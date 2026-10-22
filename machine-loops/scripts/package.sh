@@ -7,7 +7,7 @@ DEST="${1:-out/$NAME.zip}"
 rm -f "$DEST"
 TMP=$(mktemp -d)
 mkdir -p "$TMP/$NAME"
-tar --exclude=./node_modules --exclude=./.git --exclude=./refs --exclude=./out --exclude=./dist --exclude=./build -cf - . | tar -xf - -C "$TMP/$NAME"
+tar --exclude=./node_modules --exclude=./.git --exclude=./refs --exclude=./out --exclude=./dist --exclude=./build --exclude=__pycache__ -cf - . | tar -xf - -C "$TMP/$NAME"
 ABS="$(pwd)/$DEST"
 (cd "$TMP" && zip -qr "$ABS" "$NAME")
 rm -rf "$TMP"

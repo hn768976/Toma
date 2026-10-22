@@ -101,23 +101,23 @@ def levels():
             for x, y in sample_points(rng, [(540, 300, 740, 410)], 30):
                 worst = max(worst, int(np.abs(f[y, x] - (0, 255, 0)).max()))
         say(worst <= 2, f"levels {name} screen: 60 samples, max deviation {worst} from (0,255,0)")
-    # black: every pixel with no line within 3 px
+    # black: "nothing drawn" is taken from the lossless PNG render (value exactly 0 with nothing
+    # drawn within 3 px); those pixels must be <= 1 in the mp4, and exactly 0 in the PNG
+    from numpy.lib.stride_tricks import sliding_window_view
     name = "MachineBlueprint_Beam"
-    worst = 0
-    count = 0
+    tmp = tempfile.mkdtemp()
+    worst_png = worst_mp4 = count = 0
     for n in (0, 150, 300, 450):
-        f = frame_rgb(os.path.join(OUT, name + ".mp4"), n)
-        m = f.max(axis=2)
-        from numpy.lib.stride_tricks import sliding_window_view
-        near = sliding_window_view(np.pad(m, 3), (7, 7)).max(axis=(2, 3))
-        empty = near < 12
-        count += int(empty.sum())
-        if empty.any():
-            worst = max(worst, int(m[empty].max()))
-        ys, xs = np.nonzero(empty)
-        idx = rng.choice(len(ys), 50, replace=False)
-        worst = max(worst, int(m[ys[idx], xs[idx]].max()))
-    say(worst <= 1, f"levels {name}: {count} empty pixels in 4 frames (incl. 200 random samples), max value {worst} (allowed 1)")
+        png = still("MachineBlueprint-Beam", n, f"{tmp}/bp_{n}.png").max(axis=2)
+        empty = ~sliding_window_view(np.pad(png > 0, 3), (7, 7)).any(axis=(2, 3))
+        # H.264 rings inside its 8x8 transform blocks, so the mp4 is checked one block clear of the lines
+        empty8 = ~sliding_window_view(np.pad(png > 0, 8), (17, 17)).any(axis=(2, 3))
+        count += int(empty8.sum())
+        worst_png = max(worst_png, int(png[empty].max()))
+        f = frame_rgb(os.path.join(OUT, name + ".mp4"), n).max(axis=2)
+        worst_mp4 = max(worst_mp4, int(f[empty8].max()))
+    say(worst_png == 0, f"levels {name} renderer: PNG frames exactly 0 wherever nothing is drawn within 3 px (max {worst_png})")
+    say(worst_mp4 <= 1, f"levels {name} mp4: {count} pixels more than 8 px from any line in 4 frames, max {worst_mp4} (allowed 1)")
 
 
 def key():

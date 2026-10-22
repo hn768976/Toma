@@ -35,7 +35,7 @@ npx remotion render src/index.ts SteampunkFrame-Green out/SteampunkFrame_Green.m
 npx remotion render src/index.ts RobotWalk-Turnaround out/RobotWalk_Turnaround.mp4 --gl=angle --image-format=png --codec=h264 --pixel-format=yuv420p --crf=16 --muted --timeout=120000
 npx remotion render src/index.ts RobotWalk-Loop       out/RobotWalk_Loop.mp4       --gl=angle --image-format=png --codec=h264 --pixel-format=yuv420p --crf=16 --muted --timeout=120000
 npx remotion render src/index.ts RobotWalk-Green      out/RobotWalk_Green.mp4      --gl=angle --image-format=png --codec=h264 --pixel-format=yuv420p --crf=16 --muted --timeout=120000
-npx remotion render src/index.ts MachineBlueprint-Beam out/MachineBlueprint_Beam.mp4 --gl=angle --image-format=png --codec=h264 --pixel-format=yuv420p --crf=16 --muted --timeout=120000
+npx remotion render src/index.ts MachineBlueprint-Beam out/MachineBlueprint_Beam.mp4 --gl=angle --image-format=png --codec=h264 --pixel-format=yuv420p --crf=16 --muted --timeout=120000 --x264-preset=veryslow
 npx remotion render src/index.ts OceanDepth-Labelled  out/OceanDepth_Labelled.mp4  --gl=angle --image-format=png --codec=h264 --pixel-format=yuv420p --crf=16 --muted --timeout=120000
 npx remotion render src/index.ts OceanDepth-Clean     out/OceanDepth_Clean.mp4     --gl=angle --image-format=png --codec=h264 --pixel-format=yuv420p --crf=16 --muted --timeout=120000
 ```
@@ -152,4 +152,28 @@ compared with frame 0.
 
 ## Timings
 
-TIMINGS_PLACEHOLDER
+Measured on the build machine: 4 CPU cores, **no GPU** (WebGL runs on ANGLE's software
+backend), Remotion 4.0.515, Chromium headless shell. A machine with a GPU will be much faster on
+the three.js clips.
+
+720p previews (`--scale=0.3333333333333333`, 4 workers, wall clock including bundling and
+encoding):
+
+| Clip | Frames | Total | Per frame |
+|---|---|---|---|
+| SteampunkFrame_White | 300 | 193.6 s | 0.65 s |
+| SteampunkFrame_Green | 300 | 186.6 s | 0.62 s |
+| RobotWalk_Turnaround | 360 | 91.3 s | 0.25 s |
+| RobotWalk_Loop | 300 | 73.0 s | 0.24 s |
+| RobotWalk_Green | 300 | 71.9 s | 0.24 s |
+| MachineBlueprint_Beam | 600 | 98.3 s | 0.16 s (x264 `veryslow`) |
+| OceanDepth_Labelled | 450 | 157.6 s | 0.35 s |
+| OceanDepth_Clean | 450 | 157.4 s | 0.35 s |
+
+One 4K frame (scale 1, one worker; start-up and scene build excluded by differencing a 1-frame
+and a 10-frame render):
+
+| Clip | Per 4K frame | Estimated full 4K render, 4 workers |
+|---|---|---|
+| SteampunkFrame_White | 2.97 s | ~4 min for 300 frames |
+| MachineBlueprint_Beam | 0.51 s | ~2 min for 600 frames (plus `veryslow` encode) |
