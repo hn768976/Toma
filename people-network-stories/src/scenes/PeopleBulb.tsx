@@ -55,7 +55,7 @@ const sampleProfile = (n: number) => {
   return { rows: out, spacing: total / n };
 };
 
-const MERIDIANS = 44;
+const MERIDIANS = 34;
 const ROWS = Math.round(COUNTS.peopleBulbPeople / MERIDIANS);
 const { rows: ROW_PTS, spacing: ROW_SPACING } = sampleProfile(ROWS);
 const SLOTS = MERIDIANS * ROWS;
@@ -224,7 +224,8 @@ const createScene = (info: StageInfo): SceneRuntime => {
       }
       lines.setDrawCount(n * SEGS);
       // Inner glow when the bulb lights up.
-      const glowA = light * 0.22;
+      // A faint haze fills the glass once we are outside; the bulb lights up at 20s.
+      const glowA = 0.06 * smooth(remap(t, 11, 15)) + light * 0.18;
       inner.set(0, 0, 0.05, 0, 2.2, 0.95, 0.97, 1, glowA);
       inner.set(1, 0, -0.35, 0, 1.6, 0.95, 0.97, 1, glowA * 0.8);
       inner.set(2, 0, -0.9, 0, 0.9, 0.95, 0.97, 1, glowA * 0.6);

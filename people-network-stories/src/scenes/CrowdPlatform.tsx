@@ -251,7 +251,7 @@ const createScene = (info: StageInfo): SceneRuntime => {
       void c;
       const dist = keyframes(t, [[0, 5.5], [5, 8], [12, 18], [20, 30], [28, 46]]);
       const elev = THREE.MathUtils.degToRad(keyframes(t, [[0, 8], [5, 12], [20, 30], [28, 34]]));
-      const az = THREE.MathUtils.degToRad(keyframes(t, [[0, 0], [27, 13], [28, 13.3]], (x) => x));
+      const az = THREE.MathUtils.degToRad(keyframes(t, [[0, 0], [27, 27], [28, 27.5]], (x) => x));
       camera.position.set(
         target.x + Math.sin(az) * Math.cos(elev) * dist,
         target.y + Math.sin(elev) * dist,

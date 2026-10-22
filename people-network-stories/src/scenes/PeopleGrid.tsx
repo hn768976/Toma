@@ -91,7 +91,7 @@ const streakTexture = () => {
   for (let y = 0; y < 32; y++) {
     const dy = (y + 0.5 - 16) / 16;
     const core = Math.exp(-dy * dy * 14);
-    const halo = Math.exp(-dy * dy * 3.5) * 0.45;
+    const halo = Math.exp(-dy * dy * 2.5) * 0.6;
     for (let x = 0; x < 256; x++) {
       const u = (x + 0.5) / 256;
       const taper = Math.min(1, u / 0.35) * Math.min(1, (1 - u) / 0.12);
@@ -214,7 +214,7 @@ const setup: PixiSetup = (world: Container, info: PixiInfo) => {
       s.width = st.len * k;
       s.height = 72 * k;
       // Streaks stay inside the grid: they fade out as they cross its edge.
-      const inside = Math.min(1, Math.max(0, Math.min(s.x / k - GX0, GX1 - s.x / k, s.y / k - GY0, GY1 - s.y / k) / 120 + 0.6));
+      const inside = Math.min(1, Math.max(0, Math.min(s.x / k - GX0, GX1 - s.x / k, s.y / k - GY0, GY1 - s.y / k) / 90));
       s.alpha = st.bright * env * clear * inside;
     }
     for (let i = n; i < MAX_STREAKS; i++) streaks[i].visible = false;

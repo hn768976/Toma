@@ -51,7 +51,7 @@ const buildField = (seed: number) => {
     const f = (i - 3) / (total - 4);
     // invert f = easeIn(u, 2) -> u = sqrt(f)
     // Ease-in count: sparse for a long time, filling quickly towards 13s.
-    nodes[i].at = 2 + 11 * Math.pow(f, 1 / 5.5) * 0.985;
+    nodes[i].at = 2 + 11 * Math.pow(f, 1 / 7) * 0.985;
   }
   const links: Link[] = [
     { from: 0, to: 1, at: 0.3 },

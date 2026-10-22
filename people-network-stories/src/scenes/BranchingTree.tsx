@@ -79,7 +79,9 @@ const buildTree = (targetTips: number) => {
         const a1 = splitA ? lerp(n.a0, n.a1, s1) : n.a1;
         const b0 = splitA ? n.b0 : lerp(n.b0, n.b1, s0);
         const b1 = splitA ? n.b1 : lerp(n.b0, n.b1, s1);
-        const ac = lerp(a0, a1, 0.5 + (rng() - 0.5) * 0.5);
+        // Tips get extra spread beyond their sector, which smooths the crown into one dome.
+        const spread = lvl >= LEVELS - 2 ? 1.6 : 0.5;
+        const ac = lerp(a0, a1, 0.5 + (rng() - 0.5) * spread);
         const bc = lerp(b0, b1, 0.5 + (rng() - 0.5) * 0.5);
         // Fan direction: a sweeps across the front plane (beyond +-90deg at the sides,
         // so the rim droops), b tilts towards/away from the camera.
@@ -224,7 +226,11 @@ const makeCreate = (variant: Variant) => (info: StageInfo): SceneRuntime => {
         } else if (b.leaf) {
           const s = 1.5 + 0.7 * thick;
           if (dark) dots.set(d++, x, y, z, s, ink[0], ink[1], ink[2], 0.3 + 0.15 * thick);
-          else dots.set(d++, x, y, z, s, tipInk[0], tipInk[1], tipInk[2], 0.9);
+          else {
+            // Darker towards the top of the dome.
+            const h = 0.55 + 0.45 * (1 - clamp01((y - TRUNK_TOP - 0.6) / 1.0));
+            dots.set(d++, x, y, z, s, tipInk[0] * h, tipInk[1] * h, tipInk[2] * h, 0.95);
+          }
         } else {
           // Junction node.
           const s = early ? 2.6 : b.level === LEVELS - 1 ? 1.9 + 0.6 * thick : 1.3;
