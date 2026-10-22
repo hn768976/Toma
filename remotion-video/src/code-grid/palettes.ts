@@ -13,13 +13,13 @@ export type Palette = {
 // Close match of the reference: icy cyan lattice over deep navy glass.
 export const CYBER_BLUE: Palette = {
   background: "#01060f",
-  panelTop: "#0b3460",
-  panelBottom: "#041a36",
-  text: "#7cc8ff",
-  textHot: "#dff4ff",
-  frame: "#14c0f2",
-  frameHot: "#9ff0ff",
-  ray: "#3fe6ff",
+  panelTop: "#0b3a66",
+  panelBottom: "#03132a",
+  text: "#a8c4e0",
+  textHot: "#d6e8f8",
+  frame: "#2db2da",
+  frameHot: "#3cc8ec",
+  ray: "#2fd8cc",
   haze: "#1a78c8",
 };
 

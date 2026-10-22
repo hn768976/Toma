@@ -12,7 +12,7 @@ export const COLS = 13; // odd so the camera centers on a panel
 export const ROWS = 9;
 export const PITCH_X = 1.0;
 export const PITCH_Y = 1.35;
-export const CUBE_DEPTH = 0.55; // front opening -> back panel
+export const CUBE_DEPTH = 0.4; // front opening -> back panel
 export const PANEL_W = 0.86;
 export const PANEL_H = 1.19;
 

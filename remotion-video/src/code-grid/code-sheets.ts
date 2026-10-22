@@ -167,9 +167,9 @@ export const drawCodeSheet = (seed: number): HTMLCanvasElement => {
     if (!line.text) return;
     const y = i * lineHeight + lineHeight / 2;
     const x = marginX + line.indent * charWidth * 4;
-    const hot = line.hot || rand() < 0.04;
+    const hot = (line.hot && rand() < 0.5) || rand() < 0.01;
     // Occasional selection bar behind a line, like an editor cursor row.
-    const selected = rand() < 0.012;
+    const selected = rand() < 0.004;
     if (selected) {
       ctx.fillStyle = "#0000ff";
       ctx.fillRect(x - 4, y - lineHeight / 2 + 3, Math.min(560, line.text.length * charWidth + 8), lineHeight - 6);

@@ -72,17 +72,18 @@ const panelFragment = /* glsl */ `
     float seed = vParams.z;
     float mode = vParams.w;
 
-    // Scroll position: smooth crawl, or a crawl plus periodic page jumps.
-    float scroll = phase + uTime * speed;
-    if (mode > 0.5) {
-      float period = 2.2 + seed * 2.5;
-      float k = floor((uTime + seed * 7.0) / period);
-      float f = fract((uTime + seed * 7.0) / period);
-      float jump = k + smoothstep(0.0, 0.12, f);
-      scroll += jump * 0.19;
-    }
+    // Pages hold (with a barely-there crawl) and hard-cut to a new block
+    // of code at staggered intervals, like the reference.
+    float period = 1.3 + seed * 2.0;
+    float pt = (uTime + seed * 7.0) / period;
+    float k = floor(pt);
+    float f = fract(pt) * period; // seconds since the last cut
+    float scroll = phase + hash(k * 1.37 + seed * 17.0) + uTime * speed;
+    // Two-frame glitch right after each cut: rows tear sideways.
+    float glitch = (1.0 - step(0.07, f)) * mode;
 
-    vec2 tuv = vec2(vUv.x, 1.0 - (scroll + (1.0 - vUv.y) * uWindow));
+    float tear = glitch * (hash2(vec2(floor(vUv.y * 40.0), k)) - 0.5) * 0.08;
+    vec2 tuv = vec2(vUv.x + tear, 1.0 - (scroll + (1.0 - vUv.y) * uWindow));
     vec3 m = texture2D(uSheet, tuv).rgb;
 
     // Ghost of code from "deeper" glass layers, softened via mip bias.
@@ -110,7 +111,7 @@ const panelFragment = /* glsl */ `
     float drop = step(0.985, hash(floor(uTime * 6.0) + seed * 37.0));
     flick *= 1.0 - 0.55 * drop;
 
-    vec3 textCol = uText * m.r * 1.15 + (uHot - uText) * m.g * 1.25;
+    vec3 textCol = uText * m.r * 0.85 + (uHot - uText) * m.g;
     vec3 sel = uFrame * m.b * 0.55;
     vec3 ghost = uText * g.r * 0.22;
 
@@ -267,7 +268,7 @@ const GradeShader = {
       col.g = texture2D(tDiffuse, vUv).g;
       col.b = texture2D(tDiffuse, vUv - off).b;
       // Soft horizontal light leak across the middle band.
-      col += uTint * 0.05 * exp(-pow(c.y * 3.2, 2.0));
+      col += uTint * 0.015 * exp(-pow(c.y * 3.2, 2.0));
       float vig = smoothstep(1.35, 0.25, r2);
       col *= mix(0.45, 1.0, vig);
       float g = hash(vUv * 1000.0 + fract(uTime * 7.13)) - 0.5;
@@ -279,7 +280,9 @@ const GradeShader = {
 
 /* ------------------------------------------------------------------ */
 
-const easeInOut = (x: number) => 0.5 - 0.5 * Math.cos(Math.PI * Math.min(1, Math.max(0, x)));
+const TRUCK_SPEED = 0.13; // world units / s
+const TRUCK_START = -TRUCK_SPEED * (DURATION_IN_FRAMES / FPS) * 0.5;
+const CAM_Z = 2.5;
 
 export const createCodeGridScene = (
   canvas: HTMLCanvasElement,
@@ -342,10 +345,10 @@ export const createCodeGridScene = (
     const geo = panelGeo.clone();
     const params = new Float32Array(slots.length * 4);
     slots.forEach((_, k) => {
-      params[k * 4 + 0] = 0.006 + rand() * 0.02; // sheet-fraction / s
+      params[k * 4 + 0] = rand() * 0.004; // sheet-fraction / s
       params[k * 4 + 1] = rand();
       params[k * 4 + 2] = rand();
-      params[k * 4 + 3] = rand() < 0.45 ? 1 : 0;
+      params[k * 4 + 3] = rand() < 0.6 ? 1 : 0; // glitch on cut
     });
     geo.setAttribute("aParams", new THREE.InstancedBufferAttribute(params, 4));
     const mat = new THREE.ShaderMaterial({
@@ -383,7 +386,7 @@ export const createCodeGridScene = (
   const bars: Bar[] = [];
   const spanX = COLS * PITCH_X;
   const spanY = ROWS * PITCH_Y;
-  const front = 0.05;
+  const front = 0.075;
   const back = 0.022;
   for (let i = 0; i <= COLS; i++) {
     const x = (i - COLS / 2) * PITCH_X;
@@ -412,7 +415,7 @@ export const createCodeGridScene = (
     dummy.scale.set(b.sx, b.sy, b.sz);
     dummy.updateMatrix();
     barMesh.setMatrixAt(k, dummy.matrix);
-    const c = frameCol.clone().lerp(hotCol, 0.12 * b.glow).multiplyScalar(0.35 + 0.95 * b.glow * (0.85 + 0.3 * rand()));
+    const c = frameCol.clone().lerp(hotCol, 0.12 * b.glow).multiplyScalar(0.3 + 0.45 * b.glow * (0.85 + 0.3 * rand()));
     barMesh.setColorAt(k, c);
   });
   barMesh.frustumCulled = false;
@@ -422,11 +425,11 @@ export const createCodeGridScene = (
   // Thin hot cores on the front bars (bloom turns them into the bright
   // white-cyan lines seen in the reference).
   const coreBars = bars.filter((b) => b.glow === 1.0);
-  const coreMat = new THREE.MeshBasicMaterial({ color: hotCol.clone().multiplyScalar(1.5), toneMapped: false });
+  const coreMat = new THREE.MeshBasicMaterial({ color: hotCol.clone().multiplyScalar(1.6), toneMapped: false });
   const coreMesh = new THREE.InstancedMesh(barGeo, coreMat, coreBars.length);
   coreBars.forEach((b, k) => {
-    dummy.position.set(b.x, b.y, b.z + 0.03);
-    dummy.scale.set(b.sx === front ? 0.012 : b.sx, b.sy === front ? 0.012 : b.sy, 0.01);
+    dummy.position.set(b.x, b.y, b.z + front / 2 + 0.005);
+    dummy.scale.set(b.sx === front ? 0.016 : b.sx, b.sy === front ? 0.016 : b.sy, 0.01);
     dummy.updateMatrix();
     coreMesh.setMatrixAt(k, dummy.matrix);
   });
@@ -500,7 +503,7 @@ export const createCodeGridScene = (
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     side: THREE.DoubleSide,
-    uniforms: { uRay: { value: col(palette.ray).multiplyScalar(1.6) }, uTime: { value: 0 } },
+    uniforms: { uRay: { value: col(palette.ray).multiplyScalar(0.7) }, uTime: { value: 0 } },
   });
   // Each ray = two crossed quads (XZ and YZ) so it reads from any angle.
   const rayMesh = new THREE.InstancedMesh(rayGeo.clone(), rayMat, rayNodes.length * 2);
@@ -513,7 +516,7 @@ export const createCodeGridScene = (
     for (let q = 0; q < 2; q++) {
       dummy.position.set(x, y, RAY_LEN / 2);
       dummy.rotation.set(Math.PI / 2, q === 0 ? 0 : Math.PI / 2, 0);
-      dummy.scale.set(0.014, RAY_LEN, 1);
+      dummy.scale.set(0.05, RAY_LEN, 1);
       dummy.updateMatrix();
       rayMesh.setMatrixAt(k * 2 + q, dummy.matrix);
       rayParams.set([intensity, phase, speed], (k * 2 + q) * 3);
@@ -561,7 +564,7 @@ export const createCodeGridScene = (
   composer.setPixelRatio(1);
   composer.setSize(width, height);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(width, height), 0.75, 0.45, 0.5);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(width, height), 0.7, 0.4, 0.7);
   composer.addPass(bloom);
   const grade = new ShaderPass(GradeShader);
   grade.uniforms.uAspect.value = width / height;
@@ -572,16 +575,13 @@ export const createCodeGridScene = (
 
   const render = (frame: number) => {
     const time = frame / FPS;
-    const p = frame / (DURATION_IN_FRAMES - 1);
-    const e = easeInOut(p);
 
-    // Slow drift + gentle push, like the reference's floating camera.
-    const camX = -0.12 + 0.2 * e + 0.025 * Math.sin(time * 0.55);
-    const camY = 0.06 - 0.1 * e + 0.018 * Math.sin(time * 0.43 + 1.2);
-    const camZ = 2.55 - 0.22 * e;
-    camera.position.set(camX, camY, camZ);
-    camera.lookAt(camX * 0.35, camY * 0.35, -2);
-    camera.rotateZ(0.006 * Math.sin(time * 0.3));
+    // Constant lateral truck (content slides left ~1.9 cells over the
+    // clip), straight-on view, no zoom or roll, like the reference.
+    const camX = TRUCK_START + TRUCK_SPEED * time;
+    const camY = 0.08;
+    camera.position.set(camX, camY, CAM_Z);
+    camera.lookAt(camX, camY, -2);
 
     for (const m of panelMaterials) m.uniforms.uTime.value = time;
     wallMat.uniforms.uTime.value = time;
