@@ -83,7 +83,7 @@ const Cell: React.FC<{
           uSeed: { value: cell.seed },
           uSpin: { value: new Matrix3() },
           uAmp: { value: 0.1 },
-          uBump: { value: 0.014 },
+          uBump: { value: 0.01 },
           uSoft: { value: cell.soft },
         },
       }),

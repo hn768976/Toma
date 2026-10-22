@@ -98,7 +98,7 @@ vec3 backdrop(vec2 uv) {
   float aspect = 1192.0 / 672.0;
   // Horizontal band of light through the middle of the frame.
   float band = exp(-pow((uv.y - 0.5) / 0.4, 2.0));
-  band = max(band, 0.55 * smoothstep(0.6, 1.0, uv.y));
+  band = mix(band, 0.85, smoothstep(0.45, 1.0, uv.y));
   vec3 col = mix(uBgDark, uBgMid, band * 0.55);
   // Darker vertical column left of centre, darker right edge.
   col = mix(col, uBgDark, 0.55 * exp(-pow((uv.x - 0.34) / 0.13, 2.0)));
@@ -114,10 +114,14 @@ vec3 backdrop(vec2 uv) {
   d *= vec2(1.0, 0.72) / gs;
   col = mix(col, uBgMid, 0.7 * exp(-dot(d, d) / 0.24));
   col = mix(col, uBgGlow, 0.97 * exp(-dot(d, d) / 0.075));
+  col = mix(col, min(uBgGlow * 1.12, vec3(1.0)), 0.6 * k * exp(-dot(d, d) / 0.03));
   // Fall off toward the right edge.
   col = mix(col, uBgDark * 0.95, smoothstep(0.86, 1.02, uv.x) * 0.85);
   // Pale light strip down the left edge, strongest at mid-height.
   float strip = exp(-pow(uv.x / 0.1, 2.0)) * (0.45 + 0.55 * band);
+  // ...which fades as the light moves inward late in the shot.
+  strip *= mix(1.0, 0.25, smoothstep(4.5, 9.0, uTime));
+  col = mix(col, uBgDark * 0.85, 0.95 * smoothstep(4.5, 9.0, uTime) * smoothstep(0.55, 0.0, uv.x) * smoothstep(0.9, 0.0, uv.y));
   col = mix(col, uBgStrip, strip * 0.85);
   // Darken top corners slightly.
   col *= 1.0 - 0.25 * smoothstep(0.25, 0.0, uv.y) * smoothstep(0.3, 1.0, uv.x);
