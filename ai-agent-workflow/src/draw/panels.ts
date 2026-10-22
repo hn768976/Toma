@@ -48,8 +48,8 @@ export const drawGlass = (ctx: Ctx, pal: Palette, o: GlassOpts) => {
 
   // Border.
   const bg = ctx.createLinearGradient(x, y, x + w, y + h);
-  bg.addColorStop(0, rgba(pal.primary, 0.85 * borderK));
-  bg.addColorStop(0.62, rgba(pal.primary, 0.4 * borderK));
+  bg.addColorStop(0, rgba(pal.primary, 0.7 * borderK));
+  bg.addColorStop(0.62, rgba(pal.primary, 0.3 * borderK));
   bg.addColorStop(1, rgba(o.gradientBorder ? pal.secondary : pal.primary, 0.95 * borderK));
   ctx.strokeStyle = bg;
   ctx.lineWidth = ppu * 0.045;
@@ -213,13 +213,13 @@ export const drawLabel = (
   captionAlpha: number,
 ) => {
   ctx.save();
-  const size = ppu * 0.62;
-  ctx.font = `700 ${Math.round(size)}px ${FONT_LABEL}`;
-  ctx.letterSpacing = `${Math.round(size * 0.22)}px`;
+  const size = ppu * 0.56;
+  ctx.font = `600 ${Math.round(size)}px ${FONT_LABEL}`;
+  ctx.letterSpacing = `${Math.round(size * 0.16)}px`;
   ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = pal.text;
+  ctx.fillStyle = rgba(pal.text, 0.85);
   ctx.shadowColor = pal.text;
-  ctx.shadowBlur = ppu * 0.2;
+  ctx.shadowBlur = ppu * 0.1;
   ctx.fillText(text.slice(0, chars), ppu * 0.2, size * 1.1);
   if (captionAlpha > 0) {
     ctx.globalAlpha = captionAlpha;

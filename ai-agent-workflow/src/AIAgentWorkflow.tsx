@@ -70,7 +70,7 @@ export const AIAgentWorkflow: React.FC<CompProps> = ({ palette }) => {
       {/* Lens vignette */}
       <AbsoluteFill
         style={{
-          background: `radial-gradient(ellipse 75% 70% at 45% 45%, rgba(0,0,0,0) 55%, ${rgba(pal.bgEdge, 0.75)} 100%)`,
+          background: `radial-gradient(ellipse 80% 75% at 38% 40%, rgba(0,0,0,0) 50%, ${rgba(pal.bgEdge, 0.8)} 100%), linear-gradient(90deg, rgba(0,0,0,0) 60%, ${rgba(pal.bgEdge, 0.35)} 100%)`,
         }}
       />
       {/* Opening fade from the bare backdrop */}

@@ -1,6 +1,6 @@
 import { useThree } from "@react-three/fiber";
 import React, { useLayoutEffect } from "react";
-import { interpolate, useCurrentFrame } from "remotion";
+import { Easing, interpolate, useCurrentFrame } from "remotion";
 import type { PerspectiveCamera } from "three";
 import { DURATION } from "../layout";
 
@@ -15,16 +15,20 @@ type Pose = {
   fov: number;
 };
 
-// Slow, steady truck to the right along the data flow with a gentle push-in,
-// matching the reference's drift.
+// A quick ease-out dolly-in over the first ~1.3 s, then a slow, steady truck
+// to the right along the data flow, matching the reference's drift.
 const poseAt = (frame: number): Pose => {
   const t = frame / (DURATION - 1);
   const ease = (x: number) => x * 0.82 + 0.18 * (1 - Math.cos(x * Math.PI)) / 2;
   const k = ease(t);
+  const dolly = interpolate(frame, [0, 32], [1.6, 1], {
+    extrapolateRight: "clamp",
+    easing: Easing.out(Easing.cubic),
+  });
   return {
-    u: interpolate(k, [0, 1], [1.9, 8.4]),
-    v: interpolate(k, [0, 1], [1.3, 0.2]),
-    dist: interpolate(k, [0, 1], [30, 29]),
+    u: interpolate(k, [0, 1], [0.3, 6.5]),
+    v: interpolate(k, [0, 1], [0.45, -0.05]),
+    dist: interpolate(k, [0, 1], [30, 29]) * dolly,
     azimuth: 62,
     elevation: interpolate(k, [0, 1], [40, 38]),
     fov: 32,

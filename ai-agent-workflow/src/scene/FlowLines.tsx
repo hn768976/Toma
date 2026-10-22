@@ -4,6 +4,7 @@ import { AdditiveBlending, BufferAttribute, BufferGeometry, DoubleSide } from "t
 import {
   GUIDE_LINES,
   INPUT_PATHS,
+  INPUT_STUBS,
   JUNCTIONS,
   NEXT_PATHS,
   OUTPUT_PATHS,
@@ -15,7 +16,8 @@ import type { Palette } from "../theme";
 import { clamp01, easeOut, hexToRgb, prog } from "../util";
 import { FloorMeshBuilder, roundCorners, sampleAt, toPolyline } from "./lineGeometry";
 
-const ALL_PATHS: FlowPath[] = [...INPUT_PATHS, ...WORKFLOW_PATHS, ...OUTPUT_PATHS, ...NEXT_PATHS];
+const ALL_PATHS: FlowPath[] = [...INPUT_STUBS, ...INPUT_PATHS, ...WORKFLOW_PATHS, ...OUTPUT_PATHS, ...NEXT_PATHS];
+const STARTS_WITH_DOT = new Set([...INPUT_STUBS, ...INPUT_PATHS, ...NEXT_PATHS]);
 
 const DASH = 0.15;
 const GAP = 0.15;
@@ -49,22 +51,24 @@ export const FlowLines: React.FC<{ pal: Palette }> = ({ pal }) => {
     ALL_PATHS.forEach((path, i) => {
       const pl = polylines[i];
       const p = prog(frame, path.start, path.dur, easeOut);
-      if (p <= 0) return;
+      const fade = path.fadeOut ? 1 - prog(frame, path.fadeOut[0], path.fadeOut[1] - path.fadeOut[0]) : 1;
+      if (p <= 0 || fade <= 0) return;
+      const col: [number, number, number] = [line[0] * fade, line[1] * fade, line[2] * fade];
       const reveal = pl.length * p;
       const phase = -frame * FLOW_SPEED;
       // A brighter packet travels along each line once it is drawn.
       const packet = ((frame - path.start) * 0.12) % (pl.length + 6);
-      b.dashes(pl, reveal, DASH, GAP, WIDTH, phase, line, (s) => {
+      b.dashes(pl, reveal, DASH, GAP, WIDTH, phase, col, (s) => {
         const d = Math.abs(s - packet);
         return 0.34 + 0.6 * Math.max(0, 1 - d / 1.2) + (s > reveal - 0.6 ? 0.4 : 0);
       });
       if (path.arrow) {
         const { p: tip, d } = sampleAt(pl, reveal);
-        b.arrow(tip, d, 0.42, [line[0] * 0.9, line[1] * 0.9, line[2] * 0.9]);
+        b.arrow(tip, d, 0.42, [col[0] * 0.9, col[1] * 0.9, col[2] * 0.9]);
       }
       // Start-of-line connector dot.
-      if (i < INPUT_PATHS.length || i >= ALL_PATHS.length - NEXT_PATHS.length) {
-        b.disc(pl.pts[0], 0.11, line);
+      if (STARTS_WITH_DOT.has(path)) {
+        b.disc(pl.pts[0], 0.11, col);
       }
     });
 

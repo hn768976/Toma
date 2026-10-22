@@ -1,5 +1,5 @@
 import { useThree } from "@react-three/fiber";
-import { Bloom, EffectComposer } from "@react-three/postprocessing";
+import { Bloom, EffectComposer, TiltShift2 } from "@react-three/postprocessing";
 import React, { useLayoutEffect, useMemo } from "react";
 import { CanvasTexture, Color, Fog, SRGBColorSpace } from "three";
 import {
@@ -14,7 +14,7 @@ import {
 import type { Palette } from "../theme";
 import { CameraRig } from "./CameraRig";
 import { FlowLines } from "./FlowLines";
-import { AgentCard, Counter, FloorLabel, IconTile, OutputCard } from "./Nodes";
+import { AgentCard, Counter, DataBlock, FloorLabel, IconTile, OutputCard } from "./Nodes";
 import { Specks } from "./Specks";
 
 /** Screen-space gradient backdrop + distance fog in the backdrop colour. */
@@ -25,7 +25,7 @@ const Atmosphere: React.FC<{ pal: Palette }> = ({ pal }) => {
     c.width = 960;
     c.height = 540;
     const ctx = c.getContext("2d")!;
-    const g = ctx.createRadialGradient(400, 230, 0, 400, 230, 640);
+    const g = ctx.createRadialGradient(300, 170, 0, 300, 170, 760);
     g.addColorStop(0, pal.bgCenter);
     g.addColorStop(0.5, pal.bgMid);
     g.addColorStop(1, pal.bgEdge);
@@ -63,7 +63,7 @@ export const World: React.FC<{ pal: Palette }> = ({ pal }) => {
           h={INPUT.size}
           icon={INPUT_ICONS[i]}
           accent={pal.primary}
-          appear={T.inputsIn + i * 2}
+          appear={T.inputsIn + i}
         />
       ))}
 
@@ -101,7 +101,7 @@ export const World: React.FC<{ pal: Palette }> = ({ pal }) => {
           h={OUTPUT.h}
           icon={r.icon}
           kind={r.kind}
-          appear={T.outputCards + i * 14}
+          appear={T.outputCards + i * 10}
         />
       ))}
 
@@ -117,7 +117,7 @@ export const World: React.FC<{ pal: Palette }> = ({ pal }) => {
           h={NEXT_INPUT.size}
           icon={NEXT_INPUT.icons[i]}
           accent={pal.primary}
-          appear={T.nextIcons + i * 8}
+          appear={T.nextIcons + i * 6}
         />
       ))}
 
@@ -133,8 +133,15 @@ export const World: React.FC<{ pal: Palette }> = ({ pal }) => {
         />
       ))}
 
+      <DataBlock pal={pal} u={13.2} v={3.6} seed={5} start={150} />
+      <DataBlock pal={pal} u={4.2} v={-10.4} seed={17} start={70} />
+      <DataBlock pal={pal} u={21.0} v={3.4} seed={29} start={200} />
+      <DataBlock pal={pal} u={-9.6} v={9.4} seed={43} start={30} />
+
       <EffectComposer multisampling={0}>
         <Bloom mipmapBlur intensity={0.85} luminanceThreshold={0.36} luminanceSmoothing={0.35} radius={0.72} />
+        {/* Shallow focus: sharp band through the card, soft far/near corners. */}
+        <TiltShift2 blur={0.16} taper={0.55} start={[0.0, 0.9]} end={[1.0, 0.18]} samples={10} />
       </EffectComposer>
     </>
   );

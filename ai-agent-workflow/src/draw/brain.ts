@@ -99,7 +99,7 @@ export const drawBrain = (ctx: Ctx, size: number, pal: Palette, p: number, pulse
   ctx.lineJoin = "round";
   ctx.strokeStyle = lineCol;
   ctx.fillStyle = lineCol;
-  ctx.lineWidth = u * 0.04;
+  ctx.lineWidth = u * 0.05;
   ctx.shadowColor = pal.primary;
   ctx.shadowBlur = u * 0.12;
 
@@ -124,7 +124,7 @@ export const drawBrain = (ctx: Ctx, size: number, pal: Palette, p: number, pulse
   // Processor chip in the middle.
   const chipP = clamp01(p / 0.25);
   if (chipP > 0) {
-    const h = u * 0.19 * (0.6 + 0.4 * chipP);
+    const h = u * 0.25 * (0.6 + 0.4 * chipP);
     ctx.globalAlpha = chipP;
     ctx.shadowBlur = u * (0.3 + 0.15 * pulse);
     ctx.shadowColor = pal.primary;

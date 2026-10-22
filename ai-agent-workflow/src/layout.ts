@@ -12,25 +12,26 @@ export const DURATION = 600; // 20 s, same as the reference
 // ---------------------------------------------------------------------------
 export const T = {
   sceneFadeIn: [0, 15] as const,
-  inputsIn: 4,
+  inputsIn: 0,
   guideLines: 8,
-  inputLines: 14,
-  cardGhost: 24,
-  cardGrow: 33,
-  rings: 40,
-  brain: 42,
-  agentLabel: 44,
-  agentOut: 82,
-  workflowBranches: 104,
-  workflowLabel: 112,
-  workflowTiles: [124, 110, 140] as const, // flowchart, shield, gear
-  shieldOut: 168,
-  outputLabel: 186,
-  outputBus: 196,
-  outputCards: 204,
-  nextLines: 300,
-  nextLabel: 326,
-  nextIcons: 336,
+  inputStubs: 8,
+  inputLines: 40,
+  cardGhost: 20,
+  cardGrow: 27,
+  rings: 29,
+  brain: 30,
+  agentLabel: 38,
+  agentOut: 78,
+  workflowBranches: 98,
+  workflowLabel: 104,
+  workflowTiles: [116, 104, 130] as const, // flowchart, shield, gear
+  shieldOut: 140,
+  outputLabel: 152,
+  outputBus: 162,
+  outputCards: 168,
+  nextLines: 228,
+  nextLabel: 250,
+  nextIcons: 258,
 };
 
 // ---------------------------------------------------------------------------
@@ -78,8 +79,8 @@ export const WORKFLOW = {
 
 export type OutputKind = "bars" | "gauge" | "dots" | "lines" | "list";
 export const OUTPUT = {
-  label: [17.2, -11.0] as V2,
-  u: 17.2,
+  label: [16.2, -10.8] as V2,
+  u: 16.2,
   w: 7.2,
   h: 2.0,
   rows: [
@@ -92,8 +93,8 @@ export const OUTPUT = {
 };
 
 export const NEXT_INPUT = {
-  u: 29.8,
-  label: [28.4, -12.6] as V2,
+  u: 27.6,
+  label: [26.2, -12.4] as V2,
   size: 1.7,
   icons: ["database", "document", "chat", "cloud", "broadcast"] as IconName[],
   vs: OUTPUT.rows.map((r) => r.v - 1.2),
@@ -107,6 +108,8 @@ export type FlowPath = {
   start: number; // frame the reveal begins
   dur: number; // frames to fully reveal
   arrow?: boolean;
+  /** Frame range over which the path fades out (for temporary stubs). */
+  fadeOut?: [number, number];
 };
 
 const inR = INPUT.u + INPUT.size / 2 + 0.25;
@@ -115,6 +118,16 @@ const cardR = CARD.u + CARD.size / 2 + 0.15;
 const trunkV = INPUT.vs[2];
 const BUS_A = -8.4;
 const BUS_B = -7.0;
+
+// Short straight arrows that shoot out of each input first, then give way
+// to the routed bus (as in the reference).
+export const INPUT_STUBS: FlowPath[] = INPUT.vs.map((v, i) => ({
+  pts: [[inR, v], [inR + 3.2 + (i % 2) * 0.8, v]],
+  start: T.inputStubs + [6, 2, 0, 4, 8][i],
+  dur: 22,
+  arrow: true,
+  fadeOut: [T.inputLines + 6, T.inputLines + 20],
+}));
 
 export const INPUT_PATHS: FlowPath[] = [
   { pts: [[inR, trunkV], [cardL, trunkV]], start: T.inputLines, dur: 40, arrow: true },
@@ -133,7 +146,7 @@ export const WORKFLOW_PATHS: FlowPath[] = [
   { pts: [j1, [j1[0], wf[2].v], [wf[2].u - 0.15, wf[2].v]], start: T.workflowBranches + 8, dur: 24, arrow: true },
 ];
 
-const j2: V2 = [15.7, -1.2];
+const j2: V2 = [14.9, -1.2];
 const outL = OUTPUT.u - 0.15;
 const outR = OUTPUT.u + OUTPUT.w + 0.15;
 export const OUTPUT_PATHS: FlowPath[] = [
@@ -149,14 +162,14 @@ export const OUTPUT_PATHS: FlowPath[] = [
     })),
   // Secondary feedback loop from the flowchart tile up to the first output.
   {
-    pts: [[wf[0].u + wf[0].w + 0.15, wf[0].v], [14.4, wf[0].v], [14.4, OUTPUT.rows[0].v - 1.5], [20.5, OUTPUT.rows[0].v - 1.5]],
+    pts: [[wf[0].u + wf[0].w + 0.15, wf[0].v], [13.9, wf[0].v], [13.9, OUTPUT.rows[0].v - 1.5], [19.5, OUTPUT.rows[0].v - 1.5]],
     start: T.outputBus + 20,
     dur: 50,
   },
 ];
 
 export const NEXT_PATHS: FlowPath[] = OUTPUT.rows.map((r, k) => {
-  const bx = 26.0 + 0.45 * k;
+  const bx = 24.2 + 0.45 * k;
   const tv = NEXT_INPUT.vs[k];
   return {
     pts: [[outR, r.v], [bx, r.v], [bx, tv], [NEXT_INPUT.u - NEXT_INPUT.size / 2 - 0.25, tv]],
@@ -176,15 +189,15 @@ export const JUNCTIONS: { p: V2; at: number }[] = [
 
 // Faint, solid "circuit board" lines etched into the floor.
 export const GUIDE_LINES: { pts: V2[]; a: number }[] = [
-  { pts: [[-40, -9.6], [60, -9.6]], a: 0.07 },
-  { pts: [[-40, 11.5], [60, 11.5]], a: 0.06 },
-  { pts: [[-16.5, -40], [-16.5, 40]], a: 0.05 },
-  { pts: [[5.6, -40], [5.6, 30]], a: 0.06 },
-  { pts: [[14.6, -40], [14.6, 30]], a: 0.045 },
-  { pts: [[-30, 18], [45, 18]], a: 0.04 },
-  { pts: [[26.8, -40], [26.8, 30]], a: 0.04 },
-  { pts: [[-3, -20], [26, -20]], a: 0.05 },
-  { pts: [[-6.2, 6.2], [-6.2, 9.0], [4.0, 9.0]], a: 0.06 },
+  { pts: [[-40, -9.6], [60, -9.6]], a: 0.03 },
+  { pts: [[-40, 11.5], [60, 11.5]], a: 0.025 },
+  { pts: [[-16.5, -40], [-16.5, 40]], a: 0.02 },
+  { pts: [[5.6, -40], [5.6, 30]], a: 0.025 },
+  { pts: [[14.1, -40], [14.1, 30]], a: 0.02 },
+  { pts: [[-30, 18], [45, 18]], a: 0.02 },
+  { pts: [[24.9, -40], [24.9, 30]], a: 0.02 },
+  { pts: [[-3, -20], [26, -20]], a: 0.02 },
+  { pts: [[-6.2, 6.2], [-6.2, 9.0], [4.0, 9.0]], a: 0.03 },
 ];
 
 export const COUNTERS: { u: number; v: number; seed: number; dot?: "primary" | "secondary" }[] = [

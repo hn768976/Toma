@@ -35,7 +35,7 @@ export const TEAL_PALETTE: Palette = {
   textDim: "#3f8f8a",
   glassFill: "rgba(110, 215, 235, 0.10)",
   glassBorder: "rgba(160, 240, 255, 0.75)",
-  specks: ["#46e3ff", "#c6e85a", "#3fd6b8", "#2fa7d8"],
+  specks: ["#46e3ff", "#2fa7d8", "#3fd6b8", "#46e3ff", "#c6e85a", "#5b8cff"],
   core: "#eafffe",
 };
 

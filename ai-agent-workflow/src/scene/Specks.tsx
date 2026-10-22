@@ -15,7 +15,7 @@ export const Specks: React.FC<{ pal: Palette }> = ({ pal }) => {
       u: -34 + rnd() * 84,
       v: -30 + rnd() * 56,
       z: rnd() < 0.55 ? 0.05 : rnd() * 7,
-      s: 0.08 + rnd() * 0.16,
+      s: 0.07 + rnd() * rnd() * 0.4,
       c: Math.floor(rnd() * pal.specks.length),
       phase: rnd() * Math.PI * 2,
       speed: 0.03 + rnd() * 0.08,

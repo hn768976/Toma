@@ -4,7 +4,7 @@ import { drawBrain, drawRings } from "../draw/brain";
 import { drawCounter, drawGlass, drawIconTile, drawLabel, drawOutputCard } from "../draw/panels";
 import { CARD, T, type IconName, type OutputKind } from "../layout";
 import type { Palette } from "../theme";
-import { clamp01, easeOut, easeOutBack, prog, rgba } from "../util";
+import { clamp01, easeOut, easeOutBack, hash2, prog, rgba } from "../util";
 import { CanvasPlane } from "./CanvasPlane";
 
 const PAD = 0.35; // texture padding around panels so glows aren't clipped
@@ -99,17 +99,34 @@ export const AgentCard: React.FC<{ pal: Palette }> = ({ pal }) => {
         renderOrder={3}
         draw={(ctx, W) => {
           const ppu = W / (S + PAD * 2);
-          drawGlass(ctx, pal, {
-            x: PAD * ppu,
-            y: PAD * ppu,
-            w: S * ppu,
-            h: S * ppu,
-            r: 0.7 * ppu,
-            ppu,
-            fill: 0.7,
-            border: 1.1,
-            gradientBorder: true,
-          });
+          const x = PAD * ppu;
+          const s = S * ppu;
+          const r = 0.7 * ppu;
+          // Dark smoked glass with a faint primary tint.
+          drawGlass(ctx, pal, { x, y: x, w: s, h: s, r, ppu, fill: 0.45, border: 0.55 });
+          ctx.save();
+          ctx.beginPath();
+          ctx.roundRect(x, x, s, s, r);
+          ctx.fillStyle = rgba(pal.bgEdge, 0.28);
+          ctx.fill();
+          // Secondary-colour glow pooled along the right and bottom edges.
+          const g = ctx.createLinearGradient(x + s * 0.45, x + s * 0.45, x + s, x + s);
+          g.addColorStop(0, rgba(pal.secondary, 0));
+          g.addColorStop(1, rgba(pal.secondary, 0.32));
+          ctx.fillStyle = g;
+          ctx.fill();
+          ctx.clip();
+          ctx.lineWidth = ppu * 0.09;
+          ctx.strokeStyle = rgba(pal.secondary, 0.85);
+          ctx.shadowColor = pal.secondary;
+          ctx.shadowBlur = ppu * 0.35;
+          ctx.beginPath();
+          ctx.moveTo(x + s, x + s * 0.35);
+          ctx.lineTo(x + s, x + s - r);
+          ctx.arcTo(x + s, x + s, x + s - r, x + s, r);
+          ctx.lineTo(x + s * 0.35, x + s);
+          ctx.stroke();
+          ctx.restore();
         }}
       />
       {ringsP > 0 && (
@@ -304,5 +321,42 @@ export const Counter: React.FC<{ pal: Palette; u: number; v: number; seed: numbe
         />
       )}
     </group>
+  );
+};
+
+/** Dim block of tiny log text etched on the floor (secondary UI filler). */
+export const DataBlock: React.FC<{ pal: Palette; u: number; v: number; seed: number; start: number }> = ({
+  pal,
+  u,
+  v,
+  seed,
+  start,
+}) => {
+  const frame = useCurrentFrame();
+  const a = prog(frame, start, 20, easeOut);
+  if (a <= 0) return null;
+  const rows = 7;
+  const shown = Math.ceil(a * rows);
+  return (
+    <CanvasPlane
+      u={u + 1.8}
+      v={v + 1.1}
+      z={0.04}
+      width={3.6}
+      height={2.2}
+      ppu={130}
+      drawKey={`${shown}-${Math.floor(frame / 8)}`}
+      renderOrder={2}
+      opacity={0.55}
+      draw={(ctx, W) => {
+        const ppu = W / 3.6;
+        ctx.font = `${Math.round(ppu * 0.16)}px AgentMono`;
+        for (let i = 0; i < shown; i++) {
+          const n = Math.floor(hash2(seed + i, Math.floor(frame / 8)) * 1e12).toString(16);
+          ctx.fillStyle = rgba(i === 0 ? pal.text : pal.textDim, i === 0 ? 0.7 : 0.6);
+          ctx.fillText(i === 0 ? "PROCESS LOG" : `${String(i).padStart(2, "0")}  ${n}`, 0, ppu * (0.25 + i * 0.27));
+        }
+      }}
+    />
   );
 };
