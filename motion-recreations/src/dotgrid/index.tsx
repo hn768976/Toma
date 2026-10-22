@@ -6,5 +6,5 @@ export const DotGridReference: React.FC = () => (
 );
 
 export const DotGridMidnight: React.FC = () => (
-  <DotGrid palette={midnightPalette} />
+  <DotGrid palette={midnightPalette} seed={23} />
 );

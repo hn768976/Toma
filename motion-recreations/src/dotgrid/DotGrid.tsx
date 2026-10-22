@@ -10,7 +10,7 @@ const SPACING_X = 62.55;
 const SPACING_Y = 67.9;
 const OFFSET_X = 20.6;
 const OFFSET_Y = 27.6;
-const TWINKLE_WAVES = 4;
+const TWINKLE_WAVES = 8;
 
 // Quantiles of the per-dot average intensity measured from the reference.
 const MEAN_QUANTILES: [number, number][] = [
@@ -55,7 +55,10 @@ const buildDots = (seed: number): Dot[] => {
         x: OFFSET_X + c * SPACING_X,
         y: OFFSET_Y + r * SPACING_Y,
         mean,
-        freqs: Array.from({ length: TWINKLE_WAVES }, () => 0.1 + rand() * 1.1),
+        freqs: Array.from(
+          { length: TWINKLE_WAVES },
+          () => 0.02 + rand() * 0.98,
+        ),
         phases: Array.from(
           { length: TWINKLE_WAVES },
           () => rand() * Math.PI * 2,
@@ -66,7 +69,8 @@ const buildDots = (seed: number): Dot[] => {
   return dots;
 };
 
-// Smooth twinkle around each dot's mean; decorrelates in ~0.3 s like the reference.
+// Smooth, non-periodic twinkle around each dot's mean; its autocorrelation
+// matches the reference (~0.4 after 1/3 s, ~0 after 1/2 s).
 const dotIntensity = (d: Dot, t: number) => {
   let n = 0;
   for (let i = 0; i < TWINKLE_WAVES; i++) {

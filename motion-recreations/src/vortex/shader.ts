@@ -93,7 +93,7 @@ float seg(float x, float x0, float x1, float y0, float y1) {
 
 float tone(float raw) {
   float x = clamp(raw, -118.8, 118.8);
-  if (x <= -63.9) return seg(x, -118.8, -63.9, 1.0, 44.0);
+  if (x <= -63.9) return seg(x, -118.8, -63.9, 10.0, 44.0);
   if (x <= -41.9) return seg(x, -63.9, -41.9, 44.0, 59.0);
   if (x <= -23.7) return seg(x, -41.9, -23.7, 59.0, 71.0);
   if (x <= -10.6) return seg(x, -23.7, -10.6, 71.0, 85.0);
@@ -167,7 +167,7 @@ float hash(vec3 p) {
   return fract((p.x + p.y) * p.z);
 }
 
-// Soft film grain: bilinear value noise on a ~6 px (4K) lattice, new every frame.
+// Film grain: bilinear value noise on a ~6 px (4K) lattice, new every frame.
 float grain(vec2 px, float frame) {
   vec2 q = px / 6.0;
   vec2 i = floor(q);
@@ -177,13 +177,15 @@ float grain(vec2 px, float frame) {
   float b = hash(vec3(i + vec2(1.0, 0.0), frame));
   float c = hash(vec3(i + vec2(0.0, 1.0), frame));
   float d = hash(vec3(i + vec2(1.0, 1.0), frame));
-  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y) - 0.5;
+  // Squaring skews the grain toward bright specks, like the reference.
+  float n = mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+  return n * n - 0.27;
 }
 
 void main() {
   float lum = texture(uField, gl_FragCoord.xy / uResolution).r;
   // Grain is strongest in the shadows, as in the reference.
-  lum += grain(gl_FragCoord.xy, uFrame) * 0.27 * pow(1.0 - lum, 1.3);
+  lum += grain(gl_FragCoord.xy, uFrame) * 0.36 * pow(1.0 - lum, 1.3);
   outColor = vec4(vec3(clamp(lum, 0.0, 1.0)), 1.0);
 }
 `;

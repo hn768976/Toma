@@ -5,13 +5,13 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 // Version 1: white background with aqua squares that deepen to teal as they
 // brighten, sampled from the reference.
 export const referencePalette: DotGridPalette = {
-  background: "#fffeff",
+  background: "#ffffff",
   dotColor: (_x, v) => {
     const k = Math.min(1, v * 1.4);
-    const r = Math.round(lerp(0, 14, k));
-    const g = Math.round(lerp(200, 150, k));
-    const b = Math.round(lerp(222, 182, k));
-    return `rgba(${r}, ${g}, ${b}, ${Math.min(0.85, v * 1.05)})`;
+    const r = Math.round(lerp(40, 20, k));
+    const g = Math.round(lerp(206, 168, k));
+    const b = Math.round(lerp(224, 196, k));
+    return `rgba(${r}, ${g}, ${b}, ${Math.min(0.8, v * 1.05)})`;
   },
   glow: false,
 };
