@@ -57,7 +57,9 @@ void main() {
   life = 0.25 + 0.75 * smoothstep(0.15, 0.75, life);
   float pulse = 0.6 + 0.4 * sin(aInfo.z * 7.0 - uTime * 2.4 + aRand.x * 6.2832);
   float twinkle = 0.65 + 0.35 * sin(uTime * 6.0 + aInfo.z * 113.0 + aRand.w * 40.0);
-  float b = aInfo.y * life * pulse * 1.85;
+  // Strands converge at the poles; damp them there so the pole doesn't blow out.
+  float pole = mix(0.35, 1.0, smoothstep(0.97, 0.8, abs(d.y)));
+  float b = aInfo.y * life * pulse * pole * 1.85;
 
   vec3 col;
   if (cls < 0.5) {
@@ -148,7 +150,7 @@ void main() {
   vec2 p = (vUv - 0.5) * vec2(uAspect, 1.0) - uPos;
   float core = exp(-dot(p, p) / 0.0012) * 0.05;
   float halo = exp(-dot(p, p) / 0.01) * 0.22;
-  float dx = p.x > 0.0 ? p.x / uLength : p.x / (uLength * 0.35);
+  float dx = p.x > 0.0 ? p.x / uLength : p.x / (uLength * 0.2);
   float streak = exp(-dx * dx - pow(p.y / 0.011, 2.0)) * 0.4;
   vec3 col = uColor * (core + halo + streak) * uIntensity;
   gl_FragColor = vec4(col, 1.0);

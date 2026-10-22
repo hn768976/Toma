@@ -16,6 +16,7 @@ Config.setDefaultPremountInSeconds(2);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
+Config.setColorSpace("bt709");
 // WebGL 2 needs a GL backend in headless Chrome. "angle" uses the GPU when
 // one exists; on GPU-less machines pass --gl=swangle on the command line.
 Config.setChromiumOpenGlRenderer("angle");

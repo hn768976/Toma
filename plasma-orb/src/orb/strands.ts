@@ -51,7 +51,7 @@ export const buildOrbGeometry = (seed: number): OrbGeometry => {
 
     const roll = rand();
     const cls = roll < 0.42 ? CLASS_BLUE : roll < 0.67 ? CLASS_VIOLET : CLASS_MAGENTA;
-    const bright = 0.35 + Math.pow(rand(), 2.2) * 0.95;
+    const bright = 0.35 + Math.pow(rand(), 2.2) * 0.75;
     const length = 0.9 + rand() * 2.4;
     const steps = Math.floor(length / BEAD_SPACING);
     const threads = cls === CLASS_MAGENTA ? 3 : 5;
