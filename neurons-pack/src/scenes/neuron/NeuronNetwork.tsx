@@ -13,7 +13,7 @@ const build = (ctx: StageContext): Stage => {
   const camera = new THREE.PerspectiveCamera(FOV, 16 / 9, 0.1, 60);
   const mat = neuronMaterial({ silver: colors.neuron.silver });
   const farMat = neuronMaterial({ silver: colors.neuron.silver });
-  farMat.uniforms.uDim.value = 0.8;
+  farMat.uniforms.uDim.value = 0.6;
   mat.uniforms.uFibre.value = 0.72;
   farMat.uniforms.uFibre.value = 0.72;
   mat.uniforms.uViewportH.value = height;
@@ -61,17 +61,17 @@ const build = (ctx: StageContext): Stage => {
           const u = (dt + dur + j * 2) / dur;
           if (u > 0 && u < 1) {
             const fade = Math.min(1, u * 6, (1 - u) * 12);
-            for (let k = -1; k <= 1; k++) sparks.push(add(P.dend[di].at(u), [k * TILE, 0, 0]), 0.9 * fade, 260);
+            for (let k = -1; k <= 1; k++) sparks.push(add(P.dend[di].at(u), [k * TILE, 0, 0]), 1.2 * fade, 650);
           }
         });
         if (dt >= -2 && dt < 40) {
           const a = dt < 2 ? (dt + 2) / 4 : Math.exp(-(dt - 2) / 9);
-          flash[n.id] = Math.max(flash[n.id], 0.55 * a);
+          flash[n.id] = Math.max(flash[n.id], 0.35 * a);
         }
         const ua = (dt - 4) / ev.axonDur;
         if (ua > 0 && ua < 1) {
           const fade = Math.min(1, ua * 10, (1 - ua) * 8);
-          for (let k = -1; k <= 1; k++) sparks.push(add(P.axon.at(ua), [k * TILE, 0, 0]), fade, 240);
+          for (let k = -1; k <= 1; k++) sparks.push(add(P.axon.at(ua), [k * TILE, 0, 0]), 1.3 * fade, 650);
         }
       }
       (farMat.uniforms.uFlash.value as Float32Array).set(flash);

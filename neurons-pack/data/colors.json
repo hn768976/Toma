@@ -11,7 +11,7 @@
     "streetMid": "#2A8FD6", "streetMajor": "#3FC6F2", "highway": "#8FEAFF", "river": "#0A2348",
     "park": "#0F2A36", "haze": "#000000", "people": "#5FE3FF", "ring": "#5FE3FF", "line": "#5FE3FF"
   },
-  "server": { "case": "#2B2E33", "screen": "#7FD4FF", "led": "#5CFF9A" },
+  "server": { "case": "#4A4E55", "screen": "#7FD4FF", "led": "#5CFF9A" },
   "phone": { "frame": "#3A3D42", "glass": "#050608", "greenScreen": "#00FF00" },
   "ink": { "particle": "#000000", "background": "#FFFFFF" },
   "threads": { "white": "#F0F0F0", "black": "#000000", "ink": "#151515", "paper": "#FFFFFF" }

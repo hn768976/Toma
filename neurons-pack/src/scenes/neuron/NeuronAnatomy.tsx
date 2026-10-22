@@ -149,47 +149,43 @@ const Labels: React.FC = () => {
     return [(v.x * 0.5 + 0.5) * W, (-v.y * 0.5 + 0.5) * H];
   };
   const A = M.anchors;
-  const specs: LabelSpec[] = [
-    { key: "cellBody", text: [0.335, 0.28], anchors: [A.cellBody] },
-    { key: "nucleus", text: [0.345, 0.345], anchors: [A.nucleus] },
-    { key: "axon", text: [0.36, 0.415], anchors: [A.axon] },
-    { key: "myelinSheath", text: [0.37, 0.485], anchors: [A.myelin] },
-    { key: "nodeOfRanvier", text: [0.5, 0.79], anchors: [A.node] },
-    { key: "dendrites", text: [0.08, 0.85], anchors: A.dendrites },
-    { key: "axonTerminals", text: [0.69, 0.33], anchors: A.terminals },
+  // Text positions (fraction of frame, baseline-left) and where each
+  // leader starts, laid out like a textbook plate.
+  const specs: (LabelSpec & { from: [number, number][] })[] = [
+    { key: "cellBody", text: [0.285, 0.265], anchors: [A.cellBody], from: [[0.28, 0.255]] },
+    { key: "nucleus", text: [0.3, 0.385], anchors: [A.nucleus], from: [[0.295, 0.375]] },
+    { key: "axon", text: [0.33, 0.505], anchors: [A.axon], from: [[0.325, 0.495]] },
+    { key: "myelinSheath", text: [0.34, 0.62], anchors: [A.myelin], from: [[0.37, 0.635]] },
+    { key: "nodeOfRanvier", text: [0.5, 0.905], anchors: [A.node], from: [[0.51, 0.855]] },
+    { key: "dendrites", text: [0.055, 0.925], anchors: A.dendrites, from: [[0.06, 0.865], [0.075, 0.865]] },
+    { key: "axonTerminals", text: [0.585, 0.34], anchors: A.terminals, from: [[0.83, 0.355], [0.835, 0.355]] },
   ];
-  const fontSize = 64;
-  const stroke = 3;
+  const fontSize = 104;
+  const stroke = 5;
   const col = "#D8D8D8";
   const titleP = interpolate(t, [LABEL_START - 0.4, LABEL_START + 0.4], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return (
     <AbsoluteFill>
       <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute" }}>
-        <text x={W * 0.06} y={H * 0.105} fill="#FFFFFF" fontFamily={LABEL_FONT} fontWeight={700} fontSize={84} letterSpacing={6} opacity={titleP}>
+        <text x={W * 0.06} y={H * 0.095} fill="#FFFFFF" fontFamily={LABEL_FONT} fontWeight={700} fontSize={104} letterSpacing={6} opacity={titleP}>
           {labels.title}
         </text>
-        <line x1={W * 0.06} y1={H * 0.13} x2={W * 0.06 + W * 0.88 * titleP} y2={H * 0.13} stroke="#FFFFFF" strokeWidth={3} />
+        <line x1={W * 0.06} y1={H * 0.13} x2={W * 0.06 + W * 0.88 * titleP} y2={H * 0.13} stroke="#E8E8E8" strokeWidth={6} />
         {specs.map((s, i) => {
           const t0 = LABEL_START + 0.3 + i * LABEL_STEP;
           const lineP = interpolate(t, [t0, t0 + 0.35], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
           const textP = interpolate(t, [t0 + 0.2, t0 + 0.5], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
           if (lineP <= 0) return null;
-          const tx = s.text[0] * W;
-          const ty = s.text[1] * H;
-          // Leader starts just under/beside the label, ends on the structure.
-          const start: [number, number] = [tx + (s.key === "dendrites" ? 20 : -14), ty + (s.key === "dendrites" ? -fontSize * 0.95 : -fontSize * 0.33)];
           return (
             <g key={s.key}>
               {s.anchors.map((a, k) => {
                 const [ax, ay] = proj(a);
-                const sx = s.key === "axonTerminals" ? tx + fontSize * 6.2 : start[0];
-                const sy = s.key === "axonTerminals" ? ty + 18 : start[1];
-                void k;
-                return (
-                  <line key={k} x1={sx} y1={sy} x2={sx + (ax - sx) * lineP} y2={sy + (ay - sy) * lineP} stroke={col} strokeWidth={stroke} />
-                );
+                const [fx, fy] = s.from[Math.min(k, s.from.length - 1)];
+                const sx = fx * W;
+                const sy = fy * H;
+                return <line key={k} x1={sx} y1={sy} x2={sx + (ax - sx) * lineP} y2={sy + (ay - sy) * lineP} stroke={col} strokeWidth={stroke} strokeLinecap="round" />;
               })}
-              <text x={tx} y={ty} fill={col} fontFamily={LABEL_FONT} fontWeight={600} fontSize={fontSize} letterSpacing={2} opacity={textP}>
+              <text x={s.text[0] * W} y={s.text[1] * H} fill={col} fontFamily={LABEL_FONT} fontWeight={700} fontSize={fontSize} letterSpacing={7} opacity={textP}>
                 {labels[s.key]}
               </text>
             </g>

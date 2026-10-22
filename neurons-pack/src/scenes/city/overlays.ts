@@ -72,7 +72,7 @@ void main() {
   float aa;
   vec4 c = vec4(uColor, 1.0);
   if (kind == ${SPRITE.ring}) {
-    d = abs(length(p) - 0.41) - 0.07;
+    d = abs(length(p) - 0.4) - 0.085;
   } else if (kind == ${SPRITE.dot}) {
     d = length(p) - 0.45;
   } else if (kind == ${SPRITE.packet}) {

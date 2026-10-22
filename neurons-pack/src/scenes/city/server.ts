@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { hexToLinear } from "../../lib/color";
 
-export const SERVER = { w: 9, h: 21, d: 11 };
+export const SERVER = { w: 8, h: 23, d: 11 };
 
 export const makeServer = (c: { case: string; screen: string; led: string }) => {
   const geo = new RoundedBoxGeometry(SERVER.w, SERVER.h, SERVER.d, 5, 0.55);
@@ -77,7 +77,8 @@ void main() {
     for (int i = 0; i < 3; i++) {
       vec2 c = vec2(-1.2 + float(i) * 0.9, hs.y - 5.4);
       float l = cov(length(p - c) - 0.17);
-      vec3 lc = i == 2 ? vec3(1.0, 0.45, 0.08) : uLed;
+      vec3 lc = uScreen;
+      if (i != 1) continue;
       col = mix(col, lc, l);
       emit += lc * l * 0.6;
     }

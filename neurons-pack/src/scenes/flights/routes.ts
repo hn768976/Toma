@@ -14,7 +14,9 @@ const REGIONS: Region[] = [
   { lat: 46, lon: -100, sLat: 6, sLon: 14, w: 3 }, // Interior
   { lat: 19, lon: -99, sLat: 4, sLon: 5, w: 4 }, // Mexico
   { lat: 18, lon: -72, sLat: 2, sLon: 6, w: 1.5 }, // Caribbean
-  { lat: -21, lon: -46, sLat: 6, sLon: 5, w: 5 }, // Brazil
+  { lat: -21, lon: -46, sLat: 6, sLon: 5, w: 7 }, // Brazil
+  { lat: -34, lon: -60, sLat: 4, sLon: 5, w: 3 }, // Buenos Aires / Chile
+  { lat: -33.9, lon: 18.5, sLat: 1, sLon: 1, w: 2 }, // Cape Town
   { lat: -15, lon: -70, sLat: 12, sLon: 4, w: 2 }, // Andes
   { lat: 31, lon: 116, sLat: 6, sLon: 6, w: 14 }, // China
   { lat: 35.5, lon: 138, sLat: 2, sLon: 3, w: 6 }, // Japan
@@ -30,7 +32,8 @@ const REGIONS: Region[] = [
   { lat: 33, lon: -7, sLat: 2, sLon: 3, w: 1 }, // Maghreb
   { lat: 55.7, lon: 37.6, sLat: 2, sLon: 5, w: 3 }, // Moscow
   { lat: 55, lon: 85, sLat: 3, sLon: 25, w: 1.2 }, // Siberia
-  { lat: -31, lon: 146, sLat: 4, sLon: 7, w: 4 }, // Australia
+  { lat: -31, lon: 146, sLat: 4, sLon: 7, w: 6 }, // Australia
+  { lat: -32, lon: 116, sLat: 1, sLon: 1, w: 1.5 }, // Perth
   { lat: -39, lon: 175, sLat: 2, sLon: 2, w: 0.8 }, // New Zealand
   { lat: 61, lon: -150, sLat: 2, sLon: 4, w: 0.5 }, // Alaska
 ];
@@ -89,7 +92,7 @@ export const buildRoutes = (W: number, H: number): Route[] => {
   for (let i = 0; i < counts.flights.routes; i++) {
     const a = cities[weighted(rng, cw)];
     let b = a;
-    if (rng() < 0.35) {
+    if (rng() < 0.2) {
       // Regional: a nearby city.
       const near = cities.filter((c) => c !== a && Math.hypot(c.lon - a.lon, c.lat - a.lat) < 28);
       b = near.length ? pick(rng, near) : cities[weighted(rng, cw)];
@@ -99,7 +102,7 @@ export const buildRoutes = (W: number, H: number): Route[] => {
     const { pts: ll, angle } = slerpPath(a.lon, a.lat, b.lon, b.lat, Math.max(16, Math.ceil(angle0(a, b) * 40)));
     void angle;
     // Bow the great circle a little, like a drawn flight arc.
-    const bend = (rng() - 0.5) * 0.7;
+    const bend = (rng() - 0.5) * (rng() < 0.25 ? 1.8 : 0.8);
     const xy: number[] = [];
     let shift = 0;
     let prevX = 0;

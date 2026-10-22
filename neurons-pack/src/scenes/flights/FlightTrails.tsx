@@ -41,9 +41,9 @@ void main() {
   if (d >= 0.0 && d <= vTail) {
     float f = 1.0 - d / vTail;
     a = f * f;
-    a += 1.2 * exp(-d / 0.006); // hot head
+    a += 0.5 * exp(-d / 0.006); // head
   } else if (d > vTail) {
-    a = 0.17 * (1.0 - 0.7 * vHead / (1.0 + vTail)); // faint wake: the web over the oceans
+    a = 0.34 * (1.0 - 0.5 * vHead / (1.0 + vTail)); // faint wake: the web over the oceans
   }
   float v = a * vOpacity * ribbonCoverage();
   finalColor = vec4(v, v, v, v);
@@ -157,10 +157,12 @@ vec3 composite(vec4 c, vec2 uv, out bool allow) {
   float dotA = h3 < dens ? clamp((rad + 0.5 * aa - r) / aa, 0.0, 1.0) * min(1.0, 2.0 * rad * rad / (aa * aa)) : 0.0;
   float bright = 0.45 + 0.55 * fract(h1 * 17.0 + h2 * 5.0);
   vec3 col = ${glslLinear(C.background)};
-  col = mix(col, ${glslLinear(C.land)}, 0.07 * inland);
+  col = mix(col, ${glslLinear(C.land)}, 0.05 * inland);
   col = mix(col, ${glslLinear(C.land)}, ${C.landOpacity.toFixed(3)} * dotA * bright);
   col += ${glslLinear(C.coast)} * dotA * smoothstep(0.25, 0.85, shore) * 0.9;
-  col += ${glslLinear(C.coast)} * coast * 0.16;
+  // Soft glowing coast band (inland side), the "lit coast" bloom.
+  col += ${glslLinear(C.coast)} * (0.22 * shore * shore + 0.012 * glow);
+  col += ${glslLinear(C.coast)} * coast * 0.07;
   col += ${glslLinear(C.trail)} * c.r;
   allow = c.r > 0.0 || land > 0.0 || glow > 0.0 || coast > 0.0;
   return col;

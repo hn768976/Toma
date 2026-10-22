@@ -43,23 +43,26 @@ vec3 curlNoise(vec3 p) {
 void main() {
   float th = uTheta;
   // Bunching: twice per loop the sheet gathers into a dense knot.
-  float k1 = pow(0.5 + 0.5 * cos(2.0 * th - 1.3), 4.0);
+  float k1 = 0.25 + 0.75 * pow(0.5 + 0.5 * cos(2.0 * th - 1.3), 3.0);
   float knot = k1;
   vec2 uv = position.xy - 0.5;
-  float scale = 1.0 - 0.62 * knot;
-  vec3 p = vec3(uv.x * 1.45, uv.y * 1.05, 0.0) * scale;
+  float scale = 1.0 - 0.5 * knot;
+  // Particles bunch towards the middle (a darker core, lighter lobes).
+  float rr = length(uv) * 2.0;
+  vec2 uvc = uv * mix(0.35, 1.0, smoothstep(0.0, 1.0, rr));
+  vec3 p = vec3(uvc.x * 1.75, uvc.y * 1.25, 0.0) * scale;
   // Large folds: the sheet bends and wraps around itself.
   vec3 q = vec3(uv * 1.6, 0.0);
   vec3 fold = vec3(
     snoise4(vec4(q.xy, 1.2 * cos(th), 1.2 * sin(th))),
     snoise4(vec4(q.xy + 17.0, 1.2 * cos(th) + 3.0, 1.2 * sin(th))),
     snoise4(vec4(q.xy + 41.0, 1.2 * cos(th), 1.2 * sin(th) + 5.0)));
-  p += fold * vec3(0.24, 0.24, 0.5) * (1.0 - 0.3 * knot);
+  p += fold * vec3(0.13, 0.13, 0.3) * (1.0 - 0.3 * knot);
   // Curl noise: smoke-thin rippling and crumpling, stronger in the knot.
   vec3 c = curlNoise(p * (1.8 + 1.8 * knot));
-  p += c * (0.045 + 0.06 * knot);
+  p += c * (0.018 + 0.03 * knot);
   // Thickness: a smoky volume rather than a crisp membrane; powdery edges.
-  p += aJit.xyz * (0.007 + 0.035 * aJit.w + 0.004 * knot);
+  p += aJit.xyz * (0.009 + 0.025 * aJit.w + 0.004 * knot);
   vAlpha = mix(0.06, 0.12, position.z);
   gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
   gl_PointSize = uPointPx * (0.8 + 0.4 * aRand2);
@@ -119,7 +122,7 @@ const build = (ctx: StageContext): Stage => {
     glslVersion: THREE.GLSL3,
     vertexShader: VERT,
     fragmentShader: FRAG,
-    uniforms: { uTheta: { value: 0 }, uPointPx: { value: 3 * px } },
+    uniforms: { uTheta: { value: 0 }, uPointPx: { value: 4.5 * px } },
     transparent: true,
     depthTest: false,
     depthWrite: false,
@@ -142,7 +145,7 @@ const build = (ctx: StageContext): Stage => {
       mat.uniforms.uTheta.value = th;
       // Tumble: one whole turn in the picture plane per loop, with a
       // periodic rock in depth so the sheet never goes edge-on.
-      pivot.rotation.set(0.45 * Math.sin(th) + 0.25, 0.55 * Math.sin(th + 1.1), th, "ZXY");
+      pivot.rotation.set(0.35 * Math.sin(th) + 0.15, 0.4 * Math.sin(th + 1.1), 0.5 * Math.sin(th) + 0.25 * Math.sin(2 * th), "ZXY");
       renderer.setRenderTarget(target);
       renderer.setClearColor(white, 1);
       renderer.clear(true, true, true);

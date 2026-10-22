@@ -9,9 +9,9 @@ import { SPRITE, SpriteBuffer } from "./overlays";
 import { LOOP, PERSON_H, makeCrowd, makeCrowdMesh, personPos } from "./people";
 import { SERVER, makeServer } from "./server";
 
-const FOG = { near: 105, far: 320 };
+const FOG = { near: 175, far: 285 };
 const CAM_H = 60;
-const PITCH = (30 * Math.PI) / 180;
+const PITCH = (25 * Math.PI) / 180;
 const LIFE = 330;
 const N_EVENTS = 22;
 const SHOOT = 14;
@@ -33,16 +33,16 @@ const makeBuild = (night: boolean) => (ctx: StageContext): Stage => {
   const map = makeMapLayer(pal, night, FOG);
   scene.add(map.group);
 
-  const people = makeCrowd(counts.dataServer.people, { x: [-330, 330], z: [-470, -32] }, 0xda7a);
+  const people = makeCrowd(counts.dataServer.people, { x: [-330, 330], z: [-520, -30] }, 0xda7a);
   const crowd = makeCrowdMesh(people, pal.people, pal.haze);
   crowd.renderOrder = 1;
   scene.add(crowd);
 
   const server = makeServer(colors.server);
   // Hovering at the top centre of the view.
-  const serverPos = new THREE.Vector3(0, 27, -108);
+  const serverPos = new THREE.Vector3(0, 33, -128);
+  server.rotation.y = 0.07;
   server.position.copy(serverPos);
-  server.rotation.y = 0;
   server.renderOrder = 2;
   scene.add(server);
   const serverBase = serverPos.clone().add(new THREE.Vector3(0, -SERVER.h / 2, 0));
@@ -58,7 +58,7 @@ const makeBuild = (night: boolean) => (ctx: StageContext): Stage => {
   const rng = mulberry32(0xe7e7);
   const candidates = people
     .map((p, i) => ({ p, i }))
-    .filter(({ p }) => p.z > -230 && p.z < -45 && Math.abs(p.x) < 18 + (-p.z) * 0.55);
+    .filter(({ p }) => p.z > -170 && p.z < -36 && Math.abs(p.x) < 10 + (-p.z) * 0.5);
   const events = Array.from({ length: N_EVENTS }, (_, e) => ({
     t: Math.floor((e + 0.6 * rng()) * (LOOP / N_EVENTS)),
     person: candidates[Math.floor(rng() * candidates.length)].i,
@@ -92,7 +92,7 @@ const makeBuild = (night: boolean) => (ctx: StageContext): Stage => {
         const h = PERSON_H * P.scale;
         const fade = 1 - smoothstep(LIFE - 40, LIFE, age);
         const pop = easeOut(Math.min(1, age / 8));
-        ringSprites.push(pos.clone().add(new THREE.Vector3(0, h * 0.5, 0)), h * 1.25 * (0.6 + 0.4 * pop), SPRITE.ring, fade * pop);
+        ringSprites.push(pos.clone().add(new THREE.Vector3(0, h * 0.5, 0)), h * 1.35 * (0.6 + 0.4 * pop), SPRITE.ring, fade * pop);
         // Dotted line from the base of the server down to the person.
         const top = serverBase.clone().add(new THREE.Vector3(ev.spread * 0.5, 0.3, 0));
         const end = pos.clone().add(new THREE.Vector3(0, h * 0.62, 0));

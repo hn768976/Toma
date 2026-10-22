@@ -29,11 +29,24 @@ export type NeuronOpts = {
 
 const somaNoise = makeNoise3(0x50a);
 
-export const somaRadius = (n: Pick<Neuron, "R" | "spikes" | "id">) => (d: V3) => {
-  let r = 0.7;
-  for (const s of n.spikes) r += s.amp * Math.pow(Math.max(0, dot(d, s.dir)), 9);
-  r += 0.07 * somaNoise(d[0] * 2.2 + n.id, d[1] * 2.2, d[2] * 2.2);
+export const somaRadius = (n: Pick<Neuron, "R" | "spikes" | "id">, shape = { base: 0.9, power: 4, bumps: 0.09 }) => (d: V3) => {
+  // A rounded body, gently drawn out towards each process; the processes
+  // themselves start thick and taper (see taperRoot), giving the cell its
+  // pointed, pyramidal silhouette.
+  let r = shape.base;
+  for (const s of n.spikes) r += s.amp * 0.25 * Math.pow(Math.max(0, dot(d, s.dir)), shape.power);
+  r += shape.bumps * somaNoise(d[0] * 2.2 + n.id, d[1] * 2.2, d[2] * 2.2);
   return n.R * r;
+};
+
+/** Thicken the first stretch of a root branch into a cone out of the soma. */
+export const taperRoot = (b: Branch, r0: number, taperLen: number) => {
+  let dist = 0;
+  b.radii = b.radii.map((r, i) => {
+    if (i > 0) dist += len(sub(b.pts[i], b.pts[i - 1]));
+    const t = Math.max(0, 1 - dist / taperLen);
+    return Math.max(r, r0 * Math.pow(t, 1.4));
+  });
 };
 
 export const makeNeuron = (rng: Rng, o: NeuronOpts): Neuron => {
@@ -52,18 +65,19 @@ export const makeNeuron = (rng: Rng, o: NeuronOpts): Neuron => {
     dirs.push(d);
   }
   dirs.forEach((d, i) => {
-    const amp = i === 0 && o.apical ? 1.8 : range(rng, 0.9, 1.3);
+    const amp = i === 0 && o.apical ? 1.0 : range(rng, 0.3, 0.6);
     spikes.push({ dir: d, amp });
-    const start = add(o.center, mul(d, o.R * (0.7 + amp) * 0.8));
+    const start = add(o.center, mul(d, o.R * 0.6));
     const opts: DendriteOpts = i === 0 && o.apical ? { ...o.dend, rootLen: o.dend.rootLen * o.apical.lenMul } : o.dend;
     const first = branches.length;
-    growTree(rng, branches, start, d, opts, KIND.dendrite);
+    const root = growTree(rng, branches, start, d, opts, KIND.dendrite);
+    taperRoot(branches[root], o.R * (i === 0 && o.apical ? 0.62 : 0.4), o.R * (i === 0 && o.apical ? 3.2 : 1.5));
     for (let b = first; b < branches.length; b++) if (branches[b].depth === opts.maxDepth) leaves.push(b);
   });
   // Axon from the hillock.
-  spikes.push({ dir: axonDir, amp: 1.6 });
+  spikes.push({ dir: axonDir, amp: 0.9 });
   const a = o.axon;
-  const start = add(o.center, mul(axonDir, o.R * 1.9));
+  const start = add(o.center, mul(axonDir, o.R * 0.6));
   const nSeg = Math.max(4, Math.round(a.length / a.segLen));
   const pts: V3[] = [start];
   const radii = [a.r0 * 1.6];
@@ -81,6 +95,7 @@ export const makeNeuron = (rng: Rng, o: NeuronOpts): Neuron => {
   }
   const axon = branches.length;
   branches.push({ pts, radii, grow: pts.map(() => 0), parent: -1, kind: KIND.axon, depth: 0 });
+  taperRoot(branches[axon], o.R * 0.55, o.R * 2.8);
   if (a.terminals) growTree(rng, branches, p, d, a.terminals, KIND.terminal, axon, 0, a.terminals.rootLen, a.r1);
   return { id: o.id, center: o.center, R: o.R, branches, leaves, axon, spikes };
 };

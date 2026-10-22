@@ -36,7 +36,7 @@ export const personPos = (p: Person, frame: number): THREE.Vector3 => {
   return new THREE.Vector3(p.x + Math.cos(p.dir) * off, 0, p.z + Math.sin(p.dir) * off);
 };
 
-export const PERSON_H = 4.2;
+export const PERSON_H = 3.1;
 
 export const makeCrowdMesh = (people: Person[], color: string, haze: string) => {
   const quad = new THREE.InstancedBufferGeometry();

@@ -19,7 +19,7 @@ export const CLS = {
 } as const;
 
 export const MAP_HALF = 320;
-const SPACING = 7; // between grid streets
+const SPACING = 5; // between grid streets
 const ANGLE = 0.42; // grid rotation (rad)
 
 type P2 = [number, number];
@@ -110,16 +110,16 @@ const build = (): CityMap => {
       const c = warp(u0 + SPACING / 2, v0 + SPACING / 2);
       if (Math.abs(c[0]) > MAP_HALF || Math.abs(c[1]) > MAP_HALF) continue;
       const parkN = noise(u0 / 90, v0 / 90, 3.3);
-      if (parkN > 0.5 && rng() < 0.7) {
-        fills.poly([warp(u0 + 0.8, v0 + 0.8), warp(u0 + SPACING - 0.8, v0 + 0.8), warp(u0 + SPACING - 0.8, v0 + SPACING - 0.8), warp(u0 + 0.8, v0 + SPACING - 0.8)], CLS.park);
+      if (parkN > 0.55 && rng() < 0.5) {
+        fills.poly([warp(u0 + 0.6, v0 + 0.6), warp(u0 + SPACING - 0.6, v0 + 0.6), warp(u0 + SPACING - 0.6, v0 + SPACING - 0.6), warp(u0 + 0.6, v0 + SPACING - 0.6)], CLS.park);
         continue;
       }
       const nLots = Math.floor(range(rng, 1, 5));
       for (let k = 0; k < nLots; k++) {
-        const a = range(rng, 1.0, SPACING - 3);
-        const b = range(rng, 1.0, SPACING - 3);
-        const w = range(rng, 0.7, 2.0);
-        const h = range(rng, 0.7, 2.0);
+        const a = range(rng, 0.7, SPACING - 2);
+        const b = range(rng, 0.7, SPACING - 2);
+        const w = range(rng, 0.5, 1.4);
+        const h = range(rng, 0.5, 1.4);
         fills.poly([warp(u0 + a, v0 + b), warp(u0 + a + w, v0 + b), warp(u0 + a + w, v0 + b + h), warp(u0 + a, v0 + b + h)], CLS.lot);
       }
     }
@@ -127,7 +127,7 @@ const build = (): CityMap => {
   // River: a meandering band.
   const river: P2[] = [];
   for (let s = -R; s <= R; s += 4) river.push([s * 0.95, 40 + 55 * Math.sin(s / 120 + 1) + 20 * noise(s / 60, 1.5, 0)]);
-  fills.line(river, 9, CLS.river);
+  fills.line(river, 3.2, CLS.river);
 
   // Streets: two families of grid lines; size grades by index.
   const gridLines = (axis: 0 | 1) => {
@@ -136,9 +136,9 @@ const build = (): CityMap => {
       for (let s = -R; s <= R; s += 6) pts.push(axis === 0 ? warp(i * SPACING, s) : warp(s, i * SPACING));
       const clip = pts.filter((p) => Math.abs(p[0]) < MAP_HALF + 20 && Math.abs(p[1]) < MAP_HALF + 20);
       if (clip.length < 2) continue;
-      const m = ((i % 8) + 8) % 8;
-      const cls = m === 0 ? CLS.major : m === 4 ? CLS.mid : m % 2 === 0 ? CLS.small : CLS.minor;
-      const width = cls === CLS.major ? 1.25 : cls === CLS.mid ? 1.0 : cls === CLS.small ? 0.72 : 0.45;
+      const m = ((i % 10) + 10) % 10;
+      const cls = m === 0 ? CLS.major : m === 5 ? CLS.mid : m % 3 === 1 ? CLS.small : CLS.minor;
+      const width = cls === CLS.major ? 0.95 : cls === CLS.mid ? 0.75 : cls === CLS.small ? 0.55 : 0.36;
       lines.push({ pts: clip, cls, width });
     }
   };
@@ -153,11 +153,11 @@ const build = (): CityMap => {
       const a = warp(u, j * SPACING);
       const b = warp(u, (j + 1) * SPACING);
       if (Math.abs(a[0]) > MAP_HALF || Math.abs(a[1]) > MAP_HALF) continue;
-      lines.push({ pts: [a, b], cls: CLS.minor, width: 0.35 });
+      lines.push({ pts: [a, b], cls: CLS.minor, width: 0.28 });
     }
   }
   // Highways: smooth curves across the city, double carriageway.
-  for (let h = 0; h < 6; h++) {
+  for (let h = 0; h < 9; h++) {
     const pts: P2[] = [];
     const ang = range(rng, 0, Math.PI);
     const off = range(rng, -140, 140);
@@ -169,7 +169,7 @@ const build = (): CityMap => {
       pts.push([x * Math.cos(ang) - z * Math.sin(ang), x * Math.sin(ang) + z * Math.cos(ang)]);
     }
     const clip = pts.filter((p) => Math.abs(p[0]) < MAP_HALF + 20 && Math.abs(p[1]) < MAP_HALF + 20);
-    lines.push({ pts: clip, cls: CLS.highway, width: 2.1 });
+    lines.push({ pts: clip, cls: CLS.highway, width: h < 3 ? 1.5 : 0.8 });
   }
   lines.sort((a, b) => a.cls - b.cls);
   for (const l of lines) {

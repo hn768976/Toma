@@ -6,7 +6,7 @@ import { Neuron, addNeuron, makeNeuron } from "./neuron";
 
 export const LOOP = 600;
 export const FOV = 40;
-export const TILE = 13; // world units: one tile of the repeating layout
+export const TILE = 18; // world units: one tile of the repeating layout
 const NEAR_Z = 6;
 const FAR_Z = 17;
 const BLUR_Z = 13.5; // farther than this: the soft layer
@@ -36,13 +36,13 @@ export const buildLayout = (): Layout => {
     const n = makeNeuron(rng, {
       id: i,
       center: [x, y, -depth],
-      R: 0.1 * scale,
+      R: 0.2 * scale,
       nDend: irange(rng, counts.neuronNetwork.dendritesMin, counts.neuronNetwork.dendritesMax),
       dend: {
-        rootLen: 0.4 * scale,
+        rootLen: 0.46 * scale,
         rootRadius: 0.015 * scale,
         tipRadius: 0.0011,
-        maxDepth: rng() < 0.6 ? 3 : counts.neuronNetwork.branchDepth,
+        maxDepth: rng() < 0.8 ? 3 : counts.neuronNetwork.branchDepth,
         segLen: 0.045,
         wiggle: 0.28,
         spread: [0.3, 0.75],
@@ -52,8 +52,8 @@ export const buildLayout = (): Layout => {
       axon: {
         dir: axonDir,
         length: range(rng, 1.2, 3.4) * scale,
-        r0: 0.0075 * scale,
-        r1: 0.0045 * scale,
+        r0: 0.012 * scale,
+        r1: 0.007 * scale,
         wiggle: 0.12,
         segLen: 0.12,
         terminals: {

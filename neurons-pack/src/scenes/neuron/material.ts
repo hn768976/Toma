@@ -106,13 +106,13 @@ void main() {
   float spec = pow(max(dot(N, H), 0.0), 48.0);
   float spec2 = pow(max(dot(N, normalize(L2 + V)), 0.0), 24.0);
   // Subtle inner shade: the centre of a body reads darker than its rim.
-  vec3 col = uSilver * (0.10 + 0.42 * diff + 0.12 * diff2) * mix(0.55, 1.0, rim);
+  vec3 col = uSilver * (0.16 + 0.5 * diff + 0.14 * diff2) * mix(0.6, 1.0, rim);
   col += uSilver * rim * 0.85;
-  col += vec3(spec * 0.55 + spec2 * 0.18);
+  col += vec3(spec * 0.3 + spec2 * 0.12);
   bool isSoma = vKind < 0.5;
   bool isNucleus = vKind > 4.5;
   if (isNucleus) col *= 1.25;
-  if (vKind > 2.5 && vKind < 3.5) col *= 1.18; // myelin reads a touch lighter
+  if (vKind > 2.5 && vKind < 3.5) col *= 1.4; // myelin reads lighter than the bare axon
   if (!isSoma && !isNucleus) col *= uFibre;
   col *= uDim;
   col += vec3(vGlow);
@@ -162,7 +162,7 @@ void main() {
   float halo = (1.0 - r2) * (1.0 - r2);
   float core = exp(-r2 * 28.0);
   float v = vI * (0.35 * halo * halo + 1.4 * core);
-  outColor = vec4(vec3(v), 0.0);
+  outColor = vec4(vec3(v), 1.0); // AdditiveBlending is SRC_ALPHA, ONE
 }
 `,
   });

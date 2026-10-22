@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { easeInOut, smoothstep } from "../../lib/math";
 import { mulberry32, range } from "../../lib/random";
 import { Branch, GeoBuilder, KIND, V3, add, growTree, len, mul, norm, pathToRoot, polyline, sub } from "./geometry";
-import { Neuron, addNeuron, branchStartDist, somaRadius } from "./neuron";
+import { Neuron, addNeuron, branchStartDist, somaRadius, taperRoot } from "./neuron";
 
 export const FPS = 30;
 export const FOV = 35;
@@ -32,10 +32,10 @@ const AXON_CTRL: V3[] = [
   [2.95, -0.42, 0.05],
 ];
 const AXON_R = 0.024;
-const MYELIN_R = 0.05;
+const MYELIN_R = 0.04;
 const MYELIN_START = 0.75; // arc length before the first sheath (bare axon)
 const MYELIN_LEN = 0.62;
-const NODE_GAP = 0.085;
+const NODE_GAP = 0.11;
 
 export type AnatomyModel = {
   fibres: THREE.BufferGeometry;
@@ -68,7 +68,7 @@ const build = (): AnatomyModel => {
   const branches: Branch[] = [];
   const leaves: number[] = [];
   const spikes: { dir: V3; amp: number }[] = [];
-  const R = 0.42;
+  const R = 0.36;
   const dendDirs: V3[] = [
     [-0.25, 1, 0.1],
     [-1, 0.55, -0.1],
@@ -80,49 +80,51 @@ const build = (): AnatomyModel => {
   ];
   dendDirs.forEach((d0, i) => {
     const d = norm(d0);
-    const amp = i === 0 ? 1.1 : range(rng, 0.55, 0.85);
+    const amp = i === 0 ? 1.0 : range(rng, 0.3, 0.6);
     spikes.push({ dir: d, amp });
-    const start = add(SOMA, mul(d, R * (0.7 + amp) * 0.82));
+    const start = add(SOMA, mul(d, R * 0.6));
     const first = branches.length;
-    growTree(rng, branches, start, d, {
+    const root = growTree(rng, branches, start, d, {
       rootLen: i === 0 ? 0.62 : range(rng, 0.42, 0.55),
-      rootRadius: 0.04,
-      tipRadius: 0.0035,
+      rootRadius: 0.032,
+      tipRadius: 0.0025,
       maxDepth: 5,
       segLen: 0.045,
       wiggle: 0.2,
       spread: [0.3, 0.7],
       shrink: [0.72, 0.9],
     }, KIND.dendrite);
+    taperRoot(branches[root], R * (i === 0 ? 0.6 : 0.42), R * (i === 0 ? 2.6 : 1.5));
     for (let b = first; b < branches.length; b++) if (branches[b].depth === 5) leaves.push(b);
   });
   spikes.push({ dir: axonDir, amp: 1.0 });
   const axonIdx = branches.length;
   branches.push({
     pts: axonPts,
-    radii: axonPts.map((_, i) => AXON_R * (1 + 1.2 * Math.exp(-i / 6))),
+    radii: axonPts.map(() => AXON_R),
     grow: [],
     parent: -1,
     kind: KIND.axon,
     depth: 0,
   });
+  taperRoot(branches[axonIdx], R * 0.55, R * 2.4);
   // Terminals.
   const end = axonPts[axonPts.length - 1];
   const endDir = norm(sub(end, axonPts[axonPts.length - 4]));
   const termFirst = branches.length;
   growTree(rng, branches, end, endDir, {
-    rootLen: 0.62,
+    rootLen: 0.7,
     rootRadius: AXON_R * 0.9,
-    tipRadius: 0.005,
-    maxDepth: 4,
+    tipRadius: 0.004,
+    maxDepth: 5,
     segLen: 0.05,
-    wiggle: 0.16,
-    spread: [0.3, 0.65],
-    shrink: [0.8, 1.02],
-    bias: [0.06, 0, 0],
+    wiggle: 0.2,
+    spread: [0.35, 0.8],
+    shrink: [0.75, 0.97],
+    bias: [0.0, 0.025, 0],
   }, KIND.terminal, axonIdx);
   const termLeaves: number[] = [];
-  for (let b = termFirst; b < branches.length; b++) if (branches[b].depth === 4) termLeaves.push(b);
+  for (let b = termFirst; b < branches.length; b++) if (branches[b].depth === 5) termLeaves.push(b);
 
   const neuron: Neuron = { id: 0, center: SOMA, R, branches, leaves, axon: axonIdx, spikes };
 
@@ -182,15 +184,15 @@ const build = (): AnatomyModel => {
     const tip = br.pts[br.pts.length - 1];
     bulbs.push(tip);
     const g = br.grow[br.grow.length - 1];
-    fibres.blob(tip, () => 0.03, 2, () => [0, axonLen + 1, g, KIND.terminal]);
+    fibres.blob(tip, () => 0.02, 2, () => [0, axonLen + 1, g, KIND.terminal]);
   }
 
   // Soma (drawn translucent) and nucleus.
   const somaB = new GeoBuilder();
-  somaB.blob(SOMA, somaRadius(neuron), 5, () => [0, 0, 0, KIND.soma]);
+  somaB.blob(SOMA, somaRadius(neuron, { base: 0.92, power: 4, bumps: 0.03 }), 5, () => [0, 0, 0, KIND.soma]);
   const nucB = new GeoBuilder();
-  const NUC: V3 = add(SOMA, [0.03, 0.02, 0.04]);
-  nucB.blob(NUC, (d) => 0.15 * (1 + 0.06 * d[0] - 0.05 * d[1]), 3, () => [0, 0, 0, KIND.nucleus]);
+  const NUC: V3 = add(SOMA, [0.02, 0.03, 0.0]);
+  nucB.blob(NUC, (d) => 0.13 * (1 + 0.06 * d[0] - 0.05 * d[1]), 3, () => [0, 0, 0, KIND.nucleus]);
 
   // Leaves for the incoming signal: one each from three different trees.
   const pickLeaves = [leaves[3], leaves[Math.floor(leaves.length * 0.45)], leaves[leaves.length - 5]];
@@ -232,8 +234,8 @@ export const anatomyModel = () => (cache ??= build());
 /** Camera and model pose at time t (seconds): pure, shared with labels. */
 export const anatomyPose = (t: number) => {
   const pull = easeInOut(smoothstep(4, 12, t));
-  const target = new THREE.Vector3().lerpVectors(new THREE.Vector3(SOMA[0], SOMA[1], 0), new THREE.Vector3(0.45, 0.42, 0), pull);
-  const dist = 3.0 + (11.0 - 3.0) * pull;
+  const target = new THREE.Vector3().lerpVectors(new THREE.Vector3(SOMA[0], SOMA[1], 0), new THREE.Vector3(0.75, 0.4, 0), pull);
+  const dist = 6.2 + (11.6 - 6.2) * pull;
   const orbit = 0.35 * (1 - pull) + 0.02;
   const pos = new THREE.Vector3(target.x + Math.sin(orbit) * dist, target.y + 0.15 * (1 - pull), Math.cos(orbit) * dist);
   // The cell turns slowly while alone, settling before the pull-back ends.
