@@ -1,6 +1,7 @@
 import "./index.css";
 import "./load-fonts";
 import { Composition } from "remotion";
+import { BrainPackCompositions } from "./brain/BrainPack";
 import {
   BluetoothExplainer,
   bluetoothExplainerSchema,
@@ -22,6 +23,7 @@ import {
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      <BrainPackCompositions />
       <Composition
         id="BluetoothExplainer"
         component={BluetoothExplainer}

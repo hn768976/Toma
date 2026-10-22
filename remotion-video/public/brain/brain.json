@@ -1,0 +1,334 @@
+{
+ "source": {
+  "file_vertices": 130017,
+  "file_triangles": 198145,
+  "file_bounds": [
+   [
+    -0.7959,
+    -0.7791,
+    -0.9506
+   ],
+   [
+    0.7951,
+    0.7713,
+    0.9511
+   ]
+  ],
+  "file_name": "brain.glb",
+  "file_bytes": 6539328
+ },
+ "clean": {
+  "merged_duplicate_vertices": 30950,
+  "removed_stray_faces": 2,
+  "removed_degenerate_faces": 0,
+  "inverted_mesh": false,
+  "boundary_edges_before": 13,
+  "nonmanifold_edges": 1,
+  "boundary_edges_after": 13,
+  "vertices": 99065,
+  "triangles": 198143,
+  "hole_filled_edges": 13,
+  "relaxed_folded_faces": 37,
+  "relaxed_pits": 525,
+  "occipital_smoothed_vertices": 90,
+  "brainstem": "thickened 22 percent, pons bulge 0.065 (anterior) at y=-0.410",
+  "fissure_pull_max": 0.012
+ },
+ "normalise": {
+  "rotation": [
+   [
+    0.0,
+    0.0,
+    1.0
+   ],
+   [
+    0.0,
+    1.0,
+    0.0
+   ],
+   [
+    -1.0,
+    0.0,
+    0.0
+   ]
+  ],
+  "scale": 1.051666782945904,
+  "extents": [
+   2.0,
+   1.6305,
+   1.6732
+  ]
+ },
+ "qpos": 30000.0,
+ "files": {
+  "mesh": {
+   "bytes": 6043316,
+   "arrays": {
+    "position": {
+     "offset": 0,
+     "dtype": "float32",
+     "shape": [
+      99066,
+      3
+     ]
+    },
+    "normal": {
+     "offset": 1188792,
+     "dtype": "float32",
+     "shape": [
+      99066,
+      3
+     ]
+    },
+    "curv": {
+     "offset": 2377584,
+     "dtype": "float32",
+     "shape": [
+      99066
+     ]
+    },
+    "ao": {
+     "offset": 2773848,
+     "dtype": "float32",
+     "shape": [
+      99066
+     ]
+    },
+    "depth": {
+     "offset": 3170112,
+     "dtype": "float32",
+     "shape": [
+      99066
+     ]
+    },
+    "label": {
+     "offset": 3566376,
+     "dtype": "uint8",
+     "shape": [
+      99066
+     ]
+    },
+    "index": {
+     "offset": 3665444,
+     "dtype": "uint32",
+     "shape": [
+      198156,
+      3
+     ]
+    }
+   }
+  },
+  "inner": {
+   "bytes": 2533596,
+   "arrays": {
+    "position": {
+     "offset": 0,
+     "dtype": "float32",
+     "shape": [
+      51706,
+      3
+     ]
+    },
+    "normal": {
+     "offset": 620472,
+     "dtype": "float32",
+     "shape": [
+      51706,
+      3
+     ]
+    },
+    "label": {
+     "offset": 1240944,
+     "dtype": "uint8",
+     "shape": [
+      51706
+     ]
+    },
+    "index": {
+     "offset": 1292652,
+     "dtype": "uint32",
+     "shape": [
+      103412,
+      3
+     ]
+    }
+   },
+   "parts": {
+    "ventricles": {
+     "label": 3,
+     "vertices": 18780,
+     "triangles": 37552
+    },
+    "corpus_callosum": {
+     "label": 4,
+     "vertices": 17136,
+     "triangles": 34268
+    },
+    "thalamus": {
+     "label": 5,
+     "vertices": 9810,
+     "triangles": 19640
+    },
+    "hippocampus": {
+     "label": 6,
+     "vertices": 5980,
+     "triangles": 11952
+    }
+   }
+  },
+  "points": {
+   "bytes": 9600000,
+   "arrays": {
+    "position": {
+     "offset": 0,
+     "dtype": "int16",
+     "shape": [
+      800000,
+      3
+     ]
+    },
+    "normal": {
+     "offset": 4800000,
+     "dtype": "int8",
+     "shape": [
+      800000,
+      3
+     ]
+    },
+    "curv": {
+     "offset": 7200000,
+     "dtype": "int8",
+     "shape": [
+      800000
+     ]
+    },
+    "ao": {
+     "offset": 8000000,
+     "dtype": "uint8",
+     "shape": [
+      800000
+     ]
+    },
+    "label": {
+     "offset": 8800000,
+     "dtype": "uint8",
+     "shape": [
+      800000
+     ]
+    }
+   },
+   "cortex": 640000,
+   "inner": 160000
+  },
+  "fibres": {
+   "bytes": 1188000,
+   "arrays": {
+    "position": {
+     "offset": 0,
+     "dtype": "int16",
+     "shape": [
+      192000,
+      3
+     ]
+    },
+    "kind": {
+     "offset": 1152000,
+     "dtype": "uint8",
+     "shape": [
+      6000
+     ]
+    },
+    "label": {
+     "offset": 1158000,
+     "dtype": "uint8",
+     "shape": [
+      6000
+     ]
+    },
+    "length": {
+     "offset": 1164000,
+     "dtype": "float32",
+     "shape": [
+      6000
+     ]
+    }
+   },
+   "count": 6000,
+   "pointsPerFibre": 32
+  },
+  "thoughts": {
+   "bytes": 60900,
+   "arrays": {
+    "position": {
+     "offset": 0,
+     "dtype": "float32",
+     "shape": [
+      5040,
+      3
+     ]
+    },
+    "count": {
+     "offset": 60480,
+     "dtype": "uint8",
+     "shape": [
+      420
+     ]
+    }
+   },
+   "count": 420,
+   "pointsPerLine": 12
+  },
+  "arcs": {
+   "bytes": 96768,
+   "arrays": {
+    "main": {
+     "offset": 0,
+     "dtype": "float32",
+     "shape": [
+      3840,
+      3
+     ]
+    },
+    "forks": {
+     "offset": 46080,
+     "dtype": "float32",
+     "shape": [
+      4032,
+      3
+     ]
+    },
+    "forkAt": {
+     "offset": 94464,
+     "dtype": "float32",
+     "shape": [
+      96,
+      3
+     ]
+    },
+    "centre": {
+     "offset": 95616,
+     "dtype": "float32",
+     "shape": [
+      96,
+      3
+     ]
+    }
+   },
+   "count": 96,
+   "mainPts": 40,
+   "forkPts": 14,
+   "forks": 3
+  }
+ },
+ "parts": {
+  "cortex_mesh": {
+   "vertices": 99066,
+   "triangles": 198156
+  },
+  "labels": {
+   "cerebrum": 87305,
+   "cerebellum": 9344,
+   "brainstem": 2417
+  }
+ }
+}
