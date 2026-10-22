@@ -12,14 +12,14 @@ export const HEIGHT = 2160;
 // (height BOWL_HEIGHT at BOWL_RADIUS, exponent BOWL_FLARE), and each one
 // sweeps in plan view (BLADE_SWEEP radians per unit of radius) so the
 // blades curve like gills.
-export const BLADE_COUNT = 44;
+export const BLADE_COUNT = 64;
 export const BOWL_RADIUS = 12;
-export const BOWL_HEIGHT = 0.8;
+export const BOWL_HEIGHT = 2.5;
 export const BOWL_FLARE = 2;
 export const HUB_RADIUS = 0.2;
 export const BLADE_DEPTH = 6;
-export const BLADE_THICKNESS = 0.12;
-export const BLADE_SWEEP = 0.06;
+export const BLADE_THICKNESS = 0.22;
+export const BLADE_SWEEP = 0.12;
 
 // The fan turns by a whole number of blade spacings per loop, so frame 0
 // and frame DURATION_IN_FRAMES are identical and the clip loops

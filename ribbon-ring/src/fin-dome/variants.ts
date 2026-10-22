@@ -25,8 +25,8 @@ const ORBIT_ANGLE = (-45 * Math.PI) / 180;
 // it goes. It starts on the reference framing and ends looking down
 // into the fan from above the rim.
 const ORBIT_END: CameraPose = {
-  position: orbit([-2.5, 4.5, 7.5], HUB, ORBIT_ANGLE),
-  target: orbit([-1.2, -0.6, 0], HUB, ORBIT_ANGLE),
+  position: orbit([-2.5, 4.2, 7.5], HUB, ORBIT_ANGLE),
+  target: orbit([-1.6, -2.4, 0], HUB, ORBIT_ANGLE),
   fov: 48,
   roll: 0,
   focus: 5,

@@ -44,6 +44,13 @@ export const finDomeSchema = z.object({
   glowRadius: z.number(),
   hazeRadius: z.number(),
   hazeStrength: z.number(),
+  // Blades sink out of view as they rotate away from the camera's side
+  // of the fan, opening the sky on the far side as in the reference.
+  // visibleOffset turns the kept side relative to the camera's azimuth
+  // (radians, around the spin axis); fadeWidth is how wide (in cos-space)
+  // the sink transition is.
+  visibleOffset: z.number(),
+  fadeWidth: z.number(),
   // Camera at the first and last frame; eased in between. Identical
   // poses = locked-off camera.
   cameraStart: cameraPoseSchema,
@@ -60,37 +67,52 @@ export const finDomeSchema = z.object({
 export type FinDomeProps = z.infer<typeof finDomeSchema>;
 export type CameraPose = z.infer<typeof cameraPoseSchema>;
 
-// Locked-off framing matched to the reference: low over the blade tips,
-// slightly rolled, looking along the blades as they converge on the
-// glowing hub at upper right.
+// Locked-off framing matched to the reference: close over the near
+// blades, slightly rolled, looking down their broad curved faces as they
+// sweep up towards the glow (the hub sits just off the top of frame).
 export const REFERENCE_CAMERA: CameraPose = {
-  position: [-2, 1.3, 6],
-  target: [-2.4, -0.7, 0],
+  position: [-2.5, 2.6, 6.5],
+  target: [-2.9, -2.3, 0],
   fov: 50,
-  roll: 0.22,
-  focus: 3,
+  roll: 0.25,
+  focus: 4,
 };
 
 export const finDomeDefaults: FinDomeProps = {
-  bladeColor: "#8a4ee0",
+  bladeColor: "#9a56e8",
   sheenColor: "#e0a8ff",
   skyLight: "#b890ff",
-  groundLight: "#4a38d0",
+  groundLight: "#5a40d8",
   backgroundColor: "#3360d0",
   cornerColor: "#5a3fc8",
   glowColor: "#d4caf2",
-  glowRadius: 0.9,
-  hazeRadius: 0.8,
-  hazeStrength: 0.5,
+  glowRadius: 1.1,
+  hazeRadius: 1.0,
+  hazeStrength: 0.4,
+  visibleOffset: -0.39,
+  fadeWidth: 0.6,
   cameraStart: REFERENCE_CAMERA,
   cameraEnd: REFERENCE_CAMERA,
-  focusScale: 12,
+  focusScale: 8,
   maxBlur: 0.04,
-  // Just behind the hub, so the glow blooms where the blades converge.
-  lightPosition: [0.5, 0.6, -2],
+  // Just behind and above the hub, so the glow blooms where the blades
+  // converge.
+  lightPosition: [0.5, 1.5, -2],
 };
 
-const bladeTop = (r: number) => BOWL_HEIGHT * Math.pow(Math.min(1, r / BOWL_RADIUS), BOWL_FLARE);
+// How far a blade sinks once it has rotated fully into the hidden side.
+const SINK_DEPTH = 9;
+
+// Top edge: rises outward along the bowl profile, then curls down over
+// the last quarter of the span in a quarter-ellipse, so blade ends read
+// as rounded tips rather than square cuts.
+const ROUND_START = BOWL_RADIUS * 0.72;
+const bladeTop = (r: number) => {
+  const bowl = BOWL_HEIGHT * Math.pow(Math.min(1, r / BOWL_RADIUS), BOWL_FLARE);
+  if (r <= ROUND_START) return bowl;
+  const u = Math.min(1, (r - ROUND_START) / (BOWL_RADIUS - ROUND_START));
+  return bowl - BLADE_DEPTH * (1 - Math.sqrt(1 - u * u));
+};
 
 // One blade: a thin plate whose top edge follows the bowl profile, built
 // flat in (radius, height) and then bent round the Y axis so it sweeps
@@ -125,12 +147,12 @@ const createBladeGeometry = () => {
   const pos = geometry.attributes.position;
   const colors = new Float32Array(pos.count * 3);
   const lip = new THREE.Color(1, 1, 1);
-  const core = new THREE.Color(0.42, 0.36, 0.95);
+  const core = new THREE.Color(0.2, 0.26, 0.95);
   const c = new THREE.Color();
   for (let i = 0; i < pos.count; i++) {
     const r = pos.getX(i);
     const below = bladeTop(r) - pos.getY(i);
-    c.copy(lip).lerp(core, THREE.MathUtils.smoothstep(below, 0.1, 2.5));
+    c.copy(lip).lerp(core, THREE.MathUtils.smoothstep(below, 0.05, 1.2));
     colors.set([c.r, c.g, c.b], i * 3);
     const angle = BLADE_SWEEP * r + pos.getZ(i) / Math.max(r, HUB_RADIUS);
     pos.setXYZ(i, r * Math.cos(angle), pos.getY(i), r * Math.sin(angle));
@@ -192,6 +214,7 @@ type SceneState = {
   dof: DofPipeline;
   camera: THREE.PerspectiveCamera;
   fan: THREE.Group;
+  blades: THREE.Mesh[];
   bladeMaterial: THREE.MeshPhysicalMaterial;
   background: THREE.ShaderMaterial;
   hemi: THREE.HemisphereLight;
@@ -223,16 +246,18 @@ const buildScene = (canvas: HTMLCanvasElement, width: number, height: number): S
     metalness: 0,
     sheen: 1,
     sheenRoughness: 0.35,
-    clearcoat: 0.2,
+    clearcoat: 0,
     clearcoatRoughness: 0.5,
   });
 
   const geometry = createBladeGeometry();
   const fan = new THREE.Group();
+  const blades: THREE.Mesh[] = [];
   for (let i = 0; i < BLADE_COUNT; i++) {
     const blade = new THREE.Mesh(geometry, bladeMaterial);
     blade.rotation.y = (i / BLADE_COUNT) * Math.PI * 2;
     fan.add(blade);
+    blades.push(blade);
   }
   scene.add(fan);
 
@@ -240,7 +265,7 @@ const buildScene = (canvas: HTMLCanvasElement, width: number, height: number): S
   scene.add(hemi);
   // The glow is the light source: a point light at lightPosition, plus a
   // soft white key from the camera side.
-  const glowLight = new THREE.PointLight(0xf4ecff, 22, 0, 1.0);
+  const glowLight = new THREE.PointLight(0xf4ecff, 8, 0, 1.0);
   scene.add(glowLight);
   // Rim light from above and behind the glow: lights the blade lips
   // while their faces fall into blue shadow.
@@ -256,7 +281,7 @@ const buildScene = (canvas: HTMLCanvasElement, width: number, height: number): S
 
   const dof = new DofPipeline(width, height);
 
-  return { renderer, scene, dof, camera, fan, bladeMaterial, background, hemi, glowLight, rimLight };
+  return { renderer, scene, dof, camera, fan, blades, bladeMaterial, background, hemi, glowLight, rimLight };
 };
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -278,6 +303,8 @@ export const FinDome: React.FC<FinDomeProps> = ({
   glowRadius,
   hazeRadius,
   hazeStrength,
+  visibleOffset,
+  fadeWidth,
   cameraStart,
   cameraEnd,
   focusScale,
@@ -310,8 +337,8 @@ export const FinDome: React.FC<FinDomeProps> = ({
     s.hemi.groundColor.set(groundLight);
 
     // Constant angular speed: one blade spacing per loop.
-    s.fan.rotation.y = (frame / DURATION_IN_FRAMES) * LOOP_ROTATION;
-
+    const spin = (frame / DURATION_IN_FRAMES) * LOOP_ROTATION;
+    s.fan.rotation.y = spin;
     const t = interpolate(frame, [0, DURATION_IN_FRAMES - 1], [0, 1], {
       easing: Easing.inOut(Easing.sin),
       extrapolateLeft: "clamp",
@@ -324,6 +351,20 @@ export const FinDome: React.FC<FinDomeProps> = ({
     s.camera.fov = lerp(cameraStart.fov, cameraEnd.fov, t);
     s.camera.updateProjectionMatrix();
     s.camera.updateMatrixWorld();
+
+    const visibleAzimuth = Math.atan2(s.camera.position.z, s.camera.position.x) + visibleOffset;
+    // A blade at rotation.y = a points its root along azimuth -a (azimuth
+    // = atan2(z, x)); its mid-span sits a little further round because of
+    // the sweep. Sinking depends only on that azimuth relative to the
+    // camera's, so with a locked-off camera the loop stays seamless.
+    s.blades.forEach((blade, i) => {
+      const a = (i / BLADE_COUNT) * Math.PI * 2 + spin;
+      const azimuth = -a + BLADE_SWEEP * BOWL_RADIUS * 0.5;
+      const f = THREE.MathUtils.smoothstep(Math.cos(azimuth - visibleAzimuth), -fadeWidth, fadeWidth);
+      blade.visible = f > 0.001;
+      blade.position.y = -(1 - f) * SINK_DEPTH;
+    });
+
 
     // Glow and haze follow the light's on-screen position, so they stay
     // locked to it however the camera moves.
@@ -362,6 +403,8 @@ export const FinDome: React.FC<FinDomeProps> = ({
     glowRadius,
     hazeRadius,
     hazeStrength,
+    visibleOffset,
+    fadeWidth,
     cameraStart,
     cameraEnd,
     focusScale,
