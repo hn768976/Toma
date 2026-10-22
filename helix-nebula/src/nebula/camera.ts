@@ -1,17 +1,14 @@
 import { DURATION_IN_FRAMES } from "./constants";
 
-// Camera paths measured from the reference with frame-to-frame tracking,
-// then fitted with cubics in normalised time t = frame / (duration - 1).
-// Coefficients are t^3..t^0.
-//
-// The reference is a 2.5D move: the star field (tracked with sparse optical
-// flow on point features) pushes in faster than the nebula and its clouds
-// (tracked with ECC on a star-free, median-filtered image). Each layer gets
-// its own path so the parallax matches.
-//   logScale: ln(zoom)
-//   rotDeg:   image rotation in degrees (y-down image space)
-//   qx, qy:   world point at the centre of the screen, in units of the
-//             frame height, y pointing down
+// Camera path measured from the reference, as cubics in normalised time
+// t = frame / (duration - 1). Coefficients are t^3..t^0.
+//   logScale, rotDeg: from ECC registration of star-free (median-filtered)
+//     frames in 100-frame steps, cross-checked with SIFT matches on stars.
+//     Stars and nebula move together (no parallax): 1.0x -> ~1.56x,
+//     0 -> ~-11.4 deg (image space, y down).
+//   qx, qy: world point at the centre of the screen (frame-height units,
+//     y down), solved per frame so the core lands where the reference's
+//     magenta core centroid is.
 type Path = {
   logScale: number[];
   rotDeg: number[];
@@ -19,20 +16,11 @@ type Path = {
   qy: number[];
 };
 
-// Nebula + clouds: 1.0x -> ~1.60x, 0 -> ~-11.0 deg.
-const NEBULA_PATH: Path = {
-  logScale: [-0.112, 0.23155, 0.35224, 0],
-  rotDeg: [-9.43233, 16.3931, -18.22179, 0],
-  qx: [0.05461, -0.29074, 0.21041, 0],
-  qy: [-0.03353, 0.25744, -0.25297, 0],
-};
-
-// Star field: 1.0x -> ~1.93x, 0 -> ~-15.7 deg.
-const STAR_PATH: Path = {
-  logScale: [-0.13821, 0.20702, 0.58702, 0],
-  rotDeg: [0.77635, -3.90002, -12.77712, 0],
-  qx: [0.08621, -0.31558, 0.20284, 0],
-  qy: [-0.10902, 0.36499, -0.28417, 0],
+const PATH: Path = {
+  logScale: [0.07166, -0.06379, 0.43448, 0],
+  rotDeg: [-3.14587, 3.0493, -11.34189, 0],
+  qx: [0.04492, -0.29697, 0.23347, 0.00441],
+  qy: [0.05052, 0.15014, -0.2528, -0.01939],
 };
 
 const cubic = (c: number[], t: number) =>
@@ -45,7 +33,8 @@ export type CameraState = {
   centerY: number;
 };
 
-const evaluate = (path: Path, frame: number): CameraState => {
+export const getCamera = (frame: number): CameraState => {
+  const path = PATH;
   const t = Math.min(1, Math.max(0, frame / (DURATION_IN_FRAMES - 1)));
   return {
     zoom: Math.exp(cubic(path.logScale, t)),
@@ -54,9 +43,6 @@ const evaluate = (path: Path, frame: number): CameraState => {
     centerY: cubic(path.qy, t),
   };
 };
-
-export const getNebulaCamera = (frame: number) => evaluate(NEBULA_PATH, frame);
-export const getStarCamera = (frame: number) => evaluate(STAR_PATH, frame);
 
 // Screen -> world: world = center + (1 / zoom) * R(-rotation) * screen.
 // Returned column-major for a GLSL mat2.

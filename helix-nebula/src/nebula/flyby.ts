@@ -1,11 +1,11 @@
 import { FPS } from "./constants";
 
 // Foreground dust that drifts past the lens in the last quarter of the shot
-// (in the reference, soft white motes appear from ~15.5 s to ~19 s). Each
+// (in the reference, one or two soft white motes at a time, ~16.3-18.8 s). Each
 // mote travels on a straight 3D path towards the camera, so it accelerates
 // outwards and swells as it gets closer.
 
-export const MAX_FLYBY = 16;
+export const MAX_FLYBY = 6;
 
 type Mote = {
   start: number; // seconds
@@ -32,12 +32,12 @@ const MOTES: Mote[] = (() => {
     const a = rnd() * Math.PI * 2;
     motes.push({
       // Mostly late in the shot, matching the reference.
-      start: 14.6 + (i / MAX_FLYBY) * 4.6 + (rnd() - 0.5) * 0.4,
-      life: 0.9 + rnd() * 0.9,
+      start: 16.2 + (i / MAX_FLYBY) * 2.2 + (rnd() - 0.5) * 0.2,
+      life: 0.7 + rnd() * 0.5,
       dirX: Math.cos(a),
       dirY: Math.sin(a),
       dist0: 0.12 + rnd() * 0.32,
-      size: 0.03 + Math.pow(rnd(), 2) * 0.03,
+      size: 0.045 + Math.pow(rnd(), 2) * 0.035,
     });
   }
   return motes;

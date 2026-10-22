@@ -7,7 +7,7 @@ import {
   useVideoConfig,
 } from "remotion";
 import { z } from "zod";
-import { getNebulaCamera, getStarCamera, screenToWorldMatrix } from "./camera";
+import { getCamera, screenToWorldMatrix } from "./camera";
 import { getFlyby } from "./flyby";
 import { emberPalette, paletteToArray, referencePalette } from "./palettes";
 import { FRAGMENT_SHADER, VERTEX_SHADER } from "./shader";
@@ -64,11 +64,8 @@ const initGl = (canvas: HTMLCanvasElement): GlState => {
     "uRes",
     "uCam",
     "uCamCenter",
-    "uStarCam",
-    "uStarCenter",
     "uTime",
     "uPx",
-    "uStarPx",
     "uStarSize",
     "uPal",
     "uFly",
@@ -101,18 +98,14 @@ export const HelixNebula: React.FC<Props> = ({ palette }) => {
     if (!glRef.current) glRef.current = initGl(canvas);
     const { gl, uniforms } = glRef.current;
 
-    const cam = getNebulaCamera(frame);
-    const starCam = getStarCamera(frame);
+    const cam = getCamera(frame);
     gl.viewport(0, 0, bufW, bufH);
     gl.uniform2f(uniforms.uRes, bufW, bufH);
     gl.uniformMatrix2fv(uniforms.uCam, false, screenToWorldMatrix(cam));
     gl.uniform2f(uniforms.uCamCenter, cam.centerX, cam.centerY);
-    gl.uniformMatrix2fv(uniforms.uStarCam, false, screenToWorldMatrix(starCam));
-    gl.uniform2f(uniforms.uStarCenter, starCam.centerX, starCam.centerY);
     gl.uniform1f(uniforms.uTime, frame / fps);
     gl.uniform1f(uniforms.uPx, 1 / cam.zoom / bufH);
-    gl.uniform1f(uniforms.uStarPx, 1 / starCam.zoom / bufH);
-    gl.uniform1f(uniforms.uStarSize, Math.pow(starCam.zoom, -0.7));
+    gl.uniform1f(uniforms.uStarSize, Math.pow(cam.zoom, -0.7));
     gl.uniform3fv(
       uniforms.uPal,
       paletteToArray(palette === "ember" ? emberPalette : referencePalette),

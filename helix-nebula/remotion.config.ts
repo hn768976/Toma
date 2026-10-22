@@ -12,6 +12,9 @@ import { enableTailwind } from '@remotion/tailwind-v4';
 Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
+// Deliver limited-range BT.709 yuv420p H.264, which every player reads correctly.
+Config.setPixelFormat("yuv420p");
+Config.setColorSpace("bt709");
 Config.setDefaultPremountInSeconds(2);
 Config.overrideBundlerConfig(enableTailwind);
 

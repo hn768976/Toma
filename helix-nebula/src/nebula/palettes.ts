@@ -41,17 +41,17 @@ export const PALETTE_KEYS: (keyof Palette)[] = [
 // Matches the reference: deep navy space, royal-blue clouds, lavender-white
 // ring and a magenta core.
 export const referencePalette: Palette = {
-  space: "#050a18",
+  space: "#07101e",
   cloud: "#2c4aae",
   fog: "#78868e",
   shell: "#2c47a6",
   shellHi: "#7d93ff",
-  gap: "#3b43a0",
-  ringEdge: "#9ba5e6",
+  gap: "#4650c8",
+  ringEdge: "#a6acdc",
   ringHot: "#f0f3fa",
-  ringTint: "#d6e6b4",
-  coreOuter: "#b22fd6",
-  coreInner: "#ff6cf6",
+  ringTint: "#d8e4a8",
+  coreOuter: "#b830c8",
+  coreInner: "#ff70e8",
   star1: "#ffffff",
   star2: "#5fe6ff",
   star3: "#4dff7a",

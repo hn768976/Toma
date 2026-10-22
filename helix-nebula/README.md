@@ -1,9 +1,9 @@
 # Helix Nebula push-in (Remotion + WebGL 2)
 
 This is a procedural recreation of a 20-second stock shot of the Helix ("Eye of God")
-nebula. The camera slowly pushes in, rotates and drifts, and the star field
-moves with parallax. The whole frame is one WebGL 2 fragment shader rendered
-inside a Remotion composition. It uses no bitmaps or video assets.
+nebula, with a slow push-in, rotation and drift. The whole frame is one WebGL 2
+fragment shader rendered inside a Remotion composition. It uses no bitmaps or
+video assets.
 
 | | |
 |---|---|
@@ -41,16 +41,15 @@ added only when the pixel size can resolve them.
 
 ## How it is built
 
-- `src/nebula/camera.ts` holds two camera paths measured from the reference
-  by tracking. The star field was tracked with sparse optical flow. The nebula
-  and clouds were tracked with ECC on a median-filtered, star-free image. Both
-  paths are fitted with cubics. The nebula zooms 1.0× → 1.60× and rotates
-  −11°. The stars zoom 1.0× → 1.93× and rotate −15.7°, which gives the
-  parallax.
+- `src/nebula/camera.ts` holds the camera path measured from the reference.
+  Zoom and rotation come from ECC registration of star-free frames, checked
+  against SIFT star matches: 1.0× → about 1.56×, and 0° → about −11.4°. The
+  drift is solved per frame so the core follows the reference's core centroid.
+  Stars and nebula move together, with no parallax.
 - `src/nebula/shader.ts` builds the frame from these parts:
   - fbm clouds in a diagonal band
   - the outer helix shell and its left loop
-  - a fibrous inner ring made from radial-streak noise plus grain
+  - a lumpy, domain-warped inner ring with fine radial grain
   - a dark annulus
   - a spiky magenta core with drifting sparks
   - four hashed star layers
