@@ -8,10 +8,10 @@ export type SatelliteVariant = "reference" | "orbit";
  */
 export const T = {
   targetPing: 108, // 3.6 s red target dot pops on the pivot cluster
-  iconC: 135, // 4.5 s "C" scan icon + dashed range circle
-  lensStart: 150, // 5.0 s frosted halo sweeps on clockwise
-  lensFull: 168, // 5.6 s
-  amberRing: 168, // 5.6 s amber lens rim + label bar
+  iconC: 128, // 4.3 s "C" scan icon + dashed range circle
+  lensStart: 138, // 4.6 s frosted halo sweeps on clockwise
+  lensFull: 162, // 5.4 s
+  amberRing: 164, // 5.5 s amber lens rim + label bar
   zoomStart: 360, // 12.0 s dive into the farm district
   zoomEnd: 398, // 13.3 s
   lockOn: 480, // 16.0 s targeting reticle draws on
@@ -24,7 +24,7 @@ export const T = {
 /** World point the scan locks on to in the regional shot. */
 export const WIDE_TARGET = { x: 0.4, y: 1.2 };
 /** World point at the centre of the close-up reticle. */
-export const CLOSE_TARGET = { x: 0.4, y: 0.5 };
+export const CLOSE_TARGET = { x: 0.4, y: 1.3 };
 
 const wideRef = (f: number): Camera => {
   const t = ramp(f, 0, T.zoomStart);
@@ -40,8 +40,8 @@ const wideRef = (f: number): Camera => {
 const closeRef = (f: number): Camera => {
   const t = ramp(f, T.zoomEnd, 668);
   return {
-    cx: lerp(0.5, 0.15, t),
-    cy: lerp(0.3, 0.6, t),
+    cx: lerp(1.45, 1.15, t),
+    cy: lerp(1.15, 1.45, t),
     span: lerp(7.0, 6.5, t),
     rot: lerp(0.0, -0.012, t),
     tilt: 0.16,
@@ -62,8 +62,8 @@ const wideOrbit = (f: number): Camera => {
 const closeOrbit = (f: number): Camera => {
   const t = ramp(f, T.zoomEnd, 668);
   return {
-    cx: lerp(0.5, 0.3, t),
-    cy: lerp(0.3, 0.6, t),
+    cx: lerp(1.2, 1.0, t),
+    cy: lerp(1.0, 1.4, t),
     span: lerp(6.4, 5.8, t),
     rot: lerp(0.45, 0.95, t),
     tilt: lerp(0.78, 0.86, t),

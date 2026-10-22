@@ -24,7 +24,7 @@ export const satelliteSchema = z.object({
 export type SatelliteProps = z.infer<typeof satelliteSchema>;
 
 /** Lens radius (fraction of frame height) at rest in the regional shot. */
-const LENS_R = 0.36;
+const LENS_R = 0.37;
 
 export const SatelliteTargeting: React.FC<SatelliteProps> = ({ variant }) => {
   useFonts();
@@ -42,8 +42,7 @@ export const SatelliteTargeting: React.FC<SatelliteProps> = ({ variant }) => {
 
   // Exposure pop as the scan engages and a soft flash at the end of the dive.
   const flash =
-    0.14 * Math.exp(-Math.pow((frame - T.lensStart - 4) / 6, 2)) +
-    0.1 * Math.exp(-Math.pow((frame - T.zoomEnd + 6) / 5, 2));
+    0.12 * Math.exp(-Math.pow((frame - T.lensStart - 4) / 6, 2));
 
   const uniforms = useMemo(
     () => ({
@@ -53,7 +52,10 @@ export const SatelliteTargeting: React.FC<SatelliteProps> = ({ variant }) => {
       uMid: pal.mid,
       uLight: pal.light,
       uGridColor: pal.grid,
-      uGridAlpha: frame < T.zoomEnd ? 0.16 : 0.1,
+      // Fade the ground grid out and back in around the period switch.
+      uGridAlpha:
+        (frame < (T.zoomStart + T.zoomEnd) / 2 ? 0.16 : 0.1) *
+        Math.min(1, Math.abs(frame - (T.zoomStart + T.zoomEnd) / 2) / 10),
       uGridPeriod: frame < (T.zoomStart + T.zoomEnd) / 2 ? 8 : 1.6,
       uLensC: tgt ? [tgt.x / DESIGN_WIDTH, tgt.y / DESIGN_HEIGHT] : [0.5, 0.5],
       uLensR: lensR,
@@ -64,8 +66,8 @@ export const SatelliteTargeting: React.FC<SatelliteProps> = ({ variant }) => {
       uHaze: pal.haze,
       uWideB: [...WIDE_BOUNDS],
       uCloseB: [...CLOSE_BOUNDS],
-      uExposure: 1.1 + flash,
-      uVignette: 0.55,
+      uExposure: 1.05 + flash,
+      uVignette: 0.7,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [frame, variant],

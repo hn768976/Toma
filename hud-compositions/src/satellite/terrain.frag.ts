@@ -124,7 +124,9 @@ float farm(vec2 p, float px, float farmMask) {
     code = rnd < dens ? (rnd2 < 0.5 ? 1 : 5) : (rnd2 < 0.5 ? 0 : 4);
   }
   float w = px / cell;
-  float d = length(f);
+  // Organic jitter so pivots are not a perfect lattice.
+  vec2 fj = f - (vec2(rnd, rnd2) - 0.5) * 0.06;
+  float d = length(fj);
   // Bare soil base with plough striping.
   float stripe = 0.5 + 0.5 * sin((rnd2 > 0.5 ? f.x : f.y) * 90.0);
   float soil = 0.62 + 0.3 * (fbm(p * 1.5, px * 1.5, 7) - 0.5) + 0.1 * (rnd - 0.5) + 0.08 * (fbm(p * 12.0, px * 12.0, 4) - 0.5);
@@ -135,7 +137,7 @@ float farm(vec2 p, float px, float farmMask) {
   // Faint wheel-track rings on pivots.
   float rings = 0.012 * sin(d * 120.0) * clamp(1.0 - w * 60.0, 0.0, 1.0);
   if (code == 1 || code == 5 || code == 6 || code == 3) {
-    float r = code == 5 ? 0.36 : 0.47;
+    float r = (code == 5 ? 0.36 : 0.47) * (0.9 + 0.12 * rnd2);
     float inside = 1.0 - aaStep(r, d, w * 1.2);
     float crop = darkCrop + rings;
     if (code == 3) inside *= aaStep(0.0, f.x * (rnd > 0.5 ? 1.0 : -1.0), w);
@@ -152,11 +154,15 @@ float farm(vec2 p, float px, float farmMask) {
     lum = mix(lum, darkCrop + rings, 1.0 - aaStep(0.0, sd, w));
   }
   // Farmsteads: small buildings in some corners.
-  vec2 corner = f - vec2(0.38, -0.38) * sign(vec2(rnd - 0.5, rnd2 - 0.5));
-  vec2 bq = abs(corner) - vec2(0.05, 0.03);
-  float bd = length(max(bq, 0.0));
-  float bmask = (hash21(vec2(c) + 77.0) > 0.55) ? 1.0 - aaStep(0.0, bd, w) : 0.0;
-  lum = mix(lum, rnd > 0.5 ? 0.95 : 0.15, bmask * 0.9);
+  for (int k = 0; k < 3; k++) {
+    float hk = hash21(vec2(c) + 77.0 + float(k) * 13.0);
+    if (hk < 0.45) continue;
+    vec2 at = vec2(hash21(vec2(c) * 3.1 + float(k)), hash21(vec2(c) * 5.7 + float(k))) - 0.5;
+    at = sign(at) * (0.36 + 0.08 * abs(at));
+    vec2 bq = abs(f - at) - vec2(0.03 + 0.04 * hk, 0.02 + 0.03 * rnd);
+    float bmask = 1.0 - aaStep(0.0, length(max(bq, 0.0)), w);
+    lum = mix(lum, hk > 0.75 ? 0.95 : 0.12, bmask * 0.9);
+  }
   // Regional blotches that ignore field boundaries.
   lum += 0.2 * (fbm(p * 0.35 + 8.0, px * 0.35, 5) - 0.5);
   // Section roads between fields.
@@ -243,8 +249,9 @@ float terrain(vec2 p, float px) {
 
   // --- highway / rail and desert tracks
   float hd = abs(dot(p - vec2(1.0, 5.6), normalize(vec2(0.42, 1.0))));
-  lum = mix(lum, 0.28, (1.0 - aaStep(0.035, hd, px)) * 0.7);
-  lum = mix(lum, 0.92, (1.0 - aaStep(0.012, abs(hd - 0.16), px)) * 0.6);
+  lum = mix(lum, 0.2, (1.0 - aaStep(0.07, hd, px)) * 0.85);
+  lum = mix(lum, 0.95, (1.0 - aaStep(0.015, abs(hd - 0.09), px)) * 0.7);
+  lum = mix(lum, 0.92, (1.0 - aaStep(0.014, abs(hd - 0.22), px)) * 0.7);
   float t1 = abs(dot(p - vec2(-30.0, 10.0), normalize(vec2(0.25, 1.0))));
   lum = mix(lum, 0.85, (1.0 - aaStep(0.03, t1, px)) * 0.4 * (1.0 - fmask) * (1.0 - m));
   float t2 = abs(p.x - 14.0 + 0.3 * p.y);
@@ -344,7 +351,7 @@ float sampleTerrain(vec2 p, float px) {
 
 vec3 grade(float l) {
   l = clamp(l * uExposure, 0.0, 1.0);
-  l = mix(l, l * l * (3.0 - 2.0 * l), 0.45); // S-curve contrast
+  l = mix(l, l * l * (3.0 - 2.0 * l), 0.7); // S-curve contrast
   vec3 c = l < 0.5 ? mix(uShadow, uMid, l * 2.0) : mix(uMid, uLight, l * 2.0 - 1.0);
   return c;
 }
@@ -385,11 +392,11 @@ void main() {
     // Frosted ring: terrain pushed toward white with soft, noisy edges.
     float n = fbm(dv * 40.0 + 3.0, 0.0, 4);
     float ring = smoothstep(rIn - 0.004, rIn + 0.002, r) * (1.0 - smoothstep(rOut - 0.02 - 0.015 * n, rOut + 0.004, r));
-    vec3 frost = mix(col, vec3(0.93, 0.96, 0.98), 0.72 + 0.18 * (n - 0.5));
+    vec3 frost = mix(col, vec3(0.94, 0.97, 0.99), 0.84 + 0.14 * (n - 0.5));
     frost += 0.04 * (fbm(p * 1.5, px, 3) - 0.5);
     // Interior: brightened and tinted.
     float inner = 1.0 - smoothstep(rIn - 0.002, rIn + 0.002, r);
-    vec3 tinted = mix(col, col * uLensTint * 1.05 + 0.05, 0.75);
+    vec3 tinted = mix(col, col * uLensTint * 1.05 + 0.06, 0.65);
     // Radar sweep wedge trailing the sweep angle.
     float sa = atan(dv.x, -dv.y);
     float rel = fract((uSweep - sa) / 6.2831853);

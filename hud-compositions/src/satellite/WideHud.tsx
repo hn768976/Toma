@@ -161,6 +161,15 @@ export const WideHud: React.FC<{
             </g>
             {LENS_MARKERS.map((m, i) => {
               const p = project(cam, WIDE_TARGET.x + m.dx, WIDE_TARGET.y + m.dy, W, H);
+              if (!p || m.kind === "cross" || m.kind === "square") return null;
+              return (
+                <text key={`t${i}`} x={p.x + 12} y={p.y - 9} fontFamily={FONT_MONO} fontSize={9} fill={palette.white} opacity={markersIn(i) * 0.8}>
+                  {`T-${String(i + 1).padStart(2, "0")}`}
+                </text>
+              );
+            })}
+            {LENS_MARKERS.map((m, i) => {
+              const p = project(cam, WIDE_TARGET.x + m.dx, WIDE_TARGET.y + m.dy, W, H);
               if (!p) return null;
               const o = markersIn(i);
               switch (m.kind) {

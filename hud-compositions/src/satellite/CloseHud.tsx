@@ -6,7 +6,7 @@ import { CrossMarker, CrossNode, DotMarker, LetterBadge } from "./icons";
 import { SatellitePalette } from "./palette";
 import { CLOSE_TARGET, SatelliteVariant, T } from "./timeline";
 
-const R = 230; // reticle radius, design px
+const R = 360; // reticle radius, design px
 const NODE_ANGLES = [-150, -112, -62, -24, 12, 52, 100, 128, 158, 196];
 // Inner relay points (fraction of R) joined to the centre by dashed lines.
 const RELAYS: { a: number; f: number; to: "center" | "left" | "right" | "bottom" }[] = [
@@ -85,17 +85,17 @@ export const CloseHud: React.FC<{
         ))}
       </g>
       {/* Corner brackets */}
-      <g stroke={palette.amber} strokeWidth={2.5} fill="none" opacity={brackets}>
+      <g stroke={palette.amber} strokeWidth={4} fill="none" opacity={brackets}>
         {[
           [-1, -1],
           [1, -1],
           [-1, 1],
           [1, 1],
         ].map(([sx, sy], i) => {
-          const s = 300 + (1 - brackets) * 60;
+          const s = 430 + (1 - brackets) * 60;
           const x = c.x - 40 + sx * s;
           const y = c.y - 30 + sy * s * 0.92;
-          return <path key={i} d={`M${x} ${y - sy * 50}L${x} ${y}L${x - sx * 50} ${y}`} />;
+          return <path key={i} d={`M${x} ${y - sy * 70}L${x} ${y}L${x - sx * 70} ${y}`} />;
         })}
       </g>
       {/* Reticle ring */}
@@ -112,7 +112,7 @@ export const CloseHud: React.FC<{
       />
       {NODE_ANGLES.map((a, i) => {
         const p = pt(a);
-        return <circle key={i} cx={p.x} cy={p.y} r={9} fill="rgba(12,16,20,0.6)" stroke={palette.white} strokeWidth={3.5} opacity={nodes(i)} />;
+        return <circle key={i} cx={p.x} cy={p.y} r={13} fill="rgba(12,16,20,0.6)" stroke={palette.white} strokeWidth={4.5} opacity={nodes(i)} />;
       })}
       {/* Relays and dashed links */}
       {RELAYS.map((r, i) => {
@@ -121,7 +121,7 @@ export const CloseHud: React.FC<{
         return (
           <g key={i} opacity={o}>
             <line x1={p.x} y1={p.y} x2={c.x} y2={c.y} stroke={palette.white} strokeWidth={2} strokeDasharray="4 6" opacity={0.85} />
-            <circle cx={p.x} cy={p.y} r={8} fill="rgba(12,16,20,0.6)" stroke={palette.white} strokeWidth={3.5} />
+            <circle cx={p.x} cy={p.y} r={12} fill="rgba(12,16,20,0.6)" stroke={palette.white} strokeWidth={4.5} />
           </g>
         );
       })}
@@ -129,15 +129,15 @@ export const CloseHud: React.FC<{
       <line x1={bottom.x} y1={bottom.y} x2={pt(90, 0.5).x} y2={pt(90, 0.5).y} stroke={palette.white} strokeWidth={2} strokeDasharray="3 5" opacity={big} />
       {/* Key nodes */}
       <g transform={`translate(${left.x} ${left.y}) scale(${0.6 + 0.4 * big})`}>
-        <circle r={26} fill="none" stroke={palette.amber} strokeWidth={6} opacity={big} />
-        <CrossNode x={0} y={0} r={15} color={palette.white} opacity={big} />
+        <circle r={40} fill="none" stroke={palette.amber} strokeWidth={8} opacity={big} />
+        <CrossNode x={0} y={0} r={24} color={palette.white} opacity={big} />
       </g>
       <g opacity={hostileFlash}>
-        <CrossNode x={right.x} y={right.y} r={19} color={sideColor} opacity={big} double={!hostile} />
-        <CrossNode x={bottom.x} y={bottom.y} r={19} color={sideColor} opacity={big} double={!hostile} />
+        <CrossNode x={right.x} y={right.y} r={30} color={sideColor} opacity={big} double={!hostile} />
+        <CrossNode x={bottom.x} y={bottom.y} r={30} color={sideColor} opacity={big} double={!hostile} />
       </g>
       {/* Centre target */}
-      <DotMarker x={c.x} y={c.y} r={8} core={palette.red} opacity={ring} />
+      <DotMarker x={c.x} y={c.y} r={12} core={palette.red} opacity={ring} />
       {/* Amber pulses */}
       {T.pulses.map((p0, i) => {
         const t = ramp(frame, p0, p0 + 22);
@@ -163,13 +163,13 @@ export const CloseHud: React.FC<{
         strokeDasharray={`${link} 1`}
       />
       <g transform={`translate(${c.x + R * 0.62} ${c.y - R * 0.78})`} opacity={bar}>
-        <rect width={150 * bar} height={10} fill={palette.amber} />
+        <rect width={190 * bar} height={13} fill={palette.amber} />
         <text y={-6} fontFamily={FONT_MONO} fontSize={9} fill={palette.white} opacity={0.9}>
           TRK 0417 / LOCK
         </text>
       </g>
       {/* Node captions */}
-      <g fontFamily={FONT_MONO} fontSize={8} fill={palette.white} opacity={big * 0.8}>
+      <g fontFamily={FONT_MONO} fontSize={12} fill={palette.white} opacity={big * 0.85}>
         <text x={left.x + 18} y={left.y + 28}>N-01 / 2.41</text>
         <text x={right.x + 22} y={right.y + 4}>N-04 / 1.87</text>
         <text x={bottom.x + 24} y={bottom.y + 4}>N-07 / 3.02</text>
@@ -182,14 +182,14 @@ export const CloseHud: React.FC<{
         const o = flickerIn(frame, T.contacts + i * 5, i + 20);
         return hostile ? (
           <g key={i} opacity={o * hostileFlash}>
-            <DotMarker x={p.x} y={p.y} r={5} core={palette.red} rim={palette.white} opacity={1} />
-            <circle cx={p.x} cy={p.y} r={14} fill="none" stroke={palette.red} strokeWidth={1.5} opacity={0.6} />
+            <DotMarker x={p.x} y={p.y} r={9} core={palette.red} rim={palette.white} opacity={1} />
+            <circle cx={p.x} cy={p.y} r={24} fill="none" stroke={palette.red} strokeWidth={1.5} opacity={0.6} />
           </g>
         ) : (
           <g key={i} opacity={o}>
-            <circle cx={p.x} cy={p.y} r={9} fill="none" stroke={palette.white} strokeWidth={2} />
-            <circle cx={p.x} cy={p.y} r={14} fill="none" stroke={palette.white} strokeWidth={1} strokeDasharray="2 4" />
-            <circle cx={p.x} cy={p.y} r={3} fill={palette.white} />
+            <circle cx={p.x} cy={p.y} r={14} fill="none" stroke={palette.white} strokeWidth={3} />
+            <circle cx={p.x} cy={p.y} r={22} fill="none" stroke={palette.white} strokeWidth={1.5} strokeDasharray="3 5" />
+            <circle cx={p.x} cy={p.y} r={5} fill={palette.white} />
           </g>
         );
       })}
@@ -198,9 +198,9 @@ export const CloseHud: React.FC<{
         y={60}
         textAnchor="end"
         fontFamily={FONT_LABEL}
-        fontSize={14}
+        fontSize={20}
         fill={palette.white}
-        opacity={0.6 * fieldIn}
+        opacity={0.7 * fieldIn}
         letterSpacing={2}
       >
         ZOOM 5.6X · SECTOR 61-A
