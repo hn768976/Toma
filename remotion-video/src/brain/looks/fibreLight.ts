@@ -58,6 +58,7 @@ const BG = /* glsl */ `
 const LINE_VERT = /* glsl */ `
 in float aT;
 in vec4 aCurve;
+in float aLabel;
 uniform float uPx;
 uniform vec3 uCentreView;
 uniform float uDepthSpan;
@@ -69,10 +70,13 @@ void main() {
   float dz = (mv.z - uCentreView.z) / uDepthSpan; // >0 near, <0 far
   float depthFade = mix(0.42, 1.0, smoothstep(-1.0, 0.6, dz));
   float w = mix(0.8, 2.4, aCurve.y * aCurve.y) * uPx; // width carried as coverage
-  float inner = aCurve.x > 0.5 ? 0.35 : 1.0;
+  // cerebellum and brainstem read denser and darker so the anatomy holds up;
+  // projection fibres (kind 3) carry the brainstem
+  float inner = aCurve.x > 2.5 ? 0.9 : (aCurve.x > 0.5 ? 0.35 : 1.0);
+  float part = aLabel > 1.5 ? 2.0 : (aLabel > 0.5 ? 2.2 : 1.0);
   float ends = smoothstep(0.0, 0.08, aT) * smoothstep(1.0, 0.92, aT);
-  vA = clamp(w, 0.0, 1.6) * 0.6 * depthFade * inner * ends;
-  vMix = clamp(0.5 * aCurve.z + 0.8 * smoothstep(-0.8, 0.9, dz) - 0.05, 0.0, 1.0);
+  vA = clamp(clamp(w, 0.0, 1.6) * 0.6 * depthFade * inner * ends * part, 0.0, 1.0);
+  vMix = clamp(0.5 * aCurve.z + 0.8 * smoothstep(-0.8, 0.9, dz) - 0.05 - 0.5 * step(0.5, aLabel), 0.0, 1.0);
   gl_Position = projectionMatrix * mv;
 }`;
 
@@ -464,9 +468,9 @@ export const makeFibreLook =
         let yaw: number;
         if (variant === "loop") {
           yaw = -0.6 + (TAU * f) / PERIOD;
-          const d = farDist;
+          const d = farDist * 1.08;
           cam.position.set(0, Math.sin(ELEV) * d, Math.cos(ELEV) * d);
-          cam.lookAt(0, 0, 0);
+          cam.lookAt(0, 0.07, 0);
           common.uCoc.value = 0;
           common.uHero.value = 0.0;
           common.uFocus.value = d;

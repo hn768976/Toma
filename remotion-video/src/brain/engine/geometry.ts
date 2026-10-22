@@ -100,6 +100,7 @@ export const fibreLines = (a: BrainAssets, key: string, keep?: (i: number) => bo
     const pos = new Float32Array(nv * 3);
     const t = new Float32Array(nv);
     const cur = new Float32Array(nv * 4);
+    const lab = new Float32Array(nv);
     const rng = mulberry32(9100 + key.length * 31);
     let v = 0;
     for (const c of ids) {
@@ -116,6 +117,7 @@ export const fibreLines = (a: BrainAssets, key: string, keep?: (i: number) => bo
           cur[v * 4 + 1] = r1;
           cur[v * 4 + 2] = r2;
           cur[v * 4 + 3] = c;
+          lab[v] = a.fibres.label[c];
           v++;
         }
       }
@@ -124,5 +126,6 @@ export const fibreLines = (a: BrainAssets, key: string, keep?: (i: number) => bo
     g.setAttribute("position", new BufferAttribute(pos, 3));
     g.setAttribute("aT", new BufferAttribute(t, 1));
     g.setAttribute("aCurve", new BufferAttribute(cur, 4));
+    g.setAttribute("aLabel", new BufferAttribute(lab, 1)); // 0 cerebrum, 1 cerebellum, 2 brainstem
     return g;
   });

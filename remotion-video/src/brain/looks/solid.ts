@@ -26,7 +26,7 @@ const GLOW_PTS = 10;
 
 const ELEV = 0.3; // camera elevation (rad)
 const FOV = 30;
-const VIEW_H = 1.8; // visible height in brain units
+const VIEW_H = 1.95; // visible height in brain units
 const START_YAW = -0.7; // frame 0 shows the left hemisphere, three-quarter front
 
 const yawAt = (f: number) => START_YAW + (TAU * (f % PERIOD)) / PERIOD;
@@ -265,7 +265,7 @@ export const makeSolidLook =
     const camPos = new Vector3(0, Math.sin(ELEV), Math.cos(ELEV)).multiplyScalar(VIEW_H / 2 / Math.tan((FOV / 2) * (Math.PI / 180)));
     const cam = new PerspectiveCamera(FOV, width / height, 0.1, 30);
     cam.position.copy(camPos);
-    cam.lookAt(0, 0.0, 0);
+    cam.lookAt(0, -0.05, 0);
     cam.updateMatrixWorld();
 
     const glow = Array.from({ length: MAX_ACTIVE * GLOW_PTS }, () => new Vector4());

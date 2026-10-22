@@ -37,7 +37,7 @@ for id in BrainMembrane-Violet BrainFibre-LightReveal BrainFibre-LightLoop Brain
     --gl=angle \
     --scale="$SCALE" \
     --codec=h264 --crf=16 --pixel-format=yuv420p \
-    --image-format=png \
+    --image-format=png --muted \
     --concurrency="$CONCURRENCY" \
     --log=error
   end=$(date +%s)

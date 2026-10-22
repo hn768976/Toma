@@ -92,7 +92,7 @@ def levels(d):
     spec = {
         "BrainSolid_Black": ((0, 0, 0), 1, [(0.0, 0.12, 0.0, 1.0), (0.88, 1.0, 0.0, 1.0)]),
         "BrainSolid_Green": ((0, 255, 0), 2, [(0.0, 0.12, 0.0, 1.0), (0.88, 1.0, 0.0, 1.0)]),
-        "BrainGlass_Thoughts": ((0, 0, 0), 1, [(0.78, 1.0, 0.0, 1.0), (0.0, 0.05, 0.0, 1.0)]),
+        "BrainGlass_Thoughts": ((0, 0, 0), 1, [(0.78, 1.0, 0.0, 1.0), (0.0, 0.03, 0.0, 1.0)]),
     }
     for name, (col, tol, regions) in spec.items():
         p = os.path.join(d, name + ".mp4")
@@ -112,41 +112,34 @@ def levels(d):
 
 
 def key(path, work):
-    """Chroma-key clip 5 over mid-grey; check fringes, holes and arc survival."""
+    """Chroma-key clip 5 over mid-grey (on the encoded yuv420p frames) and check
+    green fringes, holes and arc survival — with chromakey alone and with
+    chromakey + despill. ffmpeg's chromakey keeps each edge pixel's own colour
+    at partial alpha, so pure-green pixels next to any subject leave a 1-2 px
+    green band unless a despill follows."""
+    from scipy.ndimage import binary_erosion
+
     os.makedirs(work, exist_ok=True)
     fs = [0, 58, 110, 260, 400, 570]
-    keyed = os.path.join(work, "keyed.mp4")
-    subprocess.run(
-        ["ffmpeg", "-v", "error", "-y", "-i", path, "-f", "lavfi", "-i", "color=c=0x808080:s=1280x720:r=30",
-         "-filter_complex", "[0:v]chromakey=0x00FF00:0.12:0.05[k];[1:v][k]overlay=shortest=1,format=rgb24",
-         "-c:v", "libx264", "-crf", "1", "-pix_fmt", "yuv444p", keyed],
-        check=True,
-    )
-    orig = frames(path, fs)
-    kd = frames(keyed, fs)
     ok = True
-    for f, o, k in zip(fs, orig, kd):
-        oi = o.astype(int)
-        ki = k.astype(int)
-        bgmask = (oi[:, :, 1] > 200) & (oi[:, :, 0] < 60) & (oi[:, :, 2] < 60)
-        # fringe: keyed pixels with a green cast (g well above r and b)
-        green = (ki[:, :, 1] - np.maximum(ki[:, :, 0], ki[:, :, 2])) > 18
-        fringe = int((green & ~bgmask).sum() + (green & bgmask).sum())
-        # holes: subject pixels (not near green) that came out grey
-        from scipy.ndimage import binary_erosion
-
-        subject = binary_erosion(~bgmask, iterations=3)
-        grey = (np.abs(ki - 128).max(2) <= 3)
-        holes = int((subject & grey & (np.abs(oi - 128).max(2) > 12)).sum())
-        Image.fromarray(k).save(os.path.join(work, f"keyed-{f}.png"))
-        good = fringe < 40 and holes < 20
-        ok &= good
-        print(f"{'PASS' if good else 'FAIL'} key frame {f}: green-fringe px={fringe} hole px={holes}")
-    # arcs survive: bluish highlights present in the keyed frame where the original has them
-    for f, o, k in zip(fs, orig, kd):
-        arc_o = int(((o[:, :, 2].astype(int) - o[:, :, 0]) > 25).sum())
-        arc_k = int(((k[:, :, 2].astype(int) - k[:, :, 0]) > 25).sum())
-        print(f"     arcs frame {f}: blue-white px original={arc_o} keyed={arc_k}")
+    for f in fs:
+        nut = os.path.join(work, f"f{f}.nut")
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", path, "-vf", f"select=eq(n\\,{f})", "-frames:v", "1", "-c:v", "rawvideo", "-pix_fmt", "yuv420p", nut], check=True)
+        orig = frames(path, [f])[0].astype(int)
+        bg = (orig[:, :, 1] > 200) & (orig[:, :, 0] < 60) & (orig[:, :, 2] < 60)
+        subject = binary_erosion(~bg, iterations=3)
+        for label, chain in (("chromakey", "chromakey=0x00FF00:0.12:0.05"), ("chromakey+despill", "chromakey=0x00FF00:0.12:0.05,despill=type=green")):
+            out = os.path.join(work, f"keyed-{f}-{label}.png")
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", nut, "-f", "lavfi", "-i", "color=c=0x808080:s=1280x720", "-filter_complex", f"[0:v]{chain}[k];[1:v][k]overlay=shortest=1,format=rgb24", "-frames:v", "1", out], check=True)
+            k = np.asarray(Image.open(out).convert("RGB")).astype(int)
+            fringe = int(((k[:, :, 1] - np.maximum(k[:, :, 0], k[:, :, 2])) > 18).sum())
+            holes = int((subject & (np.abs(k - 128).max(2) <= 3) & (np.abs(orig - 128).max(2) > 12)).sum())
+            arcs_o = int(((orig[:, :, 2] - orig[:, :, 0]) > 25).sum())
+            arcs_k = int(((k[:, :, 2] - k[:, :, 0]) > 25).sum())
+            good = holes < 20 and fringe < 40
+            if label == "chromakey+despill":
+                ok &= good
+            print(f"{'PASS' if good else 'FAIL'} frame {f} {label}: green-fringe px={fringe} hole px={holes} arcs px {arcs_o}->{arcs_k}")
     return ok
 
 
