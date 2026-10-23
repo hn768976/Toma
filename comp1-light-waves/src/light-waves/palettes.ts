@@ -13,8 +13,8 @@ export type Palette = {
 
 // Version 1: electric blue, matching the reference.
 export const bluePalette: Palette = {
-  bgDeep: [2, 5, 18],
-  bgLift: [16, 32, 92],
+  bgDeep: [6, 13, 42],
+  bgLift: [30, 62, 160],
   source: [70, 130, 255],
   rail: [40, 110, 255],
   railCore: [150, 205, 255],
@@ -25,8 +25,8 @@ export const bluePalette: Palette = {
 
 // Version 2: "ember" - magenta to amber neon on a deep plum night.
 export const emberPalette: Palette = {
-  bgDeep: [12, 2, 10],
-  bgLift: [58, 10, 52],
+  bgDeep: [30, 6, 26],
+  bgLift: [110, 22, 80],
   source: [255, 120, 60],
   rail: [255, 50, 130],
   railCore: [255, 205, 150],

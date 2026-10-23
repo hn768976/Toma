@@ -79,7 +79,7 @@ const levelFor = (z: number, cam: CameraVariant) => {
 // Distance fade (keeps the vanishing point from blowing out) and a fade-in
 // right in front of the lens so nothing pops when it passes the near plane.
 const fade = (z: number) =>
-  Math.exp(-z / 11) * Math.min(1, Math.max(0, (z - NEAR) / 0.25)) * Math.min(1, (FAR - z) / 3);
+  Math.exp(-z / 8) * Math.min(1, Math.max(0, (z - NEAR) / 0.25)) * Math.min(1, (FAR - z) / 3);
 
 const segment = (
   f: Frame,
@@ -232,6 +232,7 @@ type Strand = {
   kind: "bounce" | "wave";
   seed: number;
   lean: number;
+  width: number;
 };
 
 const buildStrands = () => {
@@ -241,24 +242,43 @@ const buildStrands = () => {
     for (let i = 0; i < count; i++) {
       const lambda = 0.18 + rnd() * rnd() * 0.7;
       const s0 = -1.5 + rnd() * (S_MAX - 8);
-      const tall = rnd() < 0.18;
+      const tall = rnd() < 0.08;
       strands.push({
         ox: base[0] + (rnd() - 0.5) * spread,
         oy: base[1] + (rnd() - 0.5) * spread * 0.3,
         s0,
         s1: s0 + 5 + rnd() * 8,
         lambda: tall ? lambda * 1.8 : lambda,
-        amp: ampScale * lambda * (0.7 + rnd() * 1.3) * (tall ? 2.4 : 1),
+        amp: ampScale * lambda * (0.7 + rnd() * 1.3) * (tall ? 1.7 : 1),
         speed: 0.1 + rnd() * 0.25,
         phase: rnd() * 10,
         kind: rnd() < 0.7 ? "bounce" : "wave",
         seed: strands.length * 13 + 5,
         lean: (rnd() - 0.5) * 0.25,
+        width: 0.0014,
       });
     }
   };
-  add(34, [-0.79, -0.35], 0.06, 1.1); // on the main rail
+  add(22, [-0.79, -0.35], 0.06, 1.1); // on the main rail
   add(18, [0.36, 0.11], 0.12, 0.8); // on the low right rail
+  // Hero arcs: big, thick loops the camera flies past, which read as large
+  // defocused ribbons sweeping through the middle of the frame.
+  [1.6, 4.3, 7.4, 10.2, 12.6].forEach((s0, i) => {
+    strands.push({
+      ox: -0.62 + 0.1 * (i % 2),
+      oy: -0.3,
+      s0,
+      s1: s0 + 2.2,
+      lambda: 1.1 + 0.2 * (i % 3),
+      amp: 0.42 + 0.08 * (i % 2),
+      speed: 0.2,
+      phase: i * 1.7,
+      kind: "wave",
+      seed: 700 + i,
+      lean: 0.6,
+      width: 0.0055,
+    });
+  });
   return strands;
 };
 
@@ -295,7 +315,7 @@ const drawStrand = (f: Frame, r: Rig, st: Strand) => {
     const color = mix(palette.strandLow, palette.strandHigh, tip);
     const alpha = 0.45 + 0.55 * Math.min(1, envS * 1.5);
     if (prev) {
-      segment(f, r, prev, p, 0.0014, 0.8, color, alpha * 0.9);
+      segment(f, r, prev, p, st.width, 0.8, color, alpha * (st.width > 0.002 ? 1 : 0.9));
       // Fine particles riding the trail.
       if (i % 3 === 0 && p[2] > NEAR && p[2] < FAR) {
         const k = alpha * fade(p[2]);
@@ -350,7 +370,7 @@ export const drawBackground = (
   const pulse = 1 + 0.06 * Math.sin(t * 0.9);
   const sx = DW * 0.985 + 18 * Math.sin(t * 0.13);
   const sy = -DH * 0.02;
-  const halo = ctx.createRadialGradient(sx, sy, 0, sx, sy, 1100 * pulse);
+  const halo = ctx.createRadialGradient(sx, sy, 0, sx, sy, 1400 * pulse);
   halo.addColorStop(0, rgba(palette.source, 0.6));
   halo.addColorStop(0.3, rgba(palette.source, 0.2));
   halo.addColorStop(1, rgba(palette.source, 0));
