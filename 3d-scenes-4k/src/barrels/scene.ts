@@ -27,7 +27,7 @@ const makeEnvTexture = (variant: BarrelVariant) => {
   // Warm sepia studio sky: a wide luminous band hugging the horizon, brightest
   // ahead of the camera (-Z) and falling off to near-black overhead.
   // V2 looks down from higher up, so its band extends higher in elevation.
-  const bandTop = variant === "v2" ? 75 : 56; // degrees
+  const bandTop = variant === "v2" ? 75 : 40; // degrees
   for (let y = 0; y < h; y++) {
     const elev = 90 - (y / (h - 1)) * 180; // +90 top, -90 bottom
     let v = 0;
@@ -41,9 +41,10 @@ const makeEnvTexture = (variant: BarrelVariant) => {
       // Key direction sits slightly to the left of straight ahead.
       const dx = Math.cos(phi);
       const dz = Math.sin(phi);
-      const facing = Math.max(0, dx * -0.42 + dz * -0.91);
-      const front = 0.5 + 0.5 * Math.pow(facing, 1.2);
-      const lum = v * front;
+      const facing = Math.max(0, dx * -0.74 + dz * -0.67);
+      const front = 0.35 + 0.65 * Math.pow(facing, 1.4);
+      // Soft-clip so the horizon never blows out into a hotspot.
+      const lum = Math.min(0.85, v * front);
       const i = (y * w + x) * 4;
       img.data[i] = Math.min(255, 12 + 243 * lum);
       img.data[i + 1] = Math.min(255, 9 + 221 * lum);
@@ -67,7 +68,7 @@ const buildGeometries = (detail: "high" | "low") => {
   bodyGeo.translate(0, -1.66, 0);
 
   // Rolled chime at the top edge and the seam just inside it.
-  const chime = new THREE.TorusGeometry(R - 0.035, 0.045, hi ? 10 : 6, hi ? 72 : 36);
+  const chime = new THREE.TorusGeometry(R - 0.025, 0.022, hi ? 10 : 6, hi ? 72 : 36);
   chime.rotateX(Math.PI / 2);
   const rimParts: THREE.BufferGeometry[] = [chime];
   if (hi) {
@@ -85,19 +86,19 @@ const buildGeometries = (detail: "high" | "low") => {
 
   // Two bungs (2" and 3/4") with raised collars.
   const bung = (r: number, x: number, z: number, seg: number) => {
-    const collar = new THREE.TorusGeometry(r, r * 0.22, hi ? 8 : 4, seg);
+    const collar = new THREE.TorusGeometry(r, r * 0.17, hi ? 10 : 4, seg);
     collar.rotateX(Math.PI / 2);
-    collar.translate(x, -0.035, z);
+    collar.translate(x, -0.025, z);
     const cap = new THREE.CircleGeometry(r * 0.85, seg);
     cap.rotateX(-Math.PI / 2);
-    cap.translate(x, -0.045, z);
+    cap.translate(x, -0.04, z);
     const parts: THREE.BufferGeometry[] = [collar, cap];
     if (hi) {
-      const wall = new THREE.CylinderGeometry(r * 1.08, r * 1.15, 0.05, seg, 1, true);
-      wall.translate(x, -0.05, z);
+      const wall = new THREE.CylinderGeometry(r * 1.1, r * 1.2, 0.035, seg, 1, true);
+      wall.translate(x, -0.045, z);
       const nub = new THREE.TorusGeometry(r * 0.45, r * 0.12, 6, 16);
       nub.rotateX(Math.PI / 2);
-      nub.translate(x, -0.04, z);
+      nub.translate(x, -0.035, z);
       parts.push(wall, nub);
     }
     return parts;
@@ -106,8 +107,8 @@ const buildGeometries = (detail: "high" | "low") => {
   const a2 = 0.65;
   const seg = hi ? 28 : 12;
   const bungGeo = mergeGeometries([
-    ...bung(0.115, Math.cos(a1) * 0.7, Math.sin(a1) * 0.7, seg),
-    ...bung(0.08, Math.cos(a2) * 0.72, Math.sin(a2) * 0.72, seg),
+    ...bung(0.14, Math.cos(a1) * 0.68, Math.sin(a1) * 0.68, seg),
+    ...bung(0.1, Math.cos(a2) * 0.72, Math.sin(a2) * 0.72, seg),
   ])!;
   return { bodyGeo, rimGeo, lid, bungGeo };
 };
@@ -121,12 +122,12 @@ const cameraPose = (variant: BarrelVariant, t: number): CamPose => {
   // t in [0,1]
   if (variant === "v1") {
     // Low, steady forward dolly with a gentle sideways drift (as in reference).
-    const z = 3.6 - t * 5.4;
-    const x = 0.1 + t * 1.15;
-    const y = 1.25;
+    const z = 3.6 - t * 3.9;
+    const x = 0.1 + t * 0.85;
+    const y = 0.9;
     const pos = new THREE.Vector3(x, y, z);
-    const target = new THREE.Vector3(x - 0.1, -1.0, z - 7.5);
-    return { pos, target, fov: 27, focus: 4.4 };
+    const target = new THREE.Vector3(x - 0.1, -0.6, z - 8.4);
+    return { pos, target, fov: 15.5, focus: 5.2 };
   }
   // V2: high-angle orbiting crane — rises and arcs around a pivot while
   // looking down onto the lids.
@@ -147,9 +148,9 @@ export const createBarrelSetup =
   (variant: BarrelVariant, durationInFrames: number): StageSetup =>
   (renderer, width, height) => {
     const scene = new THREE.Scene();
-    const bg = new THREE.Color("#2e2416");
+    const bg = new THREE.Color("#120d07");
     scene.background = bg;
-    scene.fog = new THREE.FogExp2(bg.getHex(), 0.016);
+    scene.fog = new THREE.FogExp2(bg.getHex(), 0.03);
 
     const pmrem = new THREE.PMREMGenerator(renderer);
     const envTex = makeEnvTexture(variant);
@@ -165,7 +166,7 @@ export const createBarrelSetup =
     const geoHi = buildGeometries("high");
     const geoLo = buildGeometries("low");
     const lidMat = new THREE.MeshStandardMaterial({
-      color: "#a48c6a",
+      color: "#b49c76",
       metalness: 1,
       roughness: 0.42,
       envMapIntensity: 1.3,
@@ -183,10 +184,10 @@ export const createBarrelSetup =
       envMapIntensity: 0.35,
     });
     const bungMat = new THREE.MeshStandardMaterial({
-      color: "#8a7457",
+      color: "#d6c4a0",
       metalness: 1,
-      roughness: 0.22,
-      envMapIntensity: 1.4,
+      roughness: 0.12,
+      envMapIntensity: 2.0,
     });
 
     // Hex-packed field large enough for both camera paths.
@@ -247,7 +248,10 @@ export const createBarrelSetup =
       cocScale: variant === "v1" ? 300 : 420,
       nearScale: 0.45,
       maxCoc: 40,
-      exposure: 2.9,
+      taps: 128,
+      fireflyClamp: 3,
+      fillScale: 0.3,
+      exposure: 2.8,
       vignette: 0.3,
       lift: [0.0, 0.0, 0.0],
       gain: [1.03, 1.0, 0.9],

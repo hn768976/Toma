@@ -6,7 +6,7 @@ import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPa
  * Custom post pipeline (linear HDR throughout, display transform at the end):
  *   scene  -> full-res HDR + depth
  *   prep   -> half-res colour + signed circle-of-confusion
- *   gather -> half-res 96-tap Vogel-disk bokeh (scatter-as-gather)
+ *   gather -> half-res N-tap (default 96) Vogel-disk bokeh (scatter-as-gather)
  *   fill   -> half-res tent to smooth the gather
  *   comp   -> full-res mix of sharp/blurred by per-pixel CoC
  *   bloom  -> optional UnrealBloom on the composite
@@ -50,12 +50,14 @@ const PrepShader = new THREE.ShaderMaterial({
     cocScale: { value: 100 },
     nearScale: { value: 1 },
     maxCoc: { value: 48 },
+    fireflyClamp: { value: 8 },
     texel: { value: new THREE.Vector2() },
   },
   vertexShader: quadVert,
   fragmentShader: /* glsl */ `
     uniform sampler2D tColor;
     uniform vec2 texel; // full-res texel size
+    uniform float fireflyClamp;
     ${cocChunk}
     varying vec2 vUv;
     void main() {
@@ -63,7 +65,7 @@ const PrepShader = new THREE.ShaderMaterial({
       float coc = cocAt(vUv);
       // Clamp fireflies so tiny highlights don't turn into hard discs.
       float l = max(c.r, max(c.g, c.b));
-      c *= min(1.0, 8.0 / max(l, 1e-4));
+      c *= min(1.0, fireflyClamp / max(l, 1e-4));
       gl_FragColor = vec4(c, coc);
     }
   `,
@@ -77,13 +79,13 @@ const GatherShader = new THREE.ShaderMaterial({
     halfTexel: { value: new THREE.Vector2() },
     maxCoc: { value: 48 },
   },
+  defines: { TAPS: 96 },
   vertexShader: quadVert,
   fragmentShader: /* glsl */ `
     uniform sampler2D tPrep;
     uniform vec2 halfTexel;
     uniform float maxCoc;
     varying vec2 vUv;
-    #define TAPS 96
     void main() {
       vec4 center = texture2D(tPrep, vUv);
       // Work in half-res pixels.
@@ -118,15 +120,17 @@ const FillShader = new THREE.ShaderMaterial({
   uniforms: {
     tBlur: { value: null },
     halfTexel: { value: new THREE.Vector2() },
+    fillScale: { value: 0.18 },
   },
   vertexShader: quadVert,
   fragmentShader: /* glsl */ `
     uniform sampler2D tBlur;
     uniform vec2 halfTexel;
+    uniform float fillScale;
     varying vec2 vUv;
     void main() {
       vec4 c = texture2D(tBlur, vUv);
-      float r = clamp(abs(c.a) * 0.5 * 0.18, 0.0, 4.0);
+      float r = clamp(abs(c.a) * 0.5 * fillScale, 0.0, 6.0);
       vec3 acc = c.rgb * 4.0;
       float w = 4.0;
       for (int y = -1; y <= 1; y++) {
@@ -233,6 +237,9 @@ export type PostOptions = {
   cocScale: number;
   nearScale?: number;
   maxCoc: number;
+  taps?: number; // bokeh gather samples (default 96)
+  fireflyClamp?: number; // max luminance fed into the blur (default 8)
+  fillScale?: number; // post-gather smoothing radius factor (default 0.18)
   exposure?: number;
   bloom?: { strength: number; radius: number; threshold: number };
   vignette: number;
@@ -264,6 +271,7 @@ export const createPost = (
 
   const prep = PrepShader.clone();
   const gather = GatherShader.clone();
+  gather.defines = { TAPS: opts.taps ?? 96 };
   const fill = FillShader.clone();
   const comp = CompShader.clone();
   const grade = GradeShader.clone();
@@ -284,12 +292,14 @@ export const createPost = (
   setCoc(opts.focus);
   prep.uniforms.tColor.value = sceneRT.texture;
   prep.uniforms.texel.value.set(1 / width, 1 / height);
+  prep.uniforms.fireflyClamp.value = opts.fireflyClamp ?? 8;
   gather.uniforms.tPrep.value = prepRT.texture;
   gather.uniforms.halfTexel.value.set(1 / hw, 1 / hh);
   gather.uniforms.maxCoc.value = opts.maxCoc;
   comp.uniforms.tColor.value = sceneRT.texture;
   fill.uniforms.tBlur.value = blurRT.texture;
   fill.uniforms.halfTexel.value.set(1 / hw, 1 / hh);
+  fill.uniforms.fillScale.value = opts.fillScale ?? 0.18;
   comp.uniforms.tBlur.value = fillRT.texture;
   grade.uniforms.tColor.value = compRT.texture;
   grade.uniforms.exposure.value = opts.exposure ?? 1;

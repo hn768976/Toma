@@ -19,7 +19,7 @@ Every composition is authored at **3840×2160 (4K UHD), 30 fps, 240 frames
   (3840×2160), and every frame is a pure function of the frame number, so
   renders are deterministic under any concurrency.
 * **Custom GLSL post-processing** (`src/lib/post.ts`): half-resolution
-  96-tap bokeh depth of field, UnrealBloom (voxel scene), ACES tone mapping,
+  96–128-tap bokeh depth of field, UnrealBloom (voxel scene), ACES tone mapping,
   colour grade and vignette.
 * Instanced meshes (≈1,500 drums, ≈5,400 voxels), procedural environment
   maps generated on a 2D canvas. **No external assets** are needed.
