@@ -68,6 +68,7 @@ export type LedInfo = {
   mesh: THREE.InstancedMesh;
   base: THREE.Color;
   blink: number[]; // per-instance blink style: 0 steady, >0 activity rate
+  gain: number[]; // per-instance brightness (neighbouring racks are dimmer)
 };
 
 export type Palette = {
@@ -82,7 +83,7 @@ export type Palette = {
 export const defaultPalette: Palette = {
   background: new THREE.Color("#05070b"),
   ledBlue: new THREE.Color(0.2, 0.45, 2.6),
-  ledGreen: new THREE.Color(0.25, 2.0, 0.75),
+  ledGreen: new THREE.Color(0.2, 1.4, 0.55),
   strip: new THREE.Color(0.04, 0.22, 2.6),
   keyLight: new THREE.Color("#dfe8ff"),
   fill: new THREE.Color("#2a4c9a"),
@@ -110,8 +111,8 @@ export const buildWorld = (renderer: THREE.WebGLRenderer, palette: Palette) => {
     slim: new THREE.MeshStandardMaterial({ color: "#7d8796", map: slim, metalness: 0.55, roughness: 0.4 }),
     teal: new THREE.MeshStandardMaterial({ color: "#1f7a70", metalness: 0.3, roughness: 0.35 }),
     grille: new THREE.MeshStandardMaterial({ color: "#ffffff", map: grille, metalness: 0.6, roughness: 0.45 }),
-    handle: new THREE.MeshStandardMaterial({ color: "#b8c0c9", metalness: 0.75, roughness: 0.45 }),
-    latch: new THREE.MeshStandardMaterial({ color: "#c3cbd4", metalness: 0.8, roughness: 0.3 }),
+    handle: new THREE.MeshStandardMaterial({ color: "#9ea7b2", metalness: 0.8, roughness: 0.35 }),
+    latch: new THREE.MeshStandardMaterial({ color: "#9aa3ae", metalness: 0.8, roughness: 0.35 }),
     door: new THREE.MeshStandardMaterial({ color: "#ffffff", map: door, metalness: 0.65, roughness: 0.45 }),
     floor: new THREE.MeshStandardMaterial({ color: "#1a1d23", metalness: 0.3, roughness: 0.35 }),
     led: new THREE.MeshBasicMaterial({ color: "#ffffff", toneMapped: true }),
@@ -133,6 +134,18 @@ export const buildWorld = (renderer: THREE.WebGLRenderer, palette: Palette) => {
   };
   const blue = new BoxBatch(mat.led, new THREE.SphereGeometry(0.32, 12, 8));
   const green = new BoxBatch(mat.led, new THREE.BoxGeometry(1, 1, 1));
+  const blueGain: number[] = [];
+  const greenGain: number[] = [];
+  // Racks other than the hero rack (index 0) get dimmer LEDs.
+  let ledGain = 1;
+  const addBlue = (rate: number) => {
+    blueBlink.push(rate);
+    blueGain.push(ledGain);
+  };
+  const addGreen = (rate: number) => {
+    greenBlink.push(rate);
+    greenGain.push(ledGain);
+  };
   const blueBlink: number[] = [];
   const greenBlink: number[] = [];
 
@@ -145,9 +158,9 @@ export const buildWorld = (renderer: THREE.WebGLRenderer, palette: Palette) => {
     B.chassis.box(ox + X0, y, -1.2, X1 - X0, h - 0.12, 1.2);
     // Rack ears with status LEDs.
     blue.box(ox + X0 + 1.1, y + h - 2.2, 0.0, 0.55, 0.55, 0.55);
-    blueBlink.push(0);
+    addBlue(0);
     blue.box(ox + X0 + 1.1, y + h - 4.0, 0.0, 0.55, 0.55, 0.55);
-    blueBlink.push(rnd() < 0.5 ? 3 + rnd() * 6 : 0);
+    addBlue(rnd() < 0.5 ? 1.5 + rnd() * 3 : 0);
     const cols = 4;
     const rows = 3;
     const left = ox + X0 + 3.4;
@@ -160,11 +173,12 @@ export const buildWorld = (renderer: THREE.WebGLRenderer, palette: Palette) => {
         const by = y + 0.5 + r * bh + 0.12;
         const w = bw - 0.3;
         const hh = bh - 0.24;
-        B.tray.box(bx, by, -0.2, w - 2.8, hh, 0.55);
+        B.tray.box(bx, by, -0.2, w - 1.5, hh, 0.55);
         // Silver latch handle at the right end of each tray.
-        B.handle.box(bx + w - 2.8, by + 0.1, -0.2, 2.75, hh - 0.2, 0.95);
+        // Small silver pull-handle at the right end of each tray.
+        B.handle.box(bx + w - 1.5, by + hh * 0.18, -0.2, 1.4, hh * 0.64, 0.95);
         blue.box(bx + 0.35, by + hh / 2 - 0.25, 0.32, 0.5, 0.5, 0.5);
-        blueBlink.push(rnd() < 0.35 ? 4 + rnd() * 10 : 0);
+        addBlue(rnd() < 0.35 ? 1.5 + rnd() * 3.5 : 0);
       }
     }
     return h;
@@ -174,7 +188,7 @@ export const buildWorld = (renderer: THREE.WebGLRenderer, palette: Palette) => {
     const h = RACK_UNIT * 2;
     B.chassis.box(ox + X0, y, -1.2, X1 - X0, h - 0.12, 1.2);
     blue.box(ox + X0 + 1.1, y + h - 2.4, 0.0, 0.55, 0.55, 0.55);
-    blueBlink.push(0);
+    addBlue(0);
     const left = ox + X0 + 3.2;
     const right = ox + X1 - 1.2;
     const n = 24;
@@ -186,10 +200,10 @@ export const buildWorld = (renderer: THREE.WebGLRenderer, palette: Palette) => {
       const th = h - 1.5;
       // Dark tray body, a silver vertical pull-handle and a teal latch tab.
       B.slim.box(bx, by, -0.2, w, th * 0.84, 0.6);
-      B.latch.box(bx + w * 0.22, by + th * 0.14, 0.4, w * 0.56, th * 0.62, 0.5);
-      B.teal.box(bx + 0.05, by + th * 0.85, -0.2, w - 0.1, th * 0.14, 0.95);
+      B.latch.box(bx + w * 0.3, by + th * 0.16, 0.4, w * 0.4, th * 0.58, 0.5);
+      B.teal.box(bx + w * 0.18, by + th * 0.86, -0.2, w * 0.64, th * 0.12, 0.95);
       green.box(bx + w / 2 - 0.22, by + th + 0.08, 0.25, 0.44, 0.32, 0.35);
-      greenBlink.push(rnd() < 0.3 ? 5 + rnd() * 12 : 0);
+      addGreen(rnd() < 0.3 ? 1.5 + rnd() * 3.5 : 0);
     }
     return h;
   };
@@ -200,9 +214,9 @@ export const buildWorld = (renderer: THREE.WebGLRenderer, palette: Palette) => {
     B.grille.box(ox + X0 + 4, y + 0.6, 0.0, X1 - X0 - 10, h - 1.3, 0.2);
     B.handle.box(ox + X1 - 5.2, y + 0.9, 0.0, 3.6, h - 1.9, 0.9);
     blue.box(ox + X0 + 1.4, y + h / 2 - 0.25, 0.1, 0.5, 0.5, 0.5);
-    blueBlink.push(0);
+    addBlue(0);
     green.box(ox + X0 + 2.4, y + h / 2 - 0.2, 0.1, 0.45, 0.4, 0.3);
-    greenBlink.push(6 + rnd() * 8);
+    addGreen(1.5 + rnd() * 3);
     return h;
   };
 
@@ -243,6 +257,7 @@ export const buildWorld = (renderer: THREE.WebGLRenderer, palette: Palette) => {
 
   for (let i = -5; i <= 6; i++) {
     const ox = i * RACK_PITCH;
+    ledGain = i === 0 ? 1 : 0.4;
     if (i === 4 || i === -4) doorRack(ox);
     else openRack(ox);
   }
@@ -292,15 +307,15 @@ export const buildWorld = (renderer: THREE.WebGLRenderer, palette: Palette) => {
   scene.add(rim);
   for (let i = -4; i <= 2; i++) {
     for (const y of [60, 130, 200]) {
-      const p = new THREE.PointLight(palette.strip.clone().multiplyScalar(0.3), 900, 70, 2);
+      const p = new THREE.PointLight(palette.strip.clone().multiplyScalar(0.3), 350, 45, 2);
       p.position.set(i * RACK_PITCH + 58, y, 10);
       scene.add(p);
     }
   }
 
   const leds: LedInfo[] = [
-    { mesh: blueMesh, base: palette.ledBlue, blink: blueBlink },
-    { mesh: greenMesh, base: palette.ledGreen, blink: greenBlink },
+    { mesh: blueMesh, base: palette.ledBlue, blink: blueBlink, gain: blueGain },
+    { mesh: greenMesh, base: palette.ledGreen, blink: greenBlink, gain: greenGain },
   ];
   return { scene, leds, env };
 };
@@ -316,7 +331,7 @@ export const updateLeds = (leds: LedInfo[], t: number) => {
         const step = Math.floor(t * rate);
         k = hash01(i, step) < 0.55 ? 1 : 0.18;
       }
-      tmpColor.copy(led.base).multiplyScalar(k);
+      tmpColor.copy(led.base).multiplyScalar(k * led.gain[i]);
       led.mesh.setColorAt(i, tmpColor);
     });
     if (led.mesh.instanceColor) led.mesh.instanceColor.needsUpdate = true;
