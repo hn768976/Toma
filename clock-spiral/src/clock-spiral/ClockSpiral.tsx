@@ -199,7 +199,7 @@ export const ClockSpiral: React.FC<ClockSpiralProps> = ({ palette }) => {
     // Slow "breathing" of the light, ~7 s period like the reference.
     gl.uniform1f(
       gl.getUniformLocation(post, "uExposure"),
-      1.12 + 0.14 * Math.sin((t / 7) * Math.PI * 2 + 1.2),
+      1.0 + 0.13 * Math.sin((t / 7) * Math.PI * 2 + 1.2),
     );
     set3(post, "cInk", pal.ink);
     set3(post, "cPaperHot", pal.paperHot);

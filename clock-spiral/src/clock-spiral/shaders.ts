@@ -77,7 +77,7 @@ void main() {
   float smoke2 = texture(uNoise, nUV * 2.3 + vec2(0.31, uTime * 0.02)).g;
 
   // Overall light: hot around the inner turns, falling off outward.
-  float glow = smoothstep(0.0, 0.05, r) * (1.0 - 0.7 * smoothstep(0.3, 1.0, r));
+  float glow = smoothstep(0.0, 0.05, r) * (1.0 - 0.6 * smoothstep(0.45, 1.3, r));
   float hot = smoothstep(0.5, 0.06, r) * smoothstep(0.0, 0.05, r);
 
   vec3 col;
@@ -169,9 +169,9 @@ void main() {
 
   // Depth-of-field: sharp centre, increasingly soft toward the edges.
   float edge = smoothstep(0.16, 0.75, d);
-  float radius = (0.0012 + 0.016 * edge) * uRes.y;
+  float radius = (0.0012 + 0.022 * edge) * uRes.y;
   vec2 dir = d > 1e-4 ? c / d : vec2(0.0);
-  float ca = 0.0035 * edge * uRes.y;   // chromatic fringe in pixels
+  float ca = 0.006 * edge * uRes.y;   // chromatic fringe in pixels
 
   // Lens blur: a few rotated taps into a pre-filtered mip level (cheap even
   // in software GL), with red/blue pulled apart for the chromatic fringe.
@@ -197,7 +197,7 @@ void main() {
   float sm = texture(uNoise, q * 0.9 + vec2(uTime * 0.012, -uTime * 0.008)).r;
   float sm2 = texture(uNoise, q * 2.1 + vec2(-uTime * 0.02, uTime * 0.01) + 0.4).g;
   float smokeV = smoothstep(0.25, 0.75, sm * 0.7 + sm2 * 0.3);
-  float outer = smoothstep(0.26, 0.62, d);
+  float outer = smoothstep(0.4, 0.85, d);
   col *= mix(1.0, 0.18 + 0.8 * smokeV, outer);
 
   // Clock hands (with a soft drop shadow onto the dial).
@@ -223,7 +223,7 @@ void main() {
 
   // Vignette toward smoky darkness, colour grade and grain.
   vec2 vq = (uv - 0.5) * vec2(uRes.x / uRes.y, 1.0);
-  float vig = smoothstep(1.35, 0.4, length(vq * vec2(0.78, 1.0)));
+  float vig = smoothstep(1.2, 0.35, length(vq * vec2(0.8, 1.0)));
   col = mix(cBg, col, vig);
   col = pow(max(col * uExposure, 0.0), vec3(0.95)) * cGrade;
   float g = hash(gl_FragCoord.xy + uFrame * 17.0) - 0.5;
