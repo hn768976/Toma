@@ -61,7 +61,9 @@ export const buildArchiveScene = (
   const scene = new THREE.Scene();
   const fogColor = new THREE.Color("#e9ebec");
   scene.background = fogColor;
-  scene.fog = new THREE.Fog(fogColor, 4, 52);
+  // Haze lightens the far walls (as in the reference) and suppresses
+  // shimmer from the dense drawer grid near the vanishing point.
+  scene.fog = new THREE.Fog(fogColor, 3, 34);
 
   const pmrem = new THREE.PMREMGenerator(renderer);
   const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
