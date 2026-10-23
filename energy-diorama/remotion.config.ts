@@ -14,6 +14,7 @@ Config.setJpegQuality(95);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
+Config.setColorSpace("bt709");
 
 // Optional: render with an already-installed Chromium instead of letting
 // Remotion download its headless shell (useful on offline machines).
