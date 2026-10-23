@@ -106,11 +106,12 @@ export const buildWorld = (renderer: THREE.WebGLRenderer, palette: Palette) => {
   const mat = {
     chassis: new THREE.MeshStandardMaterial({ color: "#121419", metalness: 0.7, roughness: 0.42 }),
     post: new THREE.MeshStandardMaterial({ color: "#0a0b0e", metalness: 0.6, roughness: 0.5 }),
-    tray: new THREE.MeshStandardMaterial({ color: "#ffffff", map: vent, metalness: 0.35, roughness: 0.55 }),
-    slim: new THREE.MeshStandardMaterial({ color: "#ffffff", map: slim, metalness: 0.35, roughness: 0.55 }),
+    tray: new THREE.MeshStandardMaterial({ color: "#8a94a3", map: vent, metalness: 0.55, roughness: 0.4 }),
+    slim: new THREE.MeshStandardMaterial({ color: "#7d8796", map: slim, metalness: 0.55, roughness: 0.4 }),
+    teal: new THREE.MeshStandardMaterial({ color: "#1f7a70", metalness: 0.3, roughness: 0.35 }),
     grille: new THREE.MeshStandardMaterial({ color: "#ffffff", map: grille, metalness: 0.6, roughness: 0.45 }),
     handle: new THREE.MeshStandardMaterial({ color: "#b8c0c9", metalness: 0.75, roughness: 0.45 }),
-    latch: new THREE.MeshStandardMaterial({ color: "#aeb6c0", metalness: 0.2, roughness: 0.55 }),
+    latch: new THREE.MeshStandardMaterial({ color: "#c3cbd4", metalness: 0.8, roughness: 0.3 }),
     door: new THREE.MeshStandardMaterial({ color: "#ffffff", map: door, metalness: 0.65, roughness: 0.45 }),
     floor: new THREE.MeshStandardMaterial({ color: "#1a1d23", metalness: 0.3, roughness: 0.35 }),
     led: new THREE.MeshBasicMaterial({ color: "#ffffff", toneMapped: true }),
@@ -125,6 +126,7 @@ export const buildWorld = (renderer: THREE.WebGLRenderer, palette: Palette) => {
     grille: new BoxBatch(mat.grille),
     handle: new BoxBatch(mat.handle),
     latch: new BoxBatch(mat.latch),
+    teal: new BoxBatch(mat.teal),
     door: new BoxBatch(mat.door),
     strip: new BoxBatch(mat.strip),
     hoop: new BoxBatch(mat.handle, new THREE.TorusGeometry(1, 0.11, 10, 24, Math.PI)),
@@ -182,9 +184,10 @@ export const buildWorld = (renderer: THREE.WebGLRenderer, palette: Palette) => {
       const w = pitch - 0.2;
       const by = y + 0.45;
       const th = h - 1.5;
-      B.slim.box(bx, by, -0.2, w, th * 0.62, 0.6);
-      // Light-grey release latch covering the upper part of the tray.
-      B.latch.box(bx, by + th * 0.62, -0.2, w, th * 0.38 - 0.1, 0.95);
+      // Dark tray body, a silver vertical pull-handle and a teal latch tab.
+      B.slim.box(bx, by, -0.2, w, th * 0.84, 0.6);
+      B.latch.box(bx + w * 0.22, by + th * 0.14, 0.4, w * 0.56, th * 0.62, 0.5);
+      B.teal.box(bx + 0.05, by + th * 0.85, -0.2, w - 0.1, th * 0.14, 0.95);
       green.box(bx + w / 2 - 0.22, by + th + 0.08, 0.25, 0.44, 0.32, 0.35);
       greenBlink.push(rnd() < 0.3 ? 5 + rnd() * 12 : 0);
     }
@@ -219,7 +222,7 @@ export const buildWorld = (renderer: THREE.WebGLRenderer, palette: Palette) => {
     }
     // Mostly alternating blocks of bay servers and slim-drive arrays, as in
     // the reference, with the occasional 1U box for variety.
-    const pattern = ["bays", "bays", "slim", "slim", "bays", "slim", "1u", "bays", "slim", "slim"];
+    const pattern = ["bays", "bays", "slim", "slim", "bays", "slim", "bays", "bays", "slim", "slim"];
     let y = 2;
     let i = Math.floor(rnd() * pattern.length);
     while (y < RACK_HEIGHT - 14) {
@@ -240,7 +243,7 @@ export const buildWorld = (renderer: THREE.WebGLRenderer, palette: Palette) => {
 
   for (let i = -5; i <= 6; i++) {
     const ox = i * RACK_PITCH;
-    if (i === 1 || i === 4 || i === -4) doorRack(ox);
+    if (i === 4 || i === -4) doorRack(ox);
     else openRack(ox);
   }
 

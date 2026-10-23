@@ -7,13 +7,13 @@ import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPa
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { buildWorld, defaultPalette, updateLeds } from "./build";
-import { CameraShot, craneUp, lateralTrack } from "./cameras";
+import { CameraShot, craneDown, lateralTrack } from "./cameras";
 
 export type ServerRacksProps = {
-  shot: "craneUp" | "lateralTrack";
+  shot: "craneDown" | "lateralTrack";
 };
 
-const SHOTS: Record<ServerRacksProps["shot"], CameraShot> = { craneUp, lateralTrack };
+const SHOTS: Record<ServerRacksProps["shot"], CameraShot> = { craneDown, lateralTrack };
 
 type World = {
   renderer: THREE.WebGLRenderer;

@@ -7,7 +7,7 @@ image-based environment, Bokeh depth of field and bloom.
 
 | Composition       | Size        | FPS | Frames | Duration | Variant |
 | ----------------- | ----------- | --- | ------ | -------- | ------- |
-| `ServerRacks-V1`  | 3840 × 2160 | 30  | 360    | 12.000 s | Oblique close-up with a slow crane-up move, matches the reference |
+| `ServerRacks-V1`  | 3840 × 2160 | 30  | 360    | 12.000 s | Oblique close-up with a slow, steady crane-down move, matches the reference |
 | `ServerRacks-V2`  | 3840 × 2160 | 30  | 360    | 12.000 s | Alternative **camera angle + movement**: low-angle lateral tracking shot along the rack row |
 
 The reference is 12.0 s (300 frames @ 25 fps) = 360 frames @ 30 fps.

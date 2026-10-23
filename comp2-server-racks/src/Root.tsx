@@ -5,7 +5,7 @@ import { DURATION_IN_FRAMES, FPS, HEIGHT, WIDTH } from "./server-racks/constants
 export const RemotionRoot: React.FC = () => {
   return (
     <>
-      {/* Version 1: matches the reference - oblique close-up, slow crane up. */}
+      {/* Version 1: matches the reference - oblique close-up, slow crane down. */}
       <Composition
         id="ServerRacks-V1"
         component={ServerRacks}
@@ -13,7 +13,7 @@ export const RemotionRoot: React.FC = () => {
         fps={FPS}
         width={WIDTH}
         height={HEIGHT}
-        defaultProps={{ shot: "craneUp" as const }}
+        defaultProps={{ shot: "craneDown" as const }}
       />
       {/* Version 2: alternative camera - low-angle lateral tracking shot. */}
       <Composition

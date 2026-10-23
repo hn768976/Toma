@@ -14,19 +14,21 @@ export type CameraShot = {
 };
 
 // Version 1: matches the reference - close, oblique view of one rack with a
-// slow, constant upward crane move (the content drifts down through frame).
-export const craneUp: CameraShot = {
-  fov: 38,
+// slow, steady downward crane move (the content drifts up through frame).
+export const craneDown: CameraShot = {
+  fov: 40,
   pose: (_t, p) => {
-    const y = 92 + 21 * p;
+    // Near-linear descent with a slight ease at both ends.
+    const e = p * 0.85 + 0.15 * (p * p * (3 - 2 * p));
+    const y = 144 - 58 * e;
     return {
-      position: new THREE.Vector3(-5, y, 46),
-      target: new THREE.Vector3(32, y - 2, -2),
-      focus: new THREE.Vector3(16, y, 0),
+      position: new THREE.Vector3(-3, y, 42),
+      target: new THREE.Vector3(38, y - 2, -6),
+      focus: new THREE.Vector3(24, y, 0),
     };
   },
-  exposure: 1.05,
-  aperture: 0.00035,
+  exposure: 1.15,
+  aperture: 0.00045,
   maxBlur: 0.012,
 };
 
