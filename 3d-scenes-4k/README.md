@@ -8,7 +8,7 @@ Every composition is authored at **3840×2160 (4K UHD), 30 fps, 240 frames
 |------------------|-------------|
 | `BarrelField-V1` | Field of steel oil drums under warm sepia light; low, steady forward dolly with a slight sideways drift and shallow depth of field (matches the reference). |
 | `BarrelField-V2` | Same scene and lighting, but the **camera angle and movement** change: a high-angle orbiting crane that rises and arcs around the field. |
-| `VoxelCube-V1`   | A giant cube built from extruded voxels: cyan/teal glossy blocks, violet accents and white-hot glowing clusters that drift across the surface, seen on a slow orbit around the leading corner with heavy depth of field (matches the reference). |
+| `VoxelCube-V1`   | A giant cube tiled with bevelled glossy blocks of mixed sizes (large cubes, slabs, small tiles): cyan/teal glass-metal, mirror-dark and violet blocks with white-hot glowing clusters flowing across the surface. Low, long-lens three-quarter view on the leading edge with the top face and background visible, a steady sideways orbit and shallow depth of field (matches the reference). |
 | `VoxelCube-V2`   | Same geometry, animation and camera, with a **different colour palette**: molten copper, orange and magenta blocks with warm gold-white glow on a deep plum background. |
 
 ## Technology
@@ -21,7 +21,7 @@ Every composition is authored at **3840×2160 (4K UHD), 30 fps, 240 frames
 * **Custom GLSL post-processing** (`src/lib/post.ts`): half-resolution
   96–128-tap bokeh depth of field, UnrealBloom (voxel scene), ACES tone mapping,
   colour grade and vignette.
-* Instanced meshes (≈1,500 drums, ≈5,400 voxels), procedural environment
+* Instanced meshes (≈1,500 drums with two levels of detail, ≈7,300 voxel tiles), procedural environment
   maps generated on a 2D canvas. **No external assets** are needed.
 
 ## Requirements

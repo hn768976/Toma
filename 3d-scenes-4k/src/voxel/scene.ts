@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { createPost } from "../lib/post";
 import { mulberry32, fbm3, smoothstep, easeInOutSine } from "../lib/random";
 import type { StageSetup } from "../lib/ThreeStage";
@@ -11,7 +12,7 @@ type Palette = {
   envBottom: string;
   envBox: string;
   core: string;
-  // Base block colours, from darkest to brightest.
+  // Mirror-like dark blocks, glassy mid tones, accent and glowing clusters.
   dark: string;
   mid: string[];
   accent: string;
@@ -25,37 +26,38 @@ type Palette = {
 // and white-hot glowing clusters. V2 swaps to a molten copper/magenta palette.
 const PALETTES: Record<VoxelVariant, Palette> = {
   v1: {
-    background: "#0a2a66",
-    envTop: "#3a78e0",
-    envBottom: "#030a22",
-    envBox: "#d8ecff",
-    core: "#123a8a",
-    dark: "#040a20",
-    mid: ["#30b0e0", "#48c8f0", "#3088e0", "#28a0c8"],
+    background: "#0c3074",
+    envTop: "#4a8cf0",
+    envBottom: "#06163c",
+    envBox: "#e4f2ff",
+    core: "#0a2a70",
+    dark: "#030818",
+    mid: ["#38b8f0", "#5ad2ff", "#3490f0", "#2cb0d8"],
     accent: "#9a3ad8",
-    glow: "#eaf2ff",
-    glowIntensity: 1.4,
-    exposure: 1.05,
+    glow: "#eef4ff",
+    glowIntensity: 1.2,
+    exposure: 1.6,
     gain: [0.97, 1.0, 1.06],
   },
   v2: {
-    background: "#3a0c22",
-    envTop: "#e0703a",
-    envBottom: "#14030a",
-    envBox: "#ffe6c8",
-    core: "#6a1a1a",
-    dark: "#1c0610",
-    mid: ["#d8682a", "#e88a34", "#c0402c", "#b0503a"],
-    accent: "#c22a78",
-    glow: "#fff0d2",
-    glowIntensity: 1.4,
-    exposure: 1.2,
+    background: "#3e0e26",
+    envTop: "#f0803e",
+    envBottom: "#20060e",
+    envBox: "#fff0dc",
+    core: "#5a1418",
+    dark: "#16050c",
+    mid: ["#d8682a", "#ec8e36", "#c4402c", "#b4563a"],
+    accent: "#c82a7c",
+    glow: "#fff2d8",
+    glowIntensity: 1.2,
+    exposure: 1.65,
     gain: [1.06, 1.0, 0.95],
   },
 };
 
-const N = 30; // voxels per cube edge
+const N = 48; // fine grid cells per cube edge
 const HALF = N / 2;
+const MACRO = 4; // largest tile size in cells
 
 const makeEnv = (p: Palette) => {
   const w = 1024;
@@ -66,44 +68,53 @@ const makeEnv = (p: Palette) => {
   const ctx = c.getContext("2d")!;
   const g = ctx.createLinearGradient(0, 0, 0, h);
   g.addColorStop(0, p.envTop);
-  g.addColorStop(0.55, p.envBottom);
+  g.addColorStop(0.5, p.envBottom);
   g.addColorStop(1, "#000000");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
-  // A few soft studio boxes for crisp reflections on the metallic faces.
+  // Studio softboxes: give the glossy blocks crisp, bright reflections.
   const box = (x: number, y: number, bw: number, bh: number, a: number) => {
     ctx.globalAlpha = a;
     ctx.fillStyle = p.envBox;
-    ctx.filter = "blur(10px)";
+    ctx.filter = "blur(6px)";
     ctx.fillRect(x, y, bw, bh);
     ctx.filter = "none";
     ctx.globalAlpha = 1;
   };
-  box(w * 0.18, h * 0.12, w * 0.14, h * 0.2, 0.95);
-  box(w * 0.62, h * 0.18, w * 0.2, h * 0.12, 0.7);
-  box(w * 0.42, h * 0.02, w * 0.3, h * 0.06, 0.8);
-  box(w * 0.88, h * 0.3, w * 0.08, h * 0.25, 0.5);
+  box(w * 0.05, h * 0.1, w * 0.16, h * 0.22, 1);
+  box(w * 0.3, h * 0.06, w * 0.12, h * 0.3, 0.9);
+  box(w * 0.55, h * 0.14, w * 0.22, h * 0.12, 0.85);
+  box(w * 0.8, h * 0.08, w * 0.1, h * 0.3, 0.8);
+  box(0, h * 0.0, w, h * 0.04, 0.7);
   const tex = new THREE.CanvasTexture(c);
   tex.mapping = THREE.EquirectangularReflectionMapping;
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 };
 
-type Voxel = {
-  base: THREE.Vector3; // centre on the cube surface
+type Tile = {
+  centre: THREE.Vector3; // centre of the tile on the cube surface
   normal: THREE.Vector3; // outward axis
-  size: number; // lateral scale
-  depthBase: number; // resting extrusion
-  depthAmp: number;
+  size: number; // nominal edge length in cells (1, 2 or 4)
+  su: number; // lateral extent along the face's u axis
+  sv: number; // lateral extent along the face's v axis
+  extrude: number; // resting protrusion
+  amp: number; // breathing amplitude
   phase: number;
   hue: number; // picks a mid colour
   accentBias: number;
-  jitter: number; // dithers material class boundaries per block
+  jitter: number; // dithers material class boundaries per tile
+  orient: THREE.Quaternion; // maps box x/y/z to the face's u/v/normal
 };
 
-const buildVoxels = () => {
+/**
+ * Each face is an N x N grid split into 4x4 macro cells, each randomly kept
+ * whole or subdivided into 2x2 and 1x1 tiles. This gives the mix of large
+ * blocks, medium cubes and small tiles seen in the reference.
+ */
+const buildTiles = () => {
   const rand = mulberry32(2264163700);
-  const voxels: Voxel[] = [];
+  const tiles: Tile[] = [];
   const axes = [
     new THREE.Vector3(1, 0, 0),
     new THREE.Vector3(-1, 0, 0),
@@ -113,51 +124,84 @@ const buildVoxels = () => {
     new THREE.Vector3(0, 0, -1),
   ];
   for (const n of axes) {
-    // Two in-plane axes for this face.
     const u = Math.abs(n.x) > 0 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
     const v = new THREE.Vector3().crossVectors(n, u);
-    for (let i = 0; i < N; i++) {
-      for (let j = 0; j < N; j++) {
-        const a = i - HALF + 0.5;
-        const b = j - HALF + 0.5;
-        const base = new THREE.Vector3()
-          .addScaledVector(n, HALF - 0.5)
-          .addScaledVector(u, a)
-          .addScaledVector(v, b);
+    const orient = new THREE.Quaternion().setFromRotationMatrix(
+      new THREE.Matrix4().makeBasis(u, v, n),
+    );
+    const emit = (i: number, j: number, s: number, su = s, sv = s) => {
+      const centre = new THREE.Vector3()
+        .addScaledVector(n, HALF)
+        .addScaledVector(u, i + su / 2 - HALF)
+        .addScaledVector(v, j + sv / 2 - HALF);
+      const r = rand();
+      // Mostly shallow relief; small tiles occasionally poke out further.
+      const extrude =
+        s * 0.1 * Math.pow(r, 2) + (s === 1 && rand() > 0.7 ? Math.pow(rand(), 2) * 1.6 : 0);
+      tiles.push({
+        centre,
+        normal: n.clone(),
+        size: s,
+        su,
+        sv,
+        extrude,
+        amp: (0.15 + rand() * 0.35) * (s === 1 ? 1 : 0.5),
+        phase: rand() * Math.PI * 2,
+        hue: rand(),
+        accentBias: rand(),
+        jitter: rand() - 0.5,
+        orient,
+      });
+    };
+    for (let i = 0; i < N; i += MACRO) {
+      for (let j = 0; j < N; j += MACRO) {
         const r = rand();
-        voxels.push({
-          base,
-          normal: n.clone(),
-          size: r > 0.82 ? 0.55 + rand() * 0.2 : 0.86 + rand() * 0.12,
-          depthBase: Math.pow(r, 2.4) * 1.3,
-          depthAmp: 0.1 + rand() * 0.35,
-          phase: rand() * Math.PI * 2,
-          hue: rand(),
-          accentBias: rand(),
-          jitter: rand() - 0.5,
-        });
+        if (r < 0.22) {
+          emit(i, j, 4);
+          continue;
+        }
+        for (let a = 0; a < 4; a += 2) {
+          for (let b = 0; b < 4; b += 2) {
+            const r2 = rand();
+            if (r2 < 0.38) {
+              emit(i + a, j + b, 2);
+            } else if (r2 < 0.5) {
+              // Two 2x1 slabs, horizontal or vertical.
+              if (rand() < 0.5) {
+                emit(i + a, j + b, 1, 2, 1);
+                emit(i + a, j + b + 1, 1, 2, 1);
+              } else {
+                emit(i + a, j + b, 1, 1, 2);
+                emit(i + a + 1, j + b, 1, 1, 2);
+              }
+            } else {
+              for (let c = 0; c < 2; c++) {
+                for (let d = 0; d < 2; d++) emit(i + a + c, j + b + d, 1);
+              }
+            }
+          }
+        }
       }
     }
   }
-  return voxels;
+  return tiles;
 };
 
 const cameraPose = (t: number) => {
-  // Low three-quarter view on the leading corner: a slow orbit that also
-  // cranes up a little and drifts back, keeping the corner near frame centre.
-  const e = easeInOutSine(t);
+  // Low three-quarter view on the leading vertical edge with the top face and
+  // a strip of background visible; a steady sideways orbit along the cube.
+  const e = easeInOutSine(t) * 0.35 + t * 0.65; // nearly linear, soft ends
   const corner = new THREE.Vector3(HALF, HALF, HALF);
-  const az = THREE.MathUtils.degToRad(30 + 15 * e);
-  const el = THREE.MathUtils.degToRad(9 + 7 * e);
-  const dist = HALF * (1.9 + 0.3 * e);
+  const az = THREE.MathUtils.degToRad(42 + 14 * e);
+  const el = THREE.MathUtils.degToRad(8 - 2 * e);
+  const dist = HALF * 2.8;
   const dir = new THREE.Vector3(
     Math.cos(el) * Math.sin(az),
     Math.sin(el),
     Math.cos(el) * Math.cos(az),
   );
   const pos = corner.clone().addScaledVector(dir, dist);
-  const target = corner.clone().add(new THREE.Vector3(-0.05 * HALF, -0.17 * HALF, -0.05 * HALF));
-  return { pos, target, focus: dist };
+  return { pos, target: corner, focus: dist };
 };
 
 export const createVoxelSetup =
@@ -166,7 +210,7 @@ export const createVoxelSetup =
     const pal = PALETTES[variant];
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(pal.background);
-    scene.fog = new THREE.Fog(pal.background, 80, 220);
+    scene.fog = new THREE.Fog(pal.background, 90, 240);
 
     const pmrem = new THREE.PMREMGenerator(renderer);
     const envSrc = makeEnv(pal);
@@ -174,38 +218,39 @@ export const createVoxelSetup =
     envSrc.dispose();
     scene.environment = env;
 
-    const key = new THREE.DirectionalLight("#ffffff", 2.8);
+    const key = new THREE.DirectionalLight("#ffffff", 2.4);
     key.position.set(20, 40, 30);
     scene.add(key);
-    const rim = new THREE.DirectionalLight(pal.mid[1], 0.8);
+    const rim = new THREE.DirectionalLight(pal.mid[1], 1.0);
     rim.position.set(-30, 10, -10);
     scene.add(rim);
 
-    // Inner core so gaps between retracting blocks show depth, not void.
+    // Inner core so gaps between tiles show depth, not void.
     const core = new THREE.Mesh(
-      new THREE.BoxGeometry(N - 1.2, N - 1.2, N - 1.2),
+      new THREE.BoxGeometry(N - 0.6, N - 0.6, N - 0.6),
       new THREE.MeshStandardMaterial({
         color: pal.core,
         emissive: new THREE.Color(pal.core),
-        emissiveIntensity: 0.6,
-        roughness: 0.6,
-        metalness: 0.2,
+        emissiveIntensity: 0.5,
+        roughness: 0.5,
+        metalness: 0.3,
       }),
     );
     scene.add(core);
 
-    const voxels = buildVoxels();
-    const count = voxels.length;
-    const geo = new THREE.BoxGeometry(1, 1, 1);
+    const tiles = buildTiles();
+    const count = tiles.length;
+    // Bevelled unit box: the rounded edges catch the bright edge highlights.
+    const geo = new RoundedBoxGeometry(1, 1, 1, 2, 0.08);
     const emissiveAttr = new THREE.InstancedBufferAttribute(new Float32Array(count), 1);
     geo.setAttribute("instanceEmissive", emissiveAttr);
     const mat = new THREE.MeshPhysicalMaterial({
       color: "#ffffff",
-      metalness: 0.45,
-      roughness: 0.16,
+      metalness: 0.6,
+      roughness: 0.1,
       clearcoat: 1,
-      clearcoatRoughness: 0.08,
-      envMapIntensity: 1.8,
+      clearcoatRoughness: 0.05,
+      envMapIntensity: 2.0,
     });
     const glowColor = new THREE.Color(pal.glow);
     mat.onBeforeCompile = (shader) => {
@@ -239,49 +284,52 @@ export const createVoxelSetup =
     const tmpC = new THREE.Color();
     const m4 = new THREE.Matrix4();
     const q = new THREE.Quaternion();
-    const zAxis = new THREE.Vector3(0, 0, 1);
     const pos = new THREE.Vector3();
     const scl = new THREE.Vector3();
 
-    const camera = new THREE.PerspectiveCamera(23, width / height, 1, 500);
+    const camera = new THREE.PerspectiveCamera(16, width / height, 1, 500);
+    // Shift the principal point so the leading edge sits ~40% across and the
+    // cube's top corner ~31% down, leaving background above the top face.
+    camera.setViewOffset(width, height, width * 0.1, height * 0.19, width, height);
     const post = createPost(renderer, scene, camera, width, height, {
-      focus: 26,
-      cocScale: 900,
-      nearScale: 0.9,
-      maxCoc: 46,
+      focus: 67,
+      cocScale: 4500,
+      nearScale: 0.6,
+      maxCoc: 44,
       exposure: pal.exposure,
-      bloom: { strength: 0.42, radius: 0.5, threshold: 1.1 },
-      vignette: 0.35,
+      bloom: { strength: 0.4, radius: 0.45, threshold: 1.0 },
+      vignette: 0.3,
       gain: pal.gain,
       saturation: 1.05,
     });
 
-    const updateVoxels = (time: number) => {
+    const updateTiles = (time: number) => {
       for (let i = 0; i < count; i++) {
-        const v = voxels[i];
-        const p = v.base;
-        // Flowing field decides the material class of each block.
+        const tl = tiles[i];
+        const p = tl.centre;
+        // Flowing fields decide each tile's material class.
         const f =
-          fbm3(p.x * 0.15 + time * 0.22, p.y * 0.15 - time * 0.15, p.z * 0.15 + time * 0.1) +
-          v.jitter * 0.22;
+          fbm3(p.x * 0.12 + time * 0.5, p.y * 0.12 - time * 0.34, p.z * 0.12 + time * 0.22) +
+          tl.jitter * 0.3;
         const g =
-          fbm3(p.x * 0.15 - 40 + time * 0.12, p.y * 0.15 + 12, p.z * 0.15 - time * 0.14) +
-          v.jitter * 0.3;
-        const glow = smoothstep(0.24, 0.4, f);
-        const dark = smoothstep(0.02, 0.24, -f) * (0.6 + 0.4 * v.hue);
-        const accent = smoothstep(0.1, 0.3, g) * (v.accentBias > 0.3 ? 1 : 0.2);
+          fbm3(p.x * 0.07 - 40 + time * 0.25, p.y * 0.07 + 12, p.z * 0.07 - time * 0.3) +
+          tl.jitter * 0.35;
+        const glow = smoothstep(0.26, 0.38, f);
+        const dark = smoothstep(0.04, 0.22, -f) * (0.7 + 0.3 * tl.hue);
+        const accent = smoothstep(0.12, 0.3, g) * (tl.accentBias > 0.35 ? 1 : 0.2);
 
-        const mid = midC[Math.floor(v.hue * midC.length) % midC.length];
+        const mid = midC[Math.floor(tl.hue * midC.length) % midC.length];
         tmpC.copy(mid).lerp(accentC, accent).lerp(darkC, dark).lerp(glowBase, glow);
         mesh.instanceColor!.setXYZ(i, tmpC.r, tmpC.g, tmpC.b);
-        emissiveAttr.setX(i, glow * (0.75 + 0.25 * v.hue));
+        emissiveAttr.setX(i, glow * (0.8 + 0.2 * tl.hue));
 
-        // Extrusion: resting depth + slow breathing; glowing clusters push out.
-        const breathe = Math.sin(time * 0.9 + v.phase) * 0.5 + 0.5;
-        const depth = 0.3 + v.depthBase + v.depthAmp * breathe + glow * 0.25;
-        pos.copy(p).addScaledVector(v.normal, depth * 0.5 - 0.15);
-        q.setFromUnitVectors(zAxis, v.normal);
-        scl.set(v.size, v.size, depth + 0.3);
+        // Resting relief + breathing; glowing clusters push out slightly.
+        const breathe = Math.sin(time * 2.2 + tl.phase) * 0.5 + 0.5;
+        const out = tl.extrude + tl.amp * breathe + glow * 0.25 * tl.size;
+        const len = tl.size * 0.6 + out;
+        pos.copy(p).addScaledVector(tl.normal, out - len / 2);
+        q.copy(tl.orient);
+        scl.set(tl.su - 0.08, tl.sv - 0.08, len);
         m4.compose(pos, q, scl);
         mesh.setMatrixAt(i, m4);
       }
@@ -293,7 +341,7 @@ export const createVoxelSetup =
     return {
       render: (frame) => {
         const time = frame / fps;
-        updateVoxels(time);
+        updateTiles(time);
         const pose = cameraPose(frame / (durationInFrames - 1));
         camera.position.copy(pose.pos);
         camera.lookAt(pose.target);
@@ -308,6 +356,8 @@ export const createVoxelSetup =
         mesh.dispose();
         geo.dispose();
         mat.dispose();
+        core.geometry.dispose();
+        (core.material as THREE.Material).dispose();
       },
     };
   };
