@@ -78,6 +78,7 @@ const GatherShader = new THREE.ShaderMaterial({
     tPrep: { value: null },
     halfTexel: { value: new THREE.Vector2() },
     maxCoc: { value: 48 },
+    jitter: { value: 0 },
   },
   defines: { TAPS: 96 },
   vertexShader: quadVert,
@@ -85,9 +86,18 @@ const GatherShader = new THREE.ShaderMaterial({
     uniform sampler2D tPrep;
     uniform vec2 halfTexel;
     uniform float maxCoc;
+    uniform float jitter;
     varying vec2 vUv;
+    float hash12(vec2 p) {
+      vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+      p3 += dot(p3, p3.yzx + 33.33);
+      return fract((p3.x + p3.y) * p3.z);
+    }
     void main() {
       vec4 center = texture2D(tPrep, vUv);
+      // Optional per-pixel rotation of the sample spiral: trades structured
+      // banding for fine noise that the fill pass then smooths away.
+      float rot = jitter * hash12(gl_FragCoord.xy) * 6.2831853;
       // Work in half-res pixels.
       float maxR = maxCoc * 0.5;
       float cR = abs(center.a) * 0.5;
@@ -97,7 +107,7 @@ const GatherShader = new THREE.ShaderMaterial({
       for (int i = 1; i < TAPS; i++) {
         float fi = float(i);
         float r = sqrt(fi / float(TAPS)) * maxR;
-        float th = fi * GOLDEN;
+        float th = fi * GOLDEN + rot;
         vec2 off = vec2(cos(th), sin(th)) * r;
         vec4 s = texture2D(tPrep, vUv + off * halfTexel);
         float sR = abs(s.a) * 0.5;
@@ -240,6 +250,7 @@ export type PostOptions = {
   taps?: number; // bokeh gather samples (default 96)
   fireflyClamp?: number; // max luminance fed into the blur (default 8)
   fillScale?: number; // post-gather smoothing radius factor (default 0.18)
+  jitter?: boolean; // per-pixel rotation of the bokeh spiral (default false)
   exposure?: number;
   bloom?: { strength: number; radius: number; threshold: number };
   vignette: number;
@@ -296,6 +307,7 @@ export const createPost = (
   gather.uniforms.tPrep.value = prepRT.texture;
   gather.uniforms.halfTexel.value.set(1 / hw, 1 / hh);
   gather.uniforms.maxCoc.value = opts.maxCoc;
+  gather.uniforms.jitter.value = opts.jitter ? 1 : 0;
   comp.uniforms.tColor.value = sceneRT.texture;
   fill.uniforms.tBlur.value = blurRT.texture;
   fill.uniforms.halfTexel.value.set(1 / hw, 1 / hh);
