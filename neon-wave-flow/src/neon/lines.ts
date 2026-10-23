@@ -94,7 +94,7 @@ type WaveParams = {
   ahead: number;
 };
 
-const SAMPLES_PER_WAVE = 18;
+const SAMPLES_PER_WAVE = 26;
 
 const waveSampleCount = (p: WaveParams) =>
   Math.ceil(((p.behind + p.ahead) / p.lambda) * SAMPLES_PER_WAVE) + 2;
@@ -178,19 +178,19 @@ export const buildLines = (seed: number, duration: number): LineDef[] => {
       intensity: range(rng, 1.0, 1.5),
       color: [0.3, 0.62, 1.0],
       // Fade out before reaching the lens (no blown-out near plates).
-      fill: slider(10, range(rng, 0, period), range(rng, 1, 4), 2, 0.005, z, period, duration, 2),
+      fill: slider(10, range(rng, 0, period), range(rng, 1, 4), 3, 0.005, z, period, duration, 2),
     });
   }
 
   // An orderly row of wave filaments rising from the track, plus a few tall
   // looping springs.
-  const waveCount = 14;
+  const waveCount = 18;
   for (let i = 0; i < waveCount; i++) {
     const loopy = i % 4 === 1;
     const tall = i % 5 === 2;
     const p: WaveParams = {
       z: -1.4 + (2.8 * i) / (waveCount - 1),
-      amp: tall ? range(rng, 2.0, 3.0) : range(rng, 0.35, 1.3),
+      amp: tall ? range(rng, 2.6, 3.6) : range(rng, 0.8, 2.2),
       lambda: loopy ? range(rng, 1.0, 2.0) : range(rng, 0.9, 2.4),
       laps: 0,
       phase: range(rng, 0, Math.PI * 2),
@@ -200,7 +200,7 @@ export const buildLines = (seed: number, duration: number): LineDef[] => {
       behind: -1,
       ahead: 55,
     };
-    p.laps = lapsFor(-range(rng, 0.7, 1.4), p.lambda, duration);
+    p.laps = lapsFor(-range(rng, 1.3, 2.2), p.lambda, duration);
     p.pulses = 6 + Math.floor(rng() * 6);
     const n = waveSampleCount(p);
     lines.push({
@@ -244,7 +244,7 @@ export const buildLines = (seed: number, duration: number): LineDef[] => {
       foreground: true,
       n: 24,
       width: range(rng, 0.3, 0.55),
-      intensity: range(rng, 0.55, 0.8),
+      intensity: range(rng, 0.35, 0.5),
       color: [0.25, 0.58, 1.0],
       fill: slider(24, range(rng, -3, 9), range(rng, 3, 7), 2, range(rng, -1.5, -0.9), range(rng, -1.0, 1.2), 12, duration, -3),
     });
