@@ -24,17 +24,17 @@ const ORANGE: Palette = {
   background: "#bf7037",
   glassTint: "#ffeedd",
   attenuation: "#ff7a30",
-  inner: "#a9d4c8",
+  inner: "#8fc8c0",
   iridescenceRange: [180, 520],
   env: {
     top: [0.06, 0.03, 0.015],
-    horizon: [0.9, 0.3, 0.06],
+    horizon: [1.5, 0.5, 0.08],
     bottom: [0.05, 0.02, 0.008],
     lights: [
       { dir: [0.5, 0.9, 0.5], size: 0.35, color: [6, 3.0, 1.0] },
       { dir: [-1, 0.25, 0.5], size: 0.7, color: [0.05, 1.7, 1.9] },
       { dir: [1, 0.0, 0.4], size: 0.45, color: [4.5, 1.4, 0.25] },
-      { dir: [0.1, -0.5, -1], size: 0.4, color: [0.05, 0.45, 0.9] },
+      
       { dir: [-0.4, -0.8, 0.6], size: 0.5, color: [2.4, 0.8, 0.15] },
       { dir: [0.3, 0.3, -1], size: 0.6, color: [0.1, 1.3, 1.45] },
     ],
@@ -85,8 +85,8 @@ export const createGlassRing =
     const envTex = makeEnvironment(renderer, pal.env);
     scene.environment = envTex;
 
-    const outerGeo = new RoundedBoxGeometry(1, 1, 1, 8, 0.11);
-    const innerGeo = new RoundedBoxGeometry(0.74, 0.74, 0.74, 4, 0.07);
+    const outerGeo = new RoundedBoxGeometry(1, 1, 1, 8, 0.145);
+    const innerGeo = new RoundedBoxGeometry(0.74, 0.74, 0.74, 6, 0.12);
     const glass = new THREE.MeshPhysicalMaterial({
       color: pal.glassTint,
       metalness: 0,
@@ -96,7 +96,9 @@ export const createGlassRing =
       ior: 1.62,
       attenuationColor: new THREE.Color(pal.attenuation),
       attenuationDistance: 2.6,
-      iridescence: 1,
+      // weak film on the shell keeps the rims orange; the teal/cyan play
+      // lives on the inner walls
+      iridescence: 0.3,
       iridescenceIOR: 1.35,
       iridescenceThicknessRange: pal.iridescenceRange,
       specularIntensity: 1,
@@ -110,7 +112,7 @@ export const createGlassRing =
       iridescence: 1,
       iridescenceIOR: 1.8,
       iridescenceThicknessRange: pal.iridescenceRange,
-      envMapIntensity: 1.1,
+      envMapIntensity: 0.8,
       // only the far walls are drawn: seen through the outer glass this
       // reads as a hollow, thick-walled cube with inner bevel lines
       side: THREE.BackSide,
@@ -146,19 +148,19 @@ export const createGlassRing =
     }
 
     const camera = new THREE.PerspectiveCamera(44, width / height, 0.3, 60);
-    camera.position.set(0, 0, 6.2);
+    camera.position.set(0, 0, 7.1);
     camera.lookAt(0, 0, 0);
     // ring sits right of centre, as in the reference framing
     spinner.position.set(1.3, -0.08, 0);
 
     const dof = new DofRenderer(renderer, width, height);
-    // The ring's normal precesses on a 40 degree cone around an axis lying
+    // The ring's normal precesses on a 26 degree cone around an axis lying
     // nearly across the view, so the ring is seen mostly edge-on/oblique (a
     // column, an arc, a C) and only briefly opens up toward the camera.
-    const tumbleAxis = new THREE.Vector3(1, 0.35, 0.25).normalize();
+    const tumbleAxis = new THREE.Vector3(1, 0.12, 0.3).normalize();
     const coneTilt = new THREE.Quaternion().setFromUnitVectors(
       new THREE.Vector3(0, 0, 1),
-      tumbleAxis.clone().applyAxisAngle(new THREE.Vector3(0, 0.6, 0.8).normalize(), 0.7),
+      tumbleAxis.clone().applyAxisAngle(new THREE.Vector3(0, 0.6, 0.8).normalize(), 0.45),
     );
     const qa = new THREE.Quaternion();
     const nearest = new THREE.Vector3();

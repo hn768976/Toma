@@ -25,7 +25,7 @@ const GOLD: Look = {
   env: {
     top: [0.14, 0.05, 0.007],
     horizon: [0.45, 0.15, 0.015],
-    bottom: [0.0, 0.0, 0.0],
+    bottom: [0.03, 0.012, 0.002],
     lights: [
       { dir: [1, 0.35, 0.5], size: 0.5, color: [5, 2.5, 0.4] },
       { dir: [-1, 0.25, 0.4], size: 0.45, color: [3.6, 1.7, 0.25] },
@@ -34,6 +34,9 @@ const GOLD: Look = {
       { dir: [0.4, 0.85, 0.3], size: 0.1, color: [8, 3.8, 0.9] },
       { dir: [0.25, 0.7, -0.7], size: 0.42, color: [2.2, 1.0, 0.14], softness: 0.6 },
       { dir: [-0.7, 0.6, 0.1], size: 0.3, color: [1.8, 0.8, 0.1], softness: 0.6 },
+      // broad warm bank in the mirror direction of the stud tops, so the
+      // flat caps fill with amber mid-morph instead of reading as rings
+      { dir: [0.05, 0.93, -0.36], size: 0.55, color: [1.2, 0.52, 0.07], softness: 0.7 },
       // a scatter of small hot lights gives each stud busier reflections
       ...Array.from({ length: 18 }, (_, i) => {
         const a = i * 2.39996;
@@ -137,9 +140,9 @@ export const createGoldGrid =
     // and drawing them front-to-back so the depth test rejects hidden pixels.
     const layout = (roundness: number) => {
       // studs grow slightly as they round off so spheres nearly touch
-      const size = THREE.MathUtils.lerp(0.8, 0.93, roundness) * PITCH;
+      const size = THREE.MathUtils.lerp(0.72, 0.9, roundness) * PITCH;
       // crisp cubes read as taller cells, spheres stay round
-      const tall = THREE.MathUtils.lerp(1.3, 1, Math.min(1, roundness * 1.6));
+      const tall = THREE.MathUtils.lerp(1.65, 1, Math.min(1, roundness * 1.6));
       let n = 0;
       for (let j = 0; j < ROWS; j++) {
         for (let i = 0; i < COLS; i++) {
@@ -176,7 +179,7 @@ export const createGoldGrid =
         const e = smooth(t);
         const az = (tw.az ?? 0.12) + 0.04 * e;
         const el = (tw.el ?? 1.2) - 0.04 * e;
-        const dist = (tw.dist ?? 10.5) - 0.8 * e;
+        const dist = (tw.dist ?? 9.2) - 0.8 * e;
         target.set(0.5 * e, 0.3, 0);
         camera.position.set(
           target.x - Math.cos(el) * Math.sin(az) * dist,
@@ -203,7 +206,7 @@ export const createGoldGrid =
         const u = frame / (GRID_FRAMES - 1);
         const e = u * u * (3 - 2 * u);
         const az = -0.55 + 1.2 * e;
-        const el = 0.92 + 0.36 * e;
+        const el = 1.0 + 0.3 * e;
         const dist = 7 + 2 * e;
         target.set(-5 + 10 * e, 0.4, 3 - 6 * e);
         camera.position.set(

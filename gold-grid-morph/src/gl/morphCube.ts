@@ -56,6 +56,10 @@ export class MorphCube {
       const x = as < q ? (as / Math.max(q, 1e-6)) * h : h + ((as - q) / (1 - q)) * r;
       return Math.sign(s) * x;
     };
+    // Mid-morph the flat caps also swell toward the sphere, so they read as
+    // pillows rather than flat mirrors (which look like rings at grazing
+    // view angles).
+    const swell = 0.4 * Math.sin(Math.PI * THREE.MathUtils.clamp(roundness, 0, 1));
     const pos = this.geometry.attributes.position.array as Float32Array;
     const nor = this.geometry.attributes.normal.array as Float32Array;
     const count = this.params.length / 3;
@@ -85,9 +89,26 @@ export class MorphCube {
       nx /= len;
       ny /= len;
       nz /= len;
-      pos[k * 3] = cx + nx * r;
-      pos[k * 3 + 1] = cy + ny * r;
-      pos[k * 3 + 2] = cz + nz * r;
+      let px = cx + nx * r;
+      let py = cy + ny * r;
+      let pz = cz + nz * r;
+      if (swell > 0) {
+        const pl = Math.hypot(px, py, pz) || 1;
+        const sx = px / pl, sy = py / pl, sz = pz / pl;
+        px += (sx * 0.5 - px) * swell;
+        py += (sy * 0.5 - py) * swell;
+        pz += (sz * 0.5 - pz) * swell;
+        nx += (sx - nx) * swell;
+        ny += (sy - ny) * swell;
+        nz += (sz - nz) * swell;
+        const nl = Math.hypot(nx, ny, nz) || 1;
+        nx /= nl;
+        ny /= nl;
+        nz /= nl;
+      }
+      pos[k * 3] = px;
+      pos[k * 3 + 1] = py;
+      pos[k * 3 + 2] = pz;
       nor[k * 3] = nx;
       nor[k * 3 + 1] = ny;
       nor[k * 3 + 2] = nz;
