@@ -31,12 +31,12 @@ const PALETTES: Record<VoxelVariant, Palette> = {
     envBottom: "#06163c",
     envBox: "#e4f2ff",
     core: "#0a2a70",
-    dark: "#030818",
+    dark: "#061232",
     mid: ["#38b8f0", "#5ad2ff", "#3490f0", "#2cb0d8"],
-    accent: "#9a3ad8",
+    accent: "#b23cd6",
     glow: "#eef4ff",
     glowIntensity: 1.2,
-    exposure: 1.6,
+    exposure: 1.95,
     gain: [0.97, 1.0, 1.06],
   },
   v2: {
@@ -50,13 +50,15 @@ const PALETTES: Record<VoxelVariant, Palette> = {
     accent: "#c82a7c",
     glow: "#fff2d8",
     glowIntensity: 1.2,
-    exposure: 1.65,
+    exposure: 2.0,
     gain: [1.06, 1.0, 0.95],
   },
 };
 
-const N = 48; // fine grid cells per cube edge
-const HALF = N / 2;
+// Block dimensions in fine grid cells (x, y, z). Elongated along z so the
+// right-hand face recedes out of frame, as in the reference.
+const DIMS = new THREE.Vector3(48, 48, 80);
+const HALF = DIMS.y / 2; // reference scale for camera distances
 const MACRO = 4; // largest tile size in cells
 
 const makeEnv = (p: Palette) => {
@@ -108,7 +110,7 @@ type Tile = {
 };
 
 /**
- * Each face is an N x N grid split into 4x4 macro cells, each randomly kept
+ * Each face is a grid of cells split into 4x4 macro cells, each randomly kept
  * whole or subdivided into 2x2 and 1x1 tiles. This gives the mix of large
  * blocks, medium cubes and small tiles seen in the reference.
  */
@@ -129,11 +131,15 @@ const buildTiles = () => {
     const orient = new THREE.Quaternion().setFromRotationMatrix(
       new THREE.Matrix4().makeBasis(u, v, n),
     );
+    const extent = (axis: THREE.Vector3) =>
+      Math.abs(axis.x) * DIMS.x + Math.abs(axis.y) * DIMS.y + Math.abs(axis.z) * DIMS.z;
+    const du = extent(u);
+    const dv = extent(v);
     const emit = (i: number, j: number, s: number, su = s, sv = s) => {
       const centre = new THREE.Vector3()
-        .addScaledVector(n, HALF)
-        .addScaledVector(u, i + su / 2 - HALF)
-        .addScaledVector(v, j + sv / 2 - HALF);
+        .addScaledVector(n, extent(n) / 2)
+        .addScaledVector(u, i + su / 2 - du / 2)
+        .addScaledVector(v, j + sv / 2 - dv / 2);
       const r = rand();
       // Mostly shallow relief; small tiles occasionally poke out further.
       const extrude =
@@ -153,10 +159,10 @@ const buildTiles = () => {
         orient,
       });
     };
-    for (let i = 0; i < N; i += MACRO) {
-      for (let j = 0; j < N; j += MACRO) {
+    for (let i = 0; i < du; i += MACRO) {
+      for (let j = 0; j < dv; j += MACRO) {
         const r = rand();
-        if (r < 0.22) {
+        if (r < 0.06) {
           emit(i, j, 4);
           continue;
         }
@@ -191,10 +197,10 @@ const cameraPose = (t: number) => {
   // Low three-quarter view on the leading vertical edge with the top face and
   // a strip of background visible; a steady sideways orbit along the cube.
   const e = easeInOutSine(t) * 0.35 + t * 0.65; // nearly linear, soft ends
-  const corner = new THREE.Vector3(HALF, HALF, HALF);
-  const az = THREE.MathUtils.degToRad(42 + 14 * e);
+  const corner = DIMS.clone().multiplyScalar(0.5);
+  const az = THREE.MathUtils.degToRad(40 + 18 * e);
   const el = THREE.MathUtils.degToRad(8 - 2 * e);
-  const dist = HALF * 2.8;
+  const dist = HALF * 3.3;
   const dir = new THREE.Vector3(
     Math.cos(el) * Math.sin(az),
     Math.sin(el),
@@ -227,7 +233,7 @@ export const createVoxelSetup =
 
     // Inner core so gaps between tiles show depth, not void.
     const core = new THREE.Mesh(
-      new THREE.BoxGeometry(N - 0.6, N - 0.6, N - 0.6),
+      new THREE.BoxGeometry(DIMS.x - 0.6, DIMS.y - 0.6, DIMS.z - 0.6),
       new THREE.MeshStandardMaterial({
         color: pal.core,
         emissive: new THREE.Color(pal.core),
@@ -249,7 +255,7 @@ export const createVoxelSetup =
       metalness: 0.6,
       roughness: 0.1,
       clearcoat: 1,
-      clearcoatRoughness: 0.05,
+      clearcoatRoughness: 0.12,
       envMapIntensity: 2.0,
     });
     const glowColor = new THREE.Color(pal.glow);
@@ -269,7 +275,9 @@ export const createVoxelSetup =
         )
         .replace(
           "#include <emissivemap_fragment>",
-          "#include <emissivemap_fragment>\ntotalEmissiveRadiance += glowColor * glowIntensity * vGlow;",
+          // Faint self-illumination in each block's own colour reads as light
+          // scattering inside glass; glowing blocks add the white glow on top.
+          "#include <emissivemap_fragment>\ntotalEmissiveRadiance += vColor * 0.22 + glowColor * glowIntensity * vGlow;",
         );
     };
     const mesh = new THREE.InstancedMesh(geo, mat, count);
@@ -292,12 +300,13 @@ export const createVoxelSetup =
     // cube's top corner ~31% down, leaving background above the top face.
     camera.setViewOffset(width, height, width * 0.1, height * 0.19, width, height);
     const post = createPost(renderer, scene, camera, width, height, {
-      focus: 67,
-      cocScale: 4500,
-      nearScale: 0.6,
-      maxCoc: 44,
+      focus: 79,
+      cocScale: 7000,
+      nearScale: 0.45,
+      maxCoc: 48,
+      fireflyClamp: 4,
       exposure: pal.exposure,
-      bloom: { strength: 0.4, radius: 0.45, threshold: 1.0 },
+      bloom: { strength: 0.3, radius: 0.4, threshold: 1.1 },
       vignette: 0.3,
       gain: pal.gain,
       saturation: 1.05,
@@ -309,14 +318,15 @@ export const createVoxelSetup =
         const p = tl.centre;
         // Flowing fields decide each tile's material class.
         const f =
-          fbm3(p.x * 0.12 + time * 0.5, p.y * 0.12 - time * 0.34, p.z * 0.12 + time * 0.22) +
+          fbm3(p.x * 0.12 + time * 0.62, p.y * 0.12 - time * 0.42, p.z * 0.12 + time * 0.28) +
           tl.jitter * 0.3;
         const g =
-          fbm3(p.x * 0.07 - 40 + time * 0.25, p.y * 0.07 + 12, p.z * 0.07 - time * 0.3) +
+          fbm3(p.x * 0.07 - 40 + time * 0.31, p.y * 0.07 + 12, p.z * 0.07 - time * 0.38) +
           tl.jitter * 0.35;
-        const glow = smoothstep(0.26, 0.38, f);
-        const dark = smoothstep(0.04, 0.22, -f) * (0.7 + 0.3 * tl.hue);
-        const accent = smoothstep(0.12, 0.3, g) * (tl.accentBias > 0.35 ? 1 : 0.2);
+        // Wide transition bands so blocks fade over ~10+ frames, never pop.
+        const glow = smoothstep(0.24, 0.5, f);
+        const dark = smoothstep(0.0, 0.3, -f) * (0.7 + 0.3 * tl.hue);
+        const accent = smoothstep(0.1, 0.36, g) * (tl.accentBias > 0.35 ? 1 : 0.2);
 
         const mid = midC[Math.floor(tl.hue * midC.length) % midC.length];
         tmpC.copy(mid).lerp(accentC, accent).lerp(darkC, dark).lerp(glowBase, glow);
