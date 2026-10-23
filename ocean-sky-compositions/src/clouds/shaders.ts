@@ -99,13 +99,14 @@ void main() {
   float stars = starLayer(d, 0.0035, 0.45 + 0.4 * band, 0.0)
               + starLayer(d, 0.0016, 0.35 + 0.45 * band, 71.0) * 0.8
               + starLayer(d, 0.0009, 0.2 + 0.5 * band, 13.0) * 0.6;
-  col += vec3(0.85, 0.9, 1.0) * stars * smoothstep(-0.02, 0.06, el);
+  col += vec3(0.85, 0.9, 1.0) * stars * smoothstep(-0.02, 0.06, el)
+         * smoothstep(uMoonRadius * 1.15, uMoonRadius * 1.8, acos(clamp(dot(d, uMoonDir), -1.0, 1.0)));
 
   // moon halo
   float cosA = clamp(dot(d, uMoonDir), -1.0, 1.0);
   float ang = acos(cosA);
   float rim = max(ang - uMoonRadius, 0.0);
-  col += uMoonGlow * (exp(-rim / 0.022) * 0.6 + exp(-rim / 0.07) * 0.25 + exp(-rim / 0.3) * 0.04);
+  col += uMoonGlow * (exp(-rim / 0.022) * 0.85 + exp(-rim / 0.07) * 0.27 + exp(-rim / 0.3) * 0.04);
 
   // holes in the cloud deck show dim cloud below
   col = mix(col, uBelow, smoothstep(0.0, -0.04, el));
@@ -117,7 +118,7 @@ void main() {
     vec2 l = vec2(dot(d, mr), dot(d, mu)) / sin(uMoonRadius);
     float z = sqrt(max(0.0, 1.0 - dot(l, l)));
     vec3 sp = vec3(l, z);
-    float maria = smoothstep(0.44, 0.58, fbm3(sp * 1.7 + vec3(3.0, 1.0, 7.0)));
+    float maria = smoothstep(0.36, 0.64, fbm3(sp * 2.0 + vec3(3.0, 1.0, 7.0)));
     maria *= 0.7 + 0.3 * fbm3(sp * 5.0 + 1.0);
     float speck = fbm3(sp * 14.0 + 2.0);
     // small craters: bright rims around darker floors
@@ -127,10 +128,11 @@ void main() {
     float cr = length(cf) / (0.12 + 0.18 * hash13(ci + 11.0));
     float craterRim = smoothstep(0.75, 1.0, cr) * smoothstep(1.25, 1.0, cr) * step(0.75, hash13(ci + 5.0));
     float craterFloor = smoothstep(0.9, 0.5, cr) * step(0.75, hash13(ci + 5.0));
-    vec3 albedo = mix(uMoonLight, uMoonShadow, maria * 0.95);
+    vec3 albedo = mix(uMoonLight, uMoonShadow, maria * 0.8);
     albedo *= 0.9 + 0.2 * speck;
     albedo *= 1.0 - 0.05 * craterFloor;
-    albedo = mix(albedo, uMoonLight * 1.06, craterRim * 0.6);
+    albedo = mix(albedo, uMoonLight * 1.04, craterRim * 0.15);
+    albedo *= 1.0 - 0.18 * smoothstep(0.2, 1.0, l.x);   // darker right limb
     albedo *= 0.8 + 0.2 * pow(z, 0.5);   // limb darkening
     float edge = smoothstep(uMoonRadius + 1.2 * uPixelAngle, uMoonRadius - 1.2 * uPixelAngle, ang);
     col = mix(col, albedo, edge);
@@ -214,15 +216,12 @@ void main() {
   float toMoon = max(dot(vDir, uMoonDir), 0.0);
   float thin = 1.0 - tx.a;
   // silver lining: thin edges of clouds between us and the moon glow
-  float forward = pow(toMoon, 10.0) * (0.2 + thin * thin * 2.2);
+  float forward = pow(toMoon, 14.0) * (0.25 + thin * thin * 1.4);
   float forwardWide = pow(toMoon, 3.0) * thin * 0.35;
 
   float lit = clamp(skyLight * vShade * cavity * 1.3, 0.0, 1.0);
-  vec3 col = mix(uCloudDark, uCloudLit, lit * lit * (1.6 - 0.6 * lit));
+  vec3 col = mix(uCloudDark, uCloudLit, pow(lit, 1.9) * 1.25);
   col += uMoonColor * (moonLight * 0.28 * vShade + (forward + forwardWide) * uBacklight);
-  // bright rims along the upper outlines of billows
-  float rimL = pow(1.0 - nz, 3.0) * smoothstep(-0.1, 0.7, n.y + 0.5 * dot(n, uMoonDir));
-  col += uMoonColor * rimL * 0.06 * vShade * smoothstep(0.5, 1.0, tx.r);
 
   float fog = smoothstep(uFogNear, uFogFar, vDist);
   vec3 fogCol = uFogColor + uFogGlow * (pow(toMoon, 18.0) * 0.8 + pow(toMoon, 4.0) * 0.25);

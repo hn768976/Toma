@@ -139,7 +139,7 @@ const buildCell = (seed: number) => {
       const edgeNoise =
         fbm(x * 9 + 11, y * 9 + 5, 4) - 0.5 + 0.6 * (fbm(x * 26 + 3, y * 26 + 9, 3) - 0.5);
       const bottom = Math.min(1, Math.max(0, (y - 0.1) / 0.2));
-      const density = 0.8 + 0.2 * fbm(x * 7 + 31, y * 7 + 17, 3);
+      const density = 0.9 + 0.1 * fbm(x * 7 + 31, y * 7 + 17, 3);
       const alpha =
         Math.min(1, Math.max(0, (hv + edgeNoise * 0.1 - 0.012) / 0.13)) *
         bottom *

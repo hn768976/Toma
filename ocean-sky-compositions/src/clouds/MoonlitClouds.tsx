@@ -209,8 +209,8 @@ export const MoonlitClouds: React.FC<MoonlitCloudsProps> = ({ shotId, palette })
     su.uBelow.value.set(palette.below);
     su.uMilkyWay.value.set(palette.milkyWay);
     // milky way band runs from the upper left down towards the moon
-    const mwA = new THREE.Vector3().setFromSphericalCoords(1, (90 - 32) * deg, (180 + 38) * deg);
-    const mwB = new THREE.Vector3().setFromSphericalCoords(1, (90 - 3) * deg, (180 - 22) * deg);
+    const mwA = new THREE.Vector3().setFromSphericalCoords(1, (90 - 19) * deg, (180 + 45) * deg);
+    const mwB = new THREE.Vector3().setFromSphericalCoords(1, (90 - 2) * deg, (180 - 25) * deg);
     su.uMilkyWayNormal.value.crossVectors(mwA, mwB).normalize();
     su.uMoonGlow.value.set(palette.moonGlow);
     su.uMoonLight.value.set(palette.moonLight);
