@@ -14,12 +14,12 @@ export type Palette = {
 export const PALETTES: Record<PaletteName, Palette> = {
   // Version 1: the reference look — rosy aged paper, near-black ink, burnt edges.
   sepia: {
-    paper: [208, 189, 181],
-    paperCenter: [224, 207, 199],
-    stain: [196, 158, 112],
+    paper: [205, 183, 172],
+    paperCenter: [222, 203, 193],
+    stain: [178, 128, 98],
     speck: [120, 80, 50],
-    rule: "rgba(105, 82, 76, 0.30)",
-    ink: "rgb(38, 30, 28)",
+    rule: "rgba(105, 82, 76, 0.26)",
+    ink: "rgb(52, 42, 38)",
     burn: [34, 22, 18],
     flickerTint: [255, 236, 220],
   },

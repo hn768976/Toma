@@ -45,10 +45,10 @@ const referenceShot = (p: number): CameraShot => {
     target,
     roll: -0.05,
     focus: dist,
-    aperture: 0.05,
-    light: [interpolate(p, [0, 1], [0.4, 0.34]), 0.8, 0.55, 0.34],
+    aperture: 0.034,
+    light: [interpolate(p, [0, 1], [0.34, 0.3]), 0.82, 0.58, 0.36],
     ghostOffset: [p * 0.55, p * 0.08],
-    exposure: 1.1,
+    exposure: 1.22,
   };
 };
 
@@ -71,10 +71,10 @@ const craneShot = (p: number): CameraShot => {
     target,
     roll: interpolate(e, [0, 1], [0.1, -0.05]),
     focus: dist * interpolate(p, [0, 0.55, 1], [1.0, 0.86, 1.0]),
-    aperture: interpolate(e, [0, 1], [0.035, 0.05]),
+    aperture: interpolate(e, [0, 1], [0.025, 0.036]),
     light: [interpolate(e, [0, 1], [0.55, 0.42]), interpolate(e, [0, 1], [0.62, 0.78]), 0.55, 0.32],
     ghostOffset: [-p * 0.4, p * 0.2],
-    exposure: 1.1,
+    exposure: 1.2,
   };
 };
 

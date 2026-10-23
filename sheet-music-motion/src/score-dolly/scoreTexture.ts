@@ -23,7 +23,9 @@ export const STAFF_SPACE = 34;
 export const SYSTEM_GAP = 19; // staff spaces between successive grand staves
 export const FIRST_SYSTEM_Y = 7; // staff spaces from top to first treble staff
 
-const INK = "rgba(38, 22, 9, 0.93)";
+const INK = "rgba(30, 17, 7, 0.95)";
+// Printed rules (staff lines, stems, bar lines) age to a lighter sepia.
+const RULE_INK = "rgba(132, 72, 22, 0.88)";
 
 type Ev = {
   dur: number; // in quarters
@@ -155,7 +157,9 @@ const drawStaffMusic = (
         const sx = stemX(ex, s, up);
         const yStart = pitchY(bottom, up ? lo : hi, s);
         const yTip = up ? pitchY(bottom, hi, s) - 3.4 * s : pitchY(bottom, lo, s) + 3.4 * s;
+        ctx.fillStyle = RULE_INK;
         stem(ctx, sx, yStart, yTip, s);
+        ctx.fillStyle = INK;
         if (e.flagCount > 0) flags(ctx, sx, yTip, s, up, e.flagCount);
       }
     }
@@ -180,7 +184,9 @@ const drawStaffMusic = (
         const sx = stemX(pl.x, s, up);
         const ps = pl.e.pitches;
         const yStart = pitchY(bottom, up ? Math.min(...ps) : Math.max(...ps), s);
+        ctx.fillStyle = RULE_INK;
         stem(ctx, sx, yStart, beamAt(sx) + (up ? 0 : 0.48 * s), s);
+        ctx.fillStyle = INK;
       }
       const off = up ? 0 : -0.48 * s;
       beam(ctx, fx - 0.06 * s, y1 + off, lx + 0.06 * s, y2 + off, s);
@@ -205,7 +211,9 @@ const drawStaffMusic = (
     }
 
     // Bar line.
-    ctx.fillRect(barEnd - 0.07 * s, top, 0.14 * s, 4 * s);
+    ctx.fillStyle = RULE_INK;
+    ctx.fillRect(barEnd - 0.06 * s, top, 0.12 * s, 4 * s);
+    ctx.fillStyle = INK;
     x = barEnd;
   }
 };
@@ -230,10 +238,10 @@ const drawAgedPaper = (ctx: CanvasRenderingContext2D, rng: Rng, w: number, h: nu
     ctx.fillRect(x - r, y - r, r * 2, r * 2);
   }
   // Water stains with darker rims.
-  for (let i = 0; i < 26; i++) {
+  for (let i = 0; i < 90; i++) {
     const x = rng() * w;
     const y = rng() * h;
-    const r = range(rng, 60, 320);
+    const r = range(rng, 40, 320);
     const g = ctx.createRadialGradient(x, y, r * 0.6, x, y, r);
     g.addColorStop(0, "rgba(150, 100, 40, 0.02)");
     g.addColorStop(0.85, `rgba(120, 72, 22, ${range(rng, 0.05, 0.14)})`);
@@ -244,7 +252,7 @@ const drawAgedPaper = (ctx: CanvasRenderingContext2D, rng: Rng, w: number, h: nu
     ctx.fill();
   }
   // Multi-scale blotchy noise: tiny random canvases upscaled with smoothing.
-  for (const [cw, alpha] of [[24, 0.22], [70, 0.16], [220, 0.12], [900, 0.1]] as const) {
+  for (const [cw, alpha] of [[24, 0.22], [70, 0.22], [220, 0.22], [900, 0.2], [2400, 0.14]] as const) {
     const ch = Math.round((cw * h) / w);
     const nc = document.createElement("canvas");
     nc.width = cw;
@@ -304,8 +312,10 @@ export const buildScoreCanvas = (seed: number): HTMLCanvasElement => {
   const right = SCORE_W - 2 * s;
   for (let top = FIRST_SYSTEM_Y * s; top + 14 * s < SCORE_H; top += SYSTEM_GAP * s) {
     const bassTop = top + 9.5 * s;
-    staffLines(ctx, left, right, top, s);
-    staffLines(ctx, left, right, bassTop, s);
+    ctx.fillStyle = RULE_INK;
+    staffLines(ctx, left, right, top, s, 0.075);
+    staffLines(ctx, left, right, bassTop, s, 0.075);
+    ctx.fillStyle = INK;
     brace(ctx, left - 1.6 * s, top, bassTop + 4 * s, s);
     ctx.fillRect(left - 0.1 * s, top, 0.2 * s, bassTop + 4 * s - top);
     trebleClef(ctx, left + 0.8 * s, top + 4 * s, s);
@@ -330,12 +340,12 @@ export const buildScoreCanvas = (seed: number): HTMLCanvasElement => {
     ctx.fillRect(x - r, y - r, r * 2, r * 2);
   }
   ctx.globalCompositeOperation = "multiply";
-  for (let i = 0; i < 70; i++) {
+  for (let i = 0; i < 600; i++) {
     const x = rng() * SCORE_W;
     const y = rng() * SCORE_H;
-    const r = range(rng, 10, 70);
+    const r = range(rng, 8, rng() < 0.15 ? 140 : 50);
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, `rgba(160, 105, 50, ${range(rng, 0.2, 0.5)})`);
+    g.addColorStop(0, `rgba(165, 100, 40, ${range(rng, 0.2, 0.55)})`);
     g.addColorStop(1, "rgba(255,255,255,0)");
     ctx.fillStyle = g;
     ctx.fillRect(x - r, y - r, r * 2, r * 2);
@@ -357,10 +367,6 @@ export const buildGhostCanvas = (seed: number): HTMLCanvasElement => {
   ctx.fillStyle = "rgba(255,255,255,0)";
   ctx.fillRect(0, 0, w, h);
   ctx.fillStyle = "rgba(0,0,0,1)";
-  // Faint grid of thin rules.
-  ctx.fillStyle = "rgba(0,0,0,0.4)";
-  for (let x = 0; x < w; x += 256) ctx.fillRect(x + range(rng, -20, 20), 0, 2, h);
-  for (let y = 0; y < h; y += 220) ctx.fillRect(0, y + range(rng, -20, 20), w, 2);
   // Small floating notes.
   ctx.fillStyle = "rgba(0,0,0,1)";
   for (let i = 0; i < 46; i++) {

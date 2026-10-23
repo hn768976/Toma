@@ -59,7 +59,7 @@ export const buildPaper = (p: Palette, w: number, h: number, u: number, seed: nu
   blotchyNoise(ctx, rng, w, h, 240, 0.08, "soft-light");
 
   // Foxing: clusters of small warm stains.
-  for (let i = 0; i < 900; i++) {
+  for (let i = 0; i < 1600; i++) {
     const x = rng() * w;
     const y = rng() * h;
     const r = range(rng, 4, rng() < 0.1 ? 70 : 22) * u;
@@ -69,13 +69,13 @@ export const buildPaper = (p: Palette, w: number, h: number, u: number, seed: nu
     ctx.fillStyle = sg;
     ctx.fillRect(x - r, y - r, r * 2, r * 2);
   }
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 70; i++) {
     const x = rng() * w;
     const y = rng() * h;
-    const r = range(rng, 120, 420) * u;
+    const r = range(rng, 120, 520) * u;
     const sg = ctx.createRadialGradient(x, y, r * 0.2, x, y, r);
     sg.addColorStop(0, rgba(p.stain, 0.0));
-    sg.addColorStop(0.8, rgba(p.stain, range(rng, 0.05, 0.14)));
+    sg.addColorStop(0.8, rgba(p.stain, range(rng, 0.05, 0.12)));
     sg.addColorStop(1, rgba(p.stain, 0));
     ctx.fillStyle = sg;
     ctx.fillRect(x - r, y - r, r * 2, r * 2);
@@ -87,12 +87,16 @@ export const buildPaper = (p: Palette, w: number, h: number, u: number, seed: nu
     ctx.arc(rng() * w, rng() * h, range(rng, 1, rng() < 0.04 ? 7 : 3) * u, 0, Math.PI * 2);
     ctx.fill();
   }
-  // Faint printed rules.
+  // Faint printed rules: thin, uneven, faintly doubled.
   ctx.fillStyle = p.rule;
   const spacing = 98 * u;
   for (let y = spacing * 0.4; y < h; y += spacing) {
-    ctx.globalAlpha = range(rng, 0.55, 1);
-    ctx.fillRect(0, y, w, 4.5 * u);
+    for (let x = 0; x < w; x += 300 * u) {
+      ctx.globalAlpha = range(rng, 0.4, 0.9);
+      ctx.fillRect(x, y + range(rng, -1, 1) * u, 300 * u, 3 * u);
+    }
+    ctx.globalAlpha = 0.25;
+    ctx.fillRect(0, y + 7 * u, w, 2.5 * u);
   }
   ctx.globalAlpha = 1;
   return c;
@@ -117,16 +121,27 @@ export const buildBurn = (p: Palette, w: number, h: number, u: number, seed: num
   ctx.fillStyle = rg;
   ctx.fillRect(-w, -h / ry, w * 3, (h / ry) * 3);
   ctx.restore();
-  // Irregular smoky blotches hugging the frame edges.
-  for (let i = 0; i < 70; i++) {
+  // Darker corners and a soft rounded-rectangle edge band (projector gate).
+  const band = (x0: number, y0: number, x1: number, y1: number) => {
+    const g = ctx.createLinearGradient(x0, y0, x1, y1);
+    g.addColorStop(0, rgba(p.burn, 0.7));
+    g.addColorStop(1, rgba(p.burn, 0));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  };
+  band(0, 0, w * 0.07, 0);
+  band(w, 0, w * 0.93, 0);
+  band(0, 0, 0, h * 0.09);
+  band(0, h, 0, h * 0.91);
+  // Slight irregularity so the burn reads as organic, not geometric.
+  for (let i = 0; i < 28; i++) {
     const side = Math.floor(rng() * 4);
     const t = rng();
-    const inset = Math.pow(rng(), 2) * 0.06;
-    const x = side < 2 ? t * w : side === 2 ? inset * w : (1 - inset) * w;
-    const y = side === 0 ? inset * h : side === 1 ? (1 - inset) * h : t * h;
-    const r = range(rng, 120, 380) * u;
+    const x = side < 2 ? t * w : side === 2 ? 0 : w;
+    const y = side === 0 ? 0 : side === 1 ? h : t * h;
+    const r = range(rng, 160, 340) * u;
     const bg = ctx.createRadialGradient(x, y, 0, x, y, r);
-    bg.addColorStop(0, rgba(p.burn, range(rng, 0.1, 0.26)));
+    bg.addColorStop(0, rgba(p.burn, range(rng, 0.15, 0.3)));
     bg.addColorStop(1, rgba(p.burn, 0));
     ctx.fillStyle = bg;
     ctx.fillRect(x - r, y - r, r * 2, r * 2);

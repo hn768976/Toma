@@ -31,9 +31,9 @@ const LAYERS: Record<Layer, {
   rate: number; s: [number, number]; life: [number, number]; alpha: number;
   blur: [number, number]; drift: number; parallax: number;
 }> = {
-  far: { rate: 4, s: [30, 46], life: [2.2, 4.0], alpha: 0.5, blur: [1.4, 2.2], drift: 10, parallax: 0.5 },
-  mid: { rate: 10, s: [56, 84], life: [1.9, 3.6], alpha: 0.96, blur: [0, 0.6], drift: 18, parallax: 1 },
-  near: { rate: 2.2, s: [110, 170], life: [2.2, 4.2], alpha: 0.42, blur: [3, 4], drift: 70, parallax: 1.8 },
+  far: { rate: 5, s: [30, 46], life: [2.2, 4.0], alpha: 0.5, blur: [1.4, 2.2], drift: 10, parallax: 0.5 },
+  mid: { rate: 13, s: [56, 84], life: [1.9, 3.6], alpha: 0.86, blur: [0, 0.6], drift: 18, parallax: 1 },
+  near: { rate: 3.6, s: [120, 190], life: [2.2, 4.2], alpha: 0.48, blur: [3.2, 4], drift: 70, parallax: 1.8 },
 };
 
 const pickWeighted = (r: number) => {
@@ -62,7 +62,7 @@ const scheduleNotes = (duration: number, W: number, H: number, seed: number): No
         layer,
         glyph: pickWeighted(rng()),
         x: range(rng, -0.04, 1.04) * W,
-        y: range(rng, -0.04, 1.04) * H,
+        y: range(rng, -0.06, 1.06) * H,
         s,
         rot: range(rng, -0.12, 0.12),
         birth,
@@ -151,7 +151,9 @@ export const FloatingNotes: React.FC<{ palette: PaletteName }> = ({ palette }) =
   }, `floating-notes-${palette}`);
 
   const duration = durationInFrames / fps;
-  const notes = useMemo(() => scheduleNotes(duration, W, H, 1641769), [duration, W, H]);
+  // Each palette gets its own layout so the versions are independent.
+  const layoutSeed = palette === "sepia" ? 1641769 : 90210;
+  const notes = useMemo(() => scheduleNotes(duration, W, H, layoutSeed), [duration, W, H, layoutSeed]);
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
@@ -207,7 +209,7 @@ export const FloatingNotes: React.FC<{ palette: PaletteName }> = ({ palette }) =
 
     // Film grain.
     ctx.globalCompositeOperation = "overlay";
-    ctx.globalAlpha = 0.09;
+    ctx.globalAlpha = 0.17;
     const pattern = ctx.createPattern(assets.grain, "repeat")!;
     const gr = mulberry32(frame * 7919 + 13);
     ctx.save();
@@ -230,7 +232,7 @@ export const FloatingNotes: React.FC<{ palette: PaletteName }> = ({ palette }) =
     ctx.drawImage(assets.burnB, ox, oy, bw, bh);
 
     // Old-projector flicker.
-    const flick = (noise1(t * 7, 5) - 0.5) * 0.05 + (noise1(t * 19, 8) - 0.5) * 0.012;
+    const flick = (noise1(t * 7, 5) - 0.5) * 0.05 + (noise1(t * 19, 8) - 0.5) * 0.022;
     if (flick > 0) {
       ctx.globalCompositeOperation = "soft-light";
       ctx.globalAlpha = flick * 2;
