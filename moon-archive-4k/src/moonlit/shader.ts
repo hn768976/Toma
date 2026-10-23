@@ -70,10 +70,10 @@ float fbm(vec2 p, int oct) {
 
 // Painterly, horizontally-stretched cloud bands drifting right-to-left.
 vec3 sky(vec2 p, float t, int oct) {
-  vec2 q = vec2(p.x * 0.7 + t * 0.055, p.y * 3.6);
-  float w = fbm(q * 0.9 + vec2(0.0, t * 0.035), oct);
-  float n1 = fbm(q + 1.8 * vec2(w, w * 0.4) + vec2(t * 0.02, 1.3), oct);
-  float n2 = fbm(q * 1.25 + vec2(-t * 0.03, 5.2) + 1.2 * w, oct);
+  vec2 q = vec2(p.x * 0.7 + t * 0.095, p.y * 3.6);
+  float w = fbm(q * 0.9 + vec2(t * 0.02, t * 0.07), oct);
+  float n1 = fbm(q + 1.8 * vec2(w, w * 0.4) + vec2(t * 0.04, 1.3 - t * 0.03), oct);
+  float n2 = fbm(q * 1.25 + vec2(-t * 0.05, 5.2 + t * 0.03) + 1.2 * w, oct);
 
   float h = smoothstep(-0.18, 0.5, p.y);
   vec3 col = mix(uLavender, uPink, clamp(h * 0.62 + (n2 - 0.5) * 0.9, 0.0, 1.0));
