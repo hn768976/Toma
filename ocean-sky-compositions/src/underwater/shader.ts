@@ -87,14 +87,14 @@ void main() {
   col = mix(col, uDeep, smoothstep(0.5, 0.88, uv.y));
   // darker water away from the sun, deepest towards the bottom right
   float side = smoothstep(0.45, 1.0, uv.x) * smoothstep(0.25, 0.8, uv.y);
-  col = mix(col, uAbyss, side * 0.85);
+  col = mix(col, uAbyss, side * 0.78);
   float leftEdge = smoothstep(0.4, 0.0, uv.x) * smoothstep(0.4, 0.8, uv.y) * smoothstep(1.0, 0.85, uv.y);
   col = mix(col, uDeep, leftEdge * 0.6);
   // sea-floor haze: a soft bright band along the bottom, centred under the sun
   float floorBand = smoothstep(0.76, 1.0, uv.y);
   float floorDrift = 0.05 * sin(t * 0.45) + 0.08 * (noise2(vec2(uv.x * 3.0 + t * 0.15, t * 0.2)) - 0.5);
   float floorShape = exp(-pow((uv.x - 0.4 - floorDrift) / 0.4, 2.0));
-  col = mix(col, uFloor, floorBand * (0.15 + 0.85 * floorShape));
+  col = mix(col, uFloor, floorBand * (0.04 + 0.96 * floorShape) * smoothstep(1.05, 0.7, uv.x));
 
   // ---- surface (above the horizon line) --------------------------------
   float h = uHorizon;
@@ -103,12 +103,13 @@ void main() {
     float dz = max(h + 0.035 - uv.y, 0.004);
     float depth = min(0.11 / dz, 9.0);              // distance along the plane
     vec2 sp = vec2((uv.x - uSun.x) * aspect * (depth + 0.6) * 11.0, depth * 7.0);
-    float r = ripples(sp * 0.9, t * 1.5);
-    float r2 = ripples(sp * 2.1 + 7.0, t * 2.1);
+    float r = ripples(sp * 0.9, t * 2.6);
+    float r2 = ripples(sp * 2.1 + 7.0, t * 3.6);
     float waves = (r * 0.75 + r2 * 0.35) * smoothstep(9.0, 3.0, depth);
     float sunNear = exp(-pow(length((p - sun) * vec2(0.9, 1.6)) / 0.2, 2.0));
     vec3 surf = uSurface * (0.82 + 0.28 * fbm(sp * 0.6 + t * 0.35));
     surf += uHighlight * waves * (0.1 + 0.75 * sunNear) * smoothstep(h + 0.035, h - 0.12, uv.y);
+    surf *= mix(1.0, 0.8, smoothstep(0.45, 1.0, uv.x));
     surf = mix(surf, uUpper * 1.08, smoothstep(h - 0.15, h + 0.03, uv.y) * 0.5);
     col = mix(col, surf, sMask);
   }
@@ -118,11 +119,11 @@ void main() {
   vec2 v = p - (sun + vec2(-0.02, -0.12));
   float dist = length(p - sun);
   float ang = atan(v.x, v.y);                       // 0 = straight down
-  float sway = 0.05 * sin(t * 0.7) + 0.03 * sin(t * 1.9 + 1.3);
+  float sway = 0.065 * sin(t * 0.9) + 0.04 * sin(t * 2.4 + 1.3);
   float a2 = ang + sway * (0.4 + dist);
-  float env = exp(-pow((a2 - 0.42) / 0.42, 2.0));
-  float s1 = noise1(a2 * 9.0 + t * 0.35 + 1.5 * noise1(a2 * 3.0 - t * 0.25));
-  float s2 = noise1(a2 * 17.0 - t * 0.6);
+  float env = exp(-pow((a2 - 0.5) / 0.5, 2.0));
+  float s1 = noise1(a2 * 9.0 + t * 0.45 + 1.5 * noise1(a2 * 3.0 - t * 0.25));
+  float s2 = noise1(a2 * 17.0 - t * 0.8);
   float s3 = noise1(a2 * 5.0 + t * 0.2);
   float shafts = pow(s1 * 0.55 + s2 * 0.15 + s3 * 0.45, 1.6);
   // shafts pulse and break up along their length with the surface waves
@@ -132,13 +133,17 @@ void main() {
   float fall = exp(-dist * 1.25) * smoothstep(0.0, 0.12, dist);
   float rays = shafts * env * fall * uRayStrength;
   // diffuse light scattered in the water around the shaft bundle
-  float haze = exp(-pow((a2 - 0.38) / 0.5, 2.0)) * exp(-dist * 1.4) * 0.6;
+  float haze = exp(-pow((a2 - 0.55) / 0.6, 2.0)) * exp(-dist * 1.4) * 0.6;
   float glow = exp(-dist * 3.4) * 0.45 + exp(-dist * 10.0) * 0.4;
   col += uRay * rays * (1.0 - 0.35 * smoothstep(0.75, 1.0, uv.y));
   col += uRay * (haze * (0.85 + 0.15 * sin(t * 0.9)) + glow * 0.45) * smoothstep(-0.05, 0.12, uv.y + 0.05);
   // sun core blown out at the surface
   float core = exp(-pow(length((p - sun) * vec2(1.0, 1.8)) / 0.06, 2.0));
   col = mix(col, uHighlight, clamp(core * 0.9, 0.0, 1.0));
+
+  // deep water swallows the light toward the bottom-right corner
+  float corner = smoothstep(0.55, 1.0, uv.x) * smoothstep(0.55, 1.0, uv.y);
+  col = mix(col, uAbyss * 0.95, corner * 0.6);
 
   // ---- drifting particles ----------------------------------------------
   vec2 gp = p * vec2(26.0, 26.0) + vec2(t * 0.12, -t * 0.22);
@@ -154,7 +159,7 @@ void main() {
            * (1.0 - smoothstep(0.2, 0.95, uv.y) * 0.6);
   }
 
-  col *= 1.0 + 0.018 * sin(t * 1.1) + 0.01 * sin(t * 2.7);
+  col *= 1.0 + 0.009 * sin(t * 1.1) + 0.005 * sin(t * 2.7);
   // dither to avoid gradient banding
   col += (hash21(gl_FragCoord.xy + fract(t) * 91.0) - 0.5) * 3.0 / 255.0;
   outColor = vec4(clamp(col, 0.0, 1.0), 1.0);
