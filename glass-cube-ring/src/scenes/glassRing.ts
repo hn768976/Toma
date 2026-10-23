@@ -14,31 +14,44 @@ const LOOP = 200; // the reference repeats exactly every 200 frames
 type Palette = {
   background: string; // display (sRGB) colour of the flat backdrop
   glassTint: string;
+  rim: string; // tint of the shell's specular/Fresnel response
   attenuation: string;
   inner: string;
   iridescenceRange: [number, number];
-  env: EnvSpec;
+  env: EnvSpec; // lights the glass shell (rims, Fresnel)
+  coreLights?: EnvSpec["lights"]; // extra lights seen only by the inner walls
 };
 
 const ORANGE: Palette = {
   background: "#bf7037",
   glassTint: "#ffeedd",
+  rim: "#ff7a2a",
   attenuation: "#ff7a30",
-  inner: "#8fc8c0",
+  inner: "#c8b8a0",
   iridescenceRange: [180, 520],
   env: {
     top: [0.06, 0.03, 0.015],
     horizon: [1.5, 0.5, 0.08],
     bottom: [0.05, 0.02, 0.008],
     lights: [
-      { dir: [0.5, 0.9, 0.5], size: 0.35, color: [6, 3.0, 1.0] },
-      { dir: [-1, 0.25, 0.5], size: 0.7, color: [0.05, 1.7, 1.9] },
+      { dir: [0.5, 0.9, 0.5], size: 0.35, color: [5.5, 2.3, 0.5] },
       { dir: [1, 0.0, 0.4], size: 0.45, color: [4.5, 1.4, 0.25] },
-      
+      { dir: [-1, 0.25, 0.5], size: 0.6, color: [3.0, 1.0, 0.15] },
       { dir: [-0.4, -0.8, 0.6], size: 0.5, color: [2.4, 0.8, 0.15] },
-      { dir: [0.3, 0.3, -1], size: 0.6, color: [0.1, 1.3, 1.45] },
+      // hot orange strips that catch on the bevels as glowing rims
+      { dir: [-0.2, 0.2, 1], size: 0.25, color: [9, 3.2, 0.5] },
+      { dir: [0.9, 0.5, 0.9], size: 0.2, color: [10, 4, 0.7] },
+      { dir: [-0.8, -0.3, 0.8], size: 0.2, color: [8, 2.8, 0.4] },
     ],
   },
+  // teal/cyan panels are reflected only by the inner walls, so the shell's
+  // rims stay saturated orange while the cube interiors glint cyan
+  coreLights: [
+    { dir: [-1, 0.25, 0.5], size: 0.7, color: [0.02, 1.6, 1.9] },
+    { dir: [0.3, 0.3, -1], size: 0.6, color: [0.02, 1.3, 1.6] },
+    { dir: [0.6, -0.5, 0.6], size: 0.5, color: [0.02, 0.9, 1.4] },
+    { dir: [0.5, 0.9, 0.5], size: 0.4, color: [1.6, 0.6, 0.12] },
+  ],
 };
 
 // Alternative palette: a cool midnight-indigo set with magenta/violet glass
@@ -46,6 +59,7 @@ const ORANGE: Palette = {
 const INDIGO: Palette = {
   background: "#1e1d45",
   glassTint: "#d9b8ff",
+  rim: "#e0b0ff",
   attenuation: "#b05cff",
   inner: "#21c7d9",
   iridescenceRange: [380, 800],
@@ -84,9 +98,18 @@ export const createGlassRing =
     scene.background = radianceForDisplayColor(pal.background, exposure);
     const envTex = makeEnvironment(renderer, pal.env);
     scene.environment = envTex;
+    const coreEnvTex = pal.coreLights
+      ? makeEnvironment(renderer, {
+          // dark amber surround so the inner walls read as a deep core
+          top: [0.05, 0.02, 0.005],
+          horizon: [0.3, 0.1, 0.02],
+          bottom: [0.03, 0.012, 0.003],
+          lights: pal.coreLights,
+        })
+      : envTex;
 
     const outerGeo = new RoundedBoxGeometry(1, 1, 1, 8, 0.145);
-    const innerGeo = new RoundedBoxGeometry(0.74, 0.74, 0.74, 6, 0.12);
+    const innerGeo = new RoundedBoxGeometry(0.6, 0.6, 0.6, 6, 0.1);
     const glass = new THREE.MeshPhysicalMaterial({
       color: pal.glassTint,
       metalness: 0,
@@ -98,21 +121,23 @@ export const createGlassRing =
       attenuationDistance: 2.6,
       // weak film on the shell keeps the rims orange; the teal/cyan play
       // lives on the inner walls
-      iridescence: 0.3,
+      iridescence: 0.08,
       iridescenceIOR: 1.35,
       iridescenceThicknessRange: pal.iridescenceRange,
       specularIntensity: 1,
+      specularColor: new THREE.Color(pal.rim),
       envMapIntensity: 1.2,
-      dispersion: 0.4,
+      dispersion: 0,
     });
     const core = new THREE.MeshPhysicalMaterial({
       color: pal.inner,
       metalness: 1,
       roughness: 0.05,
-      iridescence: 1,
+      iridescence: 0.55,
       iridescenceIOR: 1.8,
       iridescenceThicknessRange: pal.iridescenceRange,
-      envMapIntensity: 0.8,
+      envMap: coreEnvTex,
+      envMapIntensity: 1.2,
       // only the far walls are drawn: seen through the outer glass this
       // reads as a hollow, thick-walled cube with inner bevel lines
       side: THREE.BackSide,
@@ -154,23 +179,28 @@ export const createGlassRing =
     spinner.position.set(1.3, -0.08, 0);
 
     const dof = new DofRenderer(renderer, width, height);
-    // The ring's normal precesses on a 26 degree cone around an axis lying
+    // The ring's normal precesses on a ~34 degree cone around an axis lying
     // nearly across the view, so the ring is seen mostly edge-on/oblique (a
     // column, an arc, a C) and only briefly opens up toward the camera.
     const tumbleAxis = new THREE.Vector3(1, 0.12, 0.3).normalize();
     const coneTilt = new THREE.Quaternion().setFromUnitVectors(
       new THREE.Vector3(0, 0, 1),
-      tumbleAxis.clone().applyAxisAngle(new THREE.Vector3(0, 0.6, 0.8).normalize(), 0.45),
+      tumbleAxis.clone().applyAxisAngle(new THREE.Vector3(0, 0.6, 0.8).normalize(), 0.6),
     );
     const qa = new THREE.Quaternion();
     const nearest = new THREE.Vector3();
+    const qb = new THREE.Quaternion();
+    const viewAxis = new THREE.Vector3(0, 0, 1);
 
     const renderFrame = (frame: number) => {
       const ph = ((frame % LOOP) / LOOP) * Math.PI * 2;
       // whole ring tumbles about a tilted axis (one turn per loop) while
       // spinning in its own plane by one cube spacing per loop
       qa.setFromAxisAngle(tumbleAxis, ph);
-      spinner.quaternion.copy(qa).multiply(coneTilt);
+      // slow secondary roll about the view axis opens the mid-loop poses
+      // into scattered clusters and short horizontal runs
+      qb.setFromAxisAngle(viewAxis, 0.75 * Math.sin(ph - 0.6));
+      spinner.quaternion.copy(qb).multiply(qa).multiply(coneTilt);
       ring.rotation.z = (ph / CUBES) * 1;
       for (const c of cubes) {
         qa.setFromAxisAngle(c.axis, c.turns * ph + c.phase);
@@ -207,6 +237,7 @@ export const createGlassRing =
         glass.dispose();
         core.dispose();
         envTex.dispose();
+        coreEnvTex.dispose();
         renderer.dispose();
       },
     };

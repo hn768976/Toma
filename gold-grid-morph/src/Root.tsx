@@ -28,24 +28,6 @@ export const RemotionRoot: React.FC = () => {
         height={H}
         defaultProps={{ variant: "alt" as const }}
       />
-      <Composition
-        id="GoldGridMorph-Preview"
-        component={GoldGridMorph}
-        durationInFrames={GRID_FRAMES}
-        fps={30}
-        width={960}
-        height={540}
-        defaultProps={{ variant: "match" as const }}
-      />
-      <Composition
-        id="GoldGridMorph-PreviewV2"
-        component={GoldGridMorph}
-        durationInFrames={GRID_FRAMES}
-        fps={30}
-        width={960}
-        height={540}
-        defaultProps={{ variant: "alt" as const }}
-      />
     </>
   );
 };
