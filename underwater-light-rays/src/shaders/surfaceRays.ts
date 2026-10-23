@@ -51,29 +51,36 @@ void main() {
   col += uColRay * 0.16 * column * smoothstep(0.0, 0.9, uv.y);
 
   // Deep falloff towards the bottom right.
-  vec2 sh = (uv - vec2(1.0, 0.1)) * vec2(1.0, 0.85);
-  float shadow = exp(-dot(sh, sh) * 8.5);
-  col = mix(col, uColShadow, 0.85 * shadow);
+  vec2 sh = (uv - vec2(1.0, 0.22)) * vec2(1.0, 1.1);
+  float shadow = exp(-dot(sh, sh) * 6.0);
+  col = mix(col, uColShadow, 0.9 * shadow);
 
   // Lit haze over the seabed along the bottom edge.
-  float seabed = smoothstep(0.24, 0.0, uv.y) * exp(-pow((uv.x - 0.45) * 2.3, 2.0));
-  col = mix(col, uColSeabed, 0.9 * seabed);
+  float seabed = smoothstep(0.26, 0.0, uv.y) * exp(-pow((uv.x - 0.45) * 2.9, 2.0));
+  col = mix(col, uColSeabed, 0.95 * seabed);
+  // The water darkens a little towards the left edge, away from the sun.
+  col *= mix(0.86, 1.0, smoothstep(0.0, 0.3, uv.x));
 
   // ---- Light shafts -----------------------------------------------------
+  // Computed here, added after the surface so the main shaft starts inside
+  // the sun's glare.
   vec2 p = vec2(uv.x * aspect, uv.y);
   vec2 s = vec2(uSunPos.x * aspect, uSunPos.y + 0.12);
   vec2 v = p - s;
   float d = length(v);
   // Angle measured from straight down, positive towards the right.
   float a = atan(v.x, -v.y);
-  float fan = exp(-pow((a - 0.42) / 0.58, 2.0));
-  float r1 = noise2(vec2(a * 13.0, t * 0.9));
-  float r2 = noise2(vec2(a * 30.0 + 4.0, t * 1.3));
-  float r3 = pow(noise2(vec2(a * 70.0 + 9.0, t * 1.1)), 6.0);
-  float shafts = pow(0.6 * r1 + 0.4 * r2, 2.4) * 1.9 + r3 * 0.5;
+  // One broad, soft main shaft leaning slightly right...
+  float mainShaft = exp(-pow((a - 0.16) / 0.3, 2.0)) * pow(0.35 + 0.65 * noise2(vec2(a * 20.0, t * 0.7)), 1.5);
+  // ...and fainter shafts fanning further right; none lean left.
+  float fan = exp(-pow((a - 0.5) / 0.45, 2.0)) * smoothstep(-0.05, 0.2, a);
+  float r1 = noise2(vec2(a * 11.0, t * 0.9));
+  float r2 = noise2(vec2(a * 24.0 + 4.0, t * 1.3));
+  float r3 = pow(noise2(vec2(a * 55.0 + 9.0, t * 1.1)), 6.0);
+  float side = pow(0.6 * r1 + 0.4 * r2, 2.4) * 1.6 + r3 * 0.2;
   float along = 0.8 + 0.4 * noise2(vec2(a * 8.0, d * 3.0 - t * 0.6));
-  float shaftFade = exp(-max(d - 0.12, 0.0) * 1.35) * smoothstep(0.0, 0.18, uv.y);
-  col += uColRay * shafts * along * fan * shaftFade * 0.34;
+  float shaftFade = exp(-max(d - 0.1, 0.0) * 1.3) * smoothstep(0.0, 0.18, uv.y);
+  vec3 shaftLight = uColRay * (mainShaft * 0.42 + side * fan * 0.26) * along * shaftFade;
 
   // ---- Surface underside ------------------------------------------------
   // Ray-cast from a camera looking slightly upwards to a plane above it.
@@ -82,7 +89,8 @@ void main() {
   if (rd.y > 0.0) {
     float dist = 1.0 / rd.y;
     // Wavelets are wider than they are deep, as on a wind-blown surface.
-    vec2 x = rd.xz * dist * vec2(1.7, 3.4);
+    // Larger cells, running diagonally across frame like the reference.
+    vec2 x = rotate2(rd.xz * dist * vec2(1.15, 2.3), 0.45);
     float e = 0.02;
     float h0 = waveHeight(x, t);
     float hx = waveHeight(x + vec2(e, 0.0), t);
@@ -97,16 +105,19 @@ void main() {
     // Far surface dissolves into the water haze.
     float vis = exp(-(dist - 2.0) * 0.38) * smoothstep(0.0, 0.1, rd.y);
     vis = clamp(vis, 0.0, 1.0);
-    col = mix(col, col * 0.62, vis * 0.9 * smoothstep(0.65, 0.2, lit));
+    col = mix(col, col * 0.5, vis * 0.95 * smoothstep(0.65, 0.2, lit));
     col += uColSurface * vis * pow(lit, 2.4) * 0.8;
 
     // Sun burning through: a hot patch broken up by the wavelets.
     vec2 sv = (uv - uSunPos) * vec2(aspect, 1.0);
-    float sd = length(sv * vec2(0.85, 1.7));
-    float sunMask = exp(-sd * sd * 20.0);
-    float sparkle = smoothstep(0.45, 0.9, lit);
-    col += uColSun * sunMask * (0.3 + 1.5 * sparkle) * vis;
+    float sd = length(sv * vec2(1.1, 1.45));
+    float sunMask = exp(-sd * sd * 16.0);
+    float sparkle = smoothstep(0.4, 0.85, lit);
+    // Blown out at the centre, broken up by the wavelets towards its edge.
+    col += uColSun * sunMask * (0.75 + 1.3 * sparkle) * vis;
   }
+
+  col += shaftLight;
 
   // Wide atmospheric glow around the sun.
   vec2 gv = (uv - uSunPos) * vec2(aspect, 1.0);
