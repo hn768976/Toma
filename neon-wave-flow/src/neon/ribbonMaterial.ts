@@ -33,7 +33,7 @@ const vertexShader = /* glsl */ `
   varying float vEnergy;
   varying vec3 vColor;
 
-  const float EXTENT = 4.0; // quad half-size in sigmas
+  const float EXTENT = 3.2; // quad half-size in sigmas
 
   void main() {
     vec4 viewPos = modelViewMatrix * vec4(position, 1.0);
@@ -42,7 +42,8 @@ const vertexShader = /* glsl */ `
     float depth = -viewPos.z;
 
     vColor = aColor;
-    if (depth < 0.05 || oth.w < 0.05) {
+    vec3 seg3 = aOther - position;
+    if (depth < 0.05 || oth.w < 0.05 || dot(seg3, seg3) == 0.0) {
       vEnergy = 0.0;
       vAcrossW = 0.0;
       vAlongW = 0.0;
@@ -115,7 +116,7 @@ const fragmentShader = /* glsl */ `
     float along = vAlongW / vW;
     float len = vLenW / vW;
     float core = segment(across, along, len, 0.8);
-    float halo = segment(across, along, len, 1.8) * 0.2;
+    float halo = segment(across, along, len, 1.4) * 0.24;
     float a = (core + halo) * vEnergy * uGain;
     // Hot cores drift toward white, like an over-exposed light trail.
     vec3 col = mix(vColor, vec3(0.85, 0.95, 1.0), clamp(core * vEnergy - 0.55, 0.0, 0.6));

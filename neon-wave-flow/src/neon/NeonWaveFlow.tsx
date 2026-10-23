@@ -44,6 +44,9 @@ export const NeonWaveFlow: React.FC<NeonWaveFlowProps> = ({ rig }) => {
         flat
         linear
         camera={{ fov: pose.fov, near: 0.05, far: 400 }}
+        // Follow the render scale exactly (R3F clamps to >= 1 by default), so
+        // a --scale=0.5 deliverable draws a 1080p buffer, not a 4K one.
+        dpr={[0.25, 2]}
         gl={{ antialias: true, alpha: false }}
       >
         <CameraRig pose={pose} />

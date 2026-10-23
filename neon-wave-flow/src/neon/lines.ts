@@ -90,7 +90,7 @@ type WaveParams = {
   ahead: number;
 };
 
-const SAMPLES_PER_WAVE = 36;
+const SAMPLES_PER_WAVE = 18;
 
 const waveSampleCount = (p: WaveParams) =>
   Math.ceil(((BEHIND + p.ahead) / p.lambda) * SAMPLES_PER_WAVE) + 2;
