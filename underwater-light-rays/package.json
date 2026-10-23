@@ -1,0 +1,44 @@
+{
+  "name": "underwater-light-rays",
+  "version": "1.0.0",
+  "description": "Two procedural underwater light-ray compositions (WebGL 2 shaders) in 4K, each with a reference-matched and an alternative version.",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.538",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.538"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.538",
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "render:4k:c1v1": "remotion render Comp1-DeepRays-V1-Match out/Comp1-DeepRays-V1-Match-4k.mp4",
+    "render:1080p:c1v1": "remotion render Comp1-DeepRays-V1-Match out/Comp1-DeepRays-V1-Match-1080p.mp4 --scale=0.5",
+    "render:4k:c1v2": "remotion render Comp1-DeepRays-V2-CameraMove out/Comp1-DeepRays-V2-CameraMove-4k.mp4",
+    "render:1080p:c1v2": "remotion render Comp1-DeepRays-V2-CameraMove out/Comp1-DeepRays-V2-CameraMove-1080p.mp4 --scale=0.5",
+    "render:4k:c2v1": "remotion render Comp2-SurfaceRays-V1-Match out/Comp2-SurfaceRays-V1-Match-4k.mp4",
+    "render:1080p:c2v1": "remotion render Comp2-SurfaceRays-V1-Match out/Comp2-SurfaceRays-V1-Match-1080p.mp4 --scale=0.5",
+    "render:4k:c2v2": "remotion render Comp2-SurfaceRays-V2-GoldenHour out/Comp2-SurfaceRays-V2-GoldenHour-4k.mp4",
+    "render:1080p:c2v2": "remotion render Comp2-SurfaceRays-V2-GoldenHour out/Comp2-SurfaceRays-V2-GoldenHour-1080p.mp4 --scale=0.5",
+    "render:4k": "npm run render:4k:c1v1 && npm run render:4k:c1v2 && npm run render:4k:c2v1 && npm run render:4k:c2v2",
+    "render:1080p": "npm run render:1080p:c1v1 && npm run render:1080p:c1v2 && npm run render:1080p:c2v1 && npm run render:1080p:c2v2"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}
