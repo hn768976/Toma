@@ -19,11 +19,11 @@ type Look = {
 // reference macro shot.
 const GOLD: Look = {
   metal: "#ffb244",
-  baseMetal: "#5a2a08",
+  baseMetal: "#2e1404",
   roughness: 0.13,
-  exposure: 1.1,
+  exposure: 0.8,
   env: {
-    top: [0.03, 0.011, 0.002],
+    top: [0.14, 0.05, 0.007],
     horizon: [0.45, 0.15, 0.015],
     bottom: [0.0, 0.0, 0.0],
     lights: [
@@ -34,6 +34,17 @@ const GOLD: Look = {
       { dir: [0.4, 0.85, 0.3], size: 0.1, color: [8, 3.8, 0.9] },
       { dir: [0.25, 0.7, -0.7], size: 0.42, color: [2.2, 1.0, 0.14], softness: 0.6 },
       { dir: [-0.7, 0.6, 0.1], size: 0.3, color: [1.8, 0.8, 0.1], softness: 0.6 },
+      // a scatter of small hot lights gives each stud busier reflections
+      ...Array.from({ length: 18 }, (_, i) => {
+        const a = i * 2.39996;
+        const el = 0.15 + ((i * 0.37) % 1) * 1.2;
+        return {
+          dir: [Math.cos(a) * Math.cos(el), Math.sin(el), Math.sin(a) * Math.cos(el)] as [number, number, number],
+          size: 0.05 + ((i * 0.61) % 1) * 0.07,
+          color: [4.5, 2.2, 0.4] as [number, number, number],
+          softness: 0.5,
+        };
+      }),
     ],
   },
 };
@@ -155,7 +166,8 @@ export const createGoldGrid =
     const target = new THREE.Vector3();
     const renderFrame = (frame: number) => {
       const t = pingPong(frame);
-      const roundness = 0.05 + 0.95 * Math.pow(t, 0.7);
+      // front-loaded: studs are soft cushions by ~1.5 s and near domes by 3 s
+      const roundness = 0.05 + 0.95 * (1 - (1 - t) * (1 - t));
       morph.setRoundness(roundness);
 
       let dofs: DofSettings;
@@ -164,7 +176,7 @@ export const createGoldGrid =
         const e = smooth(t);
         const az = (tw.az ?? 0.12) + 0.04 * e;
         const el = (tw.el ?? 1.2) - 0.04 * e;
-        const dist = (tw.dist ?? 12.5) - 0.8 * e;
+        const dist = (tw.dist ?? 10.5) - 0.8 * e;
         target.set(0.5 * e, 0.3, 0);
         camera.position.set(
           target.x - Math.cos(el) * Math.sin(az) * dist,
@@ -176,7 +188,7 @@ export const createGoldGrid =
         camera.rotateZ(tw.roll ?? -1.67);
         dofs = {
           focusDistance: camera.position.distanceTo(target),
-          aperture: tw.ap ?? 0.11,
+          aperture: tw.ap ?? 0.065,
           maxCoc: 0.032,
           exposure: look.exposure,
           vignette: 0.35,
@@ -191,8 +203,8 @@ export const createGoldGrid =
         const u = frame / (GRID_FRAMES - 1);
         const e = u * u * (3 - 2 * u);
         const az = -0.55 + 1.2 * e;
-        const el = 0.78 + 0.45 * e;
-        const dist = 9.5 + 3.5 * e;
+        const el = 0.92 + 0.36 * e;
+        const dist = 7 + 2 * e;
         target.set(-5 + 10 * e, 0.4, 3 - 6 * e);
         camera.position.set(
           target.x - Math.cos(el) * Math.sin(az) * dist,
@@ -204,8 +216,8 @@ export const createGoldGrid =
         camera.rotateZ(-1.67 + 0.35 * e);
         dofs = {
           focusDistance: camera.position.distanceTo(target),
-          aperture: 0.1,
-          maxCoc: 0.03,
+          aperture: 0.065,
+          maxCoc: 0.028,
           exposure: look.exposure,
           vignette: 0.35,
           grain: 0.006,
