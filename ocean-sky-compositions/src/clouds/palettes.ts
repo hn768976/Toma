@@ -17,18 +17,18 @@ export type CloudPalette = {
 
 // Cool, desaturated moonlight matching the reference.
 export const MOONLIGHT: CloudPalette = {
-  zenith: "#111418",
-  horizon: "#1b2531",
+  zenith: "#090b0e",
+  horizon: "#141c26",
   below: "#2a3138",
-  milkyWay: "#26303c",
+  milkyWay: "#161d26",
   moonGlow: "#868d96",
   moonLight: "#f8f9fa",
-  moonShadow: "#a6acb3",
+  moonShadow: "#858c94",
   moonRadiusDeg: 6.8,
   cloudDark: "#07090b",
-  cloudLit: "#5e656c",
+  cloudLit: "#454b51",
   moonLightOnClouds: "#aab3bc",
-  fog: "#1d2631",
+  fog: "#18202a",
   fogGlow: "#323b45",
-  backlight: 1.0,
+  backlight: 0.8,
 };

@@ -27,21 +27,21 @@ const deg = Math.PI / 180;
 export const GLIDE_SHOT: CloudShot = {
   name: "glide",
   fovY: 40,
-  speed: 14,
+  speed: 12,
   moonAzimuth: 15.5,
   moonElevation: 3.7,
   heroes: [
     // dark mass under the moon at the start
-    { x: 2.6, z: -14 * 0.85, radius: 5.0, height: 4.5, baseY: 3.4, brightness: 0.6 },
+    { x: 2.6, z: -12 * 0.85, radius: 5.0, height: 4.5, baseY: 3.4, brightness: 0.6 },
     // big moonlit cloud that sweeps across the moon and off to the right
-    { x: 6.0, z: -14 * 1.95, radius: 7.0, height: 6.5, baseY: 5.0, brightness: 1.7 },
+    { x: 6.2, z: -12 * 1.95, radius: 7.0, height: 6.0, baseY: 4.0, brightness: 1.2 },
     // near cloud passing on the left
-    { x: -9.5, z: -14 * 2.7, radius: 5.5, height: 4.2, baseY: 2.4 },
+    { x: -9.5, z: -12 * 2.7, radius: 5.5, height: 4.2, baseY: 2.4 },
   ],
   pose: (t) => ({
     x: 0,
     y: 8.4 + 0.4 * Math.sin(t * 0.55),
-    z: -14 * t,
+    z: -12 * t,
     yaw: 0.004 * Math.sin(t * 0.4),
     pitch: 1.6 * deg,
     roll: 0.003 * Math.sin(t * 0.7),
