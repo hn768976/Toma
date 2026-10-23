@@ -110,7 +110,7 @@ A separate agent reviewed each composition against its reference. It received on
 | Extract → `npm ci` | ✅ 0 vulnerabilities |
 | `npm run lint` (ESLint + tsc) | ✅ clean |
 | `npx remotion compositions` | ✅ four compositions, 3840×2160, 30 fps, 601/601/300/300 frames |
-| 4K render with documented command | 4K_RESULT |
+| 4K render with documented command | ✅ `npm run render:4k:c2v1` rendered the **full** composition in 13 min on CPU: 3840×2160, H.264, 30/1, 300 frames, 10.000 s, decodes clean. `npm run render:4k:c1v1`, `c1v2` and `c2v2` were each run on a 15-frame segment (`-- --frames=0-14`): all 3840×2160 at 30/1, decode clean. |
 
 ## 5. Integrity (SHA-256)
 
