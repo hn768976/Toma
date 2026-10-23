@@ -22,62 +22,31 @@ const lerpPose = (a: Pose, b: Pose, k: number): Pose => ({
 });
 const easeInOut = (k: number) =>
   k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
-const easeSine = (k: number) => 0.5 - 0.5 * Math.cos(Math.PI * k);
 
 // V1 — matches the reference: three framings joined by two whip moves.
+const pose = (pos: V3, target: V3, fov: number, aperture: number): Pose => ({
+  pos,
+  target,
+  fov,
+  aperture,
+});
+
+// prettier-ignore
 const REFERENCE_SHOTS: Shot[] = [
-  {
-    // Elevated three-quarter view of the package corner, creeping in and up
-    // the right-hand edge as the contacts light up.
-    t0: 0,
-    t1: 4.8,
-    a: {
-      pos: [-0.42, 5.81, 4.67],
-      target: [0.41, 1.17, 0.29],
-      fov: 34,
-      aperture: 60,
-    },
-    b: {
-      pos: [-0.2, 4.4, 2.6],
-      target: [0.5, 0.9, -1.2],
-      fov: 34,
-      aperture: 66,
-    },
-  },
-  {
-    // Close, low view along the edge, sliding over the traces.
-    t0: 5.2,
-    t1: 8.2,
-    a: {
-      pos: [0.06, 2.03, -1.58],
-      target: [1.36, -0.94, -4.97],
-      fov: 38,
-      aperture: 110,
-    },
-    b: {
-      pos: [0.1, 1.95, -2.5],
-      target: [1.4, -0.94, -5.9],
-      fov: 38,
-      aperture: 110,
-    },
-  },
-  {
-    // Higher, rotated view over the back corner and the trace maze, drifting.
-    t0: 8.6,
-    t1: 12.04,
-    a: {
-      pos: [-0.59, 6.9, -0.34],
-      target: [0.34, 1.28, -3.8],
-      fov: 34,
-      aperture: 75,
-    },
-    b: {
-      pos: [-0.4, 6.6, -0.7],
-      target: [0.45, 1.2, -4.05],
-      fov: 34,
-      aperture: 75,
-    },
-  },
+  // Low three-quarter view of the package corner, drifting up the edge as
+  // the contacts light up.
+  { t0: 0, t1: 4.8,
+    a: pose([-0.6, 2.5, 3.4], [0.25, 0, -0.9], 28, 70),
+    b: pose([-0.3, 2.2, 1.9], [0.45, 0, -2.2], 28, 76) },
+  // Close, low view along the edge, sliding over the traces.
+  { t0: 5.2, t1: 8.2,
+    a: pose([0.06, 2.03, -1.58], [1.36, -0.94, -4.97], 38, 110),
+    b: pose([0.1, 1.95, -2.5], [1.4, -0.94, -5.9], 38, 110) },
+  // Higher view across the package toward its back corner and the trace
+  // maze, drifting sideways.
+  { t0: 8.6, t1: 12.04,
+    a: pose([-2.4, 2.5, -2.6], [0.35, 0, -5.5], 32, 80),
+    b: pose([-1.9, 2.4, -3.3], [0.55, 0, -5.9], 32, 80) },
 ];
 
 // V2 — alternative camera: one continuous overhead crane move. It starts
@@ -151,11 +120,8 @@ export const poseAt = (variant: CameraVariant, t: number): Pose => {
     const s = shots[i];
     if (t <= s.t1 || i === shots.length - 1) {
       if (t >= s.t0) {
-        return lerpPose(
-          s.a,
-          s.b,
-          easeSine(Math.min(1, (t - s.t0) / (s.t1 - s.t0))),
-        );
+        // Constant drift through the shot, as in the reference.
+        return lerpPose(s.a, s.b, Math.min(1, (t - s.t0) / (s.t1 - s.t0)));
       }
       // Whip from the previous shot's end pose into this one.
       const prev = shots[i - 1];

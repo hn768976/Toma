@@ -10,7 +10,7 @@ import { mulberry32 } from "./random";
 
 export const PKG = 6; // package size
 export const PKG_H = 0.22; // substrate thickness
-export const PAD_PITCH = 0.19;
+export const PAD_PITCH = 0.12;
 
 export type Vec2 = [number, number];
 export type Trace = { pts: Vec2[]; len: number; cum: number[] };
@@ -74,7 +74,7 @@ export const SIDES: Side[] = [
   { map: (u, v) => [v, -PKG - u], vFrom: -0.15, vTo: -PKG }, // back edge
 ];
 
-// Traces leave the package edge in bundles, run outward, jog by 45 degrees
+// Traces leave the package edge in bundles, run outward, jog sideways
 // and fold into the nested L / U shapes seen on real boards.
 export const makeTraces = (): Trace[] => {
   const rnd = mulberry32(21);
@@ -98,7 +98,8 @@ export const makeTraces = (): Trace[] => {
         let u = u0 + run1 + off;
         loc.push([u, v0]);
         const v1 = v0 + dir * jog;
-        u += jog;
+        // Square (90 degree) routing for most bundles, 45 degree for the rest.
+        if (fold > 0.3) u += jog;
         loc.push([u, v1]);
         u += run2 - off * 2;
         loc.push([u, v1]);
@@ -152,7 +153,7 @@ export const makeParticles = (traces: Trace[]): Particle[] => {
   // Dense bands of tiny lit contacts right along the package edges.
   for (const side of SIDES) {
     const span = side.vFrom - side.vTo;
-    const count = Math.round(span * 62);
+    const count = Math.round(span * 24);
     for (let i = 0; i < count; i++) {
       const [x, z] = side.map(
         0.12 + Math.pow(rnd(), 1.9) * 0.9,
@@ -167,11 +168,29 @@ export const makeParticles = (traces: Trace[]): Particle[] => {
         z,
         y: 0.01 + rnd() * 0.04,
         amber: rnd() < 0.4,
-        size: 0.02 + rnd() * 0.024,
+        size: 0.026 + rnd() * 0.03,
         phase: rnd() * 100,
       });
     }
   }
+  // Bead lights sitting on trace corners and pads at the trace ends.
+  traces.forEach((tr) => {
+    tr.pts.forEach(([x, z], k) => {
+      if (k === 0 || rnd() < 0.45) return;
+      out.push({
+        kind: 1,
+        trace: -1,
+        s0: 0,
+        speed: 0,
+        x,
+        z,
+        y: 0.02,
+        amber: rnd() < 0.4,
+        size: 0.03 + rnd() * 0.03,
+        phase: rnd() * 100,
+      });
+    });
+  });
   // Data pulses riding the traces.
   traces.forEach((tr, ti) => {
     const count = Math.max(1, Math.round(tr.len * (0.5 + rnd() * 0.7)));
@@ -185,7 +204,7 @@ export const makeParticles = (traces: Trace[]): Particle[] => {
         z: 0,
         y: 0.012,
         amber: rnd() < 0.38,
-        size: 0.02 + rnd() * 0.022,
+        size: 0.026 + rnd() * 0.028,
         phase: rnd() * 100,
       });
     }

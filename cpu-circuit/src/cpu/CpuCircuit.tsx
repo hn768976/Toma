@@ -117,7 +117,7 @@ const buildWorld = (
       vertexShader: BOARD_VERT,
       fragmentShader: BOARD_FRAG,
       uniforms: {
-        uBase: { value: new THREE.Color(0.026, 0.034, 0.045) },
+        uBase: { value: new THREE.Color(0.036, 0.044, 0.056) },
         uGlowA: { value: CYAN.clone() },
         uGlowB: { value: AMBER.clone() },
         uPower: { value: 0 },
@@ -189,7 +189,7 @@ const buildWorld = (
 
   // Traces as flat ribbons (wider than the line; the shader AA's the edge).
   const traces = makeTraces();
-  const halfW = 0.007;
+  const halfW = 0.012;
   const ribbon = halfW * 3;
   const pos: number[] = [];
   const across: number[] = [];
@@ -239,7 +239,7 @@ const buildWorld = (
     depthWrite: false,
     side: THREE.DoubleSide,
     uniforms: {
-      uColor: { value: new THREE.Color(0.36, 0.4, 0.45) },
+      uColor: { value: new THREE.Color(0.5, 0.55, 0.6) },
       uHalfW: { value: halfW },
       uWake: { value: 0 },
     },
@@ -338,8 +338,8 @@ const buildWorld = (
       uRes: { value: new THREE.Vector2(width, height) },
       uMotion: { value: new THREE.Vector2() },
       uFrame: { value: 0 },
-      uLift: { value: new THREE.Color(0.006, 0.01, 0.016) },
-      uGain: { value: new THREE.Color(1.0, 1.0, 1.04) },
+      uLift: { value: new THREE.Color(0.022, 0.027, 0.036) },
+      uGain: { value: new THREE.Color(1.45, 1.42, 1.45) },
       uBloom: { value: 0.35 },
     },
   });
@@ -413,6 +413,8 @@ const renderFrame = (
     ((probe.y - now.y) * H) / 2,
   );
   if (t < 1 / fps) motion.set(0, 0);
+  // Half-frame shutter: keeps whips readable instead of fully smeared.
+  motion.multiplyScalar(0.5);
 
   // Focus on the board where the line of sight lands.
   const eye = new THREE.Vector3(...pose.pos);
@@ -449,8 +451,8 @@ const renderFrame = (
     );
     const wake = smoothstep(
       0,
-      0.7,
-      t - (0.5 + dist * 0.45 + (p.phase % 1) * 0.9),
+      0.5,
+      t - (0.05 + dist * 0.3 + (p.phase % 1) * 0.6),
     );
     const twinkle = 0.75 + 0.25 * Math.sin(t * (2 + (p.phase % 3)) + p.phase);
     I[i] = (p.kind === 1 ? 3.2 : 4.2) * wake * twinkle;
@@ -469,7 +471,7 @@ const renderFrame = (
   (w.board.material as THREE.ShaderMaterial).uniforms.uPower.value =
     power / w.particles.length;
   // Traces are dark until the signals reach them.
-  w.traceMat.uniforms.uWake.value = 0.12 + 0.88 * smoothstep(0.6, 3.2, t);
+  w.traceMat.uniforms.uWake.value = 0.15 + 0.85 * smoothstep(0.3, 2.4, t);
 
   // 1. Opaque scene (board, package, lands, traces) with depth.
   renderer.setRenderTarget(w.rtScene);
