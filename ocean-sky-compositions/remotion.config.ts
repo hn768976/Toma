@@ -15,6 +15,10 @@ Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
 Config.setOverwriteOutput(true);
+// Software WebGL at 4K can take well over the default 30 s per frame on
+// GPU-less machines, so allow generous per-frame time and fewer parallel tabs.
+Config.setDelayRenderTimeoutInMilliseconds(600000);
+Config.setConcurrency(2);
 
 // Sandboxed environments that cannot download Remotion's Chrome Headless
 // Shell may ship a Playwright build at this path. Use it if present;
