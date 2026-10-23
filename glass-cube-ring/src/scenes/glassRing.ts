@@ -195,13 +195,14 @@ export const createGlassRing =
     const renderFrame = (frame: number) => {
       const ph = ((frame % LOOP) / LOOP) * Math.PI * 2;
       // whole ring tumbles about a tilted axis (one turn per loop) while
-      // spinning in its own plane by one cube spacing per loop
+      // rocking gently in its own plane; every term is periodic in the
+      // 200-frame loop so frame 200 matches frame 0 exactly
       qa.setFromAxisAngle(tumbleAxis, ph);
       // slow secondary roll about the view axis opens the mid-loop poses
       // into scattered clusters and short horizontal runs
       qb.setFromAxisAngle(viewAxis, 0.75 * Math.sin(ph - 0.6));
       spinner.quaternion.copy(qb).multiply(qa).multiply(coneTilt);
-      ring.rotation.z = (ph / CUBES) * 1;
+      ring.rotation.z = 0.3 * Math.sin(ph);
       for (const c of cubes) {
         qa.setFromAxisAngle(c.axis, c.turns * ph + c.phase);
         c.g.quaternion.copy(c.base).premultiply(qa);
