@@ -17,27 +17,30 @@ export type MicrobePalette = {
   // Fluorescence-style bloom; null for brightfield.
   glow: { color: string; alpha: number; blurPx: number } | null;
   grainAlpha: number;
+  // Opacity of the in-focus filament layer (filaments are translucent).
+  wormOpacity: number;
 };
 
 // Version 1: brightfield microscope look of the reference — cool grey-blue
 // slide with slate, semi-translucent filaments.
 export const brightfield: MicrobePalette = {
   id: "brightfield",
-  background: "#a4b2b8",
-  cloudLight: [196, 206, 210],
-  cloudDark: [128, 142, 150],
-  cloudAlpha: 0.55,
-  vignette: "rgba(48, 62, 70, 1)",
-  vignetteStrength: 0.62,
+  background: "#aebcc1",
+  cloudLight: [196, 208, 211],
+  cloudDark: [150, 164, 169],
+  cloudAlpha: 0.5,
+  vignette: "rgba(70, 86, 94, 1)",
+  vignetteStrength: 0.34,
   speck: "rgba(52, 62, 68, A)",
   speckAlphaScale: 1,
-  wormEdge: "rgba(58, 74, 82, 0.95)",
-  wormCore: "rgba(122, 140, 149, 0.95)",
-  wormHighlight: "rgba(170, 186, 192, 0.55)",
+  wormEdge: "rgba(58, 76, 84, 1)",
+  wormCore: "rgba(118, 137, 145, 1)",
+  wormHighlight: "rgba(160, 176, 182, 0.35)",
   blurredEdge: "rgba(78, 94, 102, 0.6)",
   blurredCore: "rgba(116, 132, 140, 0.6)",
   glow: null,
   grainAlpha: 0.07,
+  wormOpacity: 0.86,
 };
 
 // Version 2: immunofluorescence / dark-field palette — same specimen, stained
@@ -59,4 +62,5 @@ export const fluorescence: MicrobePalette = {
   blurredCore: "rgba(14, 84, 60, 0.6)",
   glow: { color: "rgba(60, 255, 150, 1)", alpha: 0.85, blurPx: 7 },
   grainAlpha: 0.035,
+  wormOpacity: 1,
 };

@@ -26,8 +26,8 @@ export const cloudTexture = (p: MicrobePalette) => {
   const img = ctx.createImageData(w, h);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      const n = fbm(x / 70, y / 70, 11, 5);
-      const v = Math.min(1, Math.max(0, (n - 0.5) * 2.4 + 0.5));
+      const n = fbm(x / 48, y / 48, 11, 5);
+      const v = Math.min(1, Math.max(0, (n - 0.5) * 1.7 + 0.5));
       const i = (y * w + x) * 4;
       img.data[i] = p.cloudDark[0] + (p.cloudLight[0] - p.cloudDark[0]) * v;
       img.data[i + 1] = p.cloudDark[1] + (p.cloudLight[1] - p.cloudDark[1]) * v;

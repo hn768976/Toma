@@ -8,34 +8,40 @@ export type MicrobeFieldProps = { palette: MicrobePalette };
 
 type Ctx = CanvasRenderingContext2D;
 
-const tracePath = (ctx: Ctx, pts: Float32Array) => {
-  ctx.beginPath();
-  ctx.moveTo(pts[0], pts[1]);
-  // Midpoint quadratic smoothing keeps tight loops round at 4K.
-  for (let i = 2; i < pts.length - 2; i += 2) {
-    const mx = (pts[i] + pts[i + 2]) / 2;
-    const my = (pts[i + 1] + pts[i + 3]) / 2;
-    ctx.quadraticCurveTo(pts[i], pts[i + 1], mx, my);
+// Each filament is stroked in short chunks so its width can taper towards
+// the ends and swell slightly along its length, like a real organism.
+const CHUNKS = 14;
+
+const widthAt = (w: Worm, s: number) =>
+  w.width *
+  (0.5 + 0.5 * Math.pow(Math.sin(Math.PI * Math.min(1, Math.max(0, s))), 0.45)) *
+  (1 + 0.13 * Math.sin(s * 9 + w.phase * 3));
+
+const strokeTapered = (ctx: Ctx, pts: Float32Array, w: Worm, scale: number) => {
+  const n = pts.length / 2;
+  const per = Math.ceil((n - 1) / CHUNKS);
+  for (let c = 0; c < n - 1; c += per) {
+    const end = Math.min(n - 1, c + per);
+    ctx.beginPath();
+    ctx.moveTo(pts[c * 2], pts[c * 2 + 1]);
+    for (let i = c + 1; i <= end; i++) ctx.lineTo(pts[i * 2], pts[i * 2 + 1]);
+    ctx.lineWidth = widthAt(w, (c + end) / 2 / (n - 1)) * scale;
+    ctx.stroke();
   }
-  ctx.lineTo(pts[pts.length - 2], pts[pts.length - 1]);
 };
 
-// A filament is drawn as a translucent tube: dark wall, lighter lumen and a
-// faint specular line, which reads as the refractive edge seen under a
-// brightfield microscope.
-const drawWorm = (ctx: Ctx, w: Worm, t: number, p: MicrobePalette, soft: boolean) => {
-  const pts = wormPath(w, t);
-  tracePath(ctx, pts);
+// A filament reads as a translucent tube: a darker wall, a lighter lumen and
+// a faint refractive highlight. Walls of the whole filament are drawn before
+// its lumen so chunk joints never show.
+const drawWorm = (ctx: Ctx, w: Worm, cycle: number, p: MicrobePalette, soft: boolean) => {
+  const pts = wormPath(w, cycle);
   ctx.strokeStyle = soft ? p.blurredEdge : p.wormEdge;
-  ctx.lineWidth = w.width;
-  ctx.stroke();
+  strokeTapered(ctx, pts, w, 1);
   ctx.strokeStyle = soft ? p.blurredCore : p.wormCore;
-  ctx.lineWidth = w.width * 0.5;
-  ctx.stroke();
+  strokeTapered(ctx, pts, w, 0.55);
   if (!soft) {
     ctx.strokeStyle = p.wormHighlight;
-    ctx.lineWidth = w.width * 0.14;
-    ctx.stroke();
+    strokeTapered(ctx, pts, w, 0.16);
   }
 };
 
@@ -44,22 +50,20 @@ const setupStroke = (ctx: Ctx) => {
   ctx.lineJoin = "round";
 };
 
-// Draws a set of worms into a reduced-resolution buffer, blurs it there
-// (cheap) and composites the result back at full size.
-const drawBlurredLayer = (
+// Draws into a reduced-resolution buffer, blurs it there (cheap) and
+// composites the result back at full size.
+const drawLayer = (
   ctx: Ctx,
-  worms: Worm[],
-  t: number,
-  p: MicrobePalette,
-  camera: (c: Ctx, scale: number) => void,
+  divisor: number,
   blurDesignPx: number,
   key: string,
+  camera: (c: Ctx, scale: number) => void,
+  draw: (c: Ctx) => void,
   composite: GlobalCompositeOperation = "source-over",
   alpha = 1,
-  drawFn: (c: Ctx, w: Worm) => void = (c, w) => drawWorm(c, w, t, p, true),
 ) => {
-  const bw = Math.round(ctx.canvas.width / 4);
-  const bh = Math.round(ctx.canvas.height / 4);
+  const bw = Math.round(ctx.canvas.width / divisor);
+  const bh = Math.round(ctx.canvas.height / divisor);
   const scale = bw / DESIGN_W;
   const src = scratchCanvas(`${key}-src`, bw, bh);
   const dst = scratchCanvas(`${key}-dst`, bw, bh);
@@ -68,7 +72,7 @@ const drawBlurredLayer = (
   s.clearRect(0, 0, bw, bh);
   camera(s, scale);
   setupStroke(s);
-  for (const w of worms) drawFn(s, w);
+  draw(s);
   const d = dst.getContext("2d")!;
   d.setTransform(1, 0, 0, 1, 0, 0);
   d.clearRect(0, 0, bw, bh);
@@ -79,6 +83,7 @@ const drawBlurredLayer = (
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = composite;
   ctx.globalAlpha = alpha;
+  ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(dst, 0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.restore();
@@ -86,7 +91,7 @@ const drawBlurredLayer = (
 
 export const MicrobeField: React.FC<MicrobeFieldProps> = ({ palette: p }) => {
   const frame = useCurrentFrame();
-  const { width, height, fps, durationInFrames } = useVideoConfig();
+  const { width, height, durationInFrames } = useVideoConfig();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const worms = useMemo(() => createWorms(7), []);
 
@@ -94,14 +99,15 @@ export const MicrobeField: React.FC<MicrobeFieldProps> = ({ palette: p }) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
-    const t = frame / fps;
-    const progress = frame / Math.max(1, durationInFrames - 1);
+    // One full cycle over the clip: frame N would equal frame 0, so the
+    // video loops seamlessly.
+    const cycle = (frame / durationInFrames) * Math.PI * 2;
     const S = width / DESIGN_W;
 
-    // Slow microscope-stage drift with a gentle push-in.
-    const zoom = 1.03 + 0.035 * progress;
-    const panX = -22 * progress + 6 * Math.sin(t * 0.21);
-    const panY = 10 * progress + 5 * Math.sin(t * 0.17 + 1.3);
+    // Gentle, periodic microscope-stage drift and focus breathing.
+    const zoom = 1.045 + 0.012 * Math.sin(cycle);
+    const panX = 16 * Math.sin(cycle + 0.4);
+    const panY = 9 * Math.sin(cycle * 2 + 1.3);
     const camera = (c: Ctx, scale: number) => {
       c.setTransform(scale, 0, 0, scale, 0, 0);
       c.translate(DESIGN_W / 2, DESIGN_H / 2);
@@ -119,11 +125,11 @@ export const MicrobeField: React.FC<MicrobeFieldProps> = ({ palette: p }) => {
     const cloud = cloudTexture(p);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-    const cdx = (Math.sin(t * 0.09) * 40 - t * 3) * S;
-    const cdy = (Math.cos(t * 0.07) * 30 - t * 1.5) * S;
+    const cdx = (Math.sin(cycle) * 60) * S;
+    const cdy = (Math.cos(cycle) * 35) * S;
     ctx.drawImage(cloud, -120 * S + cdx, -90 * S + cdy, (DESIGN_W + 300) * S, (DESIGN_H + 240) * S);
 
-    // Debris.
+    // Fine debris.
     camera(ctx, S);
     for (const sp of getSpecks()) {
       if (sp.soft) continue;
@@ -132,70 +138,67 @@ export const MicrobeField: React.FC<MicrobeFieldProps> = ({ palette: p }) => {
       ctx.arc(sp.x, sp.y, sp.r, 0, Math.PI * 2);
       ctx.fill();
     }
-    {
-      // Soft dust motes, blurred in the quarter-res buffer.
-      const bw = Math.round(width / 4);
-      const bh = Math.round(height / 4);
-      const scale = bw / DESIGN_W;
-      const src = scratchCanvas("motes-src", bw, bh);
-      const s = src.getContext("2d")!;
-      s.setTransform(1, 0, 0, 1, 0, 0);
-      s.clearRect(0, 0, bw, bh);
-      s.filter = `blur(${5 * scale}px)`;
-      camera(s, scale);
+    // Soft dust motes.
+    drawLayer(ctx, 4, 5, "motes", camera, (c) => {
       for (const sp of getSpecks()) {
         if (!sp.soft) continue;
-        s.fillStyle = p.speck.replace("A", String(sp.a * p.speckAlphaScale));
-        s.beginPath();
-        s.arc(sp.x, sp.y, sp.r, 0, Math.PI * 2);
-        s.fill();
+        c.fillStyle = p.speck.replace("A", String(sp.a * p.speckAlphaScale));
+        c.beginPath();
+        c.arc(sp.x, sp.y, sp.r, 0, Math.PI * 2);
+        c.fill();
       }
-      s.filter = "none";
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.drawImage(src, 0, 0, width, height);
-      ctx.restore();
-    }
+    });
 
     const behind = worms.filter((w) => w.layer === 1);
     const focal = worms.filter((w) => w.layer === 0);
     const front = worms.filter((w) => w.layer === 2);
 
-    drawBlurredLayer(ctx, behind, t, p, camera, 3.5, "behind");
+    drawLayer(ctx, 4, 4, "behind", camera, (c) => {
+      for (const w of behind) drawWorm(c, w, cycle, p, true);
+    });
 
-    camera(ctx, S);
-    setupStroke(ctx);
-    for (const w of focal) drawWorm(ctx, w, t, p, false);
+    // In-focus filaments: drawn at half resolution with a slight blur and
+    // composited translucently, matching the soft optics of the reference.
+    drawLayer(
+      ctx,
+      2,
+      1.3,
+      "focal",
+      camera,
+      (c) => {
+        for (const w of focal) drawWorm(c, w, cycle, p, false);
+      },
+      "source-over",
+      p.wormOpacity,
+    );
 
     if (p.glow) {
       const glow = p.glow;
-      drawBlurredLayer(
+      drawLayer(
         ctx,
-        focal,
-        t,
-        p,
-        camera,
+        4,
         glow.blurPx,
         "glow",
+        camera,
+        (c) => {
+          c.strokeStyle = glow.color;
+          for (const w of focal) strokeTapered(c, wormPath(w, cycle), w, 1.4);
+        },
         "lighter",
         glow.alpha,
-        (c, w) => {
-          tracePath(c, wormPath(w, t));
-          c.strokeStyle = glow.color;
-          c.lineWidth = w.width * 1.4;
-          c.stroke();
-        },
       );
     }
 
-    drawBlurredLayer(ctx, front, t, p, camera, 9, "front");
+    drawLayer(ctx, 4, 10, "front", camera, (c) => {
+      for (const w of front) drawWorm(c, w, cycle, p, true);
+    });
 
     // Optical vignette (fixed to the lens, not the slide).
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     const vg = ctx.createRadialGradient(
       width * 0.52,
       height * 0.5,
-      height * 0.25,
+      height * 0.3,
       width * 0.5,
       height * 0.5,
       width * 0.62,
@@ -219,7 +222,7 @@ export const MicrobeField: React.FC<MicrobeFieldProps> = ({ palette: p }) => {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = "source-over";
-  }, [frame, fps, durationInFrames, width, height, p, worms]);
+  }, [frame, durationInFrames, width, height, p, worms]);
 
   return (
     <AbsoluteFill style={{ backgroundColor: p.background }}>

@@ -28,10 +28,12 @@ export const NeonWaveFlow: React.FC<NeonWaveFlowProps> = ({ rig }) => {
   const frame = useCurrentFrame();
   const { width, height, fps, durationInFrames } = useVideoConfig();
   const t = frame / fps;
-  const pose = getCameraPose(rig, t, durationInFrames / fps);
+  // The clip period: frame N (one past the end) equals frame 0.
+  const duration = durationInFrames / fps;
+  const pose = getCameraPose(rig, t, duration);
   const lines = useMemo(
-    () => buildLines(2024).filter((l) => rig === "lowTracking" || !l.foreground),
-    [rig],
+    () => buildLines(2024, duration).filter((l) => rig === "lowTracking" || !l.foreground),
+    [rig, duration],
   );
 
   return (

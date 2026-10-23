@@ -12,15 +12,18 @@ export type CameraPose = {
 
 export type CameraRigName = "lowTracking" | "craneSweep";
 
-// Version 1: low, tilted tracking shot gliding beside the track, as in the
-// reference — near arcs huge in the upper left, track vanishing lower right.
-const lowTracking = (t: number): CameraPose => {
-  const x = 0.42 * t;
-  const sway = Math.sin(t * 0.35) * 0.12;
+// Version 1: low, tilted shot beside the track, as in the reference — near
+// arcs huge in the upper left, track vanishing lower right. The camera only
+// drifts on closed, periodic paths (the flow comes from the filaments
+// travelling toward it), so the clip loops seamlessly like the reference.
+const lowTracking = (t: number, duration: number): CameraPose => {
+  const c = (t / duration) * Math.PI * 2;
+  const sway = Math.sin(c) * 0.12;
+  const x = 0.6 * Math.sin(c + 0.8);
   return {
-    position: [x, -0.55 + sway * 0.4, 2.1 + sway],
+    position: [x, -0.55 + Math.sin(2 * c) * 0.05, 2.1 + sway],
     target: [x + 5, 0.75, -1.6],
-    roll: 0.22 + Math.sin(t * 0.22) * 0.03,
+    roll: 0.22 + Math.sin(c + 2.1) * 0.03,
     fov: 42,
     focus: 5.2,
     aperture: 0.018,
@@ -56,4 +59,4 @@ export const getCameraPose = (
   rig: CameraRigName,
   t: number,
   duration: number,
-): CameraPose => (rig === "lowTracking" ? lowTracking(t) : craneSweep(t, duration));
+): CameraPose => (rig === "lowTracking" ? lowTracking(t, duration) : craneSweep(t, duration));
