@@ -156,7 +156,7 @@ const SolarPanel: React.FC<{ p: Palette }> = ({ p }) => {
   const moduleH = 1.75; // along tilt
   const gap = 0.12;
   return (
-    <group position={[-3.52, 0, 2.45]}>
+    <group position={[-3.33, 0, 2.26]}>
       {/* support legs */}
       <Box size={[0.14, 2.1, 0.14]} position={[-0.75, 1.05, 1.8]} color={p.panelFrame} />
       <Box size={[0.14, 2.1, 0.14]} position={[-0.75, 1.05, -1.8]} color={p.panelFrame} />
@@ -218,9 +218,9 @@ const bladeGeometry = (() => {
   // Tapered aerofoil-like blade lying along +y.
   const shape = new THREE.Shape();
   shape.moveTo(0, 0);
-  shape.bezierCurveTo(0.34, 0.3, 0.26, 1.0, 0.04, 1.75);
-  shape.lineTo(-0.03, 1.75);
-  shape.bezierCurveTo(-0.14, 1.0, -0.2, 0.3, 0, 0);
+  shape.bezierCurveTo(0.22, 0.3, 0.17, 1.0, 0.035, 1.75);
+  shape.lineTo(-0.025, 1.75);
+  shape.bezierCurveTo(-0.09, 1.0, -0.13, 0.3, 0, 0);
   const geo = new THREE.ExtrudeGeometry(shape, {
     depth: 0.04,
     bevelEnabled: true,
@@ -269,7 +269,7 @@ const Turbine: React.FC<{ p: Palette; angle: number }> = ({ p, angle }) => {
 };
 
 const Controller: React.FC<{ p: Palette; frame: number }> = ({ p, frame }) => (
-  <group position={[-0.5, 0, 1.54]}>
+  <group position={[-0.25, 0, 1.61]}>
     <RoundedSlab size={[2.0, 0.7, 3.1]} position={[0, 0, 0]} radius={0.12} color={p.controller} />
     {[0, 1, 2, 3].map((i) => {
       const on = ledState(frame, i);
@@ -303,7 +303,7 @@ const Battery: React.FC<{ p: Palette; level: number }> = ({ p, level }) => {
   const y = 0.42;
   const fillLen = Math.max(0.0001, (bodyLen - 0.32) * level);
   return (
-    <group position={[3.17, 0, 2.63]} scale={[1.25, 1, 1.25]}>
+    <group position={[3.55, 0, 2.57]} scale={[1.25, 1, 1.25]}>
       <RoundedSlab size={[2.8, 0.3, 3.8]} position={[0, 0, 0]} radius={0.12} color={p.batterySlab} />
       <mesh position={[-0.05, 0.31, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[2.25, 3.25]} />

@@ -21,7 +21,7 @@ export type KeyboardVariant = "match" | "orbit";
 
 const PITCH = 1;
 const GRID_ANGLE = THREE.MathUtils.degToRad(-8);
-const PRESS_DEPTH = 0.22;
+const PRESS_DEPTH = 0.28;
 
 const COLORS = {
   background: "#00101c",
@@ -63,7 +63,7 @@ const MATCH_POSE: CameraPose = {
   distance: 7.3,
   fov: 17,
   roll: -9,
-  target: [0.02, 0.3, -0.06],
+  target: [0.1, 0.3, -0.18],
 };
 
 const cameraPose = (variant: KeyboardVariant, frame: number): CameraPose => {
@@ -127,7 +127,7 @@ const Keys: React.FC<{ press: number }> = ({ press }) => {
     () =>
       new THREE.MeshStandardMaterial({
         color: COLORS.yesKey,
-        emissive: new THREE.Color("#2a1800"),
+        emissive: new THREE.Color("#3c2400"),
         roughness: 0.42,
         metalness: 0,
       }),
@@ -248,7 +248,7 @@ export const KeyboardScene: React.FC<{ variant: KeyboardVariant }> = ({
       <AbsoluteFill
         style={{
           background:
-            "radial-gradient(ellipse 75% 70% at 50% 48%, rgba(0,0,0,0) 45%, rgba(0,6,14,0.7) 100%)",
+            "radial-gradient(ellipse 80% 75% at 50% 35%, rgba(0,0,0,0) 50%, rgba(0,6,14,0.7) 100%)",
         }}
       />
     </AbsoluteFill>
