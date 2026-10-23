@@ -8,6 +8,8 @@ import {
   batteryLevel,
   bulbFlashMix,
   bulbPhase,
+  floorLit,
+  FLOORS,
   glowAmount,
   ledState,
   turbineAngle,
@@ -109,7 +111,7 @@ const RoundedSlab: React.FC<{
   }, [size, radius]);
   return (
     <mesh geometry={geometry} position={position} castShadow receiveShadow>
-      <Mat color={color} />
+      <Mat color={color} emissive={color} emissiveIntensity={0.12} />
     </mesh>
   );
 };
@@ -154,7 +156,7 @@ const SolarPanel: React.FC<{ p: Palette }> = ({ p }) => {
   const moduleH = 1.75; // along tilt
   const gap = 0.12;
   return (
-    <group position={[-3.24, 0, 2.57]}>
+    <group position={[-3.52, 0, 2.45]}>
       {/* support legs */}
       <Box size={[0.14, 2.1, 0.14]} position={[-0.75, 1.05, 1.8]} color={p.panelFrame} />
       <Box size={[0.14, 2.1, 0.14]} position={[-0.75, 1.05, -1.8]} color={p.panelFrame} />
@@ -187,7 +189,7 @@ const SolarPanel: React.FC<{ p: Palette }> = ({ p }) => {
                 map={tex}
                 roughness={0.5}
                 emissive={p.panelCell}
-                emissiveIntensity={0.18}
+                emissiveIntensity={0.12}
               />
               <meshStandardMaterial
                 attach="material-3"
@@ -216,9 +218,9 @@ const bladeGeometry = (() => {
   // Tapered aerofoil-like blade lying along +y.
   const shape = new THREE.Shape();
   shape.moveTo(0, 0);
-  shape.bezierCurveTo(0.16, 0.25, 0.14, 1.0, 0.03, 1.75);
-  shape.lineTo(-0.02, 1.75);
-  shape.bezierCurveTo(-0.08, 1.0, -0.1, 0.3, 0, 0);
+  shape.bezierCurveTo(0.34, 0.3, 0.26, 1.0, 0.04, 1.75);
+  shape.lineTo(-0.03, 1.75);
+  shape.bezierCurveTo(-0.14, 1.0, -0.2, 0.3, 0, 0);
   const geo = new THREE.ExtrudeGeometry(shape, {
     depth: 0.04,
     bevelEnabled: true,
@@ -236,19 +238,19 @@ const Turbine: React.FC<{ p: Palette; angle: number }> = ({ p, angle }) => {
   return (
     <group position={[-2.43, 0, -1.49]}>
       <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[0.055, 0.085, height, 16]} />
-        <Mat color={p.turbine} roughness={0.6} />
+        <cylinderGeometry args={[0.07, 0.1, height, 16]} />
+        <Mat color={p.turbine} emissive={p.turbine} emissiveIntensity={0.35} roughness={0.6} />
       </mesh>
       {/* nacelle + rotor face the camera (diagonal view direction) */}
       <group position={[0, height, 0]} rotation={[0, Math.PI / 4, 0]}>
         <mesh position={[0, 0, -0.05]} castShadow>
           <capsuleGeometry args={[0.11, 0.3, 6, 16]} />
-          <Mat color={p.turbine} roughness={0.6} />
+          <Mat color={p.turbine} emissive={p.turbine} emissiveIntensity={0.35} roughness={0.6} />
         </mesh>
         <group position={[0, 0, 0.2]} rotation={[0, 0, angle]}>
           <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
             <sphereGeometry args={[0.12, 16, 16]} />
-            <Mat color={p.turbine} roughness={0.6} />
+            <Mat color={p.turbine} emissive={p.turbine} emissiveIntensity={0.35} roughness={0.6} />
           </mesh>
           {[0, 1, 2].map((i) => (
             <mesh
@@ -257,7 +259,7 @@ const Turbine: React.FC<{ p: Palette; angle: number }> = ({ p, angle }) => {
               rotation={[0, 0, (i * Math.PI * 2) / 3]}
               castShadow
             >
-              <Mat color={p.turbine} roughness={0.6} />
+              <Mat color={p.turbine} emissive={p.turbine} emissiveIntensity={0.35} roughness={0.6} />
             </mesh>
           ))}
         </group>
@@ -267,13 +269,13 @@ const Turbine: React.FC<{ p: Palette; angle: number }> = ({ p, angle }) => {
 };
 
 const Controller: React.FC<{ p: Palette; frame: number }> = ({ p, frame }) => (
-  <group position={[-0.22, 0, 1.66]}>
+  <group position={[-0.5, 0, 1.54]}>
     <RoundedSlab size={[2.0, 0.7, 3.1]} position={[0, 0, 0]} radius={0.12} color={p.controller} />
     {[0, 1, 2, 3].map((i) => {
       const on = ledState(frame, i);
       return (
         <mesh key={i} position={[-0.42, 0.7, 0.9 - i * 0.6]} castShadow>
-          <sphereGeometry args={[0.18, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <sphereGeometry args={[0.13, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
           <Mat
             color={on ? p.ledOn : p.ledOff}
             emissive={on ? p.ledOn : "#000000"}
@@ -297,11 +299,11 @@ const Controller: React.FC<{ p: Palette; frame: number }> = ({ p, frame }) => (
 const Battery: React.FC<{ p: Palette; level: number }> = ({ p, level }) => {
   const bodyLen = 2.0; // along z
   const bodyH = 0.8; // along x
-  const t = 0.07; // outline thickness
+  const t = 0.09; // outline thickness
   const y = 0.42;
   const fillLen = Math.max(0.0001, (bodyLen - 0.32) * level);
   return (
-    <group position={[3.45, 0, 2.75]} scale={[1.25, 1, 1.25]}>
+    <group position={[3.17, 0, 2.63]} scale={[1.25, 1, 1.25]}>
       <RoundedSlab size={[2.8, 0.3, 3.8]} position={[0, 0, 0]} radius={0.12} color={p.batterySlab} />
       <mesh position={[-0.05, 0.31, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[2.25, 3.25]} />
@@ -378,8 +380,8 @@ const LightPool: React.FC<{ color: string; opacity: number }> = ({ color, opacit
     return tex;
   }, []);
   return (
-    <mesh position={[2.55, 0.03, -2.55]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-      <planeGeometry args={[4.9, 4.9]} />
+    <mesh position={[2.4, 0.03, -1.9]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <planeGeometry args={[5.2, 6.2]} />
       <meshStandardMaterial
         color={color}
         alphaMap={texture}
@@ -394,14 +396,18 @@ const LightPool: React.FC<{ color: string; opacity: number }> = ({ color, opacit
   );
 };
 
-const Building: React.FC<{ p: Palette; glow: number }> = ({ p, glow }) => {
-  const floors = 7;
+const Building: React.FC<{ p: Palette; glow: number; frame: number }> = ({
+  p,
+  glow,
+  frame,
+}) => {
   const floorH = 0.9;
   const core = 2.0;
   const windows = useMemo(() => {
     const out: { pos: [number, number, number]; rotY: number; floor: number }[] = [];
-    for (let f = 0; f < floors; f++) {
+    for (let f = 0; f < FLOORS; f++) {
       const y = f * floorH + 0.42;
+      // Only the two camera-facing sides (+x, +z) are ever visible.
       for (let side = 0; side < 4; side++) {
         const rotY = (side * Math.PI) / 2;
         for (let k = 0; k < 6; k++) {
@@ -415,12 +421,10 @@ const Building: React.FC<{ p: Palette; glow: number }> = ({ p, glow }) => {
     }
     return out;
   }, []);
-  // Light is strongest at the lower floors, like the reference's warm gradient.
-  const windowColor = new THREE.Color(p.window).lerp(new THREE.Color(p.windowLit), glow);
   return (
     <group position={[0.15, 0, -3.7]}>
-      {Array.from({ length: floors }).map((_, f) => {
-        const floorGlow = glow * THREE.MathUtils.lerp(1, 0.55, f / (floors - 1));
+      {Array.from({ length: FLOORS }).map((_, f) => {
+        const floorGlow = glow * THREE.MathUtils.lerp(1, 0.55, f / (FLOORS - 1));
         return (
           <group key={f} position={[0, f * floorH, 0]}>
             <LitBox
@@ -445,21 +449,29 @@ const Building: React.FC<{ p: Palette; glow: number }> = ({ p, glow }) => {
         );
       })}
       <Box
-        size={[core + 0.05, 0.35, core + 0.05]}
-        position={[0, floors * floorH + 0.17, 0]}
+        size={[core + 0.05, 0.22, core + 0.05]}
+        position={[0, FLOORS * floorH + 0.11, 0]}
         color={p.building}
       />
-      {windows.map((w, i) => (
-        <mesh key={i} position={w.pos} rotation={[0, w.rotY, 0]} castShadow>
-          <boxGeometry args={[0.15, 0.4, 0.07]} />
-          <Mat
-            color={windowColor.getStyle()}
-            emissive={p.windowLit}
-            emissiveIntensity={glow * THREE.MathUtils.lerp(0.9, 0.6, w.floor / 6) * p.glowStrength}
-            roughness={0.5}
-          />
-        </mesh>
-      ))}
+      {windows.map((w, i) => {
+        const on = floorLit(frame, w.floor);
+        // Lit windows are pure white; the bulb's warm light tints them while on.
+        const base = new THREE.Color(on ? p.windowOn : p.window).lerp(
+          new THREE.Color(p.windowLit),
+          glow * 0.7,
+        );
+        return (
+          <mesh key={i} position={w.pos} rotation={[0, w.rotY, 0]} castShadow>
+            <boxGeometry args={[0.17, 0.4, 0.09]} />
+            <Mat
+              color={base.getStyle()}
+              emissive={base.getStyle()}
+              emissiveIntensity={on ? 0.9 : 0.12}
+              roughness={0.5}
+            />
+          </mesh>
+        );
+      })}
     </group>
   );
 };
@@ -484,8 +496,8 @@ const Bulb: React.FC<{ p: Palette; frame: number }> = ({ p, frame }) => {
   const phase = bulbPhase(frame);
   const mix = bulbFlashMix(frame);
   let color = new THREE.Color(p.bulbGlass);
-  let emissive = new THREE.Color("#000000");
-  let emissiveIntensity = 0;
+  let emissive = new THREE.Color(p.bulbGlass);
+  let emissiveIntensity = p.bulbGlassGlow;
   if (phase === "flash") {
     color = new THREE.Color(p.bulbGlass).lerp(new THREE.Color(p.bulbFlash), mix);
     emissive = new THREE.Color(p.bulbFlash);
@@ -585,7 +597,7 @@ export const Diorama: React.FC<{ variant: DioramaVariant }> = ({ variant }) => {
         <CameraRig />
         <color attach="background" args={[p.background]} />
         {/* infinite backdrop matching the background colour */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.36, 0]} receiveShadow>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.21, 0]} receiveShadow>
           <planeGeometry args={[400, 400]} />
           <meshBasicMaterial color={p.background} />
         </mesh>
@@ -619,14 +631,14 @@ export const Diorama: React.FC<{ variant: DioramaVariant }> = ({ variant }) => {
           distance={4.5}
           decay={1.5}
         />
-        <RoundedSlab size={[10, 0.35, 10]} position={[0, -0.35, 0]} radius={0.15} color={p.platform} />
+        <RoundedSlab size={[10, 0.2, 10]} position={[0, -0.2, 0]} radius={0.15} color={p.platform} />
         <Cables p={p} />
         <LightPool color={p.litSurface} opacity={glow * p.litDecalOpacity} />
         <SolarPanel p={p} />
         <Turbine p={p} angle={angle} />
         <Controller p={p} frame={frame} />
         <Battery p={p} level={level} />
-        <Building p={p} glow={glow} />
+        <Building p={p} glow={glow} frame={frame} />
         <Bulb p={p} frame={frame} />
       </ThreeCanvas>
     </AbsoluteFill>

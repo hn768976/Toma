@@ -1,8 +1,9 @@
 import * as THREE from "three";
+import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 // A sculpted keycap: rounded-square footprint, tapering towards the top,
 // with the top face nudged slightly backwards like a real cylindrical-row cap.
-export const KEY_BASE = 0.9;
+export const KEY_BASE = 0.96;
 export const KEY_TOP_SCALE = 0.75;
 export const KEY_HEIGHT = 0.62;
 const BEVEL = 0.09;
@@ -48,8 +49,13 @@ export const createKeycapGeometry = () => {
   }
   // Extrusion z -> world +y, shape +y -> world -z (towards the back).
   geo.rotateX(-Math.PI / 2);
-  geo.computeVertexNormals();
-  return geo;
+  // Extrusions are unindexed; weld them so the rounded bevels shade smoothly
+  // instead of showing flat facets.
+  geo.deleteAttribute("normal");
+  geo.deleteAttribute("uv");
+  const smooth = mergeVertices(geo, 1e-4);
+  smooth.computeVertexNormals();
+  return smooth;
 };
 
 // World-space height of the flat top face and its centre offset (towards back).

@@ -20,14 +20,14 @@ import { createLabelTexture, useLabelFont } from "./labels";
 export type KeyboardVariant = "match" | "orbit";
 
 const PITCH = 1;
-const GRID_ANGLE = THREE.MathUtils.degToRad(6);
-const PRESS_DEPTH = 0.17;
+const GRID_ANGLE = THREE.MathUtils.degToRad(-8);
+const PRESS_DEPTH = 0.22;
 
 const COLORS = {
   background: "#00101c",
-  plate: "#000d17",
-  noKey: "#004a63",
-  noLabel: "#2a7ca3",
+  plate: "#00121e",
+  noKey: "#003c56",
+  noLabel: "#1a5878",
   yesKey: "#ffbf1a",
   yesLabel: "#120d02",
 };
@@ -58,12 +58,12 @@ type CameraPose = {
 };
 
 const MATCH_POSE: CameraPose = {
-  azimuth: 6,
-  elevation: 42,
-  distance: 4.85,
-  fov: 26,
-  roll: -12,
-  target: [0.02, 0.3, -0.3],
+  azimuth: -20,
+  elevation: 60,
+  distance: 7.3,
+  fov: 17,
+  roll: -9,
+  target: [0.02, 0.3, -0.06],
 };
 
 const cameraPose = (variant: KeyboardVariant, frame: number): CameraPose => {
@@ -71,7 +71,8 @@ const cameraPose = (variant: KeyboardVariant, frame: number): CameraPose => {
     return MATCH_POSE;
   }
   // Alternative: a slow orbit that pushes in on the YES key and settles as it is pressed.
-  const t = interpolate(frame, [0, 169], [0, 1], {
+  const t = interpolate(frame, [0, 158], [0, 1], {
+    extrapolateRight: "clamp",
     easing: Easing.bezier(0.33, 0, 0.25, 1),
   });
   return {
@@ -126,7 +127,7 @@ const Keys: React.FC<{ press: number }> = ({ press }) => {
     () =>
       new THREE.MeshStandardMaterial({
         color: COLORS.yesKey,
-        emissive: new THREE.Color("#5e3a00"),
+        emissive: new THREE.Color("#2a1800"),
         roughness: 0.42,
         metalness: 0,
       }),
@@ -177,7 +178,7 @@ const Keys: React.FC<{ press: number }> = ({ press }) => {
     <group rotation={[0, GRID_ANGLE, 0]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
         <planeGeometry args={[40, 40]} />
-        <meshStandardMaterial color={COLORS.plate} roughness={0.9} />
+        <meshBasicMaterial color={COLORS.plate} />
       </mesh>
       {cells.map(({ i, j }) => {
         const isYes = i === 0 && j === 0;
@@ -225,10 +226,10 @@ export const KeyboardScene: React.FC<{ variant: KeyboardVariant }> = ({
         >
           <CameraRig pose={pose} />
           <color attach="background" args={[COLORS.background]} />
-          <hemisphereLight args={["#d8f0ff", "#000000", 0.3]} />
+          <hemisphereLight args={["#d8f0ff", "#000000", 0.06]} />
           <directionalLight
-            position={[-4.5, 6.5, 3.2]}
-            intensity={2.6}
+            position={[-2.5, 9, 0.8]}
+            intensity={3.3}
             color="#ffffff"
             castShadow
             shadow-mapSize-width={4096}
@@ -240,14 +241,14 @@ export const KeyboardScene: React.FC<{ variant: KeyboardVariant }> = ({
             shadow-bias={-0.0004}
             shadow-normalBias={0.02}
           />
-          <directionalLight position={[3, 3, 5]} intensity={0.45} color="#cfeaff" />
+          <directionalLight position={[3, 3, 5]} intensity={0.12} color="#cfeaff" />
           <Keys press={press} />
         </ThreeCanvas>
       ) : null}
       <AbsoluteFill
         style={{
           background:
-            "radial-gradient(ellipse 75% 70% at 50% 48%, rgba(0,0,0,0) 55%, rgba(0,6,14,0.55) 100%)",
+            "radial-gradient(ellipse 75% 70% at 50% 48%, rgba(0,0,0,0) 45%, rgba(0,6,14,0.7) 100%)",
         }}
       />
     </AbsoluteFill>

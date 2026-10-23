@@ -14,9 +14,11 @@ export type Palette = {
   icon: string;
   building: string;
   window: string;
+  windowOn: string;
   windowLit: string;
   buildingGlow: string;
   bulbGlass: string;
+  bulbGlassGlow: number;
   bulbOn: string;
   bulbFlash: string;
   bulbBase: string;
@@ -33,31 +35,33 @@ export type Palette = {
 
 // Version 1: soft pastel pink, sampled from the reference footage.
 export const PINK: Palette = {
-  background: "#feaece",
-  platform: "#ff9dc5",
-  cable: "#f27fab",
-  panelCell: "#22a0dc",
+  background: "#ffb2ce",
+  platform: "#ffa6c9",
+  cable: "#f58cb3",
+  panelCell: "#24b2f8",
   panelLine: "#e9f6ff",
-  panelFrame: "#ff9fc6",
+  panelFrame: "#ffa8c8",
   turbine: "#ffffff",
-  controller: "#ff9dc4",
-  ledOff: "#24452a",
+  controller: "#ffa8c9",
+  ledOff: "#2c5a33",
   ledOn: "#86f07a",
-  batterySlab: "#ff98c0",
+  batterySlab: "#ffa2c6",
   screen: "#4d4d4d",
   icon: "#ffffff",
-  building: "#ff9ec2",
-  window: "#fff4f7",
+  building: "#ffaec4",
+  window: "#ffe8ec",
+  windowOn: "#ffffff",
   windowLit: "#fffbd0",
   buildingGlow: "#ffe600",
-  bulbGlass: "#ffc6f6",
+  bulbGlass: "#ffcaf6",
+  bulbGlassGlow: 0.08,
   bulbOn: "#ffef00",
   bulbFlash: "#ffffff",
   bulbBase: "#ff8696",
   glowLight: "#ffd000",
   sky: "#ffffff",
   ground: "#ff9cc6",
-  ambient: 2.5,
+  ambient: 2.75,
   keyLight: 0.6,
   glowStrength: 1,
   litSurface: "#fff39a",
@@ -73,7 +77,7 @@ export const NIGHT: Palette = {
   panelCell: "#1fc8e8",
   panelLine: "#bff6ff",
   panelFrame: "#2b3570",
-  turbine: "#dfe6ff",
+  turbine: "#c4c8f0",
   controller: "#2c3670",
   ledOff: "#16301f",
   ledOn: "#5dff8c",
@@ -82,9 +86,11 @@ export const NIGHT: Palette = {
   icon: "#8ff3ff",
   building: "#2f3a78",
   window: "#4a5699",
+  windowOn: "#bfe9ff",
   windowLit: "#ffe9a0",
   buildingGlow: "#ffb84d",
   bulbGlass: "#7b86d6",
+  bulbGlassGlow: 0.18,
   bulbOn: "#ffd23a",
   bulbFlash: "#fff8e0",
   bulbBase: "#5a64b0",

@@ -1,4 +1,4 @@
-import { Easing, interpolate } from "remotion";
+import { interpolate } from "remotion";
 
 // Every key time below was measured frame-by-frame from the reference clip
 // (555 frames @ 30 fps).
@@ -17,19 +17,19 @@ const LED_OFF = [481, 466, 451, 436];
 export const ledState = (frame: number, index: number) =>
   frame >= LED_ON[index] && frame < LED_OFF[index];
 
-// Battery level 0..1: charges 136 -> 222, drains 336 -> 420.
+// Battery level 0..1: charges linearly 136 -> 225, drains linearly 331 -> 420.
 export const batteryLevel = (frame: number) => {
   if (frame < 300) {
-    return interpolate(frame, [136, 222], [0, 1], {
-      ...clamp,
-      easing: Easing.bezier(0.3, 0.1, 0.45, 1),
-    });
+    return interpolate(frame, [136, 225], [0, 1], clamp);
   }
-  return interpolate(frame, [336, 420], [1, 0], {
-    ...clamp,
-    easing: Easing.bezier(0.5, 0, 0.75, 0.95),
-  });
+  return interpolate(frame, [331, 420], [1, 0], clamp);
 };
+
+// Tower windows light floor by floor (bottom up) while the battery charges,
+// one floor every 15 frames from 135, and switch off top-down from 346.
+export const FLOORS = 7;
+export const floorLit = (frame: number, floor: number) =>
+  frame >= 135 + floor * 15 && frame < 346 + (FLOORS - 1 - floor) * 15;
 
 // Building and platform glow 0..1: ramps up 242 -> 249, down 321 -> 328.
 export const glowAmount = (frame: number) => {
