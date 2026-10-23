@@ -230,7 +230,7 @@ export const FloatingNotes: React.FC<{ palette: PaletteName }> = ({ palette }) =
     ctx.drawImage(assets.burnB, ox, oy, bw, bh);
 
     // Old-projector flicker.
-    const flick = (noise1(t * 9, 5) - 0.5) * 0.06 + (noise1(t * 23, 8) - 0.5) * 0.03;
+    const flick = (noise1(t * 7, 5) - 0.5) * 0.05 + (noise1(t * 19, 8) - 0.5) * 0.012;
     if (flick > 0) {
       ctx.globalCompositeOperation = "soft-light";
       ctx.globalAlpha = flick * 2;
