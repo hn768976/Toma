@@ -72,7 +72,7 @@ void main() {
   float rightFall = 1.0 - smoothstep(0.5, 0.98, sp.x + (1.0 - sp.y) * 0.18) * 0.95;
   float topFall = 1.0 - smoothstep(0.82, 1.08, sp.y) * 0.55 * (1.0 - smoothstep(0.2, 0.55, sp.x) * 0.5);
   vec2 vq = sp - 0.5;
-  float vig = 1.0 - smoothstep(0.45, 1.0, length(vq * vec2(1.0, 1.25))) * 0.4;
+  float vig = 1.0 - smoothstep(0.5, 1.05, length((vq - vec2(0.12, -0.05)) * vec2(1.0, 1.25))) * 0.35;
   float light = (uLight.w + pool * 1.55) * rightFall * topFall * vig * uExposure;
 
   float lum = dot(paper, vec3(0.3, 0.55, 0.15));

@@ -26,8 +26,15 @@ export const noteHead = (
   ctx.restore();
 };
 
-export const stem = (ctx: Ctx, x: number, y1: number, y2: number, s: number) => {
-  const w = 0.12 * s;
+export const stem = (
+  ctx: Ctx,
+  x: number,
+  y1: number,
+  y2: number,
+  s: number,
+  weight = 0.12,
+) => {
+  const w = weight * s;
   ctx.fillRect(x - w / 2, Math.min(y1, y2), w, Math.abs(y2 - y1));
 };
 

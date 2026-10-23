@@ -26,6 +26,8 @@ export const FIRST_SYSTEM_Y = 7; // staff spaces from top to first treble staff
 const INK = "rgba(30, 17, 7, 0.95)";
 // Printed rules (staff lines, stems, bar lines) age to a lighter sepia.
 const RULE_INK = "rgba(132, 72, 22, 0.88)";
+// Stems are printed heavier and darker than the rules so notes stay legible.
+const STEM_INK = "rgba(62, 32, 10, 0.95)";
 
 type Ev = {
   dur: number; // in quarters
@@ -157,8 +159,8 @@ const drawStaffMusic = (
         const sx = stemX(ex, s, up);
         const yStart = pitchY(bottom, up ? lo : hi, s);
         const yTip = up ? pitchY(bottom, hi, s) - 3.4 * s : pitchY(bottom, lo, s) + 3.4 * s;
-        ctx.fillStyle = RULE_INK;
-        stem(ctx, sx, yStart, yTip, s);
+        ctx.fillStyle = STEM_INK;
+        stem(ctx, sx, yStart, yTip, s, 0.2);
         ctx.fillStyle = INK;
         if (e.flagCount > 0) flags(ctx, sx, yTip, s, up, e.flagCount);
       }
@@ -184,15 +186,15 @@ const drawStaffMusic = (
         const sx = stemX(pl.x, s, up);
         const ps = pl.e.pitches;
         const yStart = pitchY(bottom, up ? Math.min(...ps) : Math.max(...ps), s);
-        ctx.fillStyle = RULE_INK;
-        stem(ctx, sx, yStart, beamAt(sx) + (up ? 0 : 0.48 * s), s);
+        ctx.fillStyle = STEM_INK;
+        stem(ctx, sx, yStart, beamAt(sx), s, 0.2);
         ctx.fillStyle = INK;
       }
-      const off = up ? 0 : -0.48 * s;
-      beam(ctx, fx - 0.06 * s, y1 + off, lx + 0.06 * s, y2 + off, s);
+      const off = up ? 0 : -0.4 * s;
+      beam(ctx, fx - 0.1 * s, y1 + off, lx + 0.1 * s, y2 + off, s, 0.4);
       if (g.some((pl) => pl.e.flagCount > 1)) {
         const d = up ? 0.8 * s : -0.8 * s;
-        beam(ctx, fx - 0.06 * s, y1 + off + d, lx + 0.06 * s, y2 + off + d, s);
+        beam(ctx, fx - 0.1 * s, y1 + off + d, lx + 0.1 * s, y2 + off + d, s, 0.4);
       }
       if (rng() < 0.3) {
         const above = !up;
