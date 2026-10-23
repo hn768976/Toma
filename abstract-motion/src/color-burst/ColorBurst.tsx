@@ -12,9 +12,9 @@ import { ColorBurstVariant, PALETTES } from "./palettes";
 
 // Expansion of the burst over time (world units). It erupts from a small
 // clump, fills the frame by ~3 s and keeps billowing slowly; in the last
-// ~0.65 s it collapses back to the opening clump so the clip loops, exactly
+// ~0.7 s it collapses back to the opening clump so the clip loops, exactly
 // like the reference.
-const START = 0.16;
+const START = 0.24;
 const growth = (s: number) => START + 1.8 * (1 - Math.exp(-s / 0.65)) + 0.13 * s;
 const expansionAt = (s: number, duration: number) => {
   const collapse = smoothstep(duration - 0.7, duration, s);

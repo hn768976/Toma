@@ -31,8 +31,12 @@ void main() {
   vec3 dir = normalize(uRot * aDirSpeed.xyz);
   float radius = aDirSpeed.w * uExpand;
   // Slight outward-curving drift so streaks are not perfectly straight lines.
-  vec3 headP = dir * radius;
-  vec3 tailP = dir * radius * (1.0 - aShape.x) + vec3(0.0, -0.04, 0.0) * aShape.w * uExpand;
+  // Each grain starts from a slightly different point so the rays don't meet
+  // in a single hard star point; the core stays turbulent like real powder.
+  vec3 origin = normalize(vec3(sin(aShape.z * 1.31), sin(aShape.z * 2.77), sin(aShape.z * 4.13)) + 1e-4)
+    * aShape.w * 0.045 * uExpand;
+  vec3 headP = origin + dir * radius;
+  vec3 tailP = origin + dir * radius * (1.0 - aShape.x) + vec3(0.0, -0.04, 0.0) * aShape.w * uExpand;
 
   vec4 c0 = project(tailP);
   vec4 c1 = project(headP);
@@ -215,7 +219,7 @@ const buildParticles = (palette: BurstPalette, count: number, haze: boolean) => 
     let dir = randomUnit(rand);
     let col: RGB;
     const cr = rand();
-    const inJet = !haze && rand() < 0.72;
+    const inJet = !haze && rand() < 0.85;
     let reach = 0.75 + 0.3 * rand();
     if (inJet) {
       const jet = jets[Math.floor(rand() * jets.length)];
@@ -254,7 +258,7 @@ const buildParticles = (palette: BurstPalette, count: number, haze: boolean) => 
       const width = 2.0 + 4.2 * Math.pow(rand(), 2.5);
       shape.set([trail, width, rand() * 1000, rand() * 2 - 1], i * 4);
       // Glints: short, bright sparkles scattered through the cloud.
-      if (rand() < 0.08) {
+      if (rand() < 0.12) {
         const a = pick(palette.accents, rand());
         color.set([a[0], a[1], a[2], 0.9 + 0.1 * rand()], i * 4);
         shape.set([0.015 + 0.04 * rand(), 1.6 + 1.8 * rand(), rand() * 1000, 0], i * 4);
@@ -404,7 +408,7 @@ export const createBurstRenderer = (
       gl.uniform2f(gl.getUniformLocation(prog, "uResolution"), width, height);
       gl.uniform1f(gl.getUniformLocation(prog, "uPxScale"), pxScale);
       // The compact opening clump is dim; it brightens as it opens up.
-      const open = Math.min(1, Math.max(0, (f.expand - 0.16) / 1.1));
+      const open = Math.min(1, Math.max(0, (f.expand - 0.24) / 1.1));
       gl.uniform1f(gl.getUniformLocation(prog, "uGain"), 0.18 + 0.82 * open * open * (3 - 2 * open));
     };
 
@@ -425,7 +429,7 @@ export const createBurstRenderer = (
     gl.bindTexture(gl.TEXTURE_2D, sceneTex);
     gl.uniform1i(gl.getUniformLocation(finalProg, "uScene"), 0);
     gl.uniform3fv(gl.getUniformLocation(finalProg, "uBackground"), palette.background);
-    gl.uniform1f(gl.getUniformLocation(finalProg, "uExposure"), 2.3);
+    gl.uniform1f(gl.getUniformLocation(finalProg, "uExposure"), 1.75);
     gl.uniform1f(gl.getUniformLocation(finalProg, "uSeed"), f.seed);
     gl.bindVertexArray(emptyVao);
     gl.drawArrays(gl.TRIANGLES, 0, 3);

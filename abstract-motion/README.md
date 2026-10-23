@@ -25,10 +25,10 @@ npm run dev          # Remotion Studio preview
 These commands render the 1080p H.264 deliverables from the 4K compositions. `--scale=0.5` downsamples each 4K frame to 1920×1080:
 
 ```bash
-npx remotion render QuestionField-V1 out/Composition1_Version1_1080p.mp4 --scale=0.5 --crf=16
-npx remotion render QuestionField-V2 out/Composition1_Version2_1080p.mp4 --scale=0.5 --crf=16
-npx remotion render ColorBurst-V1   out/Composition2_Version1_1080p.mp4 --scale=0.5 --crf=16
-npx remotion render ColorBurst-V2   out/Composition2_Version2_1080p.mp4 --scale=0.5 --crf=16
+npx remotion render QuestionField-V1 out/Composition1_Version1_1080p.mp4 --scale=0.5 --crf=18
+npx remotion render QuestionField-V2 out/Composition1_Version2_1080p.mp4 --scale=0.5 --crf=18
+npx remotion render ColorBurst-V1   out/Composition2_Version1_1080p.mp4 --scale=0.5 --crf=18
+npx remotion render ColorBurst-V2   out/Composition2_Version2_1080p.mp4 --scale=0.5 --crf=18
 ```
 
 To render the native 4K masters instead, leave out `--scale=0.5`.
@@ -44,7 +44,7 @@ Both scenes are WebGL. On a headless server without a GPU, add three flags:
 - A lower concurrency, for example `--concurrency=2`.
 
 ```bash
-npx remotion render QuestionField-V1 out/Composition1_Version1_1080p.mp4 --scale=0.5 --crf=16 --gl=swangle --concurrency=2 --timeout=300000
+npx remotion render QuestionField-V1 out/Composition1_Version1_1080p.mp4 --scale=0.5 --crf=18 --gl=swangle --concurrency=2 --timeout=300000
 ```
 
 ## Structure

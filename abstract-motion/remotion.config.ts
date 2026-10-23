@@ -21,6 +21,8 @@ Config.overrideBundlerConfig(enableTailwind);
 Config.setChromiumOpenGlRenderer("angle");
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
+// Limited-range BT.709, the broadcast/web standard (avoids full-range yuvj420p).
+Config.setColorSpace("bt709");
 
 // Some sandboxed environments block downloading Remotion's Chrome Headless
 // Shell but ship a Playwright one at this path. On a normal machine this path

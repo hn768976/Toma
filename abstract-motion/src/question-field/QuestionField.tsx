@@ -49,12 +49,13 @@ const cameraAt = (variant: QuestionFieldVariant, t: number) => {
   };
 };
 
-// Glow intensity: warms up over the first second, then breathes gently.
-const glowAt = (seconds: number) =>
-  0.62 +
-  0.5 * smoothstep(0.0, 1.3, seconds) +
-  0.06 * Math.sin(seconds * 2.3) +
-  0.03 * Math.sin(seconds * 5.1 + 1.2);
+// Glow intensity, as in the reference: the "?" starts as plain cyan, ignites
+// over ~0.4 s, then breathes with a ~1.6 s pulse (first peak at ~1.07 s).
+const glowAt = (seconds: number) => {
+  const ignite = lerp(0.35, 1, smoothstep(0, 0.4, seconds));
+  const pulse = 0.9 + 0.17 * Math.cos(((seconds - 1.07) / 1.6) * Math.PI * 2);
+  return ignite * lerp(1, pulse, smoothstep(0.2, 0.7, seconds));
+};
 
 export const QuestionField: React.FC<{ variant: QuestionFieldVariant }> = ({
   variant,
@@ -100,12 +101,14 @@ export const QuestionField: React.FC<{ variant: QuestionFieldVariant }> = ({
       cam.height,
       Math.cos(cam.azimuth) * cam.distance,
     );
-    s.camera.lookAt(0, cam.targetY, 0);
+    // V1 frames the "?" slightly left of centre, as in the reference.
+    s.camera.lookAt(variant === "reference" ? 0.22 : 0, cam.targetY, 0);
     s.camera.updateMatrixWorld();
 
     const g = glowAt(seconds);
-    s.glowMaterial.color.copy(GLOW).multiplyScalar(0.85 + 0.7 * g);
-    s.haloMaterial.opacity = 0.55 + 0.45 * g;
+    s.glowMaterial.color.copy(GLOW).multiplyScalar(0.5 + 0.9 * g);
+    s.haloMaterial.opacity = 0.2 + 0.8 * g;
+    s.poolMaterial.opacity = 0.15 + 0.85 * g;
     s.light.intensity = 9 * g;
 
     // Keep the question mark in focus wherever the camera goes.

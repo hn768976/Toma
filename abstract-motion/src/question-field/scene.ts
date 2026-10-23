@@ -13,6 +13,7 @@ export type QuestionFieldScene = {
   camera: THREE.PerspectiveCamera;
   glowMaterial: THREE.MeshBasicMaterial;
   haloMaterial: THREE.SpriteMaterial;
+  poolMaterial: THREE.MeshBasicMaterial;
   light: THREE.PointLight;
   bokeh: BokehPass;
   bloom: UnrealBloomPass;
@@ -245,6 +246,20 @@ export const createQuestionFieldScene = (
   halo.scale.set(3.2, 3.2, 1);
   scene.add(halo);
 
+  // Hot reflection pool where the glowing dot meets the floor.
+  const poolMaterial = new THREE.MeshBasicMaterial({
+    map: haloTexture,
+    color: new THREE.Color(0.6, 0.95, 1.0),
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    fog: false,
+  });
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5), poolMaterial);
+  pool.rotation.x = -Math.PI / 2;
+  pool.position.set(0, 0.003, 0);
+  scene.add(pool);
+
   // The question mark is the key light: everything casts shadows away from it.
   const light = new THREE.PointLight(GLOW.clone(), 9, 0, 1.25);
   light.position.set(0, QUESTION_LIGHT_Y, 0.02);
@@ -296,6 +311,7 @@ export const createQuestionFieldScene = (
     camera,
     glowMaterial,
     haloMaterial,
+    poolMaterial,
     light,
     bokeh,
     bloom,

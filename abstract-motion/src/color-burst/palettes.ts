@@ -20,7 +20,7 @@ export const PALETTES: Record<ColorBurstVariant, BurstPalette> = {
   // cyan and occasional green-yellow glints.
   reference: {
     upper: [
-      [0.85, 0.1, 0.65],
+      [0.62, 0.1, 0.95],
       [0.55, 0.12, 1.0],
       [0.32, 0.16, 1.0],
       [0.18, 0.24, 1.0],
@@ -30,7 +30,7 @@ export const PALETTES: Record<ColorBurstVariant, BurstPalette> = {
     lower: [
       [1.0, 0.03, 0.1],
       [0.88, 0.02, 0.18],
-      [1.0, 0.06, 0.3],
+      [0.95, 0.03, 0.12],
       [0.35, 0.12, 1.0],
     ],
     accents: [
