@@ -29,6 +29,7 @@ export type Worm = {
   driftY: number;
   spin: number;
   breatheCycles: number;
+  kink: number;
 };
 
 const SHAPES = ["eight", "eight", "eight", "hook", "hook", "loop", "coil", "wavy"] as const;
@@ -85,6 +86,7 @@ const makeWorm = (
   driftY: range(rng, -22, 22),
   spin: range(rng, -0.18, 0.18),
   breatheCycles: 2 + Math.floor(rng() * 4),
+  kink: range(rng, 5, 11),
 });
 
 export const createWorms = (seed: number): Worm[] => {
@@ -92,7 +94,7 @@ export const createWorms = (seed: number): Worm[] => {
   const worms: Worm[] = [];
 
   // Background (behind the focal plane) — soft, slightly larger.
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 4; i++) {
     worms.push(
       makeWorm(rng, range(rng, 0, DESIGN_W), range(rng, 0, DESIGN_H), range(rng, 260, 380), range(rng, 13, 17), 1),
     );
@@ -180,6 +182,8 @@ export const wormPath = (w: Worm, cycle: number): Float32Array => {
     let k =
       ((w.waveAmp * Math.PI * 2) / w.length) *
       Math.sin(Math.PI * 2 * w.waveK * s - w.waveCycles * cycle + w.phase);
+    // Small irregular kinks along the filament.
+    k += (w.kink / w.length) * Math.sin(Math.PI * 2 * 6.5 * s + w.phase * 2.3 - 2 * cycle);
     for (const b of w.bends) {
       const u = (s - b.s0) / b.len;
       if (u > 0 && u < 1) {

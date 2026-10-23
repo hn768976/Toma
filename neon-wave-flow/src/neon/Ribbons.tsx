@@ -4,6 +4,9 @@ import * as THREE from "three";
 import { LineDef } from "./lines";
 import { createRibbonMaterial } from "./ribbonMaterial";
 
+// Must match uMaxCoc in ribbonMaterial.ts.
+const MAX_COC = 0.045;
+
 type Props = {
   lines: LineDef[];
   t: number;
@@ -93,7 +96,7 @@ export const Ribbons: React.FC<Props> = ({ lines, t, camX, focus, aperture }) =>
       0.05,
       (x - cp.x) * fwd.x + (y - cp.y) * fwd.y + (z - cp.z) * fwd.z,
     );
-    return 0.5 * width + (aperture * Math.abs(depth - focus)) / p11;
+    return 0.5 * width + (Math.min((aperture * Math.abs(depth - focus)) / depth, MAX_COC) * depth) / p11;
   };
 
   let seg = 0;

@@ -153,7 +153,7 @@ export const MicrobeField: React.FC<MicrobeFieldProps> = ({ palette: p }) => {
     const focal = worms.filter((w) => w.layer === 0);
     const front = worms.filter((w) => w.layer === 2);
 
-    drawLayer(ctx, 4, 4, "behind", camera, (c) => {
+    drawLayer(ctx, 4, 2.5, "behind", camera, (c) => {
       for (const w of behind) drawWorm(c, w, cycle, p, true);
     });
 
@@ -189,24 +189,32 @@ export const MicrobeField: React.FC<MicrobeFieldProps> = ({ palette: p }) => {
       );
     }
 
-    drawLayer(ctx, 4, 10, "front", camera, (c) => {
+    drawLayer(ctx, 4, 6, "front", camera, (c) => {
       for (const w of front) drawWorm(c, w, cycle, p, true);
     });
 
     // Optical vignette (fixed to the lens, not the slide).
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // Off-centre, as in the reference, where the left corners fall off more.
     const vg = ctx.createRadialGradient(
-      width * 0.52,
-      height * 0.5,
-      height * 0.3,
-      width * 0.5,
-      height * 0.5,
-      width * 0.62,
+      width * 0.56,
+      height * 0.47,
+      height * 0.28,
+      width * 0.56,
+      height * 0.47,
+      width * 0.6,
     );
     vg.addColorStop(0, "rgba(0,0,0,0)");
     vg.addColorStop(1, p.vignette);
     ctx.globalAlpha = p.vignetteStrength;
     ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, width, height);
+
+    // Slow lamp flicker/drift of overall illumination (about ±4 levels),
+    // periodic over the clip.
+    const lamp = 0.6 * Math.sin(cycle * 2 + 0.5) + 0.4 * Math.sin(cycle * 3 + 2.1);
+    ctx.globalAlpha = Math.abs(lamp) * 0.03;
+    ctx.fillStyle = lamp > 0 ? "#ffffff" : "#000000";
     ctx.fillRect(0, 0, width, height);
 
     // Sensor grain, re-positioned every frame.

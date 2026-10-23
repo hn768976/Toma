@@ -17,6 +17,7 @@ const vertexShader = /* glsl */ `
   uniform float uAperture;
   uniform float uMinWidth;
   uniform float uFog;
+  uniform float uMaxCoc;
   attribute vec3 aOther;
   attribute float aEnd;
   attribute float aSide;
@@ -63,7 +64,9 @@ const vertexShader = /* glsl */ `
 
     // Half widths in NDC-y units.
     float core = max(0.5 * aWidth * projectionMatrix[1][1] / depth, uMinWidth);
-    float coc = uAperture * abs(depth - uFocus) / max(depth, 0.001);
+    // Capped so filaments brushing past the lens stay a soft glow instead of
+    // screen-filling haze (which is also very expensive to fill).
+    float coc = min(uAperture * abs(depth - uFocus) / max(depth, 0.001), uMaxCoc);
     float sigma = core + coc;
 
     float endSign = aEnd < 0.5 ? -1.0 : 1.0;
@@ -135,6 +138,7 @@ export const createRibbonMaterial = () =>
       uMinWidth: { value: 0.0012 },
       uGain: { value: 0.72 },
       uFog: { value: 0.03 },
+      uMaxCoc: { value: 0.045 },
     },
     transparent: true,
     depthWrite: false,

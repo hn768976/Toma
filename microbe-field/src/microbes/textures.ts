@@ -69,12 +69,12 @@ export const getSpecks = (): Speck[] => {
   if (specks) return specks;
   const rng = mulberry32(4242);
   const out: Speck[] = [];
-  for (let i = 0; i < 700; i++) {
+  for (let i = 0; i < 1250; i++) {
     out.push({
       x: range(rng, -60, DESIGN_W + 60),
       y: range(rng, -60, DESIGN_H + 60),
       r: rng() < 0.85 ? range(rng, 0.8, 1.8) : range(rng, 1.8, 3.2),
-      a: range(rng, 0.25, 0.75),
+      a: range(rng, 0.4, 0.9),
       soft: false,
     });
   }
