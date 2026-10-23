@@ -33,7 +33,7 @@ npx remotion render ColorBurst-V2   out/Composition2_Version2_1080p.mp4 --scale=
 
 To render the native 4K masters instead, leave out `--scale=0.5`.
 
-Codec (`h264`), pixel format (`yuv420p`) and the WebGL backend are set in `remotion.config.ts`.
+The codec (`h264`), pixel format (`yuv420p`), colour space (limited-range BT.709) and WebGL backend are set in `remotion.config.ts`.
 
 ### Machines without a GPU
 
