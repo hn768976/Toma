@@ -16,6 +16,7 @@ void main() { gl_Position = vec4(aPos, 0.0, 1.0); }
 const COMMON = /* glsl */ `
 precision highp float;
 #define TAU 6.28318530718
+#define BEND 0.22
 uniform vec2 uRes;
 uniform vec2 uCenter;   // spiral centre, in units of frame height
 uniform vec2 uTilt;     // perspective tilt of the tunnel axis
@@ -37,13 +38,16 @@ uniform vec3 cGap;
 uniform vec3 cGapDeep;
 out vec4 outColor;
 
-const float G = 1.36;          // log growth per spiral turn
-const float BAND = 0.42;       // share of each turn covered by the dial strip
-const float CELLS_PER_TURN = 14.0;
+const float G = 1.16;          // log growth per spiral turn
+const float BAND = 0.55;       // share of each turn covered by the dial strip
+const float CELLS_PER_TURN = 16.0;
 
 void main() {
   vec2 p = (gl_FragCoord.xy - 0.5 * uRes) / uRes.y - uCenter;
   p = p / (1.0 + dot(p, uTilt));
+  // Tunnel bend: inner turns sit further along the tilt than outer ones,
+  // so the spiral reads as a funnel seen off-axis rather than flat rings.
+  p -= uTilt * BEND * (1.0 - smoothstep(0.0, 0.7, length(p)));
   float r = max(length(p), 1e-5);
   float a = atan(p.y, p.x) + uRot;
   float L = log(r) - uZoom;
@@ -73,7 +77,7 @@ void main() {
   float smoke2 = texture(uNoise, nUV * 2.3 + vec2(0.31, uTime * 0.02)).g;
 
   // Overall light: hot around the inner turns, falling off outward.
-  float glow = smoothstep(0.0, 0.07, r) * (1.0 - 0.85 * smoothstep(0.28, 0.95, r));
+  float glow = smoothstep(0.0, 0.05, r) * (1.0 - 0.7 * smoothstep(0.3, 1.0, r));
   float hot = smoothstep(0.5, 0.06, r) * smoothstep(0.0, 0.05, r);
 
   vec3 col;
@@ -91,10 +95,11 @@ void main() {
     float gyN = f / dialStart;
     // Ghost numerals of a burnt dial, smaller and out of focus.
     vec4 t = textureGrad(uDial, vec2(u * 1.7 + 0.37, fract(gyN * 1.8)), gx * 6.0, gy * 6.0);
-    float grime = texture(uNoise, nUV * vec2(3.1, 4.3) + 0.5).r;
+    float grime = texture(uNoise, vec2(along * 2.4, L * 0.35) + 0.5).r;
+    float fibre = texture(uNoise, vec2(along * 6.0, f * 0.15 + 0.2)).g;
     float depth = sin(gyN * 3.14159);          // deeper in the middle of the trough
     vec3 base = mix(cGap, cGapDeep, depth * 0.8);
-    base *= 0.18 + 1.5 * smoke * smoke * (0.4 + 1.0 * grime) * (0.6 + 0.7 * smoke2);
+    base *= (0.5 + 0.9 * grime * fibre) * (0.75 + 0.5 * smoke);
     base = mix(base, base * 0.45, t.g * 0.6);
     // Rim-light where the trough meets the dial edges.
     float lip = smoothstep(0.12, 0.0, gyN) * 0.7 + smoothstep(0.85, 1.0, gyN) * 0.45;
@@ -123,6 +128,7 @@ uniform vec3 cInk;
 uniform vec3 cPaperHot;
 uniform vec3 cBg;
 uniform vec3 cGrade;
+uniform float uExposure;
 out vec4 outColor;
 
 float hash(vec2 p) {
@@ -192,21 +198,21 @@ void main() {
   float sm2 = texture(uNoise, q * 2.1 + vec2(-uTime * 0.02, uTime * 0.01) + 0.4).g;
   float smokeV = smoothstep(0.25, 0.75, sm * 0.7 + sm2 * 0.3);
   float outer = smoothstep(0.26, 0.62, d);
-  col *= mix(1.0, 0.08 + 0.8 * smokeV, outer);
+  col *= mix(1.0, 0.18 + 0.8 * smokeV, outer);
 
   // Clock hands (with a soft drop shadow onto the dial).
   float px = 1.0 / uRes.y;
-  vec2 hc = c / (1.0 + dot(c, uTilt));
+  vec2 hc = c / (1.0 + dot(c, uTilt)) - uTilt * BEND;  // hub sits at the spiral eye
   vec2 lm = rot(hc, uMinute);
   vec2 lh = rot(hc, uHour);
-  float dm = hand(lm, 0.31, 0.0042, 0.013, 0.74, 0.05);
-  float dh = hand(lh, 0.17, 0.006, 0.019, 0.72, 0.035);
+  float dm = hand(lm, 0.31, 0.0058, 0.018, 0.74, 0.05);
+  float dh = hand(lh, 0.18, 0.0085, 0.026, 0.72, 0.035);
   float dHands = min(dm, dh);
-  float dHub = length(hc) - 0.0105;
+  float dHub = length(hc) - 0.016;
   vec2 hs = hc - vec2(0.004, -0.005);  // shadow cast down-right
-  float dShadow = min(min(hand(rot(hs, uMinute), 0.31, 0.0042, 0.013, 0.74, 0.05),
-                          hand(rot(hs, uHour), 0.17, 0.006, 0.019, 0.72, 0.035)),
-                      length(hs) - 0.0105);
+  float dShadow = min(min(hand(rot(hs, uMinute), 0.31, 0.0058, 0.018, 0.74, 0.05),
+                          hand(rot(hs, uHour), 0.18, 0.0085, 0.026, 0.72, 0.035)),
+                      length(hs) - 0.016);
   col *= 1.0 - 0.5 * smoothstep(0.01, -0.002, dShadow);
   float handA = smoothstep(px * 1.5, -px * 1.5, dHands);
   vec3 handCol = cInk * 0.6 + cPaperHot * 0.05 * smoothstep(0.004, 0.0, abs(dHands + 0.002));
@@ -217,9 +223,9 @@ void main() {
 
   // Vignette toward smoky darkness, colour grade and grain.
   vec2 vq = (uv - 0.5) * vec2(uRes.x / uRes.y, 1.0);
-  float vig = smoothstep(1.02, 0.3, length(vq * vec2(0.78, 1.0)));
+  float vig = smoothstep(1.35, 0.4, length(vq * vec2(0.78, 1.0)));
   col = mix(cBg, col, vig);
-  col = pow(max(col, 0.0), vec3(0.95)) * cGrade;
+  col = pow(max(col * uExposure, 0.0), vec3(0.95)) * cGrade;
   float g = hash(gl_FragCoord.xy + uFrame * 17.0) - 0.5;
   col += g * 0.035;
   outColor = vec4(clamp(col, 0.0, 1.0), 1.0);

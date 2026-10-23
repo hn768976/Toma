@@ -142,7 +142,7 @@ export const ClockSpiral: React.FC<ClockSpiralProps> = ({ palette }) => {
     const rot = 0.09 * (t - (t * t) / (2 * T));
     const scroll = -0.012 * t;
     const swayA = 0.55 + 0.35 * Math.sin(t * 0.42 + 0.4);
-    const swayM = 0.34 + 0.06 * Math.sin(t * 0.31);
+    const swayM = 0.58 + 0.06 * Math.sin(t * 0.31);
     const tilt: [number, number] = [
       Math.cos(swayA) * swayM,
       Math.sin(swayA) * swayM,
@@ -196,6 +196,11 @@ export const ClockSpiral: React.FC<ClockSpiralProps> = ({ palette }) => {
     gl.uniform1f(gl.getUniformLocation(post, "uMinute"), minute);
     gl.uniform1f(gl.getUniformLocation(post, "uHour"), hour);
     gl.uniform1f(gl.getUniformLocation(post, "uFrame"), frame);
+    // Slow "breathing" of the light, ~7 s period like the reference.
+    gl.uniform1f(
+      gl.getUniformLocation(post, "uExposure"),
+      1.12 + 0.14 * Math.sin((t / 7) * Math.PI * 2 + 1.2),
+    );
     set3(post, "cInk", pal.ink);
     set3(post, "cPaperHot", pal.paperHot);
     set3(post, "cBg", pal.bg);

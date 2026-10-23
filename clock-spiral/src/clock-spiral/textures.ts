@@ -204,8 +204,8 @@ export const makeDialCanvas = (): OffscreenCanvas => {
       const rx = (x % (DIAL_CELL_W / 5)) - DIAL_CELL_W / 10;
       const ry = y - 13;
       const rr = rx * rx + ry * ry;
-      if (rr < 30) {
-        const k = 1 - rr / 30;
+      if (rr < 55) {
+        const k = 1 - rr / 55;
         rimV = 1 - k;
         paperV = Math.max(paperV, k);
       }
