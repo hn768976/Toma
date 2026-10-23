@@ -87,13 +87,15 @@ type WaveParams = {
   envSeed: number;
   loop: number; // 0 = bouncing arcs; > 1/(2π) = looping spring (prolate cycloid)
   zWobble: number;
+  // Visible window relative to the camera.
+  behind: number;
   ahead: number;
 };
 
 const SAMPLES_PER_WAVE = 18;
 
 const waveSampleCount = (p: WaveParams) =>
-  Math.ceil(((BEHIND + p.ahead) / p.lambda) * SAMPLES_PER_WAVE) + 2;
+  Math.ceil(((p.behind + p.ahead) / p.lambda) * SAMPLES_PER_WAVE) + 2;
 
 // Sampling uses a world-fixed grid so fine waves never shimmer as the camera
 // moves; the window simply slides over it.
@@ -104,7 +106,7 @@ const waveSampleCount = (p: WaveParams) =>
 const wave = (p: WaveParams, n: number, duration: number): LineDef["fill"] => (out, offset, t, camX) => {
   const dTheta = (Math.PI * 2) / SAMPLES_PER_WAVE;
   const k = (Math.PI * 2) / p.lambda;
-  const theta0 = Math.floor(((camX - BEHIND) * k) / dTheta) * dTheta;
+  const theta0 = Math.floor(((camX - p.behind) * k) / dTheta) * dTheta;
   const shift = (p.laps * p.lambda * t) / duration;
   const travel = p.phase - k * shift;
   const envPeriod = Math.abs(p.laps) * p.lambda;
@@ -139,85 +141,91 @@ export const buildLines = (seed: number, duration: number): LineDef[] => {
   const rng = mulberry32(seed);
   const lines: LineDef[] = [];
 
-  // Track strands.
-  for (let i = 0; i < 16; i++) {
-    const z = -1 + (2 * i) / 15 + range(rng, -0.04, 0.04);
+  // Track rails: crisp, evenly spaced strands.
+  for (let i = 0; i < 18; i++) {
+    const z = -1.5 + (3 * i) / 17 + range(rng, -0.03, 0.03);
     lines.push({
       n: 300,
-      width: range(rng, 0.012, 0.03),
-      intensity: range(rng, 0.3, 0.7),
+      width: range(rng, 0.02, 0.045),
+      intensity: range(rng, 0.9, 1.3),
       color: pickBlue(rng),
-      fill: straight(300, range(rng, -0.015, 0.015), z),
+      fill: straight(300, 0, z),
     });
   }
-  // Wide glassy edge bands of the track.
-  for (const z of [-1.18, 1.16, 1.3]) {
+  // Glassy edges of the track.
+  for (const z of [-1.65, 1.65]) {
     lines.push({
       n: 300,
-      width: 0.11,
-      intensity: 0.3,
-      color: [0.2, 0.45, 1.0],
-      fill: straight(300, -0.02, z),
+      width: 0.12,
+      intensity: 0.9,
+      color: [0.22, 0.5, 1.0],
+      fill: straight(300, 0, z),
     });
   }
 
-  // Bright light pads gliding along the track.
-  for (let i = 0; i < 26; i++) {
-    const z = range(rng, -1.2, 1.3);
-    const period = range(rng, 26, 40);
+  // Rectangular light segments gliding along the track surface.
+  for (let i = 0; i < 36; i++) {
+    const z = range(rng, -1.55, 1.55);
+    const period = range(rng, 30, 44);
     lines.push({
       n: 10,
-      width: range(rng, 0.08, 0.2),
-      intensity: range(rng, 1.0, 1.8),
+      width: range(rng, 0.25, 0.5),
+      intensity: range(rng, 1.0, 1.5),
       color: [0.3, 0.62, 1.0],
-      fill: slider(10, range(rng, 0, period), range(rng, 0.4, 2.2), 1, 0.005, z, period, duration),
+      // Fade out before reaching the lens (no blown-out near plates).
+      fill: slider(10, range(rng, 0, period), range(rng, 1, 4), 1, 0.005, z, period, duration, 2),
     });
   }
 
-  // Wave filaments rising from the track.
-  for (let i = 0; i < 34; i++) {
-    const loopy = rng() < 0.35;
+  // An orderly row of wave filaments rising from the track, plus a few tall
+  // looping springs.
+  const waveCount = 14;
+  for (let i = 0; i < waveCount; i++) {
+    const loopy = i % 4 === 1;
+    const tall = i % 5 === 2;
     const p: WaveParams = {
-      z: range(rng, -1.0, 1.1),
-      amp: rng() < 0.3 ? range(rng, 1.4, 3.2) : range(rng, 0.25, 1.3),
-      lambda: loopy ? range(rng, 0.7, 2.0) : range(rng, 0.5, 2.6),
+      z: -1.4 + (2.8 * i) / (waveCount - 1),
+      amp: tall ? range(rng, 2.0, 3.0) : range(rng, 0.35, 1.3),
+      lambda: loopy ? range(rng, 1.0, 2.0) : range(rng, 0.9, 2.4),
       laps: 0,
       phase: range(rng, 0, Math.PI * 2),
       envSeed: range(rng, 0, 100),
-      loop: loopy ? range(rng, 0.2, 0.32) : 0,
-      zWobble: range(rng, 0, 0.12),
-      ahead: 70,
+      loop: loopy ? range(rng, 0.2, 0.3) : 0,
+      zWobble: range(rng, 0, 0.08),
+      behind: -1,
+      ahead: 55,
     };
-    p.laps = lapsFor(-range(rng, 0.5, 1.4), p.lambda, duration);
+    p.laps = lapsFor(-range(rng, 0.3, 0.8), p.lambda, duration);
     const n = waveSampleCount(p);
     lines.push({
       n,
-      width: range(rng, 0.008, 0.02),
-      intensity: range(rng, 0.7, 1.3),
+      width: range(rng, 0.012, 0.02),
+      intensity: range(rng, 1.1, 1.5),
       color: pickBlue(rng),
       fill: wave(p, n, duration),
     });
   }
 
   // Giant arcs behind the track — far out of focus, they read as soft beams.
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 3; i++) {
     const p: WaveParams = {
-      z: range(rng, -9, -4),
-      amp: range(rng, 4, 8),
-      lambda: range(rng, 5, 11),
+      z: range(rng, -9, -5),
+      amp: range(rng, 4, 7),
+      lambda: range(rng, 7, 12),
       laps: 0,
       phase: range(rng, 0, Math.PI * 2),
       envSeed: range(rng, 0, 100),
       loop: 0,
       zWobble: 0,
+      behind: BEHIND,
       ahead: 70,
     };
-    p.laps = lapsFor(-range(rng, 0.4, 1.2), p.lambda, duration);
+    p.laps = lapsFor(-range(rng, 0.3, 0.7), p.lambda, duration);
     const n = waveSampleCount(p);
     lines.push({
       n,
       width: 0.06,
-      intensity: 0.9,
+      intensity: 0.6,
       color: [0.25, 0.55, 1.0],
       fill: wave(p, n, duration),
     });
@@ -230,7 +238,7 @@ export const buildLines = (seed: number, duration: number): LineDef[] => {
       foreground: true,
       n: 24,
       width: range(rng, 0.3, 0.55),
-      intensity: range(rng, 0.9, 1.3),
+      intensity: range(rng, 0.4, 0.6),
       color: [0.25, 0.58, 1.0],
       fill: slider(24, range(rng, -3, 9), range(rng, 4, 8), 1, range(rng, -1.5, -1.0), range(rng, -1.0, 0.6), 12, duration, -3),
     });

@@ -21,13 +21,13 @@ const lowTracking = (t: number, duration: number): CameraPose => {
   const sway = Math.sin(c) * 0.12;
   const x = 0.6 * Math.sin(c + 0.8);
   return {
-    position: [x, -0.55 + Math.sin(2 * c) * 0.05, 2.1 + sway],
-    target: [x + 5, 0.75, -1.6],
-    roll: 0.22 + Math.sin(c + 2.1) * 0.03,
+    position: [x, -0.8 + Math.sin(2 * c) * 0.04, 3.0 + sway],
+    target: [x + 10, 1.3, 0.8],
+    roll: 0.1 + Math.sin(c + 2.1) * 0.03,
     fov: 42,
-    focus: 5.2,
-    aperture: 0.018,
-    glow: [0.92, 0.95],
+    focus: 4.5,
+    aperture: 0.011,
+    glow: [1.0, 1.0],
   };
 };
 

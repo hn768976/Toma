@@ -5,7 +5,7 @@ import { LineDef } from "./lines";
 import { createRibbonMaterial } from "./ribbonMaterial";
 
 // Must match uMaxCoc in ribbonMaterial.ts.
-const MAX_COC = 0.045;
+const MAX_COC = 0.035;
 
 type Props = {
   lines: LineDef[];

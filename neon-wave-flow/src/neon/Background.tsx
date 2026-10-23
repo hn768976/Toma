@@ -32,12 +32,12 @@ export const Background: React.FC<{ glow: [number, number]; strength: number }> 
           }
           void main() {
             vec2 uv = vUv;
-            vec3 deep = vec3(0.004, 0.008, 0.035);
-            vec3 navy = vec3(0.02, 0.05, 0.16);
-            vec3 col = mix(deep, navy, smoothstep(0.0, 1.2, uv.x * 0.6 + uv.y * 0.7));
+            vec3 deep = vec3(0.01, 0.015, 0.05);
+            vec3 navy = vec3(0.07, 0.1, 0.25);
+            vec3 col = mix(deep, navy, smoothstep(0.1, 1.3, uv.x * 0.6 + uv.y * 0.7));
             vec2 d = (uv - uGlow) * vec2(1.777, 1.0);
-            float g = exp(-dot(d, d) * 2.2);
-            col += vec3(0.12, 0.3, 0.95) * g * 0.55 * uStrength;
+            float g = exp(-dot(d, d) * 3.5);
+            col += vec3(0.12, 0.2, 0.5) * g * uStrength;
             // Dither against banding in the smooth gradient.
             col += (hash(gl_FragCoord.xy) - 0.5) / 255.0;
             gl_FragColor = vec4(col, 1.0);
