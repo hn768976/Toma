@@ -201,7 +201,7 @@ export const buildWorld = (renderer: THREE.WebGLRenderer, palette: Palette) => {
       // Dark tray body, a silver vertical pull-handle and a teal latch tab.
       B.slim.box(bx, by, -0.2, w, th * 0.84, 0.6);
       B.latch.box(bx + w * 0.3, by + th * 0.16, 0.4, w * 0.4, th * 0.58, 0.5);
-      B.teal.box(bx + w * 0.18, by + th * 0.86, -0.2, w * 0.64, th * 0.12, 0.95);
+      B.teal.box(bx + w * 0.3, by + th * 0.86, -0.2, w * 0.4, th * 0.12, 0.95);
       green.box(bx + w / 2 - 0.22, by + th + 0.08, 0.25, 0.44, 0.32, 0.35);
       addGreen(rnd() < 0.3 ? 1.5 + rnd() * 3.5 : 0);
     }
@@ -255,10 +255,10 @@ export const buildWorld = (renderer: THREE.WebGLRenderer, palette: Palette) => {
     B.strip.box(ox + 58.5, -2, 0.2, 1.2, RACK_HEIGHT - 6, 0.4);
   };
 
-  for (let i = -5; i <= 6; i++) {
+  for (let i = -7; i <= 6; i++) {
     const ox = i * RACK_PITCH;
     ledGain = i === 0 ? 1 : 0.4;
-    if (i === 4 || i === -4) doorRack(ox);
+    if (i === 4 || i === -7) doorRack(ox);
     else openRack(ox);
   }
 

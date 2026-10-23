@@ -10,8 +10,9 @@ import { Config } from "@remotion/cli/config";
 import { enableTailwind } from "@remotion/tailwind-v4";
 
 Config.setRspack(true);
-Config.setVideoImageFormat("jpeg");
-Config.setJpegQuality(95);
+// PNG frames keep the encode in standard limited-range yuv420p (JPEG frames
+// would produce full-range yuvj420p).
+Config.setVideoImageFormat("png");
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setOverwriteOutput(true);

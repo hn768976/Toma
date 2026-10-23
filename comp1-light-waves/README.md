@@ -31,4 +31,4 @@ npm run render:v2:4k   # full 3840x2160 master of V2
 ```
 
 The 1080p deliverables are rendered from the 4K compositions with Remotion's
-`--scale=0.5`. `remotion.config.ts` sets H.264 / yuv420p / JPEG 95 frames.
+`--scale=0.5`. `remotion.config.ts` sets H.264 / yuv420p with lossless PNG intermediate frames.

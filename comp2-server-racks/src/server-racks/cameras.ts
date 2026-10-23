@@ -27,7 +27,7 @@ export const craneDown: CameraShot = {
       focus: new THREE.Vector3(24, y, 0),
     };
   },
-  exposure: 1.15,
+  exposure: 1.5,
   aperture: 0.0006,
   maxBlur: 0.012,
 };
@@ -45,7 +45,7 @@ export const lateralTrack: CameraShot = {
       focus: new THREE.Vector3(x + 30, 100, 0),
     };
   },
-  exposure: 0.85,
+  exposure: 0.32,
   aperture: 0.0003,
   maxBlur: 0.01,
 };
