@@ -114,10 +114,21 @@ const GrainShader = {
     }`,
 };
 
+// Distance from point p to segment a-b on the floor plane.
+const distToSegment = (px: number, pz: number, ax: number, az: number, bx: number, bz: number) => {
+  const dx = bx - ax;
+  const dz = bz - az;
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz)));
+  return Math.hypot(px - (ax + t * dx), pz - (az + t * dz));
+};
+
 export const createQuestionFieldScene = (
   canvas: HTMLCanvasElement,
   width: number,
   height: number,
+  // Floor positions the camera passes through; marks blocking the view from
+  // any of them to the question mark are left out.
+  cameraPath: [number, number][] = [],
 ): QuestionFieldScene => {
   const renderer = new THREE.WebGLRenderer({
     canvas,
@@ -171,6 +182,7 @@ export const createQuestionFieldScene = (
       const r = Math.hypot(x, z);
       const az = Math.atan2(x, z);
       if (r > 5.0 && r < 7.2 && az > -1.4 && az < 1.05) continue;
+      if (cameraPath.some(([cx, cz]) => distToSegment(x, z, cx, cz, 0, 0) < 0.5)) continue;
       const m = new THREE.Matrix4();
       const s = 0.92 + rand() * 0.16;
       m.compose(

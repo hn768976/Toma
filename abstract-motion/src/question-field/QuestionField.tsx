@@ -69,14 +69,23 @@ export const QuestionField: React.FC<{ variant: QuestionFieldVariant }> = ({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    sceneRef.current = createQuestionFieldScene(canvas, width, height);
+    // The low orbit (V2) sweeps through the field, so keep its sight line
+    // clear; V1 looks down from above and needs no extra clearing.
+    const path: [number, number][] =
+      variant === "orbit"
+        ? Array.from({ length: 96 }, (_, i) => {
+            const c = cameraAt(variant, i / 95);
+            return [Math.sin(c.azimuth) * c.distance, Math.cos(c.azimuth) * c.distance];
+          })
+        : [];
+    sceneRef.current = createQuestionFieldScene(canvas, width, height, path);
     setReady(true);
     continueRender(initHandle);
     return () => {
       sceneRef.current?.dispose();
       sceneRef.current = null;
     };
-  }, [width, height, initHandle]);
+  }, [width, height, initHandle, variant]);
 
   useEffect(() => {
     const s = sceneRef.current;
