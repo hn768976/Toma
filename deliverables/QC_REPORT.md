@@ -123,11 +123,11 @@ Timing and loop checks:
 
 ## Checksums (SHA-256)
 
-Checksums cover the four videos. The ZIP files' checksums aren't listed, because the ZIPs were rebuilt after this report was written so they include it.
-
 ```
 b18ce88624b0020e09beef57922298f3de35ff74587c2132b54d91d26445ce18  Comp1_GoldGridMorph_V1_1080p.mp4
 9ccd9a3b38d547e72e012be0a8331ff2c821f35c18fa85a69daeaefae1527647  Comp1_GoldGridMorph_V2_1080p.mp4
 2f5a6934d32efe9a2c02e7c7c2dae91743266a07ac09be5f5cc54a8f05ba0b12  Comp2_GlassCubeRing_V1_1080p.mp4
 c857a40c0bb0b6591395e4e18d059c0ed95282ea6935acbc64b805e3a6c4e47d  Comp2_GlassCubeRing_V2_1080p.mp4
+da149b12ee42bcef0694815dbce1d0ef0ae7d2da7671c0846bf7c639ef6f3b3e  Comp1_GoldGridMorph_4K_Project.zip
+6c1b8017f001117b4ecf4e696409ee7becf0ee70090393c4a1851ea39dd2e83a  Comp2_GlassCubeRing_4K_Project.zip
 ```
