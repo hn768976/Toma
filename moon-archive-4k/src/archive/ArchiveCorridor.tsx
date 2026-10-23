@@ -32,7 +32,7 @@ const poseFor = (mode: CameraMode, frame: number, fps: number, duration: number)
   const progress = interpolate(frame, [0, duration - 1], [0, 1], {
     easing: Easing.inOut(Easing.cubic),
   });
-  const travel = 9 * progress;
+  const travel = 8 * progress;
   const focusStart = 12;
   const halfStart = Math.tan(THREE.MathUtils.degToRad(28 / 2));
   const fov = THREE.MathUtils.radToDeg(

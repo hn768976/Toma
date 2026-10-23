@@ -16,15 +16,15 @@ export type MoonPalette = {
 
 // Sampled from the reference footage (pink / periwinkle dusk).
 export const REFERENCE_PALETTE: MoonPalette = {
-  pink: "#ec8ccd",
-  salmon: "#d67b98",
-  blue: "#6c6cf5",
-  lavender: "#b276d6",
-  horizon: "#bd79ac",
-  waterTop: "#b4627c",
-  waterLow: "#c47aa8",
-  moon: "#fff3f7",
-  glow: "#ffd9ef",
+  pink: "#ea8fc0",
+  salmon: "#e38a8c",
+  blue: "#5f62f2",
+  lavender: "#ad74d4",
+  horizon: "#cf8494",
+  waterTop: "#b9687a",
+  waterLow: "#a978c4",
+  moon: "#fbefe9",
+  glow: "#ffdcea",
 };
 
 // Alternative: teal night sky with amber clouds and a golden moon.

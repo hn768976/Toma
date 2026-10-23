@@ -71,17 +71,17 @@ float fbm(vec2 p, int oct) {
 // Painterly, horizontally-stretched cloud bands drifting right-to-left.
 vec3 sky(vec2 p, float t, int oct) {
   vec2 q = vec2(p.x * 0.7 + t * 0.095, p.y * 3.6);
-  float w = fbm(q * 0.9 + vec2(t * 0.02, t * 0.07), oct);
+  float w = fbm(q * 0.9 + vec2(t * 0.04, t * 0.12), oct);
   float n1 = fbm(q + 1.8 * vec2(w, w * 0.4) + vec2(t * 0.04, 1.3 - t * 0.03), oct);
   float n2 = fbm(q * 1.25 + vec2(-t * 0.05, 5.2 + t * 0.03) + 1.2 * w, oct);
 
   float h = smoothstep(-0.18, 0.5, p.y);
   vec3 col = mix(uLavender, uPink, clamp(h * 0.62 + (n2 - 0.5) * 0.9, 0.0, 1.0));
-  col = mix(col, uSalmon, smoothstep(0.52, 0.72, n2) * (0.75 - 0.35 * h));
+  col = mix(col, uSalmon, smoothstep(0.48, 0.70, n2) * (0.85 - 0.3 * h));
   col = mix(col, uPink, smoothstep(0.55, 0.75, n2 + 0.15 * h) * h * 0.8);
   col = mix(col, uBlue, smoothstep(0.48, 0.68, n1) * 0.82);
   // Haze towards the horizon line.
-  col = mix(col, uHorizon, smoothstep(0.12, 0.0, p.y - HORIZON) * 0.55);
+  col = mix(col, uHorizon, smoothstep(0.16, 0.0, p.y - HORIZON) * 0.65);
   return col;
 }
 
@@ -108,7 +108,7 @@ vec2 moonDisc(vec2 p) {
       craters += rim * step(0.45, hash12(cell + 3.0));
     }
   }
-  float shade = 1.0 - 0.16 * maria - 0.10 * (mottling - 0.5) - 0.05 * craters;
+  float shade = 1.0 - 0.24 * maria - 0.14 * (mottling - 0.5) - 0.09 * craters;
   shade *= mix(0.9, 1.0, z); // limb darkening
   return vec2(cover, shade);
 }
@@ -145,7 +145,7 @@ void main() {
 
     float dm = length(p - MOON_C) / MOON_R;
     // Halo
-    col += uGlow * (0.16 * exp(-(dm - 1.0) * 3.5) + 0.05 * exp(-(dm - 1.0) * 0.8)) * step(1.0, dm);
+    col += uGlow * (0.05 * exp(-(dm - 1.0) * 4.0) + 0.015 * exp(-(dm - 1.0) * 0.8)) * step(1.0, dm);
     col += stars(p, t) * smoothstep(1.2, 2.4, dm);
 
     vec2 m = moonDisc(p);
@@ -165,14 +165,15 @@ void main() {
     nrm += (vec2(vnoise(wp * 1.7 + wt * 0.4), vnoise(wp * 1.7 - wt * 0.4 + 5.0)) - 0.5) * 0.9;
 
     float amp = 0.09 * depth + 0.003;
-    vec2 refl = vec2(p.x + nrm.x * amp * 1.4, HORIZON + depth * 0.75 + nrm.y * amp * 0.5);
+    vec2 swirl = vec2(fbm(wp * vec2(0.35, 0.6) + vec2(t * 0.15, 0.0), 3), fbm(wp * vec2(0.35, 0.6) + vec2(4.0, -t * 0.1), 3)) - 0.5;
+    vec2 refl = vec2(p.x + nrm.x * amp * 1.4 + swirl.x * 0.12 * depth, HORIZON + depth * 0.75 + nrm.y * amp * 0.5 + swirl.y * 0.05);
     vec3 skyR = sky(refl, t, 3);
 
     float k = smoothstep(0.0, 0.33, depth);
     vec3 base = mix(uWaterTop, uWaterLow, k);
     // Horizontal streaks keep the reflected bands from looking glassy.
     float streak = fbm(vec2(p.x * 1.2 + t * 0.03, z * 0.9), 3);
-    col = mix(base, skyR, 0.62 + 0.1 * k);
+    col = mix(base, skyR, 0.7 + 0.1 * k);
     col = mix(col, uBlue, smoothstep(0.55, 0.75, streak) * 0.35 * k);
 
     // Broken moon path: mirrored disc torn into wobbling strips.
@@ -180,9 +181,10 @@ void main() {
     vec2 mp = vec2(p.x + (nrm.x * 1.2 + wob * 0.6) * amp * 1.3, HORIZON + depth * 0.95 + nrm.y * amp * 1.6);
     vec2 mr = moonDisc(mp);
     float rag = vnoise(vec2(p.x * 28.0, z * 3.0 - wt * 0.5)) - 0.5;
-    float strips = smoothstep(0.38, 0.62, sin(z * 5.5 + nrm.y * 1.8 - wt * 1.6) * 0.5 + 0.5 + 0.2 * nrm.x + 0.45 * rag);
+    float strips = smoothstep(0.12, 0.55, sin(z * 4.2 + nrm.y * 1.8 - wt * 1.6) * 0.5 + 0.5 + 0.2 * nrm.x + 0.45 * rag);
     float path = mr.x * strips;
-    col = mix(col, uMoon * (0.86 + 0.14 * mr.y), path * 0.92);
+    float feather = smoothstep(0.0, 0.35, mr.x * (1.0 - smoothstep(0.75, 1.0, length((mp - MOON_C) / MOON_R))));
+    col = mix(col, uMoon * (0.8 + 0.2 * mr.y), path * feather * 0.85);
     // Soft glow column under the moon.
     float colGlow = exp(-pow(p.x / (MOON_R * 1.3), 2.0)) * smoothstep(0.03, 0.12, depth);
     col += uGlow * colGlow * 0.06;

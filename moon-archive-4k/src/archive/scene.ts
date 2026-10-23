@@ -5,11 +5,11 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 // the reference repeats every 42 frames, i.e. the camera advances exactly one
 // column (and one floor tile) every 42 frames.
 export const COL_W = 0.55;
-export const ROW_H = 0.25;
-export const ROWS = 11;
+export const ROW_H = 0.28;
+export const ROWS = 10;
 export const HALF_W = 2 * COL_W;
 export const CEIL_H = ROWS * ROW_H;
-export const EYE_H = 1.125;
+export const EYE_H = 0.9;
 const COLUMNS = 64;
 const Z_START = 2;
 const END_Z = -Z_START - COLUMNS * COL_W;
@@ -61,7 +61,7 @@ export const buildArchiveScene = (
   const scene = new THREE.Scene();
   const fogColor = new THREE.Color("#e9ebec");
   scene.background = fogColor;
-  scene.fog = new THREE.Fog(fogColor, 5, 62);
+  scene.fog = new THREE.Fog(fogColor, 4, 52);
 
   const pmrem = new THREE.PMREMGenerator(renderer);
   const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
@@ -99,7 +99,7 @@ export const buildArchiveScene = (
 
   // --- Luminous ceiling ------------------------------------------------------
   const ceilGeo = new THREE.PlaneGeometry(2 * HALF_W, corridorLen);
-  const ceilMat = new THREE.MeshBasicMaterial({ color: "#b2b4b5" });
+  const ceilMat = new THREE.MeshBasicMaterial({ color: "#c3c5c6" });
   const ceil = new THREE.Mesh(ceilGeo, ceilMat);
   ceil.rotation.x = Math.PI / 2;
   ceil.position.set(0, CEIL_H, (Z_START + END_Z) / 2);
@@ -113,6 +113,30 @@ export const buildArchiveScene = (
   end.position.set(0, CEIL_H / 2, END_Z + 0.01);
   scene.add(end);
   disposables.push(endGeo, endMat);
+
+  // Soft bloom around the opening.
+  const glowCanvas = document.createElement("canvas");
+  glowCanvas.width = 256;
+  glowCanvas.height = 256;
+  const gctx = glowCanvas.getContext("2d")!;
+  const grad = gctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+  grad.addColorStop(0, "rgba(255,255,255,0.9)");
+  grad.addColorStop(0.25, "rgba(255,255,255,0.35)");
+  grad.addColorStop(1, "rgba(255,255,255,0)");
+  gctx.fillStyle = grad;
+  gctx.fillRect(0, 0, 256, 256);
+  const glowTex = new THREE.CanvasTexture(glowCanvas);
+  const glowMat = new THREE.SpriteMaterial({
+    map: glowTex,
+    fog: false,
+    depthWrite: false,
+    transparent: true,
+  });
+  const glow = new THREE.Sprite(glowMat);
+  glow.scale.set(9, 9, 1);
+  glow.position.set(0, CEIL_H / 2, END_Z + 0.5);
+  scene.add(glow);
+  disposables.push(glowTex, glowMat);
 
   // --- Dark backing behind the drawers (reads as the seams) ------------------
   const backGeo = new THREE.PlaneGeometry(corridorLen, CEIL_H);
@@ -137,14 +161,14 @@ export const buildArchiveScene = (
     metalness: 0.35,
     roughness: 0.45,
   });
-  const labelGeo = new THREE.BoxGeometry(0.008, 0.052, 0.2);
+  const labelGeo = new THREE.BoxGeometry(0.008, 0.058, 0.2);
   const labelMat = new THREE.MeshStandardMaterial({
-    color: "#dadcdd",
+    color: "#cfd1d2",
     roughness: 0.6,
     emissive: new THREE.Color("#ffffff"),
-    emissiveIntensity: 0.22,
+    emissiveIntensity: 0.08,
   });
-  const frameGeo = new THREE.BoxGeometry(0.012, 0.068, 0.222);
+  const frameGeo = new THREE.BoxGeometry(0.012, 0.076, 0.222);
   const frameMat = new THREE.MeshStandardMaterial({
     color: "#b9bcbf",
     metalness: 0.7,
@@ -182,11 +206,11 @@ export const buildArchiveScene = (
         const xFace = side * (HALF_W - frontDepth); // inner face of drawer front
         m.makeTranslation(side * (HALF_W - frontDepth / 2), y, z);
         fronts.setMatrixAt(i, m);
-        m.makeTranslation(xFace - side * 0.004, y + 0.045, z);
+        m.makeTranslation(xFace - side * 0.004, y + 0.05, z);
         frames.setMatrixAt(i, m);
-        m.makeTranslation(xFace - side * 0.009, y + 0.045, z);
+        m.makeTranslation(xFace - side * 0.009, y + 0.05, z);
         labels.setMatrixAt(i, m);
-        m.makeTranslation(xFace - side * 0.03, y - 0.05, z);
+        m.makeTranslation(xFace - side * 0.03, y - 0.056, z);
         handles.setMatrixAt(i, m);
         i++;
       }
