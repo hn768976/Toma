@@ -210,11 +210,25 @@ export const MicrobeField: React.FC<MicrobeFieldProps> = ({ palette: p }) => {
     ctx.fillStyle = vg;
     ctx.fillRect(0, 0, width, height);
 
-    // Slow lamp flicker/drift of overall illumination (about ±4 levels),
-    // periodic over the clip.
+    // Slow lamp drift of the illumination (a few levels), periodic over the
+    // clip. Applied as a radial falloff rather than a flat fill so 8-bit
+    // rounding steps land at different radii on different frames instead of
+    // shifting the whole frame at once (which reads as flicker).
     const lamp = 0.6 * Math.sin(cycle * 2 + 0.5) + 0.4 * Math.sin(cycle * 3 + 2.1);
-    ctx.globalAlpha = Math.abs(lamp) * 0.03;
-    ctx.fillStyle = lamp > 0 ? "#ffffff" : "#000000";
+    const lampGradient = ctx.createRadialGradient(
+      width * 0.5,
+      height * 0.5,
+      0,
+      width * 0.5,
+      height * 0.5,
+      width * 0.75,
+    );
+    const tint = lamp > 0 ? "255,255,255" : "0,0,0";
+    const strength = Math.abs(lamp) * 0.045;
+    lampGradient.addColorStop(0, `rgba(${tint},${strength})`);
+    lampGradient.addColorStop(1, `rgba(${tint},0)`);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = lampGradient;
     ctx.fillRect(0, 0, width, height);
 
     // Sensor grain, re-positioned every frame.

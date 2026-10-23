@@ -25,7 +25,7 @@ export type MicrobePalette = {
 // slide with slate, semi-translucent filaments.
 export const brightfield: MicrobePalette = {
   id: "brightfield",
-  background: "#aebcc1",
+  background: "#b8c6ca",
   cloudLight: [196, 208, 211],
   cloudDark: [150, 164, 169],
   cloudAlpha: 0.5,
