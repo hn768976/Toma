@@ -4,10 +4,10 @@ Two procedural compositions, each in two versions. All four are authored at **38
 
 | Composition ID   | Concept | Version | Duration | Technology |
 |------------------|---------|---------|----------|------------|
-| `Underwater-V1`  | Sun rays under the ocean surface | Matches the reference (clear ocean blue) | 240 frames / 8.000 s | WebGL 2 fragment shader |
-| `Underwater-V2`  | Same scene | Alternative **colour palette**: emerald lagoon, warm golden light shafts | 240 frames / 8.000 s | WebGL 2 fragment shader |
-| `MoonClouds-V1`  | Flight over a moonlit cloud deck | Matches the reference (steady forward glide, moon low right, cloud sweeps past early) | 300 frames / 10.000 s | Three.js (custom shaders) |
-| `MoonClouds-V2`  | Same scene | Alternative **camera move**: the camera emerges from the cloud tops and cranes up into a banking right turn, so the moon swings toward the centre of frame | 300 frames / 10.000 s | Three.js (custom shaders) |
+| `Underwater-V1`  | Sun rays under the ocean surface | Matches the reference (clear ocean blue) | 300 frames / 10.000 s | WebGL 2 fragment shader |
+| `Underwater-V2`  | Same scene | Alternative **colour palette**: emerald lagoon, warm golden light shafts | 300 frames / 10.000 s | WebGL 2 fragment shader |
+| `MoonClouds-V1`  | Flight over a moonlit cloud deck | Matches the reference (steady forward glide, moon low right, cloud sweeps past early) | 240 frames / 8.000 s | Three.js (custom shaders) |
+| `MoonClouds-V2`  | Same scene | Alternative **camera move**: the camera emerges from the cloud tops and cranes up into a banking right turn, so the moon swings toward the centre of frame | 240 frames / 8.000 s | Three.js (custom shaders) |
 
 Everything is generated procedurally, so there are no external image or video assets.
 
