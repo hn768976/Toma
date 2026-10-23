@@ -15,6 +15,8 @@ Config.setOverwriteOutput(true);
 Config.setDefaultPremountInSeconds(2);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
+// Standard limited-range BT.709 output (instead of full-range BT.601).
+Config.setColorSpace("bt709");
 Config.setCrf(16);
 // The compositions are WebGL 2 shaders. "angle" uses the GPU when one is
 // present and falls back to SwiftShader (software) on headless servers.
