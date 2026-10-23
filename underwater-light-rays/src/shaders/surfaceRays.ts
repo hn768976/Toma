@@ -32,8 +32,8 @@ ${GLSL_COMMON}
 // Height field of the surface, animated. Two wave trains plus detail.
 float waveHeight(vec2 x, float t) {
   float h = 0.0;
-  h += fbm(x + vec2(t * 0.45, t * 0.16), 4);
-  h += 0.6 * fbm(x * 1.7 + vec2(-t * 0.32, t * 0.38) + 9.0, 3);
+  h += fbm(x + vec2(t * 0.4, t * 0.14), 4);
+  h += 0.6 * fbm(x * 1.7 + vec2(-t * 0.28, t * 0.34) + 9.0, 3);
   return h;
 }
 
@@ -53,7 +53,7 @@ void main() {
   // Deep falloff towards the bottom right.
   vec2 sh = (uv - vec2(1.0, 0.22)) * vec2(1.0, 1.1);
   float shadow = exp(-dot(sh, sh) * 6.0);
-  col = mix(col, uColShadow, 0.9 * shadow);
+  col = mix(col, uColShadow, 0.72 * shadow);
 
   // Lit haze over the seabed along the bottom edge.
   float seabed = smoothstep(0.26, 0.0, uv.y) * exp(-pow((uv.x - 0.45) * 2.9, 2.0));
@@ -71,14 +71,14 @@ void main() {
   // Angle measured from straight down, positive towards the right.
   float a = atan(v.x, -v.y);
   // One broad, soft main shaft leaning slightly right...
-  float mainShaft = exp(-pow((a - 0.16) / 0.3, 2.0)) * pow(0.35 + 0.65 * noise2(vec2(a * 20.0, t * 0.7)), 1.5);
+  float mainShaft = exp(-pow((a - 0.2) / 0.3, 2.0)) * (0.55 + 0.45 * noise2(vec2(a * 8.0, t * 1.3)));
   // ...and fainter shafts fanning further right; none lean left.
   float fan = exp(-pow((a - 0.5) / 0.45, 2.0)) * smoothstep(-0.05, 0.2, a);
-  float r1 = noise2(vec2(a * 11.0, t * 0.9));
-  float r2 = noise2(vec2(a * 24.0 + 4.0, t * 1.3));
-  float r3 = pow(noise2(vec2(a * 55.0 + 9.0, t * 1.1)), 6.0);
+  float r1 = noise2(vec2(a * 11.0, t * 1.5));
+  float r2 = noise2(vec2(a * 24.0 + 4.0, t * 2.0));
+  float r3 = pow(noise2(vec2(a * 55.0 + 9.0, t * 1.7)), 6.0);
   float side = pow(0.6 * r1 + 0.4 * r2, 2.4) * 1.6 + r3 * 0.2;
-  float along = 0.8 + 0.4 * noise2(vec2(a * 8.0, d * 3.0 - t * 0.6));
+  float along = 0.75 + 0.5 * noise2(vec2(a * 8.0, d * 3.0 - t * 0.9));
   float shaftFade = exp(-max(d - 0.1, 0.0) * 1.3) * smoothstep(0.0, 0.18, uv.y);
   vec3 shaftLight = uColRay * (mainShaft * 0.42 + side * fan * 0.26) * along * shaftFade;
 
@@ -104,7 +104,8 @@ void main() {
     float lit = clamp(facing * 0.85 + ridge * 0.45, 0.0, 1.0);
     // Far surface dissolves into the water haze.
     float vis = exp(-(dist - 2.0) * 0.38) * smoothstep(0.0, 0.1, rd.y);
-    vis = clamp(vis, 0.0, 1.0);
+    // Plus a broad screen-space fade so the texture dissolves gradually.
+    vis = clamp(vis, 0.0, 1.0) * smoothstep(0.58, 0.88, uv.y);
     col = mix(col, col * 0.5, vis * 0.95 * smoothstep(0.65, 0.2, lit));
     col += uColSurface * vis * pow(lit, 2.4) * 0.8;
 

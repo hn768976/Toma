@@ -8,10 +8,10 @@ const PALETTES: Record<SurfacePalette, Uniforms> = {
   // Sampled from the reference: clear tropical blue.
   ocean: {
     uColTop: [0.06, 0.56, 0.82],
-    uColMid: [0.07, 0.56, 0.81],
+    uColMid: [0.1, 0.58, 0.8],
     uColLow: [0.0, 0.37, 0.64],
     uColShadow: [0.0, 0.1, 0.28],
-    uColSeabed: [0.4, 0.8, 0.86],
+    uColSeabed: [0.46, 0.86, 0.9],
     uColSurface: [0.55, 0.92, 1.0],
     uColRay: [0.55, 0.92, 1.0],
     uColSun: [1.0, 1.0, 0.97],
