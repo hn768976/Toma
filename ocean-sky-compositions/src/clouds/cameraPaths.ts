@@ -27,17 +27,21 @@ const deg = Math.PI / 180;
 export const GLIDE_SHOT: CloudShot = {
   name: "glide",
   fovY: 40,
-  speed: 5,
+  speed: 12,
   moonAzimuth: 15.5,
   moonElevation: 3.7,
   heroes: [
-    { x: 8.0, z: -5 * 3.0, radius: 6.5, height: 7.0, baseY: 4.5, brightness: 1.5 },
-    { x: -10.0, z: -5 * 3.6, radius: 5.5, height: 4.0, baseY: 2.0 },
+    // dark mass under the moon at the start
+    { x: 2.6, z: -12 * 0.85, radius: 5.0, height: 4.5, baseY: 3.4, brightness: 0.6 },
+    // big moonlit cloud that sweeps across the moon and off to the right
+    { x: 4.6, z: -12 * 1.95, radius: 6.0, height: 5.5, baseY: 4.4, brightness: 2.4 },
+    // near cloud passing on the left
+    { x: -9.5, z: -12 * 2.7, radius: 5.5, height: 4.2, baseY: 2.4 },
   ],
   pose: (t) => ({
     x: 0,
     y: 8.4 + 0.4 * Math.sin(t * 0.55),
-    z: -5 * t,
+    z: -12 * t,
     yaw: 0.004 * Math.sin(t * 0.4),
     pitch: 1.6 * deg,
     roll: 0.003 * Math.sin(t * 0.7),
@@ -50,10 +54,10 @@ export const GLIDE_SHOT: CloudShot = {
 export const BANKING_RISE_SHOT: CloudShot = {
   name: "banking-rise",
   fovY: 40,
-  speed: 3.6,
+  speed: 8,
   moonAzimuth: 24,
   moonElevation: 6.5,
-  heroes: [{ x: 4.5, z: -3.6 * 1.6, radius: 5.0, height: 5.0, baseY: 4.0, brightness: 1.3 }],
+  heroes: [{ x: 4.5, z: -8 * 1.6, radius: 5.0, height: 5.0, baseY: 4.0, brightness: 1.3 }],
   pose: (t, duration) => {
     const p = interpolate(t, [0, duration], [0, 1], {
       easing: Easing.inOut(Easing.sin),
@@ -63,7 +67,7 @@ export const BANKING_RISE_SHOT: CloudShot = {
     return {
       x: interpolate(p, [0, 1], [0, 12]),
       y: interpolate(p, [0, 1], [6.5, 13.5]),
-      z: -3.6 * t,
+      z: -8 * t,
       yaw: interpolate(p, [0, 1], [-6 * deg, 17 * deg]),
       pitch: interpolate(p, [0, 1], [3.5 * deg, -3.5 * deg]),
       roll: interpolate(p, [0, 0.5, 1], [2.5 * deg, -4.5 * deg, -1.5 * deg]),

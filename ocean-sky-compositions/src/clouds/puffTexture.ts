@@ -126,17 +126,24 @@ const buildCell = (seed: number) => {
       const hv = get(i, j);
       const dx = (get(i + 2, j) - get(i - 2, j)) / (4 * px);
       const dy = (get(i, j + 2) - get(i, j - 2)) / (4 * px);
-      let nx = -dx * 0.45;
-      let ny = -dy * 0.45;
+      // fine cauliflower texture on top of the soft billow shape
+      const gx = (fbm(x * 24 + 0.15, y * 24, 3) - fbm(x * 24 - 0.15, y * 24, 3)) / 0.3;
+      const gy = (fbm(x * 24, y * 24 + 0.15, 3) - fbm(x * 24, y * 24 - 0.15, 3)) / 0.3;
+      let nx = -dx * 0.4 - gx * 0.12;
+      let ny = -dy * 0.4 - gy * 0.12;
       const len = Math.sqrt(nx * nx + ny * ny + 1);
       nx /= len;
       ny /= len;
       // ragged, soft silhouette
-      const edgeNoise = fbm(x * 9 + 11, y * 9 + 5, 4) - 0.5;
-      const bottom = Math.min(1, Math.max(0, (y - 0.1) / 0.16));
+      // ragged, wispy silhouette and uneven vapour density
+      const edgeNoise =
+        fbm(x * 9 + 11, y * 9 + 5, 4) - 0.5 + 0.6 * (fbm(x * 26 + 3, y * 26 + 9, 3) - 0.5);
+      const bottom = Math.min(1, Math.max(0, (y - 0.1) / 0.2));
+      const density = 0.8 + 0.2 * fbm(x * 7 + 31, y * 7 + 17, 3);
       const alpha =
-        Math.min(1, Math.max(0, (hv + edgeNoise * 0.07 - 0.006) / 0.1)) *
-        bottom;
+        Math.min(1, Math.max(0, (hv + edgeNoise * 0.1 - 0.012) / 0.13)) *
+        bottom *
+        density;
       const k = (j * CELL + i) * 4;
       out[k] = Math.round(alpha * alpha * (3 - 2 * alpha) * 255);
       out[k + 1] = Math.round((nx * 0.5 + 0.5) * 255);
