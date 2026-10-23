@@ -1,0 +1,59 @@
+import { Easing, interpolate } from "remotion";
+
+export type CameraPose = {
+  position: [number, number, number];
+  target: [number, number, number];
+  roll: number; // radians around the view axis
+  fov: number;
+  focus: number; // focal distance from the lens
+  aperture: number;
+  glow: [number, number]; // screen-space position of the backdrop glow
+};
+
+export type CameraRigName = "lowTracking" | "craneSweep";
+
+// Version 1: low, tilted tracking shot gliding beside the track, as in the
+// reference — near arcs huge in the upper left, track vanishing lower right.
+const lowTracking = (t: number): CameraPose => {
+  const x = 0.42 * t;
+  const sway = Math.sin(t * 0.35) * 0.12;
+  return {
+    position: [x, -0.55 + sway * 0.4, 2.1 + sway],
+    target: [x + 5, 0.75, -1.6],
+    roll: 0.22 + Math.sin(t * 0.22) * 0.03,
+    fov: 42,
+    focus: 5.2,
+    aperture: 0.018,
+    glow: [0.92, 0.95],
+  };
+};
+
+// Version 2: an over-the-top crane/orbit. The camera starts high on the
+// near side of the track, sweeps up and over it, and settles into a low
+// angle on the far side, so the track ends up crossing the frame in the
+// opposite diagonal while the arcs rise toward the lens.
+const craneSweep = (t: number, duration: number): CameraPose => {
+  const p = interpolate(t, [0, duration], [0, 1], {
+    easing: Easing.inOut(Easing.sin),
+  });
+  const x = 0.3 * t;
+  // Angle around the track axis: 0 = level on the near side (+z),
+  // PI/2 = overhead, PI = level on the far side (-z).
+  const angle = interpolate(p, [0, 1], [0.85, Math.PI - 0.32]);
+  const radius = interpolate(p, [0, 0.5, 1], [5.2, 6.2, 3.4]);
+  return {
+    position: [x - 1, 0.25 + Math.sin(angle) * radius, Math.cos(angle) * radius],
+    target: [x + 3.2, 0.7, 0],
+    roll: interpolate(p, [0, 1], [0.12, -0.2]),
+    fov: 42,
+    focus: radius + 0.8,
+    aperture: 0.016,
+    glow: [interpolate(p, [0, 1], [0.85, 0.12]), 0.92],
+  };
+};
+
+export const getCameraPose = (
+  rig: CameraRigName,
+  t: number,
+  duration: number,
+): CameraPose => (rig === "lowTracking" ? lowTracking(t) : craneSweep(t, duration));
