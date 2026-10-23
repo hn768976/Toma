@@ -15,7 +15,7 @@ export const RemotionRoot: React.FC = () => {
         fps={FPS}
         width={WIDTH}
         height={HEIGHT}
-        defaultProps={{ palette: bluePalette, camera: { focus: 5.2, aperture: 16 } }}
+        defaultProps={{ palette: bluePalette, camera: { focus: 2.2, aperture: 7 } }}
       />
       {/* Version 2: same scene and camera, alternative "ember" color palette. */}
       <Composition
@@ -25,7 +25,7 @@ export const RemotionRoot: React.FC = () => {
         fps={FPS}
         width={WIDTH}
         height={HEIGHT}
-        defaultProps={{ palette: emberPalette, camera: { focus: 5.2, aperture: 16 } }}
+        defaultProps={{ palette: emberPalette, camera: { focus: 2.2, aperture: 7 } }}
       />
     </>
   );

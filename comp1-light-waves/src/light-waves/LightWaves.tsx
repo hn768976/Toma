@@ -129,8 +129,8 @@ export const LightWaves: React.FC<LightWavesProps> = ({ palette, camera }) => {
       ctx.drawImage(target, 0, 0, width, height);
       ctx.globalAlpha = 1;
     };
-    bloom(b.bloomA, 8, 1.0);
-    bloom(b.bloomB, 30, 0.85);
+    bloom(b.bloomA, 8, 1.2);
+    bloom(b.bloomB, 30, 1.1);
 
     ctx.globalCompositeOperation = "source-over";
     ctx.setTransform(S, 0, 0, S, 0, 0);
