@@ -17,7 +17,9 @@ Config.setJpegQuality(95);
 Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
-Config.setCrf(16);
+// Standard broadcast-range Rec.709 tagging (avoids full-range yuvj420p).
+Config.setColorSpace("bt709");
+Config.setCrf(18);
 // Large canvases are generated once per render tab.
 Config.setDelayRenderTimeoutInMilliseconds(120000);
 
