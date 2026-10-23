@@ -18,13 +18,15 @@ export type CameraRigName = "lowTracking" | "craneSweep";
 // travelling toward it), so the clip loops seamlessly like the reference.
 const lowTracking = (t: number, duration: number): CameraPose => {
   const c = (t / duration) * Math.PI * 2;
-  const sway = Math.sin(c) * 0.12;
-  const x = 0.6 * Math.sin(c + 0.8);
+  // Two- and three-cycle swings layered on the base path: the camera
+  // sways and yaws like a slow handheld drift, still closing the loop.
+  const sway = Math.sin(2 * c) * 0.3 + Math.sin(3 * c + 1) * 0.12;
+  const x = 1.0 * Math.sin(c + 0.8);
   return {
-    position: [x, -0.8 + Math.sin(2 * c) * 0.04, 3.0 + sway],
-    target: [x + 10, 1.3, 0.8],
-    roll: 0.1 + Math.sin(c + 2.1) * 0.03,
-    fov: 42,
+    position: [x, -0.75 + Math.sin(3 * c) * 0.12, 2.5 + sway],
+    target: [x + 10, 2.1 + Math.sin(2 * c + 0.6) * 0.5, -0.4 + Math.sin(3 * c + 2) * 0.8],
+    roll: 0.1 + Math.sin(2 * c + 2.1) * 0.05,
+    fov: 46,
     focus: 4.5,
     aperture: 0.011,
     glow: [1.0, 1.0],

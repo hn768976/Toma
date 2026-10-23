@@ -87,6 +87,8 @@ type WaveParams = {
   envSeed: number;
   loop: number; // 0 = bouncing arcs; > 1/(2π) = looping spring (prolate cycloid)
   zWobble: number;
+  // Whole height pulses per clip (the arcs "bounce"); 0 = steady.
+  pulses?: number;
   // Visible window relative to the camera.
   behind: number;
   ahead: number;
@@ -125,7 +127,10 @@ const wave = (p: WaveParams, n: number, duration: number): LineDef["fill"] => (o
     const env =
       0.5 +
       0.5 * (0.6 * Math.sin(e + p.envSeed) + 0.4 * Math.sin(2 * e + p.envSeed * 1.7));
-    const amp = p.amp * (0.08 + 0.92 * Math.pow(env, 1.7));
+    const pulse = p.pulses
+      ? 0.7 + 0.3 * Math.sin((p.pulses * t * Math.PI * 2) / duration + x * 0.35 + p.envSeed)
+      : 1;
+    const amp = p.amp * pulse * (0.08 + 0.92 * Math.pow(env, 1.7));
     const o = (offset + i) * 3;
     out[o] = x;
     out[o + 1] = amp * shape;
@@ -173,7 +178,7 @@ export const buildLines = (seed: number, duration: number): LineDef[] => {
       intensity: range(rng, 1.0, 1.5),
       color: [0.3, 0.62, 1.0],
       // Fade out before reaching the lens (no blown-out near plates).
-      fill: slider(10, range(rng, 0, period), range(rng, 1, 4), 1, 0.005, z, period, duration, 2),
+      fill: slider(10, range(rng, 0, period), range(rng, 1, 4), 2, 0.005, z, period, duration, 2),
     });
   }
 
@@ -195,7 +200,8 @@ export const buildLines = (seed: number, duration: number): LineDef[] => {
       behind: -1,
       ahead: 55,
     };
-    p.laps = lapsFor(-range(rng, 0.3, 0.8), p.lambda, duration);
+    p.laps = lapsFor(-range(rng, 0.7, 1.4), p.lambda, duration);
+    p.pulses = 6 + Math.floor(rng() * 6);
     const n = waveSampleCount(p);
     lines.push({
       n,
@@ -233,14 +239,14 @@ export const buildLines = (seed: number, duration: number): LineDef[] => {
 
   // Wide light bars on a lower rail beneath the track; with the low camera
   // they sit close to the lens and bloom into soft slabs.
-  for (let i = 0; i < 9; i++) {
+  for (let i = 0; i < 12; i++) {
     lines.push({
       foreground: true,
       n: 24,
       width: range(rng, 0.3, 0.55),
-      intensity: range(rng, 0.4, 0.6),
+      intensity: range(rng, 0.55, 0.8),
       color: [0.25, 0.58, 1.0],
-      fill: slider(24, range(rng, -3, 9), range(rng, 4, 8), 1, range(rng, -1.5, -1.0), range(rng, -1.0, 0.6), 12, duration, -3),
+      fill: slider(24, range(rng, -3, 9), range(rng, 3, 7), 2, range(rng, -1.5, -0.9), range(rng, -1.0, 1.2), 12, duration, -3),
     });
   }
 
