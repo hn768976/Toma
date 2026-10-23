@@ -25,3 +25,7 @@ const playwrightHeadlessShell =
 if (existsSync(playwrightHeadlessShell)) {
   Config.setBrowserExecutable(playwrightHeadlessShell);
 }
+
+// Standard delivery colour: BT.709, limited-range yuv420p H.264.
+Config.setPixelFormat("yuv420p");
+Config.setColorSpace("bt709");
