@@ -9,13 +9,15 @@ type Props = {
   camera: CameraMove;
 };
 
-// Matches the slow "breathing" of the reference's light (about +-20% over
-// 2-5 s cycles). Periods divide nothing in particular, so it never looks looped.
+// Slow "breathing" of the light, fitted to the reference's brightness curve
+// (dominant periods 10, 6.7, 4 and 2.5 s, phases matched so the swells land
+// at the same moments as in the reference).
 const pulse = (t: number) =>
   1 +
-  0.11 * Math.sin((2 * Math.PI * t) / 3.4 + 0.4) +
-  0.07 * Math.sin((2 * Math.PI * t) / 5.3 + 1.9) +
-  0.05 * Math.sin((2 * Math.PI * t) / 2.2 + 2.6);
+  0.08 * Math.sin((2 * Math.PI * t) / 10 - 2.677) +
+  0.08 * Math.sin((2 * Math.PI * t) / 6.7 + 0.316) +
+  0.07 * Math.sin((2 * Math.PI * t) / 4 + 0.942) +
+  0.06 * Math.sin((2 * Math.PI * t) / 2.5 + 1.973);
 
 const ease = Easing.inOut(Easing.sin);
 
@@ -28,23 +30,23 @@ export const DeepRays: React.FC<Props> = ({ camera }) => {
     if (camera === "locked") {
       return [0, 0, 1, 0] as const;
     }
-    // Tilt up and pan towards the light from the darker lower left, easing
-    // out of a slight push-in into a wider framing that brings the light
-    // source into frame, with a gentle roll.
+    // A diver's view: starts rolled and looking down into the dark, then
+    // tilts up and pulls back to a wide shot with the light entering frame.
     const range = [0, durationInFrames - 1];
     const opts = { easing: ease, extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
     return [
-      interpolate(frame, range, [-0.2, 0.14], opts),
-      interpolate(frame, range, [-0.22, 0.1], opts),
-      interpolate(frame, range, [1.16, 1.0], opts),
-      interpolate(frame, range, [0.06, -0.035], opts),
+      interpolate(frame, range, [0.04, 0.2], opts),
+      interpolate(frame, range, [-0.06, 0.12], opts),
+      interpolate(frame, range, [1.18, 0.94], opts),
+      interpolate(frame, range, [0.2, -0.06], opts),
     ] as const;
   }, [camera, frame, durationInFrames]);
 
   const uniforms = useMemo(
     () => ({
       uCam: cam,
-      uLightPos: [1.69, 1.06],
+      uLightPos: [1.64, 1.03],
+      uRaySource: [2.9, 3.3],
       uPulse: pulse(t),
       uColDeep: [0.0, 0.0, 0.012],
       uColWater: [0.0, 0.2, 0.36],

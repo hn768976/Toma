@@ -54,6 +54,14 @@ vec2 rotate2(vec2 p, float a) {
   return vec2(c * p.x - s * p.y, s * p.x + c * p.y);
 }
 
+// Fine animated film grain (about +-2.5 LSB at 4K, ~+-1 LSB after a 1080p
+// downscale). Breaks up 8-bit banding in dark gradients.
+vec3 grain(vec2 fragCoord, float frame) {
+  vec2 o = vec2(fract(frame * 0.618034), fract(frame * 0.414214)) * 977.0;
+  float r = hash12(fragCoord + o) + hash12(fragCoord + o + 71.3) - 1.0;
+  return vec3(r * 2.5 / 255.0);
+}
+
 // Triangular-distributed dither of +-1 LSB to prevent banding in 8-bit output.
 vec3 dither(vec2 fragCoord) {
   float r = hash12(fragCoord) + hash12(fragCoord + 71.3) - 1.0;
