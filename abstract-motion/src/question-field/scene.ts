@@ -288,10 +288,13 @@ export const createQuestionFieldScene = (
   composer.addPass(bokeh);
   const bloom = new UnrealBloomPass(
     new THREE.Vector2(width / 2, height / 2),
-    0.85,
+    1.15,
     0.5,
-    0.72,
+    0.42,
   );
+  // Soft knee: bloom fades in with luminance instead of switching on at a hard
+  // threshold, so the pulsing "?" never pops between bloomed / not bloomed.
+  (bloom.highPassUniforms as Record<string, { value: number }>).smoothWidth.value = 0.55;
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
   const grain = new ShaderPass(GrainShader);
