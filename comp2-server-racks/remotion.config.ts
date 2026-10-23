@@ -15,6 +15,9 @@ Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setOverwriteOutput(true);
 Config.setChromiumOpenGlRenderer("angle");
+// Without a GPU, WebGL falls back to software rendering and a full 3840x2160
+// frame (scene + depth pass + bokeh + bloom) can take well over 30 s.
+Config.setDelayRenderTimeoutInMilliseconds(600000);
 Config.setDefaultPremountInSeconds(2);
 
 // Some sandboxed environments block downloading Remotion's Chrome Headless

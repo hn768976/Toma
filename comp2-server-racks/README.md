@@ -37,3 +37,8 @@ npm run render:v2:4k   # full 3840x2160 master of V2
 headless Chrome (it falls back to SwiftShader on machines without a GPU).
 When rendering with `--scale=0.5` the renderer follows `devicePixelRatio`
 and rasterises directly at the output size.
+
+On a machine without a GPU, full-resolution 4K frames are rendered in
+software and can take 30–60 s each; the config raises Remotion's frame
+timeout to 10 minutes. Add `--concurrency=1` to the 4K scripts if memory
+is tight.
