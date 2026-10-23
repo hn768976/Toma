@@ -141,7 +141,7 @@ export const buildBurn = (p: Palette, w: number, h: number, u: number, seed: num
     const y = side === 0 ? 0 : side === 1 ? h : t * h;
     const r = range(rng, 160, 340) * u;
     const bg = ctx.createRadialGradient(x, y, 0, x, y, r);
-    bg.addColorStop(0, rgba(p.burn, range(rng, 0.15, 0.3)));
+    bg.addColorStop(0, rgba(p.burn, range(rng, 0.06, 0.12)));
     bg.addColorStop(1, rgba(p.burn, 0));
     ctx.fillStyle = bg;
     ctx.fillRect(x - r, y - r, r * 2, r * 2);
