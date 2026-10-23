@@ -24,10 +24,10 @@ type Palette = {
 
 const ORANGE: Palette = {
   background: "#bf7037",
-  glassTint: "#ffeedd",
+  glassTint: "#ffffff",
   rim: "#ff7a2a",
   attenuation: "#ff7a30",
-  inner: "#c8b8a0",
+  inner: "#ddd6cc",
   iridescenceRange: [180, 520],
   env: {
     top: [0.06, 0.03, 0.015],
@@ -39,17 +39,17 @@ const ORANGE: Palette = {
       { dir: [-1, 0.25, 0.5], size: 0.6, color: [3.0, 1.0, 0.15] },
       { dir: [-0.4, -0.8, 0.6], size: 0.5, color: [2.4, 0.8, 0.15] },
       // hot orange strips that catch on the bevels as glowing rims
-      { dir: [-0.2, 0.2, 1], size: 0.25, color: [9, 3.2, 0.5] },
-      { dir: [0.9, 0.5, 0.9], size: 0.2, color: [10, 4, 0.7] },
-      { dir: [-0.8, -0.3, 0.8], size: 0.2, color: [8, 2.8, 0.4] },
+      { dir: [-0.2, 0.2, 1], size: 0.3, color: [13, 5.2, 0.8] },
+      { dir: [0.9, 0.5, 0.9], size: 0.25, color: [15, 6.2, 1.0] },
+      { dir: [-0.8, -0.3, 0.8], size: 0.25, color: [12, 4.6, 0.6] },
     ],
   },
   // teal/cyan panels are reflected only by the inner walls, so the shell's
   // rims stay saturated orange while the cube interiors glint cyan
   coreLights: [
-    { dir: [-1, 0.25, 0.5], size: 0.7, color: [0.02, 1.6, 1.9] },
-    { dir: [0.3, 0.3, -1], size: 0.6, color: [0.02, 1.3, 1.6] },
-    { dir: [0.6, -0.5, 0.6], size: 0.5, color: [0.02, 0.9, 1.4] },
+    { dir: [-1, 0.25, 0.5], size: 0.42, color: [0.05, 3.2, 3.0] },
+    { dir: [0.3, 0.3, -1], size: 0.38, color: [0.04, 2.8, 2.6] },
+    { dir: [0.6, -0.5, 0.6], size: 0.32, color: [0.08, 2.2, 2.1] },
     { dir: [0.5, 0.9, 0.5], size: 0.4, color: [1.6, 0.6, 0.12] },
   ],
 };
@@ -102,7 +102,7 @@ export const createGlassRing =
       ? makeEnvironment(renderer, {
           // dark amber surround so the inner walls read as a deep core
           top: [0.05, 0.02, 0.005],
-          horizon: [0.3, 0.1, 0.02],
+          horizon: [0.34, 0.12, 0.025],
           bottom: [0.03, 0.012, 0.003],
           lights: pal.coreLights,
         })
@@ -118,7 +118,7 @@ export const createGlassRing =
       thickness: 1.4,
       ior: 1.62,
       attenuationColor: new THREE.Color(pal.attenuation),
-      attenuationDistance: 2.6,
+      attenuationDistance: 3.5,
       // weak film on the shell keeps the rims orange; the teal/cyan play
       // lives on the inner walls
       iridescence: 0.08,
@@ -137,7 +137,7 @@ export const createGlassRing =
       iridescenceIOR: 1.8,
       iridescenceThicknessRange: pal.iridescenceRange,
       envMap: coreEnvTex,
-      envMapIntensity: 1.2,
+      envMapIntensity: 0.95,
       // only the far walls are drawn: seen through the outer glass this
       // reads as a hollow, thick-walled cube with inner bevel lines
       side: THREE.BackSide,
@@ -173,7 +173,7 @@ export const createGlassRing =
     }
 
     const camera = new THREE.PerspectiveCamera(44, width / height, 0.3, 60);
-    camera.position.set(0, 0, 7.1);
+    camera.position.set(0, 0, 6.3);
     camera.lookAt(0, 0, 0);
     // ring sits right of centre, as in the reference framing
     spinner.position.set(1.3, -0.08, 0);
