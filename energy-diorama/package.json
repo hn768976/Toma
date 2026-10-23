@@ -1,0 +1,47 @@
+{
+  "name": "energy-diorama",
+  "version": "1.0.0",
+  "description": "A React Three Fiber Project",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@react-three/fiber": "9.2.0",
+    "@remotion/cli": "4.0.538",
+    "@remotion/media": "4.0.538",
+    "@remotion/three": "4.0.538",
+    "@remotion/zod-types": "4.0.538",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.538",
+    "three": "0.178.0",
+    "zod": "4.5.4",
+    "mediabunny": "1.62.0"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.538",
+    "@types/react": "19.2.7",
+    "@types/three": "0.170.0",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "render:v1:1080p": "remotion render Energy-V1-Match out/Composition2_V1_Match_1080p.mp4 --scale=0.5",
+    "render:v1:4k": "remotion render Energy-V1-Match out/Composition2_V1_Match_4K.mp4",
+    "render:v2:1080p": "remotion render Energy-V2-Night out/Composition2_V2_Night_1080p.mp4 --scale=0.5",
+    "render:v2:4k": "remotion render Energy-V2-Night out/Composition2_V2_Night_4K.mp4",
+    "render:all:1080p": "npm run render:v1:1080p && npm run render:v2:1080p"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}
