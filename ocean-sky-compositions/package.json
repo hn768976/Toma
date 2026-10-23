@@ -1,0 +1,42 @@
+{
+  "name": "ocean-sky-compositions",
+  "version": "1.0.0",
+  "description": "Underwater light rays and moonlit cloud fly-over, 4K Remotion compositions",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@react-three/fiber": "9.2.0",
+    "@remotion/cli": "4.0.538",
+    "@remotion/three": "4.0.538",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.538",
+    "three": "0.178.0",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.538",
+    "@types/react": "19.2.7",
+    "@types/three": "0.170.0",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "render:c1v1": "remotion render Underwater-V1 out/Comp1_Underwater_V1_1080p.mp4 --scale=0.5",
+    "render:c1v2": "remotion render Underwater-V2 out/Comp1_Underwater_V2_1080p.mp4 --scale=0.5",
+    "render:c2v1": "remotion render MoonClouds-V1 out/Comp2_MoonClouds_V1_1080p.mp4 --scale=0.5",
+    "render:c2v2": "remotion render MoonClouds-V2 out/Comp2_MoonClouds_V2_1080p.mp4 --scale=0.5",
+    "render:all": "npm run render:c1v1 && npm run render:c1v2 && npm run render:c2v1 && npm run render:c2v2",
+    "render:4k": "remotion render Underwater-V1 out/Comp1_Underwater_V1_4K.mp4"
+  }
+}
