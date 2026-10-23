@@ -19,6 +19,21 @@ const pulse = (t: number) =>
   0.07 * Math.sin((2 * Math.PI * t) / 4 + 0.942) +
   0.06 * Math.sin((2 * Math.PI * t) / 2.5 + 1.973);
 
+// Per-second exposure correction, measured by comparing this scene's frame
+// brightness with the reference's at each second. Brings the procedural rays'
+// slow drift in line with the reference's overall light over the 20 seconds.
+const EXPOSURE = [
+  1.08, 1.03, 1.0, 1.01, 0.97, 0.91, 0.9, 0.89, 0.93, 1.04, 1.1, 1.12, 1.1,
+  1.2, 1.24, 1.26, 1.24, 1.17, 1.2, 1.24, 1.23,
+];
+const exposure = (t: number) =>
+  interpolate(
+    t,
+    EXPOSURE.map((_, i) => i),
+    EXPOSURE,
+    { easing: Easing.inOut(Easing.sin), extrapolateRight: "clamp" },
+  );
+
 const ease = Easing.inOut(Easing.sin);
 
 export const DeepRays: React.FC<Props> = ({ camera }) => {
@@ -45,9 +60,9 @@ export const DeepRays: React.FC<Props> = ({ camera }) => {
   const uniforms = useMemo(
     () => ({
       uCam: cam,
-      uLightPos: [1.64, 1.03],
+      uLightPos: [1.66, 1.13],
       uRaySource: [2.9, 3.3],
-      uPulse: pulse(t),
+      uPulse: pulse(t) * exposure(t),
       uColDeep: [0.0, 0.0, 0.012],
       uColWater: [0.0, 0.2, 0.36],
       uColRay: [0.32, 0.69, 0.86],

@@ -128,11 +128,11 @@ void main() {
   float rays = rayField(p, t);
   float hz = haze(p, t);
   float ld = length(p - uLightPos);
-  float glow = exp(-ld * 6.5) * 1.7 + exp(-ld * 1.9) * 0.34;
+  float glow = exp(-ld * 3.6) * 1.35 + exp(-ld * 1.5) * 0.4;
   // Dim blue fog that keeps the far, unlit water from going fully black.
   float fog = 0.13 * smoothstep(-0.2, 1.1, p.y) * (0.65 + 0.7 * fbm(p * 1.4 + t * 0.02, 3));
 
-  float light = (rays * 0.5 + hotspotStreaks(p, t) * 0.3 + hz * 0.4 + glow * 0.85 + fog) * uPulse;
+  float light = (rays * 0.5 + hotspotStreaks(p, t) * 0.15 + hz * 0.4 + glow * 0.85 + fog) * uPulse;
 
   // Particles are lit by the light passing through them.
   float illum = 0.1 + light * 1.2;
