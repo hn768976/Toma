@@ -58,7 +58,7 @@ const EMBER_FLOW = {
   scaleRatio: 0.9,
   frontRings: 2,
   ringFade: {
-    fadeIn: [0.1, 1.0] as [number, number],
+    fadeIn: [0.35, 1.0] as [number, number],
     sink: [1.25, 2.5] as [number, number],
     sinkMax: 0.97,
   },
@@ -160,8 +160,8 @@ export const pearlV1: SceneSpec = {
     colors: {
       start: "#c8a8b4", // pinkish pearl
       mid: "#c4a8c4",
-      end: "#7c3aa4",
-      cap: "#7e3ca2",
+      end: "#7e3c98",
+      cap: "#7c3a94",
       startCap: "#c8a8b4",
       shade: "#ddd3dc",
       gradient: [0.42, 0.52, 0.6],
@@ -203,10 +203,10 @@ export const pearlV1: SceneSpec = {
       shade: 0,
     })),
     tubeRadius: [0.11, 0.11],
-    stemLength: [0.6, 0.6],
-    curlRadius: [0.3, 0.3],
-    sweep: [deg(100), deg(100)],
-    planeTilt: [deg(-90), deg(-90)], // hooks curl sideways, against the roll
+    stemLength: [0.38, 0.38],
+    curlRadius: [0.36, 0.36],
+    sweep: [deg(110), deg(110)],
+    planeTilt: [0, 0], // hooks curl up and out, caps facing left / up-left
     phaseStep: 0.5,
     phaseJitter: 0,
   },
