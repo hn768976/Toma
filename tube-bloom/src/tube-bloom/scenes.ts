@@ -160,11 +160,11 @@ export const pearlV1: SceneSpec = {
     colors: {
       start: "#c8a8b4", // pinkish pearl
       mid: "#c4a8c4",
-      end: "#7e3c98",
-      cap: "#7c3a94",
+      end: "#9a4cc0",
+      cap: "#9048b4",
       startCap: "#c8a8b4",
       shade: "#ddd3dc",
-      gradient: [0.42, 0.52, 0.6],
+      gradient: [0.52, 0.62, 0.7],
     },
     material: {
       roughness: 0.3,
@@ -199,7 +199,7 @@ export const pearlV1: SceneSpec = {
     coreRadius: 0.9,
     rings: Array.from({ length: 8 }, (_, i) => ({
       polar: deg(14 + i * 19),
-      count: 26,
+      count: 20,
       shade: 0,
     })),
     tubeRadius: [0.11, 0.11],
@@ -217,12 +217,12 @@ export const pearlV1: SceneSpec = {
     spinDirection: 1,
     wobble: [0, 0], // constant-speed rigid roll, no easing
     // 5 tube spacings per loop: the picture repeats every 30.5 frames, as in
-    // the reference (~14°/s with 26 tubes per ring).
+    // the reference (~18°/s with 20 tubes per ring).
     spins: 5,
   },
   shot: () => ({
     position: [0, 0, 0],
-    target: [0, 0, -1],
+    target: [0.5, 0.05, -1],
     fov: 38,
     focusDistance: 2.75,
     aperture: 0.07,
