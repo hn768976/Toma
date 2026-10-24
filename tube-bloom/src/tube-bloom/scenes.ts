@@ -216,9 +216,9 @@ export const pearlV1: SceneSpec = {
     loopFrames: LOOP,
     spinDirection: 1,
     wobble: [0, 0], // constant-speed rigid roll, no easing
-    // 5 tube spacings per loop: the picture repeats every 30.5 frames, as in
-    // the reference (~18°/s with 20 tubes per ring).
-    spins: 5,
+    // 3 tube spacings per loop (period 50.8 frames): matches the reference's
+    // on-screen speed with these larger hooks.
+    spins: 3,
   },
   shot: () => ({
     position: [0, 0, 0],
