@@ -11,7 +11,7 @@ type Palette = {
   envTop: string;
   envBottom: string;
   envBox: string;
-  core: string;
+  core: string; // inner light box that glows through the gaps
   // Mirror-like dark blocks, glassy mid tones, accent and glowing clusters.
   dark: string;
   mid: string[];
@@ -30,13 +30,13 @@ const PALETTES: Record<VoxelVariant, Palette> = {
     envTop: "#4a8cf0",
     envBottom: "#06163c",
     envBox: "#e4f2ff",
-    core: "#0a2a70",
+    core: "#2f6cf0",
     dark: "#061232",
-    mid: ["#38b8f0", "#5ad2ff", "#3490f0", "#2cb0d8"],
+    mid: ["#38b8f0", "#5ad2ff", "#3a8cf4", "#2cb8dc"],
     accent: "#b23cd6",
     glow: "#eef4ff",
     glowIntensity: 1.2,
-    exposure: 1.95,
+    exposure: 2.5,
     gain: [0.97, 1.0, 1.06],
   },
   v2: {
@@ -44,13 +44,13 @@ const PALETTES: Record<VoxelVariant, Palette> = {
     envTop: "#f0803e",
     envBottom: "#20060e",
     envBox: "#fff0dc",
-    core: "#5a1418",
+    core: "#e8622a",
     dark: "#16050c",
-    mid: ["#d8682a", "#ec8e36", "#c4402c", "#b4563a"],
+    mid: ["#e06c28", "#f08e36", "#cc4430", "#c0583a"],
     accent: "#c82a7c",
     glow: "#fff2d8",
     glowIntensity: 1.2,
-    exposure: 2.0,
+    exposure: 2.5,
     gain: [1.06, 1.0, 0.95],
   },
 };
@@ -198,9 +198,9 @@ const cameraPose = (t: number) => {
   // a strip of background visible; a steady sideways orbit along the cube.
   const e = easeInOutSine(t) * 0.35 + t * 0.65; // nearly linear, soft ends
   const corner = DIMS.clone().multiplyScalar(0.5);
-  const az = THREE.MathUtils.degToRad(40 + 18 * e);
+  const az = THREE.MathUtils.degToRad(38 + 22 * e);
   const el = THREE.MathUtils.degToRad(8 - 2 * e);
-  const dist = HALF * 3.3;
+  const dist = HALF * 3.6;
   const dir = new THREE.Vector3(
     Math.cos(el) * Math.sin(az),
     Math.sin(el),
@@ -237,7 +237,7 @@ export const createVoxelSetup =
       new THREE.MeshStandardMaterial({
         color: pal.core,
         emissive: new THREE.Color(pal.core),
-        emissiveIntensity: 0.5,
+        emissiveIntensity: 1.6,
         roughness: 0.5,
         metalness: 0.3,
       }),
@@ -247,16 +247,16 @@ export const createVoxelSetup =
     const tiles = buildTiles();
     const count = tiles.length;
     // Bevelled unit box: the rounded edges catch the bright edge highlights.
-    const geo = new RoundedBoxGeometry(1, 1, 1, 2, 0.08);
+    const geo = new RoundedBoxGeometry(1, 1, 1, 2, 0.03);
     const emissiveAttr = new THREE.InstancedBufferAttribute(new Float32Array(count), 1);
     geo.setAttribute("instanceEmissive", emissiveAttr);
     const mat = new THREE.MeshPhysicalMaterial({
       color: "#ffffff",
-      metalness: 0.6,
-      roughness: 0.1,
+      metalness: 0.7,
+      roughness: 0.05,
       clearcoat: 1,
       clearcoatRoughness: 0.12,
-      envMapIntensity: 2.0,
+      envMapIntensity: 2.4,
     });
     const glowColor = new THREE.Color(pal.glow);
     mat.onBeforeCompile = (shader) => {
@@ -277,7 +277,7 @@ export const createVoxelSetup =
           "#include <emissivemap_fragment>",
           // Faint self-illumination in each block's own colour reads as light
           // scattering inside glass; glowing blocks add the white glow on top.
-          "#include <emissivemap_fragment>\ntotalEmissiveRadiance += vColor * 0.22 + glowColor * glowIntensity * vGlow;",
+          "#include <emissivemap_fragment>\ntotalEmissiveRadiance += vColor * 0.12 + glowColor * glowIntensity * vGlow;",
         );
     };
     const mesh = new THREE.InstancedMesh(geo, mat, count);
@@ -297,10 +297,10 @@ export const createVoxelSetup =
 
     const camera = new THREE.PerspectiveCamera(16, width / height, 1, 500);
     // Shift the principal point so the leading edge sits ~40% across and the
-    // cube's top corner ~31% down, leaving background above the top face.
-    camera.setViewOffset(width, height, width * 0.1, height * 0.19, width, height);
+    // cube's top corner ~35% down, leaving background above the top face.
+    camera.setViewOffset(width, height, width * 0.1, height * 0.15, width, height);
     const post = createPost(renderer, scene, camera, width, height, {
-      focus: 79,
+      focus: 86,
       cocScale: 7000,
       nearScale: 0.45,
       maxCoc: 48,
@@ -318,14 +318,14 @@ export const createVoxelSetup =
         const p = tl.centre;
         // Flowing fields decide each tile's material class.
         const f =
-          fbm3(p.x * 0.12 + time * 0.62, p.y * 0.12 - time * 0.42, p.z * 0.12 + time * 0.28) +
+          fbm3(p.x * 0.17 + time * 0.75, p.y * 0.17 - time * 0.5, p.z * 0.17 + time * 0.34) +
           tl.jitter * 0.3;
         const g =
-          fbm3(p.x * 0.07 - 40 + time * 0.31, p.y * 0.07 + 12, p.z * 0.07 - time * 0.38) +
+          fbm3(p.x * 0.14 - 40 + time * 0.37, p.y * 0.14 + 12, p.z * 0.14 - time * 0.46) +
           tl.jitter * 0.35;
         // Wide transition bands so blocks fade over ~10+ frames, never pop.
-        const glow = smoothstep(0.24, 0.5, f);
-        const dark = smoothstep(0.0, 0.3, -f) * (0.7 + 0.3 * tl.hue);
+        const glow = smoothstep(0.16, 0.42, f);
+        const dark = smoothstep(0.02, 0.24, -f) * (0.8 + 0.2 * tl.hue);
         const accent = smoothstep(0.1, 0.36, g) * (tl.accentBias > 0.35 ? 1 : 0.2);
 
         const mid = midC[Math.floor(tl.hue * midC.length) % midC.length];
@@ -339,7 +339,8 @@ export const createVoxelSetup =
         const len = tl.size * 0.6 + out;
         pos.copy(p).addScaledVector(tl.normal, out - len / 2);
         q.copy(tl.orient);
-        scl.set(tl.su - 0.08, tl.sv - 0.08, len);
+        // Visible seams let the inner light box glow through between blocks.
+        scl.set(tl.su - 0.12, tl.sv - 0.12, len);
         m4.compose(pos, q, scl);
         mesh.setMatrixAt(i, m4);
       }
