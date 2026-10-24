@@ -12,14 +12,14 @@ import { ColorBurstVariant, PALETTES } from "./palettes";
 
 // Expansion of the burst over time (world units). As in the reference it
 // erupts from a small clump, fills the frame by ~3 s and keeps billowing until
-// it peaks at 8.0 s; it then recedes, slowly at first and accelerating, back
-// to the opening clump on the last frame so the clip loops.
+// it peaks at 8.0 s; it then recedes steadily (slightly accelerating) back
+// to the opening clump, landing on it at the loop point so the clip loops.
 const START = 0.4;
 const PEAK_SECONDS = 8.0;
 const growth = (s: number) => START + 1.8 * (1 - Math.exp(-s / 0.65)) + 0.13 * s;
 // 0 until the peak, rising to 1 on the last frame (ease-in).
 const recedeAt = (s: number, duration: number) =>
-  Math.pow(Math.min(1, Math.max(0, (s - PEAK_SECONDS) / (duration - PEAK_SECONDS))), 3);
+  Math.pow(Math.min(1, Math.max(0, (s - PEAK_SECONDS) / (duration - PEAK_SECONDS))), 2.2);
 const expansionAt = (s: number, duration: number) => {
   const r = recedeAt(s, duration);
   return growth(Math.min(s, PEAK_SECONDS)) * (1 - r) + START * r;
@@ -53,8 +53,9 @@ export const ColorBurst: React.FC<{ variant: ColorBurstVariant }> = ({
     if (!ready || !r) return;
     const handle = delayRender(`Rendering frame ${frame}`);
     const s = frame / fps;
-    // Last frame lands exactly on the loop point.
-    const duration = (durationInFrames - 1) / fps;
+    // The loop point is one frame past the end, so the last frame leads
+    // seamlessly into frame 0 without a duplicated frame.
+    const duration = durationInFrames / fps;
     const expand = expansionAt(s, duration);
     // Slow tumble of the cloud plus a gentle push-in.
     const loop = recedeAt(s, duration);
