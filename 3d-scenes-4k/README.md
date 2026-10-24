@@ -6,7 +6,7 @@ Every composition is authored at **3840×2160 (4K UHD), 30 fps, 240 frames
 
 | Composition ID   | Description |
 |------------------|-------------|
-| `BarrelField-V1` | Field of steel oil drums under warm sepia light; low, steady forward dolly with a slight sideways drift and shallow depth of field (matches the reference). |
+| `BarrelField-V1` | Field of steel oil drums under warm sepia light; low, long-lens camera on a steady forward dolly with shallow depth of field (matches the reference). |
 | `BarrelField-V2` | Same scene and lighting, but the **camera angle and movement** change: a high-angle orbiting crane that rises and arcs around the field. |
 | `VoxelCube-V1`   | A giant cube tiled with bevelled glossy blocks of mixed sizes (large cubes, slabs, small tiles): cyan/teal glass-metal, mirror-dark and violet blocks with white-hot glowing clusters flowing across the surface. Low, long-lens three-quarter view on the leading edge with the top face and background visible, a steady sideways orbit and shallow depth of field (matches the reference). |
 | `VoxelCube-V2`   | Same geometry, animation and camera, with a **different colour palette**: molten copper, orange and magenta blocks with warm gold-white glow on a deep plum background. |
