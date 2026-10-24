@@ -197,8 +197,8 @@ export const pearlV1: SceneSpec = {
     kind: "hook",
     seed: 11,
     coreRadius: 0.9,
-    rings: Array.from({ length: 7 }, (_, i) => ({
-      polar: deg(30 + i * 19),
+    rings: Array.from({ length: 6 }, (_, i) => ({
+      polar: deg(49 + i * 19),
       count: 20,
       shade: 0,
     })),
@@ -216,9 +216,9 @@ export const pearlV1: SceneSpec = {
     loopFrames: LOOP,
     spinDirection: 1,
     wobble: [0, 0], // constant-speed rigid roll, no easing
-    // 3 tube spacings per loop (period 50.8 frames): matches the reference's
+    // 4 tube spacings per loop (period 38 frames): matches the reference's
     // on-screen speed with these larger hooks.
-    spins: 3,
+    spins: 4,
   },
   shot: () => ({
     position: [0, 0, 0.3],
