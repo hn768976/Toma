@@ -280,17 +280,17 @@ export const pearlV2: SceneSpec = {
     background: { top: "#c3d6cc", bottom: "#c7d9cf" },
     colors: {
       ...pearlV1.look.colors,
-      start: "#f5ece3",
-      mid: "#f7e6dc",
+      start: "#e2d2bc", // cream pearl
+      mid: "#e6d2c0",
       end: "#ff6f4e",
       cap: "#f0613f",
-      startCap: "#efe6dc",
+      startCap: "#e2d2bc",
       shade: "#e3e9e4",
     },
     lights: {
-      ambient: { color: "#fff6ee", intensity: 0.4 },
+      ambient: { color: "#fff6ee", intensity: 0.2 },
       directional: [
-        { color: "#fff4e8", intensity: 1.6, direction: [-2, 3, 4] },
+        { color: "#fff4e8", intensity: 1.2, direction: [-2, 3, 4] },
         { color: "#e0f0e8", intensity: 0.6, direction: [3, -2, 1] },
       ],
     },
