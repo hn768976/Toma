@@ -197,8 +197,8 @@ export const pearlV1: SceneSpec = {
     kind: "hook",
     seed: 11,
     coreRadius: 0.9,
-    rings: Array.from({ length: 8 }, (_, i) => ({
-      polar: deg(14 + i * 19),
+    rings: Array.from({ length: 7 }, (_, i) => ({
+      polar: deg(30 + i * 19),
       count: 20,
       shade: 0,
     })),
@@ -221,10 +221,10 @@ export const pearlV1: SceneSpec = {
     spins: 3,
   },
   shot: () => ({
-    position: [0, 0, 0],
-    target: [0.5, 0.05, -1],
+    position: [0, 0, 0.3],
+    target: [0.08, 0, -1],
     fov: 38,
-    focusDistance: 2.75,
+    focusDistance: 3.2,
     aperture: 0.07,
     maxBlur: 0.022,
   }),
