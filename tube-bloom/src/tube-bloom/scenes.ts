@@ -58,7 +58,7 @@ const EMBER_FLOW = {
   scaleRatio: 0.9,
   frontRings: 2,
   ringFade: {
-    fadeIn: [0.3, 0.95] as [number, number],
+    fadeIn: [0.1, 1.0] as [number, number],
     sink: [1.25, 2.5] as [number, number],
     sinkMax: 0.97,
   },
@@ -158,11 +158,11 @@ export const pearlV1: SceneSpec = {
   look: {
     background: { top: "#bdc2d3", bottom: "#bdc2d3" },
     colors: {
-      start: "#b4a0a8",
-      mid: "#b8a4bc",
-      end: "#8a40b0",
-      cap: "#8842ac",
-      startCap: "#b4a0a8",
+      start: "#c8a8b4", // pinkish pearl
+      mid: "#c4a8c4",
+      end: "#7c3aa4",
+      cap: "#7e3ca2",
+      startCap: "#c8a8b4",
       shade: "#ddd3dc",
       gradient: [0.42, 0.52, 0.6],
     },
@@ -197,14 +197,14 @@ export const pearlV1: SceneSpec = {
     kind: "hook",
     seed: 11,
     coreRadius: 0.9,
-    rings: Array.from({ length: 13 }, (_, i) => ({
-      polar: deg(12 + i * 13),
-      count: 30,
+    rings: Array.from({ length: 8 }, (_, i) => ({
+      polar: deg(14 + i * 19),
+      count: 26,
       shade: 0,
     })),
-    tubeRadius: [0.068, 0.068],
-    stemLength: [0.72, 0.72],
-    curlRadius: [0.22, 0.22],
+    tubeRadius: [0.11, 0.11],
+    stemLength: [0.6, 0.6],
+    curlRadius: [0.3, 0.3],
     sweep: [deg(100), deg(100)],
     planeTilt: [deg(-90), deg(-90)], // hooks curl sideways, against the roll
     phaseStep: 0.5,
@@ -212,12 +212,12 @@ export const pearlV1: SceneSpec = {
   },
   motion: {
     center: [1.72, -0.28, -2.7],
-    orientation: [0.9931,-0.1997,-0.3657],
+    orientation: [0.5912, -0.1467, -0.4735], // roll axis up-right in screen, leaning to camera
     loopFrames: LOOP,
     spinDirection: 1,
     wobble: [0, 0], // constant-speed rigid roll, no easing
     // 5 tube spacings per loop: the picture repeats every 30.5 frames, as in
-    // the reference (~12°/s with 30 tubes per ring).
+    // the reference (~14°/s with 26 tubes per ring).
     spins: 5,
   },
   shot: () => ({

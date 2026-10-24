@@ -372,8 +372,10 @@ export const TubeBloom: React.FC<Props> = ({ scene, debug, tweak }) => {
           // (Flow ring materials are permanently `transparent`: toggling that
           // flag per frame would not recompile the shader, which keeps
           // writing opaque alpha.)
+          // Blending happens in linear light, so ramp alpha on a gamma curve
+          // to make the fade read as even once encoded to sRGB.
           ring.visible = fade > 0.002;
-          mat.opacity = fade;
+          mat.opacity = Math.pow(fade, 2.4);
           mat.depthWrite = fade >= 0.999;
         }
       });
