@@ -10,16 +10,19 @@ import { smoothstep } from "../lib/random";
 import { createBurstRenderer } from "./burst-gl";
 import { ColorBurstVariant, PALETTES } from "./palettes";
 
-// Expansion of the burst over time (world units). It erupts from a small
-// clump, fills the frame by ~3 s and keeps billowing slowly; in the last
-// ~0.7 s it collapses back to the opening clump so the clip loops, exactly
-// like the reference.
-const START = 0.24;
+// Expansion of the burst over time (world units). As in the reference it
+// erupts from a small clump, fills the frame by ~3 s and keeps billowing until
+// it peaks at 8.0 s; it then recedes, slowly at first and accelerating, back
+// to the opening clump on the last frame so the clip loops.
+const START = 0.4;
+const PEAK_SECONDS = 8.0;
 const growth = (s: number) => START + 1.8 * (1 - Math.exp(-s / 0.65)) + 0.13 * s;
+// 0 until the peak, rising to 1 on the last frame (ease-in).
+const recedeAt = (s: number, duration: number) =>
+  Math.pow(Math.min(1, Math.max(0, (s - PEAK_SECONDS) / (duration - PEAK_SECONDS))), 3);
 const expansionAt = (s: number, duration: number) => {
-  const collapse = smoothstep(duration - 0.7, duration, s);
-  const eased = collapse * collapse * (3 - 2 * collapse);
-  return growth(s) * (1 - eased) + START * eased;
+  const r = recedeAt(s, duration);
+  return growth(Math.min(s, PEAK_SECONDS)) * (1 - r) + START * r;
 };
 
 export const ColorBurst: React.FC<{ variant: ColorBurstVariant }> = ({
@@ -50,15 +53,16 @@ export const ColorBurst: React.FC<{ variant: ColorBurstVariant }> = ({
     if (!ready || !r) return;
     const handle = delayRender(`Rendering frame ${frame}`);
     const s = frame / fps;
-    const duration = durationInFrames / fps;
+    // Last frame lands exactly on the loop point.
+    const duration = (durationInFrames - 1) / fps;
     const expand = expansionAt(s, duration);
     // Slow tumble of the cloud plus a gentle push-in.
-    const loop = smoothstep(duration - 0.7, duration, s);
+    const loop = recedeAt(s, duration);
     r.render({
       expand,
       yaw: 0.22 * Math.sin((s / duration) * Math.PI * 0.9) * (1 - loop),
       pitch: -0.12 + 0.06 * Math.sin(s * 0.7) * (1 - loop),
-      cameraZ: 6.2 - 0.6 * smoothstep(0, duration - 0.7, s) * (1 - loop),
+      cameraZ: 6.2 - 0.6 * smoothstep(0, PEAK_SECONDS, s) * (1 - loop),
       centerY: 0.14 * (1 - smoothstep(0.0, 2.5, s) * (1 - loop)),
       seed: (frame % 89) * 1.73,
     });

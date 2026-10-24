@@ -408,7 +408,7 @@ export const createBurstRenderer = (
       gl.uniform2f(gl.getUniformLocation(prog, "uResolution"), width, height);
       gl.uniform1f(gl.getUniformLocation(prog, "uPxScale"), pxScale);
       // The compact opening clump is dim; it brightens as it opens up.
-      const open = Math.min(1, Math.max(0, (f.expand - 0.24) / 1.1));
+      const open = Math.min(1, Math.max(0, (f.expand - 0.4) / 1.0));
       gl.uniform1f(gl.getUniformLocation(prog, "uGain"), 0.18 + 0.82 * open * open * (3 - 2 * open));
     };
 
