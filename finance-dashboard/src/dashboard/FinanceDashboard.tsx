@@ -114,9 +114,9 @@ const fragmentShader = /* glsl */ `
     vec2 d2 = (sp - vec2(0.08, 0.1)) / vec2(0.55, 0.5);
     float fill = exp(-dot(d2, d2));
 
-    col *= mix(0.85, 1.15, light);
+    col *= mix(0.8, 1.05, light);
     col += glowA * 0.7 + glowB * 0.6;
-    col += lightColor * light * 0.6 + lightColor * fill * 1.3;
+    col += lightColor * light * 0.42 + lightColor * fill * 1.3;
     col = mix(shadeColor, col, 0.5 + 0.5 * smoothstep(0.0, 0.5, light + fill + 0.2));
     gl_FragColor = vec4(col, 1.0);
   }
