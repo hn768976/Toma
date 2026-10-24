@@ -37,10 +37,10 @@ Everything is generated procedurally, so the project has no external image, vide
 | Full decode errors | 0 | 0 | 0 | 0 |
 | Black frames (`blackdetect` d=0.04, pix_th=0.1) | none | none | none | none |
 | Frozen frames (`freezedetect` n=0.001, d=0.2) | none | none | none | none |
-| Largest frame-to-frame mean-luma step | 0.17 | 0.18 | 0.97 | see note |
+| Largest frame-to-frame mean-luma step | 0.17 | 0.18 | 0.97 | 1.89 (see note) |
 | Audio | none (references have none) | none | none | none |
 
-**Note on Cloud V2's luma step.** The larger steps happen over a few consecutive frames while the near cloud clears and reveals the bright moon. It is a smooth ramp, not flicker; the independent reviewer confirmed this visually on the earlier render.
+**Note on Cloud V2's luma step.** The 1.89 step is at frame 38, where the near cloud dissolves and reveals the bright moon. It is a smooth ramp, not flicker; I checked frames 28–39 visually. The mean step is 0.168.
 
 ## Project ZIP checks
 
@@ -54,6 +54,10 @@ Everything is generated procedurally, so the project has no external image, vide
   - `remotion compositions` lists all four at **3840×2160, 30 fps** with the correct durations.
   - The documented `npm run render:c1v1` rendered the full 300-frame 1080p H.264 file in 9 min. Its first frame is bit-identical to the delivered `Comp1_Underwater_V1_1080p.mp4`.
   - Each other composition rendered successfully, as a 4K still and as a short 1080p test render.
+- **Final ZIP re-verified** after the last V2 fix:
+  - The extracted source is identical to the repository.
+  - `npm ci` and `tsc` are clean, and all four compositions are listed at 3840×2160.
+  - A test render of `MoonClouds-V2` frames 30–35 produced H.264 at 1920×1080.
 - `npm run lint` (ESLint and `tsc`) is clean.
 
 ## Independent agent verification
