@@ -13,6 +13,8 @@ export type CameraPose = {
 export type CloudShot = {
   name: string;
   fovY: number; // degrees
+  // fade puffs out before the camera flies through them (hides billboard cuts)
+  lensFade?: boolean;
   speed: number; // world units per second along -z
   moonAzimuth: number; // degrees, positive = right of -z
   moonElevation: number; // degrees
@@ -54,6 +56,7 @@ export const GLIDE_SHOT: CloudShot = {
 export const BANKING_RISE_SHOT: CloudShot = {
   name: "banking-rise",
   fovY: 40,
+  lensFade: true,
   speed: 8,
   moonAzimuth: 24,
   moonElevation: 6.5,
@@ -70,7 +73,7 @@ export const BANKING_RISE_SHOT: CloudShot = {
       z: -8 * t,
       yaw: interpolate(p, [0, 1], [-6 * deg, 17 * deg]),
       pitch: interpolate(p, [0, 1], [3.5 * deg, -3.5 * deg]),
-      roll: interpolate(p, [0, 0.5, 1], [2.5 * deg, -4.5 * deg, -1.5 * deg]),
+      roll: interpolate(p, [0, 0.45, 1], [3 * deg, -8 * deg, -3 * deg]),
     };
   },
 };

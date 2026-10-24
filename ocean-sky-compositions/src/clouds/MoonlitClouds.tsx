@@ -252,8 +252,12 @@ export const MoonlitClouds: React.FC<MoonlitCloudsProps> = ({ shotId, palette })
       const dist = Math.hypot(x - pose.x, y - pose.y, z - pose.z);
       // fade puffs the camera is about to fly through, and at the far edge
       const nearA = Math.min(1, Math.max(0, (dist - p.size * 0.55) / (p.size * 1.1)));
+      // optionally also dissolve puffs whose billboard would cut the lens plane
+      const lensA = shot.lensFade
+        ? Math.min(1, Math.max(0, (depth - p.size * 1.1) / (p.size * 1.4)))
+        : 1;
       const farA = Math.min(1, Math.max(0, (far - (pose.z - z)) / FAR_FADE));
-      const a = nearA * farA;
+      const a = nearA * lensA * farA;
       if (a <= 0.002) continue;
       visible.push({ p, x, y, z, d: dist, a });
     }
