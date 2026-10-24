@@ -33,7 +33,9 @@ const makeEnvTexture = (variant: BarrelVariant) => {
     let v = 0;
     if (elev > -4) {
       const k = Math.max(0, 1 - Math.max(0, elev) / bandTop);
-      v = Math.pow(k, 1.6) * (elev < 0 ? Math.max(0, 1 + elev / 4) : 1);
+      // V2 looks down from high up, so its lids reflect higher elevations:
+      // a flatter falloff keeps their sheen.
+      v = Math.pow(k, variant === "v2" ? 0.8 : 1.6) * (elev < 0 ? Math.max(0, 1 + elev / 4) : 1);
     }
     for (let x = 0; x < w; x++) {
       // three.js equirect: u = atan2(dir.z, dir.x) / 2pi + 0.5, so -Z is u = 0.25.
@@ -150,7 +152,9 @@ export const createBarrelSetup =
     const scene = new THREE.Scene();
     const bg = new THREE.Color("#120d07");
     scene.background = bg;
-    scene.fog = new THREE.FogExp2(bg.getHex(), 0.045);
+    // Dense haze dims V1's far rows; V2's crane sees the field from much
+    // further away, so it gets a lighter haze.
+    scene.fog = new THREE.FogExp2(bg.getHex(), variant === "v2" ? 0.014 : 0.045);
 
     const pmrem = new THREE.PMREMGenerator(renderer);
     const envTex = makeEnvTexture(variant);
@@ -252,7 +256,7 @@ export const createBarrelSetup =
       fireflyClamp: 3,
       fillScale: 0.3,
       jitter: true,
-      exposure: 2.05,
+      exposure: variant === "v2" ? 3.2 : 2.05,
       vignette: 0.3,
       lift: [0.0, 0.0, 0.0],
       gain: [1.0, 0.98, 0.88],
