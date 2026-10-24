@@ -1,0 +1,42 @@
+{
+  "name": "tube-bloom",
+  "version": "1.0.0",
+  "description": "My Remotion video",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.538",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.538",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.538",
+    "@types/react": "19.2.7",
+    "@types/three": "^0.180.0",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "render:1080": "npm run render:ember-v1 && npm run render:ember-v2 && npm run render:pearl-v1 && npm run render:pearl-v2",
+    "render:ember-v1": "remotion render Ember-V1 out/Composition1_Ember_V1_1080p.mp4 --scale=0.5",
+    "render:ember-v2": "remotion render Ember-V2 out/Composition1_Ember_V2_1080p.mp4 --scale=0.5",
+    "render:pearl-v1": "remotion render Pearl-V1 out/Composition2_Pearl_V1_1080p.mp4 --scale=0.5",
+    "render:pearl-v2": "remotion render Pearl-V2 out/Composition2_Pearl_V2_1080p.mp4 --scale=0.5",
+    "render:4k": "remotion render Ember-V1 out/Composition1_Ember_V1_2160p.mp4 && remotion render Ember-V2 out/Composition1_Ember_V2_2160p.mp4 && remotion render Pearl-V1 out/Composition2_Pearl_V1_2160p.mp4 && remotion render Pearl-V2 out/Composition2_Pearl_V2_2160p.mp4"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}
