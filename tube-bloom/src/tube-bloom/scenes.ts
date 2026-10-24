@@ -116,7 +116,7 @@ export const emberV1: SceneSpec = {
     ...baseCluster,
     kind: "arc",
     seed: 7,
-    rings: Array.from({ length: EMBER_RING_COUNT }, (_, i) => ({
+    rings: Array.from({ length: EMBER_RING_COUNT }, () => ({
       y: 0, // placed per frame by the flow
       count: EMBER_FLOW.count,
       shade: 0,
@@ -234,17 +234,12 @@ export const pearlV1: SceneSpec = {
 const DURATION = 305;
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const easeInOutSine = (t: number) => -(Math.cos(Math.PI * clamp01(t)) - 1) / 2;
-const smoothstep = (a: number, b: number, x: number) => {
-  const t = clamp01((x - a) / (b - a));
-  return t * t * (3 - 2 * t);
-};
 const mix = (a: number, b: number, t: number) => a + (b - a) * t;
 
 // ---------------------------------------------------------------------------
 // Composition 1 — Version 2: same Ember look, new camera MOVEMENT. The
 // reference is a receding vortex, so the camera slowly pushes into it while
-// arcing around the axis, then racks focus from the front curls into the
-// tunnel.
+// arcing around the axis.
 // ---------------------------------------------------------------------------
 export const emberV2: SceneSpec = {
   ...emberV1,
@@ -264,8 +259,8 @@ export const emberV2: SceneSpec = {
       ],
       target: [mix(-1.6, -0.1, e), mix(0.75, -0.15, e), mix(0, -0.6, e)],
       fov: 35,
-      // Rack focus: front tentacles first, then pulled into the dark core.
-      focusDistance: mix(dist + 0.4, dist + 2.2, smoothstep(0.55, 0.92, t)),
+      // Focus rides on the front tentacles throughout the push-in.
+      focusDistance: dist + 0.4,
       aperture: 0.2,
       maxBlur: 0.018,
     };
