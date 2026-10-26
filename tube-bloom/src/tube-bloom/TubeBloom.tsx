@@ -176,9 +176,9 @@ const setup = (canvas: HTMLCanvasElement, spec: SceneSpec, width: number, height
       new THREE.SphereGeometry(spec.cluster.coreRadius, 96, 64),
       new THREE.MeshPhysicalMaterial({
         color: colors.start,
-        roughness: m.roughness,
-        metalness: m.metalness,
-        clearcoat: m.clearcoat,
+        roughness: spec.cluster.coreMatte ? 1 : m.roughness,
+        metalness: spec.cluster.coreMatte ? 0 : m.metalness,
+        clearcoat: spec.cluster.coreMatte ? 0 : m.clearcoat,
         clearcoatRoughness: m.clearcoatRoughness,
         iridescence: m.iridescence,
         iridescenceIOR: m.iridescenceIOR,

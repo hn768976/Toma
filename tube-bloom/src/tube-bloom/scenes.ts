@@ -43,109 +43,91 @@ const baseCluster: ClusterParams = {
 // almost straight down a receding tunnel of curl rings that fade to black.
 // ---------------------------------------------------------------------------
 // Helical flow shared by the Ember cluster and its motion block.
-// Three ring spacings of travel per loop down a gently narrowing horn (each
-// ring 0.9× the size of the one before). The helix phase step sets the spin:
-// 3 × 0.29 × 72° ≈ 63° per 5.08 s loop ≈ 12.4°/s, clockwise on screen.
-// Brightness is keyed to each ring's flow index u: rings fade in from black
-// at the front (so the large near rings are never seen), the next ~two rings
-// are the bright tentacles, and deeper rings sink to warm near-black.
-const EMBER_FLOW = {
-  spacing: 0.7,
-  phaseStep: 0.29,
-  count: 5,
-  extraTurns: 0,
-  spacingsPerLoop: 3,
-  scaleRatio: 0.9,
-  frontRings: 2,
-  ringFade: {
-    fadeIn: [0.35, 1.0] as [number, number],
-    sink: [1.25, 2.5] as [number, number],
-    sinkMax: 0.97,
-  },
-};
-const EMBER_RING_COUNT = 24;
+
+// A crown of short, thick, glossy orange tubes seen from above: each tube
+// leaves the centre and curls back inwards, its flat cut end facing the
+// camera. The centre is a recessed well of charcoal tube stems (inner rings
+// sunk to the shade colour) rather than a solid hub.
+const EMBER_RINGS = [
+  { polar: 88, count: 7, shade: 0 },
+  { polar: 108, count: 8, shade: 0 },
+  // Pointing away from the camera: the recessed dark well at the centre.
+  { polar: 145, count: 6, shade: 1 },
+  { polar: 162, count: 5, shade: 1 },
+];
 
 export const emberV1: SceneSpec = {
   look: {
     background: { top: "#000000", bottom: "#000000" },
     colors: {
-      start: "#f04800",
-      mid: "#ff4c00",
-      end: "#ff4c00",
-      cap: "#f04a04",
-      startCap: "#f04800",
-      shade: "#1c0d07", // warm near-black of the deep rings
-      gradient: [0, 0.3, 0.6],
+      start: "#050505", // roots sink into the dark well
+      mid: "#f03600",
+      end: "#f03600",
+      cap: "#e83402",
+      startCap: "#050505",
+      shade: "#0c0c0e", // charcoal stems of the inner well
+      gradient: [0.06, 0.24, 1],
     },
     material: {
-      roughness: 0.12,
-      metalness: 0.55,
+      roughness: 0.14,
+      metalness: 0.45,
       clearcoat: 0,
-      clearcoatRoughness: 0.06,
+      clearcoatRoughness: 0.1,
       iridescence: 0,
       iridescenceIOR: 1.3,
       envIntensity: 0.3,
-      specularColor: "#ffc060", // hot yellow-orange highlights
+      specularColor: "#ffc070", // hot yellow-orange streaks
     },
     envRotation: [0, 0, 0],
-    envTint: "#ff6a10", // warm studio: orange reflections and rims, no blue
+    envTint: "#ff6a10", // warm studio: orange reflections, no blue
     lights: {
-      // Light colours carry no blue: Fresnel turns grazing reflections
-      // towards the light colour, and any blue there reads as pink.
-      ambient: { color: "#ffa000", intensity: 0.12 },
+      // Light colours carry no blue, so grazing reflections stay orange.
+      ambient: { color: "#ffa000", intensity: 0.15 },
       directional: [
-        { color: "#ffb000", intensity: 2.6, direction: [-3, 3, 4] },
-        { color: "#ff8000", intensity: 0.15, direction: [4, -1, 2] },
+        { color: "#ffb000", intensity: 2.2, direction: [-3, 3, 4] },
+        { color: "#ff8000", intensity: 0.4, direction: [4, -1, 2] },
       ],
-      // A long soft box above-left of camera paints a streak along each tube.
+      // A long thin soft box paints one sharp streak along each tube.
       area: [
-        { color: "#ffe0a0", intensity: 22, size: [9, 0.4], position: [-2, 4, 6], lookAt: [0, 0, 0] },
+        { color: "#ffd090", intensity: 14, size: [9, 0.25], position: [-3, 5, 6], lookAt: [0, 0, 0] },
       ],
     },
-    // Rings recede into warm darkness as they flow down the tunnel.
     exposure: 1,
-    knee: 0.8,
+    knee: 0.85,
     vignette: 0,
     grain: 0.004,
   },
-  // Identical rings of hooked arcs (~120° of a circle): each tube rises out of
-  // the depth, sweeps outward and curls back in, its cut end facing the
-  // camera. Rings are stacked as a helix down a hollow tunnel so the motion
-  // can flow along it.
   cluster: {
     ...baseCluster,
-    kind: "arc",
-    seed: 7,
-    rings: Array.from({ length: EMBER_RING_COUNT }, () => ({
-      y: 0, // placed per frame by the flow
-      count: EMBER_FLOW.count,
-      shade: 0,
-    })),
-    orbit: [0.75, 0.75],
-    tubeRadius: [0.34, 0.34],
-    curlRadius: [1.18, 1.18],
-    sweep: [deg(120), deg(120)],
-    startAngle: [deg(-70), deg(-70)],
-    planeTilt: [deg(32), deg(32)],
-    phaseStep: EMBER_FLOW.phaseStep,
-    phaseJitter: 0,
-    startTaper: 0.1,
+    kind: "hook",
+    seed: 21,
+    coreRadius: 1.35, // hidden; opens the centre into a dark well
+    coreVisible: false,
+    rings: EMBER_RINGS.map((r) => ({ polar: deg(r.polar), count: r.count, shade: r.shade })),
+    tubeRadius: [0.33, 0.36],
+    stemLength: [0.15, 0.35],
+    curlRadius: [0.6, 0.75],
+    sweep: [deg(95), deg(125)],
+    planeTilt: [deg(20), deg(42)], // curl sideways and up: a pinwheel crown
+    phaseStep: 0.37,
+    phaseJitter: 0.3,
+    startTaper: 0.22, // roots narrow to nothing inside the well
   },
   motion: {
     center: [0, 0, 0],
-    orientation: [deg(102), deg(8), 0],
+    orientation: [deg(78), 0, deg(-12)], // crown axis (+Y) turned towards camera
     loopFrames: LOOP,
     spinDirection: -1, // clockwise on screen
-    wobble: [deg(1.2), deg(1.2)],
-    flow: EMBER_FLOW,
+    wobble: [deg(4), deg(4)], // slow writhe of the whole crown
+    spins: 2,
   },
   shot: () => ({
-    position: [0, 0, 5.0],
-    target: [-0.6, -0.84, 0],
+    position: [0, 0, 6.3],
+    target: [-0.95, -1.3, 0],
     fov: 35,
-    focusDistance: 5.4,
-    aperture: 0.26,
-    maxBlur: 0.018,
+    focusDistance: 5.9,
+    aperture: 0.22,
+    maxBlur: 0.022,
   }),
   quality: { radScale1080: 1 },
 };
@@ -247,8 +229,8 @@ export const emberV2: SceneSpec = {
     const t = frame / (DURATION - 1);
     const e = easeInOutSine(t);
     // Starts wide and centred on the whole bloom, pushes in while arcing
-    // around the vortex axis, and ends close on the core.
-    const dist = mix(8.2, 3.6, e);
+    // around the bloom's axis, and ends on a close top-right crop.
+    const dist = mix(11.5, 6.4, e);
     const yaw = deg(mix(-18, 14, e));
     const pitch = deg(mix(8, -6, e));
     return {
@@ -257,11 +239,11 @@ export const emberV2: SceneSpec = {
         Math.sin(pitch) * dist,
         Math.cos(yaw) * Math.cos(pitch) * dist,
       ],
-      target: [mix(-1.6, -0.1, e), mix(0.75, -0.15, e), mix(0, -0.6, e)],
+      target: [mix(-0.1, -0.95, e), mix(-0.2, -1.3, e), 0],
       fov: 35,
       // Focus rides on the front tentacles throughout the push-in.
-      focusDistance: dist + 0.4,
-      aperture: 0.2,
+      focusDistance: dist - 0.4,
+      aperture: 0.22,
       maxBlur: 0.018,
     };
   },

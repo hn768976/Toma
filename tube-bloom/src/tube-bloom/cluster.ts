@@ -51,6 +51,7 @@ export type ClusterParams = {
   // hook: radius of the core the tubes grow out of.
   coreRadius: number;
   coreVisible?: boolean; // hook: render the core sphere (default true)
+  coreMatte?: boolean; // hook: matte core (no highlight) so it reads as a dark mass
   // Fraction of the tube length over which the trailing end rounds off to a
   // point (0 = flat cut face). Hides roots that would otherwise show a cut.
   startTaper: number;
