@@ -9,8 +9,9 @@ import { existsSync } from "node:fs";
 import { Config } from "@remotion/cli/config";
 
 Config.setRspack(true);
-Config.setVideoImageFormat("jpeg");
-Config.setJpegQuality(95);
+// PNG frame capture: lossless frames, and the H.264 output is standard
+// limited-range yuv420p (JPEG capture produces full-range yuvj420p).
+Config.setVideoImageFormat("png");
 Config.setOverwriteOutput(true);
 Config.setDefaultPremountInSeconds(2);
 // The composition draws with WebGL 2. "swangle" (SwiftShader via ANGLE)
