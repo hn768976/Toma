@@ -90,6 +90,7 @@ uniform sampler2D u_glowB;
 uniform float u_exposure;
 uniform float u_glow;
 uniform vec3 u_background;
+uniform float u_saturation;
 out vec4 o;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 void main() {
@@ -100,7 +101,9 @@ void main() {
   // white the way a camera sensor would.
   vec3 m = 1.0 - exp(-c);
   float l = max(max(c.r, c.g), c.b);
-  m = mix(m, vec3(1.0 - exp(-l)), smoothstep(2.0, 8.0, l) * 0.35);
+  m = mix(m, vec3(1.0 - exp(-l)), smoothstep(3.0, 10.0, l) * 0.25);
+  float luma = dot(m, vec3(0.2126, 0.7152, 0.0722));
+  m = max(mix(vec3(luma), m, u_saturation), 0.0);
   m += u_background;
   m += (hash(gl_FragCoord.xy) - 0.5) / 255.0;
   o = vec4(pow(clamp(m, 0.0, 1.0), vec3(0.95)), 1.0);
@@ -191,6 +194,7 @@ export type Look = {
   glow: number;
   background: [number, number, number]; // 0..1, added after tone mapping
   lineWidth: number; // in 4K pixels
+  saturation: number; // applied after tone mapping, 1 = unchanged
 };
 
 export class SmokeRenderer {
@@ -351,6 +355,7 @@ export class SmokeRenderer {
       gl.uniform1f(gl.getUniformLocation(this.compProg, "u_exposure"), look.exposure);
       gl.uniform1f(gl.getUniformLocation(this.compProg, "u_glow"), look.glow);
       gl.uniform3fv(gl.getUniformLocation(this.compProg, "u_background"), look.background);
+      gl.uniform1f(gl.getUniformLocation(this.compProg, "u_saturation"), look.saturation);
     });
     gl.finish();
   }

@@ -12,10 +12,10 @@ const sim: SmokeBurstProps["sim"] = {
   strands: 4000,
   particlesPerStrand: 64,
   arcStep: 0.026,
-  emitStart: 0.12,
+  emitStart: 0.0,
   emitEnd: 6.3,
   source: [-4.9, 0.1, 0],
-  shellRadius: { base: 2.5, extra: 1.7, decay: 1.0 },
+  shellRadius: { base: 2.4, extra: 1.4, decay: 1.0 },
   forwardSpeed: { base: 1.15, extra: 0.6, decay: 1.2 },
   coneInner: { base: 0, extra: 28, decay: 1.0 },
   coneAngle: { base: 180, extra: -108, decay: 1.0 },
@@ -23,24 +23,28 @@ const sim: SmokeBurstProps["sim"] = {
   forwardRamp: 1.5,
   turbulence: 1.0,
   turbulenceScale: 0.3,
+  roll: 0,
+  rollDecay: 0.6,
 };
 
 // Linear-light colours by emission time: gold -> orange -> pink -> violet
 // -> blue, so the leading cap stays warm and the trailing body turns blue.
 const colorStops: SmokeBurstProps["colorStops"] = [
-  { te: 0.0, color: [1.0, 0.55, 0.12] },
-  { te: 0.45, color: [1.0, 0.3, 0.03] },
-  { te: 1.1, color: [0.95, 0.28, 0.32] },
-  { te: 1.7, color: [0.55, 0.35, 0.95] },
-  { te: 2.3, color: [0.12, 0.38, 1.0] },
-  { te: 6.3, color: [0.1, 0.45, 1.0] },
+  { te: 0.0, color: [1.0, 0.74, 0.38] },
+  { te: 0.18, color: [1.0, 0.42, 0.07] },
+  { te: 0.6, color: [1.0, 0.28, 0.03] },
+  { te: 1.2, color: [0.95, 0.34, 0.42] },
+  { te: 1.7, color: [0.5, 0.4, 1.0] },
+  { te: 2.2, color: [0.22, 0.4, 1.0] },
+  { te: 6.3, color: [0.28, 0.48, 1.0] },
 ];
 
 const look: SmokeBurstProps["look"] = {
   exposure: 1.0,
   glow: 0.9,
   background: [0, 0, 0],
-  lineWidth: 2.6,
+  lineWidth: 3.2,
+  saturation: 1.45,
 };
 
 // Version 1: matches the reference -- near-static side-on camera with a slow
@@ -49,7 +53,8 @@ export const smokeV1: SmokeBurstProps = {
   sim,
   colorStops,
   hueSpread: 0.9,
-  intensity: 0.32,
+  intensity: 0.22,
+  volume: 0.03,
   look,
   camera: {
     angleStart: 11,
@@ -64,18 +69,18 @@ export const smokeV1: SmokeBurstProps = {
 };
 
 // Version 2: same simulation and palette, filmed with a different camera --
-// a low-angle three-quarter view from ahead of the burst that orbits round
-// and rises while pulling back, so the cap rolls toward the lens.
+// a low-angle three-quarter view from ahead of the burst that slowly orbits
+// round while staying low, so the cap rolls toward the lens.
 export const smokeV2: SmokeBurstProps = {
   ...smokeV1,
   camera: {
-    angleStart: 58,
-    angleEnd: 32,
-    distanceStart: 14.0,
-    distanceEnd: 17.0,
-    heightStart: -3.2,
-    heightEnd: -0.6,
-    target: [0.6, 0.2, 0],
+    angleStart: 60,
+    angleEnd: 42,
+    distanceStart: 14.5,
+    distanceEnd: 18.0,
+    heightStart: -3.4,
+    heightEnd: -2.4,
+    target: [1.0, 0.6, 0],
     fovY: 40,
   },
 };

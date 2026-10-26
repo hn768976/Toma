@@ -36,6 +36,8 @@ export type SmokeBurstProps = {
   // along the colour ramp.
   hueSpread: number;
   intensity: number;
+  // Strength of the soft volume sprites relative to the fibres.
+  volume: number;
 };
 
 // One simulation runner per configuration for the lifetime of the tab.
@@ -89,6 +91,7 @@ export const SmokeBurst: React.FC<SmokeBurstProps> = ({
   colorStops,
   hueSpread,
   intensity,
+  volume,
 }) => {
   const frame = useCurrentFrame();
   const { width, height, fps, durationInFrames } = useVideoConfig();
@@ -109,7 +112,7 @@ export const SmokeBurst: React.FC<SmokeBurstProps> = ({
     return c;
   }, [sim, colorStops, hueSpread]);
 
-  const segments = useMemo(() => new Float32Array(sim.count * 2 * 10), [sim]);
+  const segments = useMemo(() => new Float32Array(sim.count * 3 * 10), [sim]);
 
   useLayoutEffect(() => {
     const handle = delayRender(`Simulating frame ${frame}`, { timeoutInMilliseconds: 180000 });
@@ -122,7 +125,7 @@ export const SmokeBurst: React.FC<SmokeBurstProps> = ({
     for (let i = 0; i < sim.count; i++) {
       if (!born[i]) continue;
       const age = t - sim.emitTime[i];
-      const fade = Math.min(1, age / 0.4);
+      const fade = Math.min(1, age / 0.15);
       // Later material piles up near the source; keep it from blowing out.
       const k = fade * fade * intensity * (0.55 + 0.45 * Math.exp(-sim.emitTime[i] / 1.5));
       const r = colors[i * 3] * k;
@@ -165,11 +168,25 @@ export const SmokeBurst: React.FC<SmokeBurstProps> = ({
       segments[s + 8] = b * 0.35;
       segments[s + 9] = 1.2;
       n++;
+      // A wide, faint soft sprite: together these build the smoky body
+      // around the fibres.
+      const v = n * 10;
+      segments[v] = pos[o];
+      segments[v + 1] = pos[o + 1];
+      segments[v + 2] = pos[o + 2];
+      segments[v + 3] = pos[o];
+      segments[v + 4] = pos[o + 1];
+      segments[v + 5] = pos[o + 2];
+      segments[v + 6] = r * volume;
+      segments[v + 7] = g * volume;
+      segments[v + 8] = b * volume;
+      segments[v + 9] = 9;
+      n++;
     }
     const progress = frame / Math.max(1, durationInFrames - 1);
     rendererRef.current.draw(segments, n, cameraAt(camera, progress), look);
     continueRender(handle);
-  }, [frame, durationInFrames, runner, sim, colors, segments, camera, look, intensity]);
+  }, [frame, durationInFrames, runner, sim, colors, segments, camera, look, intensity, volume]);
 
   return (
     <AbsoluteFill style={{ backgroundColor: "black" }}>

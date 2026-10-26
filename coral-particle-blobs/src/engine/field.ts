@@ -7,9 +7,9 @@ export const TAN_HALF_FOV_Y = Math.tan((20 * Math.PI) / 180);
 export const ASPECT = 16 / 9;
 export const Z_NEAR = 4.6;
 export const Z_FAR = 13.0;
-export const PARTICLE_RADIUS = 0.042;
+export const PARTICLE_RADIUS = 0.06;
 // Grid spacing ~ particle diameter so the spheres pack densely.
-const GRID = 0.074;
+const GRID = 0.104;
 const SHELL = GRID * 2.4;
 const SPRAY_DIST = 0.34;
 
@@ -152,7 +152,7 @@ export const generateField = (
         } else {
           if (d < -SPRAY_DIST) continue;
           const f = 1 + d / SPRAY_DIST;
-          if (rand() > 0.07 * f * f) continue;
+          if (rand() > 0.025 * f * f) continue;
           sprayAmount = -d / SPRAY_DIST;
         }
         const jitter = GRID * 0.42;
@@ -163,9 +163,9 @@ export const generateField = (
         // Slow, spatially varying current: neighbouring particles share it,
         // so whole blobs glide, shear and fold relative to each other.
         flow.push(
-          noise.noise3(x * 0.13 + 3.3, y * 0.13, z * 0.13),
-          noise.noise3(x * 0.13, y * 0.13 + 8.1, z * 0.13),
-          noise.noise3(x * 0.13, y * 0.13, z * 0.13 - 5.6),
+          noise.noise3(x * 0.09 + 3.3, y * 0.09, z * 0.09),
+          noise.noise3(x * 0.09, y * 0.09 + 8.1, z * 0.09),
+          noise.noise3(x * 0.09, y * 0.09, z * 0.09 - 5.6),
         );
         radius.push(PARTICLE_RADIUS * (0.82 + rand() * 0.3) * (1 - 0.25 * sprayAmount));
         // Outward normal points down the density gradient.
@@ -174,8 +174,8 @@ export const generateField = (
         const ony = -gy * inv;
         const onz = -gz * inv;
         const lambert = (onx * lx + ony * ly + onz * lz) / ll;
-        const depthAO = d > 0 ? 1 - 0.3 * (d / SHELL) : 1;
-        light.push((0.8 + 0.34 * lambert) * depthAO);
+        const depthAO = d > 0 ? 1 - 0.38 * (d / SHELL) : 1;
+        light.push((0.76 + 0.42 * lambert) * depthAO);
         const regionTone = noise.noise3(x * 0.11 + 40.5, y * 0.11 - 12.25, z * 0.11 + 7.5);
         tone.push(Math.min(1, Math.max(0, 0.52 + regionTone * 0.7 + (rand() - 0.5) * 0.1)));
         spray.push(sprayAmount);
@@ -198,8 +198,11 @@ export const generateField = (
 export type MotionOptions = {
   warpAmplitude: number;
   warpSpeed: number;
-  // Speed (units/s) of the spatially varying current.
+  // Speed (units/s) of the slow, spatially varying current.
   flowSpeed: number;
+  // Amplitude (units) and rate of the large-scale clump motion.
+  clumpAmplitude: number;
+  clumpSpeed: number;
   drift: [number, number, number];
   // Camera yaw / pitch (radians) as a function of normalized time 0..1.
   yawStart: number;
@@ -230,6 +233,8 @@ export const positionsAt = (
   const a2 = motion.warpAmplitude * 0.3;
   const w1 = t * motion.warpSpeed;
   const w2 = t * motion.warpSpeed * 1.7 + 19.1;
+  const a3 = motion.clumpAmplitude;
+  const w3 = t * motion.clumpSpeed + 3.1;
   const e = progress * progress * (3 - 2 * progress);
   const yaw = motion.yawStart + (motion.yawEnd - motion.yawStart) * e;
   const pitch = motion.pitchStart + (motion.pitchEnd - motion.pitchStart) * e;
@@ -250,9 +255,17 @@ export const positionsAt = (
     const qy = by * 0.26;
     const qz = bz * 0.26;
     const amp = a1 * (1 + 1.8 * s);
+    // Large-scale, bounded warp: whole clumps drift and tumble
+    // independently of their neighbours without being torn apart.
+    const lx = bx * 0.11;
+    const ly = by * 0.11;
+    const lz = bz * 0.11;
     let x = bx + amp * n4(qx, qy, qz, w1) + a2 * n4(bx * 0.7, by * 0.7, bz * 0.7, w2);
     let y = by + amp * n4(qx + 31.4, qy, qz, w1) + a2 * n4(bx * 0.7 + 13.7, by * 0.7, bz * 0.7, w2);
     let z = bz + amp * n4(qx, qy + 17.7, qz, w1) + a2 * n4(bx * 0.7, by * 0.7 + 5.3, bz * 0.7, w2);
+    x += a3 * n4(lx + 7.7, ly, lz, w3);
+    y += a3 * n4(lx, ly - 4.4, lz, w3);
+    z += a3 * n4(lx, ly, lz + 9.2, w3);
     x += dx + flow[i * 3] * fs;
     y += dy + flow[i * 3 + 1] * fs;
     z += dz + flow[i * 3 + 2] * fs - PIVOT_Z;

@@ -35,6 +35,10 @@ export type SimOptions = {
   forwardRamp: number;
   turbulence: number;
   turbulenceScale: number;
+  // Vortex-ring roll-up of the leading cap (rad/s), fading out for material
+  // emitted later than about `rollDecay` seconds.
+  roll: number;
+  rollDecay: number;
 };
 
 export type SimState = {
@@ -51,6 +55,7 @@ export type Sim = {
   emitTime: Float32Array;
   launch: Float32Array; // initial expansion velocity, xyz
   forward: Float32Array; // top forward drift speed per particle
+  shell: Float32Array; // final shell radius per particle
   strandHue: Float32Array; // per particle, -1..1 colour offset of its strand
   noise: Noise;
 };
@@ -63,7 +68,7 @@ const smoothstep = (a: number, b: number, x: number) => {
 // An impulsive opening burst (which becomes the hollow leading cap),
 // followed by a steady flow that fills the body of the cloud from behind.
 const emissionWeight = (te: number) =>
-  3.2 * Math.exp(-(((te - 0.22) / 0.2) ** 2)) + 1.15 * smoothstep(0.45, 1.4, te);
+  3.2 * Math.exp(-(((te - 0.14) / 0.18) ** 2)) + 1.15 * smoothstep(0.45, 1.4, te);
 
 export const createSim = (opts: SimOptions): Sim => {
   const rand = mulberry32(opts.seed);
@@ -95,6 +100,7 @@ export const createSim = (opts: SimOptions): Sim => {
   const emitTime = new Float32Array(count);
   const launch = new Float32Array(count * 3);
   const forward = new Float32Array(count);
+  const shell = new Float32Array(count);
   const strandHue = new Float32Array(count);
   for (let s = 0; s < strands; s++) {
     // Stratified emission times so the flow has no gaps or pulses.
@@ -125,6 +131,7 @@ export const createSim = (opts: SimOptions): Sim => {
       launch[i * 3 + 1] = v * sinT * Math.cos(phi);
       launch[i * 3 + 2] = v * sinT * Math.sin(phi);
       forward[i] = fwd;
+      shell[i] = r;
       strandHue[i] = hue;
       // Walk along the sphere surface.
       heading += turn + (rand() - 0.5) * 0.08;
@@ -140,7 +147,7 @@ export const createSim = (opts: SimOptions): Sim => {
       phi += (Math.sin(heading) * opts.arcStep) / Math.max(0.15, Math.sin(theta));
     }
   }
-  return { opts, count, emitTime, launch, forward, strandHue, noise };
+  return { opts, count, emitTime, launch, forward, shell, strandHue, noise };
 };
 
 export const initialState = (sim: Sim): SimState => ({
@@ -161,7 +168,7 @@ export const cloneState = (s: SimState): SimState => ({
 
 // Advances the state by one step of dt seconds.
 export const step = (sim: Sim, state: SimState, dt: number) => {
-  const { opts, noise, emitTime, launch, forward, count } = sim;
+  const { opts, noise, emitTime, launch, forward, shell, count } = sim;
   const { pos, vel, born } = state;
   const t0 = state.t;
   const t1 = t0 + dt;
@@ -202,9 +209,30 @@ export const step = (sim: Sim, state: SimState, dt: number) => {
     const tx = n3(qx + tt, qy, qz) + 0.3 * n3(qx * 2.3 + 5.1, qy * 2.3 + tt, qz * 2.3);
     const ty = n3(qx + 19.3, qy - tt, qz + 4.7) + 0.3 * n3(qx * 2.3, qy * 2.3 + 9.4, qz * 2.3 - tt);
     const tz = n3(qx - 7.9, qy + 13.1, qz + tt) + 0.3 * n3(qx * 2.3 + tt, qy * 2.3, qz * 2.3 + 2.2);
-    pos[o] = x + (vel[o] + vf + amp * tx) * h;
-    pos[o + 1] = y + (vel[o + 1] + amp * ty) * h;
-    pos[o + 2] = z + (vel[o + 2] + amp * tz) * h;
+    // Vortex-ring roll: rotate the particle in its (axial, radial) plane
+    // around the ring core, which sits at ~80% of the shell radius level with
+    // the cap's centre. The cap's rim curls back on itself into a rolling head.
+    let rx = 0;
+    let ry = 0;
+    let rz = 0;
+    const w = opts.roll * Math.exp(-te / opts.rollDecay) * Math.min(1, age / 0.6);
+    if (w > 0.01) {
+      const cx = sx + forward[i] * (age - tau * (1 - Math.exp(-age / tau)));
+      const py = y - sy;
+      const pz = z - sz;
+      const r = Math.sqrt(py * py + pz * pz) + 1e-6;
+      const da = x - cx;
+      const dr = r - shell[i] * 0.8;
+      // d/dt (da, dr) = w * (-dr, da): rim moves forward-out, then back-in.
+      const va = -w * dr;
+      const vr = w * da;
+      rx = va;
+      ry = (vr * py) / r;
+      rz = (vr * pz) / r;
+    }
+    pos[o] = x + (vel[o] + vf + amp * tx + rx) * h;
+    pos[o + 1] = y + (vel[o + 1] + amp * ty + ry) * h;
+    pos[o + 2] = z + (vel[o + 2] + amp * tz + rz) * h;
   }
   state.t = t1;
 };

@@ -6,12 +6,14 @@ export const DURATION_IN_FRAMES = 300;
 export const WIDTH_4K = 3840;
 export const HEIGHT_4K = 2160;
 
-const sharedField = { seed: 7, frequency: 0.4, sheetWidth: 0.2, maskThreshold: 0.45 } as const;
+const sharedField = { seed: 7, frequency: 0.36, sheetWidth: 0.42, maskThreshold: 0.5 } as const;
 
 const sharedMotion: CoralBlobsProps["motion"] = {
   warpAmplitude: 0.42,
-  warpSpeed: 0.55,
-  flowSpeed: 0.35,
+  warpSpeed: 0.5,
+  flowSpeed: 0.22,
+  clumpAmplitude: 1.4,
+  clumpSpeed: 0.32,
   drift: [-0.72, 0.16, 0],
   yawStart: -0.08,
   yawEnd: 0.08,
