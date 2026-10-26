@@ -65,16 +65,16 @@ float fbm(vec2 p, uint seed) {
   return s;
 }
 
-// As the camera climbs away from the low sun the glare clears: from 19 s to
-// 24.5 s the upper fringe of warmth and haze fades out, so the tilt comes to
+// As the camera climbs away from the low sun the glare clears: from 20 s to
+// 25 s the upper fringe of warmth and haze fades out, so the tilt comes to
 // rest on clean open sky (as in the reference).
 float skyCap(float y) {
-  return 1.0 - smoothstep(19.0, 24.5, uTime) * smoothstep(uSkyY0 - 0.62, uSkyY0 - 0.28, y);
+  return 1.0 - smoothstep(20.0, 25.0, uTime) * smoothstep(uSkyY0 - 0.62, uSkyY0 - 0.28, y);
 }
 
 float warmTop(vec2 w) {
   // Boundary leans: foliage reaches higher on the left of the plate.
-  return uGoldTop + 0.15 * (0.9 - w.x) + 0.05 * sin(w.x * 3.1 + 1.0)
+  return uGoldTop + 0.09 * (0.9 - w.x) + 0.05 * sin(w.x * 3.1 + 1.0)
     + 0.2 * (vnoise(w * vec2(1.6, 1.1) + vec2(3.0, 0.0), 29u) - 0.5);
 }
 
@@ -149,7 +149,7 @@ vec4 bokehLayer(vec2 w, float cell, float radius, uint seed, float t) {
       * (1.0 - trans);
     // Twinkle: leaves occlude the source now and then.
     float tw = 0.65 + 0.35 * sin(t * mix(0.4, 1.1, rnd(h + 9u)) + ph * 2.0);
-    float k = mix(0.12, 0.34, rnd(h + 10u)) * tw * smoothstep(0.02, 0.3, wd) * (1.0 + 0.8 * trans) * cap;
+    float k = mix(0.12, 0.34, rnd(h + 10u)) * tw * smoothstep(0.02, 0.3, wd) * (1.0 + 0.2 * trans) * cap;
     float tone = rnd(h + 11u);
     // Bimodal: deep saturated amber sources and bright yellow-cream ones.
     vec3 warm = tone < 0.4 ? mix(uWarmLow * 0.55, uWarmLow, tone / 0.4) : mix(uWarmMid, uWarmHi * 1.05, (tone - 0.4) / 0.6);
@@ -193,10 +193,11 @@ void main() {
   float env = vnoise(wFar * vec2(0.9, 1.1) + vec2(5.0, 1.0), 17u);
   warmBase *= 0.5 + 1.0 * env;
   // Transitional pale haze between the band and the sky.
-  float hazeAmt = max(smoothstep(0.0, 0.22, wd), hazeField(wFar) * 0.5 * smoothstep(0.2, 0.8, massN))
+  float hazeAmt = max(smoothstep(0.0, 0.22, wd), hazeField(wFar) * 0.3 * smoothstep(0.2, 0.8, massN))
     * (1.0 - smoothstep(0.45, 0.85, wd));
   vec3 hazeCol = mix(mix(col, vec3(0.97), 0.45), uHaze, smoothstep(0.1, 0.45, wd));
-  col = mix(col, hazeCol, hazeAmt * (0.55 + 0.35 * mass2));
+  // Translucent: bokeh outlines and sky stay visible through it.
+  col = mix(col, hazeCol, hazeAmt * (0.28 + 0.22 * mass2));
   // Thin warm light adds to the sky (glows cream, never muddy grey); dense
   // light fully covers it.
   float wa = smoothstep(0.3, 0.9, wd);
@@ -224,8 +225,10 @@ void main() {
   // highlights, deep burnt-amber shadows).
   float gW = smoothstep(0.35, 0.9, wd);
   float lum = dot(col, vec3(0.299, 0.587, 0.114));
-  vec3 graded = mix(vec3(lum), col, 0.92);
-  graded = (graded - 0.58) * 1.65 + 0.6;
+  vec3 graded = mix(vec3(lum), col, 0.8);
+  graded = (graded - 0.6) * 1.65 + 0.55;
+  // Highlight shoulder: bright sources roll off instead of clipping.
+  graded = mix(graded, 0.8 + (graded - 0.8) * 0.3, step(0.8, graded));
   // Milky veil of scattered light over the band.
   graded = mix(graded, vec3(0.96, 0.9, 0.78), 0.13);
   col = mix(col, clamp(graded, 0.0, 1.0), gW);
