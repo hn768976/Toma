@@ -9,7 +9,9 @@ import { existsSync } from "node:fs";
 import { Config } from "@remotion/cli/config";
 
 Config.setRspack(true);
-Config.setVideoImageFormat("jpeg");
+// PNG frames encode to standard (limited-range) yuv420p; JPEG frames would
+// produce full-range yuvj420p, which some players display incorrectly.
+Config.setVideoImageFormat("png");
 Config.setOverwriteOutput(true);
 Config.setDefaultPremountInSeconds(2);
 
