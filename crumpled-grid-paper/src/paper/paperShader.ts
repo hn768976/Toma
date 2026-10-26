@@ -57,7 +57,7 @@ float fbm(vec2 p, uint seed) {
   return s;
 }
 
-const int CREASES = 22;
+const int CREASES = 30;
 
 // Height of the crumpled sheet at p (units: frame heights).
 float height(vec2 p, uint seed) {
@@ -65,16 +65,16 @@ float height(vec2 p, uint seed) {
   const float baseAngle = 0.52;
   mat2 rot = mat2(cos(baseAngle), -sin(baseAngle), sin(baseAngle), cos(baseAngle));
   vec2 q = rot * p;
-  float h = 0.060 * fbm(vec2(q.x * 1.1, q.y * 2.6) + float(seed % 97u), seed);
+  float h = 0.060 * fbm(vec2(q.x * 1.3, q.y * 2.0) + float(seed % 97u), seed);
 
   for (int i = 0; i < CREASES; i++) {
     uint k = seed * 7919u + uint(i) * 104729u;
     vec2 c = vec2(rnd(k + 1u) * 2.2 - 0.2, rnd(k + 2u) * 1.4 - 0.2);
-    float cross = step(0.78, rnd(k + 3u));
-    float ang = baseAngle + (rnd(k + 4u) - 0.5) * 1.3 + cross * (1.45 + (rnd(k + 5u) - 0.5) * 0.6);
+    float cross = step(0.62, rnd(k + 3u));
+    float ang = baseAngle + (rnd(k + 4u) - 0.5) * 2.0 + cross * (1.45 + (rnd(k + 5u) - 0.5) * 0.6);
     vec2 dir = vec2(cos(ang), sin(ang));
-    float len = mix(0.35, 1.5, rnd(k + 6u));
-    float w = mix(0.05, 0.24, rnd(k + 7u));
+    float len = mix(0.25, 1.3, rnd(k + 6u));
+    float w = mix(0.03, 0.2, rnd(k + 7u));
     float amp = mix(0.02, 0.13, rnd(k + 8u) * rnd(k + 10u)) * (rnd(k + 9u) < 0.5 ? -1.0 : 1.0);
     vec2 d = p - c;
     float along = dot(d, dir);
@@ -111,7 +111,7 @@ void main() {
   vec3 L = normalize(vec3(0.55, -0.35, 0.75));
   float shade = dot(N, L) / L.z;
   shade -= 1.0;
-  shade = clamp(1.0 + shade * (shade > 0.0 ? 1.7 : 1.1), 0.25, 2.2);
+  shade = clamp(1.0 + shade * (shade > 0.0 ? 2.1 : 1.3), 0.5, 2.4);
 
   // Broad exposure fall-off: darker upper-left, brighter lower-right.
   vec2 n = vec2(p.x / aspect, p.y);
@@ -126,11 +126,12 @@ void main() {
   lit *= mix(uShadowTint, vec3(1.0), smoothstep(0.55, 1.05, shade));
 
   // Grid in (slightly fold-warped) paper space.
-  float ang = (rnd(seed + 3u) - 0.5) * 0.004;
+  float ang = (rnd(seed + 3u) - 0.5) * 0.002;
   mat2 gr = mat2(cos(ang), -sin(ang), sin(ang), cos(ang));
   float spacing = uResolution.x / uGridColumns;
-  vec2 offset = vec2(rnd(seed + 1u), rnd(seed + 2u)) * spacing;
-  vec2 g = (gr * (px - uResolution * 0.5) + offset - grad * H * 0.005) / spacing;
+  // The sheet is re-photographed in nearly the same place each state.
+  vec2 offset = (vec2(0.3, 0.6) + (vec2(rnd(seed + 1u), rnd(seed + 2u)) - 0.5) * 0.14) * spacing;
+  vec2 g = (gr * (px - uResolution * 0.5) + offset - grad * H * 0.011) / spacing;
   vec2 dCell = abs(fract(g) - 0.5);
   float dist = (0.5 - max(dCell.x, dCell.y)) * spacing;
   float lineW = H * 0.00105;

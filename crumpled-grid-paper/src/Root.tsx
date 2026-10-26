@@ -14,8 +14,8 @@ const DURATION_IN_FRAMES = 288;
 
 // Version 1: charcoal graph paper with light-grey ink, as in the reference.
 const v1Props: CrumpledGridPaperProps = {
-  paperColor: [0.108, 0.108, 0.108],
-  lineColor: [0.37, 0.37, 0.37],
+  paperColor: [0.116, 0.116, 0.116],
+  lineColor: [0.3, 0.3, 0.3],
   shadowTint: [1, 1, 1],
   gridColumns: 38,
 };
