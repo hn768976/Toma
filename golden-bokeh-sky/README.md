@@ -8,7 +8,7 @@ Rendered procedurally as a **WebGL2 fragment shader** (no image assets),
 | Composition         | Size        | FPS | Frames | Duration | Camera |
 | ------------------- | ----------- | --- | ------ | -------- | ------ |
 | `GoldenBokehSky-V1` | 3840 × 2160 | 30  | 840    | 28 s     | Vertical tilt-up, eased like the reference (no parallax) |
-| `GoldenBokehSky-V2` | 3840 × 2160 | 30  | 840    | 28 s     | Alternative movement: rising diagonal crane with push-in, roll settle and depth parallax |
+| `GoldenBokehSky-V2` | 3840 × 2160 | 30  | 840    | 28 s     | Alternative movement: crane pull-back (opens 1.4x tight on an 8° dutch angle, fast rise then glide, pulls back wide and rolls level) with depth parallax |
 
 The V1 tilt curve (`src/bokeh/camera.ts`) was fitted to the reference by
 tracking its gold/sky boundary second by second.

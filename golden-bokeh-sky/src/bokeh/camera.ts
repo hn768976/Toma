@@ -100,18 +100,26 @@ const smootherstep = (x: number) => {
   return c * c * c * (c * (c * 6 - 15) + 10);
 };
 
+const easeOutQuad = (x: number) => {
+  const c = Math.min(Math.max(x, 0), 1);
+  return 1 - (1 - c) ** 2;
+};
+
 /**
- * Version 2: a rising diagonal crane. The camera physically travels up and
- * to the right while pushing in and rolling level, so the bokeh layers slide
- * past each other with depth parallax before it settles on the sky.
+ * Version 2: a crane pull-back. It opens tight (1.4x) inside the warm bokeh
+ * on a strong dutch angle, rises fast early and then glides (a different
+ * vertical profile from V1's eased tilt), while pulling back to a wide
+ * frame and rolling level. The camera translates, so the bokeh depth layers
+ * parallax past each other. It settles on a framing close to V1's sky.
  */
 export const craneRise = (t: number): CameraState => {
-  const s = smootherstep(t / 26);
+  const rise = easeOutQuad(t / 26);
+  const settle = smootherstep(t / 22);
   return {
-    x: 0.55 * s - 0.25,
-    y: tiltAt(t),
-    zoom: 1.0 + 0.22 * s,
-    roll: -0.06 * (1 - s) + 0.012 * Math.sin(t * 0.35),
+    x: -0.22 + 0.3 * smootherstep(t / 24),
+    y: -0.25 + (TILT_END + 0.25) * rise,
+    zoom: 1.4 - 0.4 * settle,
+    roll: -0.14 * (1 - smootherstep(t / 16)) + 0.01 * Math.sin(t * 0.35),
     parallax: 0.9,
   };
 };

@@ -27,8 +27,9 @@ const palette = {
 // Version 1: the reference's slow vertical tilt-up from the warm bokeh to sky.
 const v1Props: GoldenBokehSkyProps = { camera: "tilt-up", ...palette };
 
-// Version 2: alternative camera movement - a rising diagonal crane with a
-// push-in and roll settle; the bokeh depth layers parallax past each other.
+// Version 2: alternative camera movement - a crane pull-back: opens tight on
+// a dutch angle inside the bokeh, rises fast then glides, pulls back wide and
+// rolls level; the bokeh depth layers parallax past each other.
 const v2Props: GoldenBokehSkyProps = { camera: "crane-rise", ...palette };
 
 export const RemotionRoot: React.FC = () => {
