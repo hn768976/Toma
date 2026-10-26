@@ -21,12 +21,12 @@ npm ci                       # install the exact dependency versions from packag
 npm run dev                  # Remotion Studio preview
 
 # 4K master
-npx remotion render CoralBlobs-V1-4K out/CoralBlobs-V1-4K.mp4 --codec=h264
-npx remotion render CoralBlobs-V2-4K out/CoralBlobs-V2-4K.mp4 --codec=h264
+npx remotion render CoralBlobs-V1-4K out/CoralBlobs-V1-4K.mp4 --codec=h264 --pixel-format=yuv420p
+npx remotion render CoralBlobs-V2-4K out/CoralBlobs-V2-4K.mp4 --codec=h264 --pixel-format=yuv420p
 
 # 1080p delivery (the 4K composition downscaled by Remotion)
-npx remotion render CoralBlobs-V1-4K out/CoralBlobs-V1-1080p.mp4 --codec=h264 --scale=0.5 --crf=16
-npx remotion render CoralBlobs-V2-4K out/CoralBlobs-V2-1080p.mp4 --codec=h264 --scale=0.5 --crf=16
+npx remotion render CoralBlobs-V1-4K out/CoralBlobs-V1-1080p.mp4 --codec=h264 --scale=0.5 --crf=16 --pixel-format=yuv420p
+npx remotion render CoralBlobs-V2-4K out/CoralBlobs-V2-1080p.mp4 --codec=h264 --scale=0.5 --crf=16 --pixel-format=yuv420p
 ```
 On a machine with a GPU, add `--gl=angle` for faster renders.
 

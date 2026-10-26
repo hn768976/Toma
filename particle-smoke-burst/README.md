@@ -27,12 +27,12 @@ npm ci
 npm run dev
 
 # 4K master
-npx remotion render SmokeBurst-V1-4K out/SmokeBurst-V1-4K.mp4 --codec=h264
-npx remotion render SmokeBurst-V2-4K out/SmokeBurst-V2-4K.mp4 --codec=h264
+npx remotion render SmokeBurst-V1-4K out/SmokeBurst-V1-4K.mp4 --codec=h264 --pixel-format=yuv420p
+npx remotion render SmokeBurst-V2-4K out/SmokeBurst-V2-4K.mp4 --codec=h264 --pixel-format=yuv420p
 
 # 1080p delivery (the 4K composition downscaled by Remotion)
-npx remotion render SmokeBurst-V1-4K out/SmokeBurst-V1-1080p.mp4 --codec=h264 --scale=0.5 --crf=16
-npx remotion render SmokeBurst-V2-4K out/SmokeBurst-V2-1080p.mp4 --codec=h264 --scale=0.5 --crf=16
+npx remotion render SmokeBurst-V1-4K out/SmokeBurst-V1-1080p.mp4 --codec=h264 --scale=0.5 --crf=16 --pixel-format=yuv420p
+npx remotion render SmokeBurst-V2-4K out/SmokeBurst-V2-1080p.mp4 --codec=h264 --scale=0.5 --crf=16 --pixel-format=yuv420p
 ```
 
 ## Layout
