@@ -14,14 +14,14 @@ const DURATION_IN_FRAMES = 840;
 
 // Palette sampled from the reference footage.
 const palette = {
-  goldTop: 1.17,
+  goldTop: 1.12,
   skyLight: [0.77, 0.894, 0.92],
   skyMid: [0.49, 0.79, 0.867],
   skyDeep: [0.07, 0.55, 0.725],
   warmHi: [0.98, 0.88, 0.56],
-  warmMid: [0.85, 0.6, 0.24],
+  warmMid: [0.86, 0.57, 0.19],
   warmLow: [0.62, 0.34, 0.08],
-  haze: [0.9, 0.88, 0.84],
+  haze: [0.93, 0.88, 0.86],
 } satisfies Omit<GoldenBokehSkyProps, "camera">;
 
 // Version 1: the reference's slow vertical tilt-up from the warm bokeh to sky.

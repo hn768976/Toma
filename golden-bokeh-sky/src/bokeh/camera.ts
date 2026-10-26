@@ -13,23 +13,24 @@ export type CameraState = {
 
 // Tilt of the reference, in plate travel (frame heights) every 2 s. Measured
 // by tracking the gold/sky boundary in the reference footage: eases in,
-// keeps a steady pace through the middle, then settles on open sky.
+// keeps a steady pace through the middle (no surges), then settles on
+// open sky.
 const TILT_KEYS: ReadonlyArray<readonly [number, number]> = [
   [0, 0],
-  [2, 0.055],
+  [2, 0.05],
   [4, 0.12],
-  [6, 0.225],
-  [8, 0.33],
+  [6, 0.215],
+  [8, 0.315],
   [10, 0.41],
-  [12, 0.5],
-  [14, 0.58],
-  [16, 0.68],
-  [18, 0.8],
-  [20, 0.93],
-  [22, 1.04],
-  [24, 1.12],
-  [26, 1.17],
-  [28, 1.19],
+  [12, 0.505],
+  [14, 0.6],
+  [16, 0.695],
+  [18, 0.795],
+  [20, 0.895],
+  [22, 0.99],
+  [24, 1.08],
+  [26, 1.15],
+  [28, 1.18],
 ];
 
 // Monotone cubic (Fritsch-Carlson) interpolation: smooth, no overshoot.
