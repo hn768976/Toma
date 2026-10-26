@@ -6,8 +6,8 @@ versions. Every composition is authored at **3840×2160 (4K UHD), 30 fps,
 
 | Composition id | Description |
 | --- | --- |
-| `Ember-V1` | Composition 1, version 1 — glossy orange hooked tubes on black around a dark vortex core; rings spiral clockwise and drift inward down a narrowing horn, looping seamlessly (matches reference 1). |
-| `Ember-V2` | Composition 1, version 2 — same design, look and flow; **new camera movement**: opens wide on the whole bloom, then slowly pushes in while arcing around the vortex axis. |
+| `Ember-V1` | Composition 1, version 1 — a crown of short, thick, glossy orange tubes curling around a defocused charcoal well on black, cropped off the top-right; the crown turns clockwise while its tube rings writhe independently, looping seamlessly (matches reference 1). |
+| `Ember-V2` | Composition 1, version 2 — same design, look and motion; **new camera movement**: opens wide on the whole crown, then pushes in with a slow arc, landing on the V1 framing. |
 | `Pearl-V1` | Composition 2, version 1 — close-up of a ball of pearl-white hooks with violet curled tips on a lavender-grey studio backdrop, rolling at constant speed with shallow depth of field (matches reference 2). |
 | `Pearl-V2` | Composition 2, version 2 — same shot, geometry and motion; **new colour palette**: cream-pearl hooks with coral tips on a sage-mint backdrop. |
 
@@ -64,13 +64,14 @@ that at 4K, on a 4-core machine).
   scene once, then renders deterministically per frame (no wall-clock time):
   scene → HDR multisampled render target → depth-of-field pass → canvas.
 - `src/tube-bloom/cluster.ts` — procedural geometry. Rings of identical tubes:
-  free-floating hooked arcs (Ember) or hooks rooted on a sphere (Pearl), with
-  a vertex-colour gradient along each tube and flat cut caps.
-- Motion is loop-exact: Ember's rings slide one ring spacing down a
-  narrowing helical horn (fading in with a gamma-corrected alpha ramp, then
-  sinking into the dark core) a whole number of times per 152.5-frame cycle;
-  Pearl's ball turns a whole number of tube spacings per cycle. Both
-  305-frame animations therefore loop seamlessly, like the references.
+  hooks rooted on a hidden core (Ember: curled tubes whose charcoal roots sink
+  into a dark well; Pearl: hooks on a sphere), with a vertex-colour gradient
+  along each tube and flat cut caps.
+- Motion is loop-exact: every ring turns a whole number of its tube spacings
+  per 152.5-frame cycle, and the crown sway and per-ring writhe are whole
+  sine cycles, so the 305-frame animations loop seamlessly like the
+  references. (The renderer also supports a helical "flow" mode, unused by
+  the final scenes.)
 - `src/tube-bloom/dof.ts` — bokeh depth of field: a tile-max circle-of-confusion
   prepass, then a golden-angle "scatter-as-gather" blur, plus a soft-shoulder
   tone curve and sRGB encode.

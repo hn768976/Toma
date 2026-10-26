@@ -89,7 +89,7 @@ export const emberV1: SceneSpec = {
       ],
       // A long thin soft box paints one sharp streak along each tube.
       area: [
-        { color: "#ffd8a0", intensity: 24, size: [9, 0.25], position: [-3, 5, 6], lookAt: [0, 0, 0] },
+        { color: "#ffc878", intensity: 32, size: [9, 0.25], position: [-3, 5, 6], lookAt: [0, 0, 0] },
       ],
     },
     exposure: 1,
@@ -119,7 +119,7 @@ export const emberV1: SceneSpec = {
     loopFrames: LOOP,
     spinDirection: -1, // clockwise on screen
     wobble: [deg(4), deg(4)], // slow sway of the whole crown
-    writhe: deg(7), // rings rock independently: the tubes writhe
+    writhe: deg(10), // rings rock independently: the tubes writhe
     spins: 2,
   },
   shot: () => ({
