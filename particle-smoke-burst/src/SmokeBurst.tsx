@@ -140,7 +140,11 @@ export const SmokeBurst: React.FC<SmokeBurstProps> = ({
         const dy = pos[q + 1] - pos[o + 1];
         const dz = pos[q + 2] - pos[o + 2];
         const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (len < 1.6) {
+        // Links stretched far apart would draw as stray straight lines across
+        // the cloud edge: fade them out smoothly with stretch (no popping).
+        const stretch = Math.min(1, Math.max(0, (0.6 - len) / 0.35));
+        const keep = stretch * stretch;
+        if (keep > 0.002) {
           const s = n * 10;
           segments[s] = pos[o];
           segments[s + 1] = pos[o + 1];
@@ -148,9 +152,9 @@ export const SmokeBurst: React.FC<SmokeBurstProps> = ({
           segments[s + 3] = pos[q];
           segments[s + 4] = pos[q + 1];
           segments[s + 5] = pos[q + 2];
-          segments[s + 6] = r;
-          segments[s + 7] = g;
-          segments[s + 8] = b;
+          segments[s + 6] = r * keep;
+          segments[s + 7] = g * keep;
+          segments[s + 8] = b * keep;
           segments[s + 9] = 1;
           n++;
         }
