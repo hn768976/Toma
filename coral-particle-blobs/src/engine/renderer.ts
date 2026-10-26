@@ -32,7 +32,9 @@ void main() {
   vec2 d = (v_uv - vec2(0.46, 0.6)) * vec2(u_aspect, 1.0);
   float r = length(d) / 1.25;
   vec3 c = mix(u_center, u_edge, smoothstep(0.0, 1.0, r));
-  c += (hash(gl_FragCoord.xy) - 0.5) / 255.0;
+  // Fine grain (about +/-1.5 levels) so the smooth vignette survives H.264
+  // compression without banding.
+  c += (hash(gl_FragCoord.xy) + hash(gl_FragCoord.yx + 17.0) - 1.0) * 1.5 / 255.0;
   o = vec4(c, 1.0);
 }`;
 

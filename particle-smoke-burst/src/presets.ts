@@ -14,9 +14,9 @@ const sim: SmokeBurstProps["sim"] = {
   arcStep: 0.026,
   emitStart: 0.0,
   emitEnd: 6.3,
-  source: [-4.9, 0.1, 0],
-  shellRadius: { base: 2.4, extra: 1.4, decay: 1.0 },
-  forwardSpeed: { base: 1.15, extra: 0.6, decay: 1.2 },
+  source: [-5.8, 0.1, 0],
+  shellRadius: { base: 2.1, extra: 1.2, decay: 1.0 },
+  forwardSpeed: { base: 1.05, extra: 0.5, decay: 1.2 },
   coneInner: { base: 0, extra: 28, decay: 1.0 },
   coneAngle: { base: 180, extra: -108, decay: 1.0 },
   expansionDrag: 1.9,
@@ -52,35 +52,35 @@ const look: SmokeBurstProps["look"] = {
 export const smokeV1: SmokeBurstProps = {
   sim,
   colorStops,
-  hueSpread: 0.9,
+  hueSpread: 1.3,
   intensity: 0.22,
   volume: 0.03,
   look,
   camera: {
     angleStart: 11,
     angleEnd: 16,
-    distanceStart: 15.2,
-    distanceEnd: 14.4,
+    distanceStart: 16.6,
+    distanceEnd: 17.2,
     heightStart: 0.15,
     heightEnd: 0.3,
-    target: [0.3, 0, 0],
+    target: [-0.4, 1.3, 0],
     fovY: 35,
   },
 };
 
 // Version 2: same simulation and palette, filmed with a different camera --
-// a low-angle three-quarter view from ahead of the burst that slowly orbits
-// round while staying low, so the cap rolls toward the lens.
+// a low-angle view from almost head-on to the burst that sweeps 40 degrees
+// round to a three-quarter angle while pushing in and rising.
 export const smokeV2: SmokeBurstProps = {
   ...smokeV1,
   camera: {
-    angleStart: 60,
-    angleEnd: 42,
-    distanceStart: 14.5,
-    distanceEnd: 18.0,
-    heightStart: -3.4,
-    heightEnd: -2.4,
-    target: [1.0, 0.6, 0],
+    angleStart: 78,
+    angleEnd: 38,
+    distanceStart: 19.0,
+    distanceEnd: 17.6,
+    heightStart: -4.2,
+    heightEnd: -1.6,
+    target: [0.4, 1.4, 0],
     fovY: 40,
   },
 };

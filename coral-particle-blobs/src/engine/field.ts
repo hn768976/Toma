@@ -7,9 +7,9 @@ export const TAN_HALF_FOV_Y = Math.tan((20 * Math.PI) / 180);
 export const ASPECT = 16 / 9;
 export const Z_NEAR = 4.6;
 export const Z_FAR = 13.0;
-export const PARTICLE_RADIUS = 0.06;
+export const PARTICLE_RADIUS = 0.047;
 // Grid spacing ~ particle diameter so the spheres pack densely.
-const GRID = 0.104;
+const GRID = 0.082;
 const SHELL = GRID * 2.4;
 const SPRAY_DIST = 0.34;
 
