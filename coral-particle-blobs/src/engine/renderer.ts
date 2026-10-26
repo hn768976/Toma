@@ -52,6 +52,7 @@ out float v_R;
 out float v_coc;
 out vec3 v_color;
 out float v_fog;
+out float v_near;
 void main() {
   vec3 p = a_posRad.xyz;
   float z = max(p.z, 0.5);
@@ -68,6 +69,8 @@ void main() {
   v_coc = coc;
   v_color = a_color.rgb;
   v_fog = smoothstep(u_zFogStart, u_zFogEnd, z) * 0.3;
+  // Fade out anything drifting closer than the field's near edge.
+  v_near = smoothstep(3.3, 4.3, z);
 }`;
 
 const P_FS = `#version 300 es
@@ -77,6 +80,7 @@ in float v_R;
 in float v_coc;
 in vec3 v_color;
 in float v_fog;
+in float v_near;
 uniform vec3 u_fogColor;
 uniform vec3 u_light;
 out vec4 o;
@@ -85,7 +89,7 @@ void main() {
   float edge = max(0.5 * v_coc, 0.75);
   float a = 1.0 - smoothstep(v_R - edge, v_R + edge, d);
   if (a <= 0.002) discard;
-  a *= sqrt(v_R / (v_R + 0.5 * v_coc));
+  a *= sqrt(v_R / (v_R + 0.5 * v_coc)) * v_near;
   vec2 uv = v_local / max(v_R, 0.001);
   float r2 = min(dot(uv, uv), 1.0);
   float nz = sqrt(1.0 - r2);

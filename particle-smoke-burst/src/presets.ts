@@ -49,7 +49,7 @@ export const smokeV1: SmokeBurstProps = {
   sim,
   colorStops,
   hueSpread: 0.9,
-  intensity: 0.26,
+  intensity: 0.32,
   look,
   camera: {
     angleStart: 11,
@@ -63,19 +63,19 @@ export const smokeV1: SmokeBurstProps = {
   },
 };
 
-// Version 2: same simulation and palette, filmed with a sweeping orbit --
-// the camera starts high and three-quarter-front of the burst and swings
-// round toward a side view while pushing in.
+// Version 2: same simulation and palette, filmed with a different camera --
+// a low-angle three-quarter view from ahead of the burst that orbits round
+// and rises while pulling back, so the cap rolls toward the lens.
 export const smokeV2: SmokeBurstProps = {
   ...smokeV1,
   camera: {
-    angleStart: 62,
-    angleEnd: 18,
-    distanceStart: 15.5,
-    distanceEnd: 12.0,
-    heightStart: 4.5,
-    heightEnd: 1.2,
-    target: [0.8, 0, 0],
-    fovY: 38,
+    angleStart: 58,
+    angleEnd: 32,
+    distanceStart: 14.0,
+    distanceEnd: 17.0,
+    heightStart: -3.2,
+    heightEnd: -0.6,
+    target: [0.6, 0.2, 0],
+    fovY: 40,
   },
 };

@@ -12,7 +12,7 @@ const sharedMotion: CoralBlobsProps["motion"] = {
   warpAmplitude: 0.42,
   warpSpeed: 0.55,
   flowSpeed: 0.35,
-  drift: [-0.62, 0.14, -0.3],
+  drift: [-0.72, 0.16, 0],
   yawStart: -0.08,
   yawEnd: 0.08,
   pitchStart: 0.03,
