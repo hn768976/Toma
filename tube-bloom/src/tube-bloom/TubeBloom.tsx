@@ -162,6 +162,13 @@ const setup = (canvas: HTMLCanvasElement, spec: SceneSpec, width: number, height
     if (spec.motion.flow?.ringFade) mat.transparent = true;
     return mat;
   });
+  // Without a flow, a shaded ring also sinks after lighting, so its
+  // highlights darken with it (dark stems stay matte charcoal).
+  if (!spec.motion.flow) {
+    ringMaterials.forEach((mat, i) => {
+      (mat.userData.ring.value as THREE.Vector2).y = 0.85 * spec.cluster.rings[i].shade;
+    });
+  }
   const rings = geometries.map((g, i) => new THREE.Mesh(g, ringMaterials[i]));
 
   const tilt = new THREE.Group();
@@ -386,6 +393,13 @@ export const TubeBloom: React.FC<Props> = ({ scene, debug, tweak }) => {
       ctx.rings.forEach((ring, i) => {
         ring.rotation.y =
           (motion.spinDirection * cycle * (motion.spins ?? 1)) / spec.cluster.rings[i].count;
+        // Independent per-ring writhe; whole cycles keep the loop seamless.
+        // "XZY" applies the spin first, so the ring's rotational symmetry
+        // (which makes the spin loop-exact) survives the rocking.
+        ring.rotation.order = "XZY";
+        const w = motion.writhe ?? 0;
+        ring.rotation.x = w * Math.sin(2 * cycle + i * 1.9);
+        ring.rotation.z = w * Math.cos(cycle + i * 2.7);
       });
     }
     ctx.tilt.rotation.x = motion.wobble[0] * Math.sin(cycle);

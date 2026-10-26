@@ -72,6 +72,7 @@ export type SceneSpec = {
     // Whole tube spacings each ring advances per loop (default 1). Any
     // integer keeps the loop seamless.
     spins?: number;
+    writhe?: number; // radians of independent per-ring rocking (non-flow)
     // Helical "screw" flow down an exponential horn. All rings are identical
     // (`count` tubes, built at y = 0 with phase i * phaseStep); each frame
     // ring i is placed at continuous index u = i - frontRings + frac, scaled

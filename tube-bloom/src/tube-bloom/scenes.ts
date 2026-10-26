@@ -60,13 +60,13 @@ export const emberV1: SceneSpec = {
   look: {
     background: { top: "#000000", bottom: "#000000" },
     colors: {
-      start: "#050505", // roots sink into the dark well
-      mid: "#f03600",
-      end: "#f03600",
-      cap: "#e83402",
-      startCap: "#050505",
-      shade: "#0c0c0e", // charcoal stems of the inner well
-      gradient: [0.06, 0.24, 1],
+      start: "#1a1a1d", // roots sink into the dark well as charcoal stems
+      mid: "#ff4800",
+      end: "#ff4800",
+      cap: "#f04404",
+      startCap: "#1a1a1d",
+      shade: "#1a1a1d", // charcoal stems of the inner well
+      gradient: [0.0, 0.24, 1],
     },
     material: {
       roughness: 0.14,
@@ -76,7 +76,7 @@ export const emberV1: SceneSpec = {
       iridescence: 0,
       iridescenceIOR: 1.3,
       envIntensity: 0.3,
-      specularColor: "#ffc070", // hot yellow-orange streaks
+      specularColor: "#ffd090", // hot yellow-orange streaks
     },
     envRotation: [0, 0, 0],
     envTint: "#ff6a10", // warm studio: orange reflections, no blue
@@ -89,7 +89,7 @@ export const emberV1: SceneSpec = {
       ],
       // A long thin soft box paints one sharp streak along each tube.
       area: [
-        { color: "#ffd090", intensity: 14, size: [9, 0.25], position: [-3, 5, 6], lookAt: [0, 0, 0] },
+        { color: "#ffd8a0", intensity: 24, size: [9, 0.25], position: [-3, 5, 6], lookAt: [0, 0, 0] },
       ],
     },
     exposure: 1,
@@ -101,31 +101,32 @@ export const emberV1: SceneSpec = {
     ...baseCluster,
     kind: "hook",
     seed: 21,
-    coreRadius: 1.35, // hidden; opens the centre into a dark well
+    coreRadius: 1.55, // hidden; opens the centre into a dark well
     coreVisible: false,
     rings: EMBER_RINGS.map((r) => ({ polar: deg(r.polar), count: r.count, shade: r.shade })),
-    tubeRadius: [0.33, 0.36],
+    tubeRadius: [0.3, 0.32],
     stemLength: [0.15, 0.35],
     curlRadius: [0.6, 0.75],
     sweep: [deg(95), deg(125)],
     planeTilt: [deg(20), deg(42)], // curl sideways and up: a pinwheel crown
     phaseStep: 0.37,
     phaseJitter: 0.3,
-    startTaper: 0.22, // roots narrow to nothing inside the well
+    startTaper: 0.12, // roots narrow away inside the well
   },
   motion: {
     center: [0, 0, 0],
     orientation: [deg(78), 0, deg(-12)], // crown axis (+Y) turned towards camera
     loopFrames: LOOP,
     spinDirection: -1, // clockwise on screen
-    wobble: [deg(4), deg(4)], // slow writhe of the whole crown
+    wobble: [deg(4), deg(4)], // slow sway of the whole crown
+    writhe: deg(7), // rings rock independently: the tubes writhe
     spins: 2,
   },
   shot: () => ({
-    position: [0, 0, 6.3],
-    target: [-0.95, -1.3, 0],
+    position: [0, 0, 7.3],
+    target: [-1.05, -1.75, 0],
     fov: 35,
-    focusDistance: 5.9,
+    focusDistance: 6.9,
     aperture: 0.22,
     maxBlur: 0.022,
   }),
@@ -230,7 +231,7 @@ export const emberV2: SceneSpec = {
     const e = easeInOutSine(t);
     // Starts wide and centred on the whole bloom, pushes in while arcing
     // around the bloom's axis, and ends on a close top-right crop.
-    const dist = mix(11.5, 6.4, e);
+    const dist = mix(12.5, 7.3, e);
     const yaw = deg(mix(-18, 14, e));
     const pitch = deg(mix(8, -6, e));
     return {
@@ -239,7 +240,7 @@ export const emberV2: SceneSpec = {
         Math.sin(pitch) * dist,
         Math.cos(yaw) * Math.cos(pitch) * dist,
       ],
-      target: [mix(-0.1, -0.95, e), mix(-0.2, -1.3, e), 0],
+      target: [mix(-0.2, -1.05, e), mix(-0.4, -1.75, e), 0],
       fov: 35,
       // Focus rides on the front tentacles throughout the push-in.
       focusDistance: dist - 0.4,
