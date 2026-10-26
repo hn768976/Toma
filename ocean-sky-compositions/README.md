@@ -6,8 +6,8 @@ Two procedural compositions, each in two versions. All four are authored at **38
 |------------------|---------|---------|----------|------------|
 | `Underwater-V1`  | Sun rays under the ocean surface | Matches the reference (clear ocean blue) | 300 frames / 10.000 s | WebGL 2 fragment shader |
 | `Underwater-V2`  | Same scene | Alternative **colour palette**: emerald lagoon, warm golden light shafts | 300 frames / 10.000 s | WebGL 2 fragment shader |
-| `MoonClouds-V1`  | Flight over a moonlit cloud deck | Matches the reference (steady forward glide, moon low right, cloud sweeps past early) | 240 frames / 8.000 s | Three.js (custom shaders) |
-| `MoonClouds-V2`  | Same scene | Alternative **camera move**: the camera emerges from the cloud tops and cranes up into a banking right turn, so the moon swings toward the centre of frame | 240 frames / 8.000 s | Three.js (custom shaders) |
+| `MoonSky-V1`     | Full moon in a starry night sky | Reference framing (near-locked view, moon low right); clouds removed on request | 240 frames / 8.000 s | Three.js (custom sky/moon shader) |
+| `MoonSky-V2`     | Same scene | Alternative **camera move**: a banking turn to the right while tilting down, so the moon swings from the right edge toward centre and the horizon rolls | 240 frames / 8.000 s | Three.js (custom sky/moon shader) |
 
 Everything is generated procedurally, so there are no external image or video assets.
 
@@ -32,12 +32,12 @@ Deliverables are rendered at 1920×1080 from the 4K compositions using `--scale=
 ```console
 npm run render:c1v1   # out/Comp1_Underwater_V1_1080p.mp4
 npm run render:c1v2   # out/Comp1_Underwater_V2_1080p.mp4
-npm run render:c2v1   # out/Comp2_MoonClouds_V1_1080p.mp4
-npm run render:c2v2   # out/Comp2_MoonClouds_V2_1080p.mp4
+npm run render:c2v1   # out/Comp2_MoonSky_V1_1080p.mp4
+npm run render:c2v2   # out/Comp2_MoonSky_V2_1080p.mp4
 npm run render:all
 ```
 
-To render at native 4K, drop `--scale`, e.g. `npx remotion render MoonClouds-V1 out/MoonClouds-V1-4K.mp4`.
+To render at native 4K, drop `--scale`, e.g. `npx remotion render MoonSky-V1 out/MoonSky-V1-4K.mp4`.
 
 The compositions use WebGL. Rendering uses Chrome's ANGLE backend (`Config.setChromiumOpenGlRenderer("angle")`), which falls back to software rendering on machines without a GPU. Expect roughly 1–3 s per frame on a 4-core CPU.
 
@@ -48,6 +48,6 @@ src/
   Root.tsx                 composition registry (4 x 4K compositions)
   lib/constants.ts         size, fps, durations
   underwater/              WebGL 2 shader scene + palettes (V1 ocean, V2 lagoon)
-  clouds/                  Three.js scene: sky/moon shader, procedural puff atlas,
-                           cloud field layout, camera paths (V1 glide, V2 banking rise)
+  sky/                     Three.js scene: night-sky/moon shader, palette,
+                           camera paths (V1 locked, V2 banking turn)
 ```

@@ -8,4 +8,4 @@ export const FPS = 30;
 // 300 frames at 30 fps = 10.000 s is the closest whole-frame match.
 export const UNDERWATER_DURATION = 300;
 // Reference 2 (moon over clouds): 8.000 s.
-export const CLOUDS_DURATION = 240;
+export const SKY_DURATION = 240;

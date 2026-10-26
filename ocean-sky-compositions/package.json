@@ -1,7 +1,7 @@
 {
   "name": "ocean-sky-compositions",
   "version": "1.0.0",
-  "description": "Underwater light rays and moonlit cloud fly-over, 4K Remotion compositions",
+  "description": "Underwater light rays and moonlit night sky, 4K Remotion compositions",
   "repository": {},
   "license": "UNLICENSED",
   "engines": {
@@ -34,8 +34,8 @@
     "lint": "eslint src && tsc",
     "render:c1v1": "remotion render Underwater-V1 out/Comp1_Underwater_V1_1080p.mp4 --scale=0.5",
     "render:c1v2": "remotion render Underwater-V2 out/Comp1_Underwater_V2_1080p.mp4 --scale=0.5",
-    "render:c2v1": "remotion render MoonClouds-V1 out/Comp2_MoonClouds_V1_1080p.mp4 --scale=0.5",
-    "render:c2v2": "remotion render MoonClouds-V2 out/Comp2_MoonClouds_V2_1080p.mp4 --scale=0.5",
+    "render:c2v1": "remotion render MoonSky-V1 out/Comp2_MoonSky_V1_1080p.mp4 --scale=0.5",
+    "render:c2v2": "remotion render MoonSky-V2 out/Comp2_MoonSky_V2_1080p.mp4 --scale=0.5",
     "render:all": "npm run render:c1v1 && npm run render:c1v2 && npm run render:c2v1 && npm run render:c2v2",
     "render:4k": "remotion render Underwater-V1 out/Comp1_Underwater_V1_4K.mp4"
   }
