@@ -180,7 +180,7 @@ export const createCodeStreamStage =
     scene.add(camera);
     const heroColor = new THREE.Color(palette.squareB);
     const heroes = [
-      { t0: 3.58, t1: 4.34, from: [-0.7, -1.7, -6.0], to: [2.4, 2.5, -3.2], w: 4.8, h: 4.1, peak: 1.0 },
+      { t0: 3.58, t1: 4.34, from: [-0.7, -1.7, -6.0], to: [2.4, 2.5, -3.2], w: 4.8, h: 4.1, peak: palette.heroPeak },
     ].map((cfg) => {
       const mat = new THREE.MeshBasicMaterial({
         map: spriteTex.soft,

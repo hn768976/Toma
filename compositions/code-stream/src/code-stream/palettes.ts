@@ -11,6 +11,8 @@ export type Palette = {
   squareB: string;
   accent: string;
   bloomStrength: number;
+  // Peak opacity of the ~4 s lens fly-by panel (bright palettes need less).
+  heroPeak: number;
 };
 
 // Version 1: matches the reference's indigo/ultramarine look.
@@ -24,19 +26,21 @@ export const ULTRAMARINE: Palette = {
   squareB: "#7d93ff",
   accent: "#b8c6ff",
   bloomStrength: 0.6,
+  heroPeak: 1.0,
 };
 
 // Version 2: alternative palette, emerald/teal data field with amber accents.
 export const EMERALD: Palette = {
-  bgDeep: "#03201b",
-  bgMid: "#063a33",
-  bgGlow: "#0fa47f",
-  textNear: "#52d9b5",
-  textFar: "#0f9a74",
-  squareA: "#14c495",
-  squareB: "#8dffdc",
+  bgDeep: "#010e0c",
+  bgMid: "#03241f",
+  bgGlow: "#0a7a60",
+  textNear: "#33b08e",
+  textFar: "#0a6e54",
+  squareA: "#0f9e78",
+  squareB: "#5ed9b6",
   accent: "#ffbf5a",
-  bloomStrength: 0.6,
+  bloomStrength: 0.5,
+  heroPeak: 0.42,
 };
 
 export const PALETTES = { v1: ULTRAMARINE, v2: EMERALD } as const;
