@@ -14,10 +14,12 @@ Config.setRspack(true);
 // SwiftShader) works on any machine, including servers without a GPU.
 // On a workstation with a GPU you can pass --gl=angle for faster renders.
 Config.setChromiumOpenGlRenderer("swangle");
-Config.setVideoImageFormat("jpeg");
-Config.setJpegQuality(95);
+// PNG frames keep the encoder input in RGB, so the MP4 is standard
+// limited-range yuv420p (JPEG frames would be passed through as yuvj420p).
+Config.setVideoImageFormat("png");
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
+Config.setColorSpace("bt709");
 Config.setOverwriteOutput(true);
 // WebGL frames at 4K can take a few seconds each on CPU-only machines.
 Config.setDelayRenderTimeoutInMilliseconds(120000);
