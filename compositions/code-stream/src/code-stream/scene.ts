@@ -180,7 +180,7 @@ export const createCodeStreamStage =
     scene.add(camera);
     const heroColor = new THREE.Color(palette.squareB);
     const heroes = [
-      { t0: 3.6, t1: 4.3, from: [-0.7, -1.7, -6.0], to: [2.4, 2.5, -3.2], w: 4.8, h: 4.1, peak: 1.0 },
+      { t0: 3.58, t1: 4.34, from: [-0.7, -1.7, -6.0], to: [2.4, 2.5, -3.2], w: 4.8, h: 4.1, peak: 1.0 },
     ].map((cfg) => {
       const mat = new THREE.MeshBasicMaterial({
         map: spriteTex.soft,
@@ -256,7 +256,8 @@ export const createCodeStreamStage =
           THREE.MathUtils.lerp(h.from[1], h.to[1], e2),
           THREE.MathUtils.lerp(h.from[2], h.to[2], e2),
         );
-        h.mat.opacity = Math.pow(Math.sin(Math.PI * u), 0.35) * h.peak;
+        // smooth ramp in and out, like the reference flash (no pop)
+        h.mat.opacity = Math.sin(Math.PI * u) * h.peak;
       }
 
       // Slow, floating drift: a gentle sway and rise while flying forward.
