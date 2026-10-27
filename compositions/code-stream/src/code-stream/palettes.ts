@@ -15,11 +15,11 @@ export type Palette = {
 
 // Version 1: matches the reference's indigo/ultramarine look.
 export const ULTRAMARINE: Palette = {
-  bgDeep: "#07083a",
-  bgMid: "#0f1d86",
+  bgDeep: "#050630",
+  bgMid: "#091268",
   bgGlow: "#3a34e6",
   textNear: "#6c84ff",
-  textFar: "#2c3ee0",
+  textFar: "#2533c0",
   squareA: "#3d5bff",
   squareB: "#7d93ff",
   accent: "#b8c6ff",

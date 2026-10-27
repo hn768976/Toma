@@ -47,7 +47,7 @@ const backgroundMaterial = (p: Palette) =>
         // elliptical glow hugging the top-centre
         vec2 d = vec2((vUv.x - 0.5) * aspect * 0.55, (vUv.y - 1.04) * 1.6);
         float g = exp(-dot(d, d) * 4.5);
-        col = mix(col, glow, clamp(g, 0.0, 1.0) * 0.5);
+        col = mix(col, glow, clamp(g, 0.0, 1.0) * 0.3);
         // darker side edges
         float edge = smoothstep(0.0, 0.5, abs(vUv.x - 0.5));
         col *= 1.0 - edge * 0.45;
@@ -106,7 +106,7 @@ export const createCodeStreamStage =
     const panelGeo = new THREE.PlaneGeometry(26, 13);
     const panels: Panel[] = [];
     for (let s = 0; s < PANEL_SLOTS; s++) {
-      const perSlot = 4;
+      const perSlot = 3;
       for (let k = 0; k < perSlot; k++) {
         const mat = new THREE.MeshBasicMaterial({
           map: rng.pick(panelTextures),
@@ -127,7 +127,7 @@ export const createCodeStreamStage =
         panels.push({
           mesh,
           d0: (s + rng.range(0, 1)) * (FIELD_DEPTH / PANEL_SLOTS),
-          baseOpacity: rng.range(0.45, 0.95),
+          baseOpacity: rng.range(0.6, 0.95),
           x: rng.range(-34, 34),
           y: rng.range(-11, 7),
         });
@@ -160,7 +160,7 @@ export const createCodeStreamStage =
         d0: rng.range(0, FIELD_DEPTH),
         x: rng.range(-30, 30),
         y: rng.range(-11, 8),
-        size: rng.range(sizeMin, sizeMax) * (rng.chance(0.1) ? 2.8 : 1),
+        size: rng.range(sizeMin, sizeMax) * (rng.chance(0.07) ? 2.4 : 1),
         color: rng.pick(colorChoices).clone(),
         phase: rng.range(0, Math.PI * 2),
         rate: rng.range(0.4, 1.4),
@@ -170,7 +170,7 @@ export const createCodeStreamStage =
       return { mesh, items };
     };
     const spriteSets = [
-      makeSet(spriteTex.fill, Math.round(SPRITE_COUNT * 0.65), 0.14, 0.5),
+      makeSet(spriteTex.fill, Math.round(SPRITE_COUNT * 0.6), 0.1, 0.38),
       makeSet(spriteTex.outline, Math.round(SPRITE_COUNT * 0.25), 0.15, 0.5),
       makeSet(spriteTex.cross, Math.round(SPRITE_COUNT * 0.15), 0.12, 0.26),
     ];
@@ -180,8 +180,7 @@ export const createCodeStreamStage =
     scene.add(camera);
     const heroColor = new THREE.Color(palette.squareB);
     const heroes = [
-      { t0: 3.66, t1: 4.36, from: [-0.6, -1.5, -6.2], to: [2.6, 2.1, -3.0], w: 4.0, h: 3.5, peak: 0.55 },
-      { t0: 4.02, t1: 4.42, from: [-2.4, -2.6, -6.5], to: [-1.2, -1.1, -3.4], w: 2.4, h: 2.0, peak: 0.3 },
+      { t0: 3.6, t1: 4.3, from: [-0.7, -1.7, -6.0], to: [2.4, 2.5, -3.2], w: 4.8, h: 4.1, peak: 1.0 },
     ].map((cfg) => {
       const mat = new THREE.MeshBasicMaterial({
         map: spriteTex.soft,
@@ -257,7 +256,7 @@ export const createCodeStreamStage =
           THREE.MathUtils.lerp(h.from[1], h.to[1], e2),
           THREE.MathUtils.lerp(h.from[2], h.to[2], e2),
         );
-        h.mat.opacity = Math.pow(Math.sin(Math.PI * u), 0.6) * h.peak;
+        h.mat.opacity = Math.pow(Math.sin(Math.PI * u), 0.35) * h.peak;
       }
 
       // Slow, floating drift: a gentle sway and rise while flying forward.
@@ -288,7 +287,7 @@ export const createCodeStreamStage =
       for (const set of spriteSets) {
         set.items.forEach((it, i) => {
           const d = wrap(it.d0);
-          const twinkle = 0.55 + 0.45 * Math.sin(t * it.rate * 2.2 + it.phase);
+          const twinkle = 0.7 + 0.3 * Math.sin(t * it.rate * 1.6 + it.phase);
           const f = depthFade(d) * twinkle;
           pos.set(it.x * (0.6 + d / 60), it.y + d * RISE, -d);
           e.set(PANEL_TILT * 0.55, 0, it.spin * t);
@@ -296,7 +295,7 @@ export const createCodeStreamStage =
           scl.set(it.size, it.size, 1);
           m4.compose(pos, q, scl);
           set.mesh.setMatrixAt(i, m4);
-          tmpCol.copy(it.color).multiplyScalar(f * 0.75);
+          tmpCol.copy(it.color).multiplyScalar(f * 0.6);
           set.mesh.setColorAt(i, tmpCol);
         });
         set.mesh.instanceMatrix.needsUpdate = true;

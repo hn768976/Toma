@@ -40,7 +40,7 @@ const drawMicroBlock = (
   w: number,
   rows: number,
 ) => {
-  const size = rng.range(9, 13);
+  const size = rng.range(7, 10.5);
   ctx.font = `300 ${size}px "${FONT_FAMILY}"`;
   const lh = size * rng.range(1.15, 1.5);
   const charW = size * 0.48;
@@ -49,7 +49,7 @@ const drawMicroBlock = (
     const indent = rng.chance(0.3) ? rng.int(1, 4) * 2 : 0;
     const chars = Math.floor((w / charW) * rng.range(0.25, 1)) - indent;
     if (chars <= 2) continue;
-    ctx.globalAlpha = rng.range(0.2, 0.65);
+    ctx.globalAlpha = rng.range(0.4, 0.95);
     ctx.fillText(microLine(rng, chars), x + indent * charW, y + r * lh);
   }
 };
@@ -61,7 +61,7 @@ const drawCodeBlock = (
   y: number,
 ) => {
   const lines = rng.pick(CODE_SNIPPETS);
-  const size = rng.range(17, 28);
+  const size = rng.range(13, 20);
   ctx.font = `400 ${size}px "${FONT_FAMILY}"`;
   const lh = size * 1.32;
   const start = rng.int(0, Math.max(0, lines.length - 6));
@@ -116,22 +116,22 @@ export const makeCodePanel = (rng: Random) => {
   ctx.textBaseline = "top";
 
   // Columns of micro text
-  const cols = rng.int(5, 8);
+  const cols = rng.int(10, 16);
   for (let c = 0; c < cols; c++) {
     const x = rng.range(0, W - 260);
     const y = rng.range(0, H - 200);
-    drawMicroBlock(ctx, rng, x, y, rng.range(220, 520), rng.int(8, 30));
+    drawMicroBlock(ctx, rng, x, y, rng.range(140, 360), rng.int(16, 50));
   }
   // Readable code blocks
-  const blocks = rng.int(1, 3);
+  const blocks = rng.int(1, 2);
   for (let b = 0; b < blocks; b++) {
     drawCodeBlock(ctx, rng, rng.range(20, W - 760), rng.range(20, H - 420));
   }
   drawSquares(ctx, rng, W, H, rng.int(10, 26));
 
   // Faint horizontal scan streaks, characteristic of the reference.
-  for (let i = 0; i < 40; i++) {
-    ctx.globalAlpha = rng.range(0.05, 0.22);
+  for (let i = 0; i < 20; i++) {
+    ctx.globalAlpha = rng.range(0.03, 0.12);
     ctx.fillRect(rng.range(0, W), rng.range(0, H), rng.range(60, 600), 2);
   }
   ctx.globalAlpha = 1;
@@ -160,11 +160,22 @@ export const makeSpriteTextures = () => {
   cross.ctx.fillRect(S / 2 - 4, 20, 8, S - 40);
   cross.ctx.fillRect(20, S / 2 - 4, S - 40, 8);
 
-  // Large soft-edged panel for the lens fly-by
-  const soft = makeCanvas(256, 256);
-  soft.ctx.filter = "blur(10px)";
+  // Hard-edged, text-filled light panel for the lens fly-by
+  const soft = makeCanvas(512, 448);
+  soft.ctx.filter = "blur(2px)";
   soft.ctx.fillStyle = "#fff";
-  soft.ctx.fillRect(28, 28, 200, 200);
+  soft.ctx.globalAlpha = 0.72;
+  soft.ctx.fillRect(12, 12, 488, 424);
+  soft.ctx.filter = "none";
+  soft.ctx.globalAlpha = 1;
+  soft.ctx.textBaseline = "top";
+  soft.ctx.font = `400 15px "${FONT_FAMILY}"`;
+  const lines = CODE_SNIPPETS[0];
+  lines.forEach((l, i) => soft.ctx.fillText(l.slice(0, 48), 36, 40 + i * 22));
+  soft.ctx.strokeStyle = "#fff";
+  soft.ctx.lineWidth = 3;
+  soft.ctx.strokeRect(300, 60, 60, 60);
+  soft.ctx.strokeRect(330, 300, 40, 40);
 
   return {
     soft: toTexture(soft.canvas),
