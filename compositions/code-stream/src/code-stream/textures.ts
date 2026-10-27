@@ -160,7 +160,14 @@ export const makeSpriteTextures = () => {
   cross.ctx.fillRect(S / 2 - 4, 20, 8, S - 40);
   cross.ctx.fillRect(20, S / 2 - 4, S - 40, 8);
 
+  // Large soft-edged panel for the lens fly-by
+  const soft = makeCanvas(256, 256);
+  soft.ctx.filter = "blur(10px)";
+  soft.ctx.fillStyle = "#fff";
+  soft.ctx.fillRect(28, 28, 200, 200);
+
   return {
+    soft: toTexture(soft.canvas),
     fill: toTexture(fill.canvas),
     outline: toTexture(outline.canvas),
     cross: toTexture(cross.canvas),

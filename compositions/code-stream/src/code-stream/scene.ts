@@ -12,8 +12,13 @@ import { FONT_FAMILY, makeCodePanel, makeSpriteTextures } from "./textures";
 // Depth of the recycled data field, in world units. Objects travel toward
 // the camera and wrap from the near end back to the far end.
 const FIELD_DEPTH = 54;
-const SPEED = 0.95; // world units per second
-const PANEL_TILT = -0.55; // panels lean back like stacked, slanted floors
+// Camera speed profile (world units / second): a brisk push that eases into
+// a slow drift, following the reference's motion.
+const SPEED_START = 3.1;
+const SPEED_END = 0.7;
+const EASE_FROM = 4.6; // seconds
+const EASE_TO = 8.6;
+const PANEL_TILT = -0.4; // panels lean back slightly, like stacked walls
 const PANEL_SLOTS = 22;
 const SPRITE_COUNT = 1400;
 const RISE = 0.42;
@@ -38,11 +43,11 @@ const backgroundMaterial = (p: Palette) =>
       void main() {
         // vertical falloff toward the bright horizon at the top
         float v = smoothstep(0.0, 1.0, vUv.y);
-        vec3 col = mix(deep, mid, pow(v, 1.4));
+        vec3 col = mix(deep, mid, 0.55 + 0.45 * v);
         // elliptical glow hugging the top-centre
         vec2 d = vec2((vUv.x - 0.5) * aspect * 0.55, (vUv.y - 1.04) * 1.6);
         float g = exp(-dot(d, d) * 4.5);
-        col = mix(col, glow, clamp(g, 0.0, 1.0) * 0.7);
+        col = mix(col, glow, clamp(g, 0.0, 1.0) * 0.5);
         // darker side edges
         float edge = smoothstep(0.0, 0.5, abs(vUv.x - 0.5));
         col *= 1.0 - edge * 0.45;
@@ -155,7 +160,7 @@ export const createCodeStreamStage =
         d0: rng.range(0, FIELD_DEPTH),
         x: rng.range(-30, 30),
         y: rng.range(-11, 8),
-        size: rng.range(sizeMin, sizeMax) * (rng.chance(0.06) ? 2.6 : 1),
+        size: rng.range(sizeMin, sizeMax) * (rng.chance(0.1) ? 2.8 : 1),
         color: rng.pick(colorChoices).clone(),
         phase: rng.range(0, Math.PI * 2),
         rate: rng.range(0.4, 1.4),
@@ -165,10 +170,48 @@ export const createCodeStreamStage =
       return { mesh, items };
     };
     const spriteSets = [
-      makeSet(spriteTex.fill, Math.round(SPRITE_COUNT * 0.6), 0.1, 0.4),
+      makeSet(spriteTex.fill, Math.round(SPRITE_COUNT * 0.65), 0.14, 0.5),
       makeSet(spriteTex.outline, Math.round(SPRITE_COUNT * 0.25), 0.15, 0.5),
       makeSet(spriteTex.cross, Math.round(SPRITE_COUNT * 0.15), 0.12, 0.26),
     ];
+
+    // Hero panels: large translucent squares that sweep past the lens
+    // around the 4-second mark, like the light-panel fly-by in the reference.
+    scene.add(camera);
+    const heroColor = new THREE.Color(palette.squareB);
+    const heroes = [
+      { t0: 3.66, t1: 4.36, from: [-0.6, -1.5, -6.2], to: [2.6, 2.1, -3.0], w: 4.0, h: 3.5, peak: 0.55 },
+      { t0: 4.02, t1: 4.42, from: [-2.4, -2.6, -6.5], to: [-1.2, -1.1, -3.4], w: 2.4, h: 2.0, peak: 0.3 },
+    ].map((cfg) => {
+      const mat = new THREE.MeshBasicMaterial({
+        map: spriteTex.soft,
+        color: heroColor,
+        transparent: true,
+        depthWrite: false,
+        depthTest: false,
+        blending: THREE.AdditiveBlending,
+      });
+      const mesh = new THREE.Mesh(spriteGeo, mat);
+      mesh.scale.set(cfg.w, cfg.h, 1);
+      mesh.rotation.set(-0.12, 0.1, 0.03);
+      mesh.renderOrder = 10;
+      camera.add(mesh);
+      return { ...cfg, mesh, mat };
+    });
+
+    // Cumulative travel distance per frame (numeric integral of the speed
+    // curve) so the field position stays a pure function of the frame.
+    const speedAt = (t: number) =>
+      SPEED_END + (SPEED_START - SPEED_END) * (1 - smoothstep(EASE_FROM, EASE_TO, t));
+    const travel: number[] = [0];
+    const SUB = 8;
+    for (let f = 1; f <= Math.ceil(fps * 60); f++) {
+      let acc = travel[f - 1];
+      for (let k = 0; k < SUB; k++) {
+        acc += speedAt((f - 1 + (k + 0.5) / SUB) / fps) / fps / SUB;
+      }
+      travel.push(acc);
+    }
 
     // Post-processing
     const composer = new EffectComposer(renderer);
@@ -194,12 +237,28 @@ export const createCodeStreamStage =
     const scl = new THREE.Vector3();
 
     const depthFade = (d: number) =>
-      smoothstep(6, 14, d) * (1 - smoothstep(FIELD_DEPTH * 0.62, FIELD_DEPTH, d));
-    const wrap = (d0: number, t: number) =>
-      (((d0 - SPEED * t) % FIELD_DEPTH) + FIELD_DEPTH) % FIELD_DEPTH;
+      smoothstep(4.5, 9.5, d) * (1 - smoothstep(FIELD_DEPTH * 0.62, FIELD_DEPTH, d));
+    let dist = 0;
+    const wrap = (d0: number) =>
+      (((d0 - dist) % FIELD_DEPTH) + FIELD_DEPTH) % FIELD_DEPTH;
 
     const render = (frame: number) => {
       const t = frame / fps;
+      dist = travel[Math.min(frame, travel.length - 1)];
+
+      for (const h of heroes) {
+        const u = (t - h.t0) / (h.t1 - h.t0);
+        const on = u > 0 && u < 1;
+        h.mesh.visible = on;
+        if (!on) continue;
+        const e2 = u * u * (3 - 2 * u) * 0.35 + u * 0.65;
+        h.mesh.position.set(
+          THREE.MathUtils.lerp(h.from[0], h.to[0], e2),
+          THREE.MathUtils.lerp(h.from[1], h.to[1], e2),
+          THREE.MathUtils.lerp(h.from[2], h.to[2], e2),
+        );
+        h.mat.opacity = Math.pow(Math.sin(Math.PI * u), 0.6) * h.peak;
+      }
 
       // Slow, floating drift: a gentle sway and rise while flying forward.
       camera.position.set(
@@ -215,7 +274,7 @@ export const createCodeStreamStage =
       camera.updateMatrixWorld();
 
       for (const p of panels) {
-        const d = wrap(p.d0, t);
+        const d = wrap(p.d0);
         // The field rises with distance so text fills the frame up to the top.
         p.mesh.position.set(p.x * (0.6 + d / 60), p.y + d * RISE, -d);
         const f = depthFade(d);
@@ -228,7 +287,7 @@ export const createCodeStreamStage =
 
       for (const set of spriteSets) {
         set.items.forEach((it, i) => {
-          const d = wrap(it.d0, t);
+          const d = wrap(it.d0);
           const twinkle = 0.55 + 0.45 * Math.sin(t * it.rate * 2.2 + it.phase);
           const f = depthFade(d) * twinkle;
           pos.set(it.x * (0.6 + d / 60), it.y + d * RISE, -d);
@@ -237,7 +296,7 @@ export const createCodeStreamStage =
           scl.set(it.size, it.size, 1);
           m4.compose(pos, q, scl);
           set.mesh.setMatrixAt(i, m4);
-          tmpCol.copy(it.color).multiplyScalar(f * 0.55);
+          tmpCol.copy(it.color).multiplyScalar(f * 0.75);
           set.mesh.setColorAt(i, tmpCol);
         });
         set.mesh.instanceMatrix.needsUpdate = true;
@@ -251,7 +310,7 @@ export const createCodeStreamStage =
       render,
       dispose: () => {
         panelTextures.forEach((tx) => tx.dispose());
-        [spriteTex.fill, spriteTex.outline, spriteTex.cross].forEach((tx) => tx.dispose());
+        [spriteTex.fill, spriteTex.outline, spriteTex.cross, spriteTex.soft].forEach((tx) => tx.dispose());
         composer.dispose();
         scene.traverse((o) => {
           const m = o as THREE.Mesh;

@@ -28,7 +28,7 @@ export const ULTRAMARINE: Palette = {
 
 // Version 2: alternative palette, emerald/teal data field with amber accents.
 export const EMERALD: Palette = {
-  bgDeep: "#01110f",
+  bgDeep: "#03201b",
   bgMid: "#063a33",
   bgGlow: "#0fa47f",
   textNear: "#52d9b5",
