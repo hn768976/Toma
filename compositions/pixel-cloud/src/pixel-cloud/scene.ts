@@ -5,7 +5,7 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { Stage, StageFactory } from "../three/ThreeStage";
 import { createRandom, Random, smoothstep } from "../three/random";
-import { CLOUD_BOUNDS, cloudSdf } from "./cloud-shape";
+import { CLOUD_BOUNDS, CLOUD_SDF_GLSL, cloudSdf } from "./cloud-shape";
 import { DofPass } from "./DofPass";
 import { DITHER, SIMPLEX_3D } from "./glsl";
 
@@ -15,6 +15,17 @@ const TILE_PITCH = 0.19;
 const BOARD_TILT_X = -0.42; // top of the board leans away from camera
 const BOARD_YAW = 0.58; // right side recedes
 const CLOUD_LIFT = 0.28; // raised top layer gives the icon some thickness
+// Circuit traces and labels run diagonally across the board, like the
+// reference, independent of the icon's tile grid.
+const CIRCUIT_ANGLE = 0.3;
+const COS_C = Math.cos(CIRCUIT_ANGLE);
+const SIN_C = Math.sin(CIRCUIT_ANGLE);
+// circuit-local -> board coordinates
+const toBoard = (x: number, y: number): [number, number] => [
+  x * COS_C - y * SIN_C,
+  x * SIN_C + y * COS_C,
+];
+const sdfLocal = (x: number, y: number) => cloudSdf(...toBoard(x, y));
 
 /** Merged quad helper: every quad carries its own per-vertex attributes. */
 class QuadBuilder {
@@ -94,6 +105,7 @@ const makeBoard = () => {
     fragmentShader: /* glsl */ `
       uniform vec3 cTopLeft, cMid, cBottomRight;
       uniform vec2 resolution;
+      uniform float uTime;
       varying vec2 vBoard;
       ${DITHER}
       float gridLine(vec2 p, float spacing, float width) {
@@ -110,13 +122,13 @@ const makeBoard = () => {
         col = mix(col, cTopLeft, smoothstep(0.55, 1.1, k));
         // faint large-scale board grid
         float g = gridLine(vBoard, 2.4, 0.006);
-        col += vec3(0.02, 0.06, 0.14) * g * 0.4;
+        col += vec3(0.02, 0.06, 0.14) * g * 0.4 * smoothstep(0.0, 1.2, uTime);
         col += dither(gl_FragCoord.xy) / 255.0;
         gl_FragColor = vec4(col, 1.0);
       }
     `,
   });
-  return new THREE.Mesh(new THREE.PlaneGeometry(220, 220), mat);
+  return new THREE.Mesh(new THREE.PlaneGeometry(600, 600), mat);
 };
 
 // ---------------------------------------------------------------- tiles ---
@@ -144,8 +156,8 @@ const makeTiles = (rng: Random, z: number, layerGain: number, sizeScale: number)
       uTime: { value: 0 },
       uGain: { value: layerGain },
       cDim: { value: new THREE.Color("#0d2f8a") },
-      cMid: { value: new THREE.Color("#3d93ff") },
-      cHot: { value: new THREE.Color("#a8ecff") },
+      cMid: { value: new THREE.Color("#2d7fe6") },
+      cHot: { value: new THREE.Color("#62c6ff") },
       bounds: { value: new THREE.Vector4(minX, maxX, minY, maxY) },
     },
     vertexShader: /* glsl */ `
@@ -167,7 +179,7 @@ const makeTiles = (rng: Random, z: number, layerGain: number, sizeScale: number)
         float bias = mix(1.25, 0.8, lr);
         float flick = 0.86 + 0.14 * sin(uTime * (1.2 + aRand.x * 2.4) + aRand.y * 6.2831);
         float rim = mix(0.75, 1.0, aEdge);
-        vI = (0.4 + blob * 0.8) * bias * flick * rim;
+        vI = (0.42 + blob * 0.85) * bias * flick * rim;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     `,
@@ -180,7 +192,7 @@ const makeTiles = (rng: Random, z: number, layerGain: number, sizeScale: number)
         vec2 q = abs(vUv - 0.5) * 2.0;
         float r = 0.32;
         float d = length(max(q - (1.0 - r), 0.0)) - r;
-        float a = 1.0 - smoothstep(-0.12, 0.06, d);
+        float a = 1.0 - smoothstep(-0.22, 0.08, d);
         vec3 col = mix(cDim, cMid, smoothstep(0.1, 0.65, vI));
         col = mix(col, cHot, smoothstep(0.7, 1.25, vI));
         gl_FragColor = vec4(col * vI * uGain * a, a);
@@ -217,7 +229,7 @@ const makeTraceSeeds = (rng: Random, count: number, duration: number) => {
     let x = rng.range(-14, 18);
     let y = rng.range(-9, 13);
     // keep most traces off the cloud so the icon reads clearly
-    if (cloudSdf(x, y) < 0.6 && rng.chance(0.8)) {
+    if (sdfLocal(x, y) < 0.6 && rng.chance(0.8)) {
       x += 7;
     }
     const pts: [number, number][] = [[x, y]];
@@ -237,8 +249,8 @@ const makeTraceSeeds = (rng: Random, count: number, duration: number) => {
       pts,
       t0: early ? rng.range(0.35, 2.0) : rng.range(1.5, duration - 2),
       speed: rng.range(3.5, 9),
-      hold: early ? 60 : rng.range(2.5, 6),
-      bright: rng.chance(0.15) ? rng.range(0.9, 1.4) : rng.range(0.25, 0.7),
+      hold: rng.range(3, 7),
+      bright: rng.chance(0.1) ? rng.range(0.7, 1.0) : rng.range(0.2, 0.5),
       width: rng.chance(0.12) ? 0.022 : rng.range(0.008, 0.014),
     };
     seeds.push(base);
@@ -316,8 +328,11 @@ const makeTraces = (seeds: TraceSeed[]) => {
       varying float vAcross;
       varying vec4 vInfo;
       varying float vLen;
+      varying vec2 vBoard;
       void main() {
         vS = aS; vAcross = aAcross; vInfo = aInfo; vLen = aLen;
+        vBoard = vec2(position.x * ${COS_C.toFixed(5)} - position.y * ${SIN_C.toFixed(5)},
+                      position.x * ${SIN_C.toFixed(5)} + position.y * ${COS_C.toFixed(5)});
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     `,
@@ -328,18 +343,24 @@ const makeTraces = (seeds: TraceSeed[]) => {
       varying float vAcross;
       varying vec4 vInfo;
       varying float vLen;
+      varying vec2 vBoard;
+      ${CLOUD_SDF_GLSL}
       void main() {
         float t = uTime - vInfo.x;
         if (t <= 0.0) discard;
+        float drawTime = vLen / vInfo.y;
+        // traces recycle (draw, hold, fade, rest) so the density stays even
+        t = mod(t, drawTime + vInfo.z + 2.0);
         float drawn = t * vInfo.y;
         if (vS > drawn) discard;
-        float drawTime = vLen / vInfo.y;
         float life = 1.0 - smoothstep(drawTime + vInfo.z, drawTime + vInfo.z + 1.2, t);
         // bright head running along the trace while it is being drawn
         float head = exp(-pow((drawn - vS) * 2.2, 2.0)) * (1.0 - smoothstep(drawTime, drawTime + 0.4, t));
         float across = 1.0 - smoothstep(0.35, 1.0, abs(vAcross));
         vec3 col = cLine * vInfo.w + cHead * head * 0.9;
-        gl_FragColor = vec4(col * across * life, 1.0);
+        // tuck traces behind the translucent icon
+        float behind = mix(0.25, 1.0, smoothstep(-0.1, 0.25, cloudSdf(vBoard)));
+        gl_FragColor = vec4(col * across * life * behind, 1.0);
       }
     `,
   });
@@ -352,12 +373,12 @@ const makeLabels = (rng: Random, count: number, duration: number) => {
   for (let i = 0; i < count; i++) {
     let x = rng.range(-12, 16);
     const y = rng.range(-8, 12);
-    if (cloudSdf(x, y) < 0.4) x += 7.5;
+    if (sdfLocal(x, y) < 0.4) x += 7.5;
     const t0 = i < count * 0.35 ? rng.range(0.5, 1.6) : rng.range(1.0, duration - 1.5);
-    const blink = rng.chance(0.35) ? rng.range(0.6, 1.6) : 0;
+    const blink = rng.chance(0.6) ? rng.range(0.6, 2.2) : 0;
     const info = [t0, blink, rng.range(0, 6.28), rng.range(0.55, 1.0)];
     const kind = rng.next();
-    const h = 0.034;
+    const h = 0.026;
     if (kind < 0.45) {
       qb.add(rect(x, y, rng.range(0.1, 0.2), h, 0.014), { aInfo: info });
     } else if (kind < 0.75) {
@@ -456,7 +477,7 @@ export const createPixelCloudStage =
     const rng = createRandom(1207);
     const duration = 12;
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(30, width / height, 0.5, 200);
+    const camera = new THREE.PerspectiveCamera(30, width / height, 0.5, 1000);
 
     const board = new THREE.Group();
     board.rotation.order = "YXZ";
@@ -468,16 +489,19 @@ export const createPixelCloudStage =
     board.add(boardMesh);
 
     const tilesBase = makeTiles(rng, 0.01, 0.45, 1.0);
-    const tilesTop = makeTiles(rng, CLOUD_LIFT, 1.0, 1.0);
+    const tilesTop = makeTiles(rng, CLOUD_LIFT, 0.95, 1.0);
     board.add(tilesBase, tilesTop);
-    const traces = makeTraces(makeTraceSeeds(rng, 120, duration));
-    board.add(traces);
-    const labels = makeLabels(rng, 170, duration);
-    board.add(labels);
+    const circuit = new THREE.Group();
+    circuit.rotation.z = CIRCUIT_ANGLE;
+    board.add(circuit);
+    const traces = makeTraces(makeTraceSeeds(rng, 150, duration));
+    circuit.add(traces);
+    const labels = makeLabels(rng, 320, duration);
+    circuit.add(labels);
     const particles = makeParticles(rng, 70);
     board.add(particles);
 
-    const timed = [tilesBase, tilesTop, traces, labels, particles].map(
+    const timed = [boardMesh, tilesBase, tilesTop, traces, labels, particles].map(
       (m) => (m.material as THREE.ShaderMaterial).uniforms.uTime,
     );
 
@@ -493,7 +517,7 @@ export const createPixelCloudStage =
     composer.addPass(new RenderPass(scene, camera));
     const dof = new DofPass(camera, width, height);
     composer.addPass(dof);
-    composer.addPass(new UnrealBloomPass(new THREE.Vector2(width, height), 0.6, 0.55, 0.28));
+    composer.addPass(new UnrealBloomPass(new THREE.Vector2(width, height), 0.55, 0.7, 0.26));
     composer.addPass(new OutputPass());
 
     const cloudCenter = new THREE.Vector3(0.2, 0.1, CLOUD_LIFT);
@@ -505,19 +529,19 @@ export const createPixelCloudStage =
       const center = cloudCenter.clone().applyMatrix4(board.matrixWorld);
       if (mode === "locked") {
         // Locked-off shot as in the reference: cloud sits left of frame centre.
-        camera.position.set(center.x + 1.55, center.y + 0.1, center.z + 13.6);
-        target.set(center.x + 1.55, center.y + 0.1, center.z);
+        camera.position.set(center.x + 1.55, center.y - 0.3, center.z + 13.6);
+        target.set(center.x + 1.55, center.y - 0.3, center.z);
       } else {
         // Alternative: a slow orbiting dolly that arcs around the icon and
         // pushes in, revealing the tilted circuit board in parallax.
         const p = t / duration;
         const e = p * p * (3 - 2 * p);
-        const az = THREE.MathUtils.lerp(1.05, -0.12, e);
-        const el = THREE.MathUtils.lerp(0.32, 0.04, e);
-        const dist = THREE.MathUtils.lerp(15.5, 11.8, e);
+        const az = THREE.MathUtils.lerp(1.05, -0.38, e);
+        const el = THREE.MathUtils.lerp(0.32, 0.12, e);
+        const dist = THREE.MathUtils.lerp(15.5, 10.2, e);
         tmp.set(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
         camera.position.copy(center).addScaledVector(tmp, dist);
-        const lead = THREE.MathUtils.lerp(-0.9, 1.2, e);
+        const lead = THREE.MathUtils.lerp(-0.9, 0.35, e);
         target.set(center.x + lead, center.y + 0.1, center.z);
       }
       camera.lookAt(target);
