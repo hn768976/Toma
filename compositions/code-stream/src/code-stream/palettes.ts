@@ -19,9 +19,9 @@ export type Palette = {
 export const ULTRAMARINE: Palette = {
   bgDeep: "#050630",
   bgMid: "#091268",
-  bgGlow: "#3a34e6",
-  textNear: "#97a8ff",
-  textFar: "#2236d8",
+  bgGlow: "#2438ff",
+  textNear: "#7f9cff",
+  textFar: "#1d3cff",
   squareA: "#3360ff",
   squareB: "#4f7dff",
   accent: "#8fa8ff",

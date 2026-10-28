@@ -125,7 +125,7 @@ export const makeCodePanel = (rng: Random) => {
   }
 
   // Short columns of small code text
-  const cols = rng.int(10, 16);
+  const cols = rng.int(16, 24);
   for (let c = 0; c < cols; c++) {
     const x = rng.range(0, W - 260);
     const y = rng.range(0, H - 200);
@@ -165,9 +165,9 @@ export const makeSpriteTextures = () => {
 
   // Hard-edged, text-filled light panel for the lens fly-by
   const soft = makeCanvas(512, 448);
-  soft.ctx.filter = "blur(9px)";
+  soft.ctx.filter = "blur(4px)";
   soft.ctx.fillStyle = "#fff";
-  soft.ctx.globalAlpha = 0.6;
+  soft.ctx.globalAlpha = 0.5;
   soft.ctx.fillRect(12, 12, 488, 424);
   soft.ctx.filter = "none";
   soft.ctx.globalAlpha = 1;

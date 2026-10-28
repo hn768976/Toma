@@ -14,13 +14,13 @@ import { FONT_FAMILY, makeCodePanel, makeSpriteTextures } from "./textures";
 const FIELD_DEPTH = 54;
 // Camera speed profile (world units / second): a brisk push that eases into
 // a slow drift, following the reference's motion.
-const SPEED_START = 3.1;
-const SPEED_END = 0.7;
+const SPEED_START = 6.5;
+const SPEED_END = 1.9;
 const EASE_FROM = 4.6; // seconds
 const EASE_TO = 8.6;
 const PANEL_TILT = -0.3; // sheets lean back slightly; the view is near-frontal
 const PANEL_SLOTS = 14;
-const SPRITE_COUNT = 900;
+const SPRITE_COUNT = 420;
 const RISE = 0.1;
 const FOV = 50;
 // Panels are spread across the view frustum (in units of the half-extent at
@@ -47,11 +47,11 @@ const backgroundMaterial = (p: Palette) =>
       void main() {
         // vertical falloff toward the bright horizon at the top
         float v = smoothstep(0.0, 1.0, vUv.y);
-        vec3 col = mix(deep, mid, 0.55 + 0.45 * v);
+        vec3 col = mix(deep, mid, 0.8 + 0.1 * v);
         // elliptical glow hugging the top-centre
         vec2 d = vec2((vUv.x - 0.5) * aspect * 0.55, (vUv.y - 1.04) * 1.6);
         float g = exp(-dot(d, d) * 4.5);
-        col = mix(col, glow, clamp(g, 0.0, 1.0) * 0.3);
+        col = mix(col, glow, clamp(g, 0.0, 1.0) * 0.12);
         // darker side edges
         float edge = smoothstep(0.0, 0.5, abs(vUv.x - 0.5));
         col *= 1.0 - edge * 0.45;
@@ -175,8 +175,8 @@ export const createCodeStreamStage =
       return { mesh, items };
     };
     const spriteSets = [
-      makeSet(spriteTex.fill, Math.round(SPRITE_COUNT * 0.6), 0.12, 0.4),
-      makeSet(spriteTex.outline, Math.round(SPRITE_COUNT * 0.25), 0.2, 0.5),
+      makeSet(spriteTex.fill, Math.round(SPRITE_COUNT * 0.6), 0.22, 0.55),
+      makeSet(spriteTex.outline, Math.round(SPRITE_COUNT * 0.25), 0.3, 0.6),
       makeSet(spriteTex.cross, Math.round(SPRITE_COUNT * 0.15), 0.12, 0.22),
     ];
 
@@ -185,7 +185,8 @@ export const createCodeStreamStage =
     scene.add(camera);
     const heroColor = new THREE.Color(palette.accent);
     const heroes = [
-      { t0: 3.58, t1: 4.34, from: [-0.7, -1.7, -6.0], to: [2.4, 2.5, -3.2], w: 4.8, h: 4.1, peak: palette.heroPeak },
+      // travels straight up through the right-centre of frame, bottom edge to top edge
+      { t0: 3.6, t1: 4.34, from: [1.15, -3.0, -4.2], to: [1.15, 4.0, -4.2], w: 3.3, h: 2.7, peak: palette.heroPeak },
     ].map((cfg) => {
       const mat = new THREE.MeshBasicMaterial({
         map: spriteTex.soft,
@@ -197,7 +198,7 @@ export const createCodeStreamStage =
       });
       const mesh = new THREE.Mesh(spriteGeo, mat);
       mesh.scale.set(cfg.w, cfg.h, 1);
-      mesh.rotation.set(-0.12, 0.1, 0.03);
+      mesh.rotation.set(-0.25, 0.08, 0.02);
       mesh.renderOrder = 10;
       camera.add(mesh);
       return { ...cfg, mesh, mat };
@@ -255,14 +256,14 @@ export const createCodeStreamStage =
         const on = u > 0 && u < 1;
         h.mesh.visible = on;
         if (!on) continue;
-        const e2 = u * u * (3 - 2 * u) * 0.35 + u * 0.65;
+        const e2 = u;
         h.mesh.position.set(
           THREE.MathUtils.lerp(h.from[0], h.to[0], e2),
           THREE.MathUtils.lerp(h.from[1], h.to[1], e2),
           THREE.MathUtils.lerp(h.from[2], h.to[2], e2),
         );
         // smooth ramp in and out, like the reference flash (no pop)
-        h.mat.opacity = Math.sin(Math.PI * u) * h.peak;
+        h.mat.opacity = Math.pow(Math.sin(Math.PI * u), 0.5) * h.peak;
       }
 
       // Slow, floating drift: a gentle sway and rise while flying forward.
@@ -286,7 +287,9 @@ export const createCodeStreamStage =
         const k = Math.min(1, d / (FIELD_DEPTH * 0.7));
         tmpCol.copy(nearCol).lerp(farCol, k);
         p.mesh.material.color.copy(tmpCol);
-        p.mesh.material.opacity = p.baseOpacity * f;
+        // per-layer shimmer, like the flickering code in the reference
+        const shimmer = 0.78 + 0.22 * Math.sin(t * (3 + p.baseOpacity * 4) + p.d0 * 1.7);
+        p.mesh.material.opacity = p.baseOpacity * f * shimmer;
         p.mesh.visible = f > 0.001;
       }
 
