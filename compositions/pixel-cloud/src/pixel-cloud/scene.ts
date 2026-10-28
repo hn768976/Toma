@@ -377,7 +377,7 @@ const makeTraces = (seeds: TraceSeed[]) => {
 };
 
 // --------------------------------------------------------------- labels ---
-const makeLabels = (rng: Random, count: number, duration: number) => {
+const makeLabels = (rng: Random, count: number) => {
   const qb = new QuadBuilder({ aInfo: 4 });
   for (let i = 0; i < count; i++) {
     // re-sample (rather than shift) so labels stay spread on every side
@@ -510,7 +510,7 @@ export const createPixelCloudStage =
     board.add(circuit);
     const traces = makeTraces(makeTraceSeeds(rng, 175, duration));
     circuit.add(traces);
-    const labels = makeLabels(rng, 480, duration);
+    const labels = makeLabels(rng, 480);
     circuit.add(labels);
     const particles = makeParticles(rng, 70);
     board.add(particles);
