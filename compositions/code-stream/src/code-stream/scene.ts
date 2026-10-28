@@ -18,10 +18,14 @@ const SPEED_START = 3.1;
 const SPEED_END = 0.7;
 const EASE_FROM = 4.6; // seconds
 const EASE_TO = 8.6;
-const PANEL_TILT = -0.4; // panels lean back slightly, like stacked walls
-const PANEL_SLOTS = 22;
-const SPRITE_COUNT = 1400;
-const RISE = 0.42;
+const PANEL_TILT = -0.3; // sheets lean back slightly; the view is near-frontal
+const PANEL_SLOTS = 14;
+const SPRITE_COUNT = 900;
+const RISE = 0.1;
+const FOV = 50;
+// Panels are spread across the view frustum (in units of the half-extent at
+// their depth) so every depth layer fills the frame, as in the reference.
+const HALF_H = Math.tan((FOV / 2) * (Math.PI / 180));
 
 const backgroundMaterial = (p: Palette) =>
   new THREE.ShaderMaterial({
@@ -91,7 +95,8 @@ export const createCodeStreamStage =
     const rng = createRandom(20251027);
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(58, width / height, 0.1, 200);
+    const camera = new THREE.PerspectiveCamera(FOV, width / height, 0.1, 200);
+    const aspect = width / height;
 
     // Background quad
     const bgMat = backgroundMaterial(palette);
@@ -106,7 +111,7 @@ export const createCodeStreamStage =
     const panelGeo = new THREE.PlaneGeometry(26, 13);
     const panels: Panel[] = [];
     for (let s = 0; s < PANEL_SLOTS; s++) {
-      const perSlot = 3;
+      const perSlot = 2;
       for (let k = 0; k < perSlot; k++) {
         const mat = new THREE.MeshBasicMaterial({
           map: rng.pick(panelTextures),
@@ -127,9 +132,9 @@ export const createCodeStreamStage =
         panels.push({
           mesh,
           d0: (s + rng.range(0, 1)) * (FIELD_DEPTH / PANEL_SLOTS),
-          baseOpacity: rng.range(0.6, 0.95),
-          x: rng.range(-34, 34),
-          y: rng.range(-11, 7),
+          baseOpacity: rng.range(0.4, 0.8),
+          x: rng.range(-1.25, 1.25),
+          y: rng.range(-1.2, 1.2),
         });
       }
     }
@@ -158,8 +163,8 @@ export const createCodeStreamStage =
       scene.add(mesh);
       const items = Array.from({ length: count }, () => ({
         d0: rng.range(0, FIELD_DEPTH),
-        x: rng.range(-30, 30),
-        y: rng.range(-11, 8),
+        x: rng.range(-1.2, 1.2),
+        y: rng.range(-1.15, 1.15),
         size: rng.range(sizeMin, sizeMax) * (rng.chance(0.07) ? 2.4 : 1),
         color: rng.pick(colorChoices).clone(),
         phase: rng.range(0, Math.PI * 2),
@@ -170,15 +175,15 @@ export const createCodeStreamStage =
       return { mesh, items };
     };
     const spriteSets = [
-      makeSet(spriteTex.fill, Math.round(SPRITE_COUNT * 0.6), 0.1, 0.38),
-      makeSet(spriteTex.outline, Math.round(SPRITE_COUNT * 0.25), 0.15, 0.5),
-      makeSet(spriteTex.cross, Math.round(SPRITE_COUNT * 0.15), 0.12, 0.26),
+      makeSet(spriteTex.fill, Math.round(SPRITE_COUNT * 0.6), 0.12, 0.4),
+      makeSet(spriteTex.outline, Math.round(SPRITE_COUNT * 0.25), 0.2, 0.5),
+      makeSet(spriteTex.cross, Math.round(SPRITE_COUNT * 0.15), 0.12, 0.22),
     ];
 
     // Hero panels: large translucent squares that sweep past the lens
     // around the 4-second mark, like the light-panel fly-by in the reference.
     scene.add(camera);
-    const heroColor = new THREE.Color(palette.squareB);
+    const heroColor = new THREE.Color(palette.accent);
     const heroes = [
       { t0: 3.58, t1: 4.34, from: [-0.7, -1.7, -6.0], to: [2.4, 2.5, -3.2], w: 4.8, h: 4.1, peak: palette.heroPeak },
     ].map((cfg) => {
@@ -220,8 +225,8 @@ export const createCodeStreamStage =
     const bloom = new UnrealBloomPass(
       new THREE.Vector2(width, height),
       palette.bloomStrength,
-      0.55,
-      0.42,
+      0.5,
+      0.6,
     );
     composer.addPass(bloom);
     composer.addPass(new OutputPass());
@@ -236,7 +241,7 @@ export const createCodeStreamStage =
     const scl = new THREE.Vector3();
 
     const depthFade = (d: number) =>
-      smoothstep(4.5, 9.5, d) * (1 - smoothstep(FIELD_DEPTH * 0.62, FIELD_DEPTH, d));
+      smoothstep(7, 13, d) * (1 - smoothstep(FIELD_DEPTH * 0.62, FIELD_DEPTH, d));
     let dist = 0;
     const wrap = (d0: number) =>
       (((d0 - dist) % FIELD_DEPTH) + FIELD_DEPTH) % FIELD_DEPTH;
@@ -263,7 +268,7 @@ export const createCodeStreamStage =
       // Slow, floating drift: a gentle sway and rise while flying forward.
       camera.position.set(
         Math.sin(t * 0.33) * 0.9,
-        0.6 + t * 0.06 + Math.sin(t * 0.21 + 1.0) * 0.3,
+        Math.sin(t * 0.21 + 1.0) * 0.3,
         0,
       );
       camera.rotation.set(
@@ -276,7 +281,7 @@ export const createCodeStreamStage =
       for (const p of panels) {
         const d = wrap(p.d0);
         // The field rises with distance so text fills the frame up to the top.
-        p.mesh.position.set(p.x * (0.6 + d / 60), p.y + d * RISE, -d);
+        p.mesh.position.set(p.x * d * HALF_H * aspect, (p.y * HALF_H + RISE) * d, -d);
         const f = depthFade(d);
         const k = Math.min(1, d / (FIELD_DEPTH * 0.7));
         tmpCol.copy(nearCol).lerp(farCol, k);
@@ -290,13 +295,15 @@ export const createCodeStreamStage =
           const d = wrap(it.d0);
           const twinkle = 0.7 + 0.3 * Math.sin(t * it.rate * 1.6 + it.phase);
           const f = depthFade(d) * twinkle;
-          pos.set(it.x * (0.6 + d / 60), it.y + d * RISE, -d);
+          pos.set(it.x * d * HALF_H * aspect, (it.y * HALF_H + RISE) * d, -d);
           e.set(PANEL_TILT * 0.55, 0, it.spin * t);
           q.setFromEuler(e);
-          scl.set(it.size, it.size, 1);
+          // sprite size is a fraction of the frame height at its depth
+          const sz = it.size * d * HALF_H * 0.15;
+          scl.set(sz, sz, 1);
           m4.compose(pos, q, scl);
           set.mesh.setMatrixAt(i, m4);
-          tmpCol.copy(it.color).multiplyScalar(f * 0.6);
+          tmpCol.copy(it.color).multiplyScalar(f * 0.85);
           set.mesh.setColorAt(i, tmpCol);
         });
         set.mesh.instanceMatrix.needsUpdate = true;
