@@ -11,13 +11,16 @@ import { DITHER, SIMPLEX_3D } from "./glsl";
 
 export type CameraMode = "locked" | "orbit";
 
-const TILE_PITCH = 0.19;
-const BOARD_TILT_X = -0.42; // top of the board leans away from camera
-const BOARD_YAW = 0.58; // right side recedes
+const TILE_PITCH = 0.18;
+// The whole board (icon, traces, labels) is one plane: rolled in-plane so its
+// rows run diagonally up-right, then tilted back and turned, as in the reference.
+const BOARD_ROLL = 0.2;
+const BOARD_TILT_X = -0.62; // top of the board leans away from camera
+const BOARD_YAW = 0.42; // right side recedes
 const CLOUD_LIFT = 0.28; // raised top layer gives the icon some thickness
 // Circuit traces and labels run diagonally across the board, like the
 // reference, independent of the icon's tile grid.
-const CIRCUIT_ANGLE = 0.3;
+const CIRCUIT_ANGLE = 0; // traces follow the tile grid
 const COS_C = Math.cos(CIRCUIT_ANGLE);
 const SIN_C = Math.sin(CIRCUIT_ANGLE);
 // circuit-local -> board coordinates
@@ -179,7 +182,7 @@ const makeTiles = (rng: Random, z: number, layerGain: number, sizeScale: number)
         float bias = mix(1.25, 0.8, lr);
         float flick = 0.86 + 0.14 * sin(uTime * (1.2 + aRand.x * 2.4) + aRand.y * 6.2831);
         float rim = mix(0.75, 1.0, aEdge);
-        vI = (0.42 + blob * 0.85) * bias * flick * rim;
+        vI = (0.62 + blob * 0.85) * bias * flick * rim;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     `,
@@ -229,8 +232,9 @@ const makeTraceSeeds = (rng: Random, count: number, duration: number) => {
     let x = rng.range(-14, 18);
     let y = rng.range(-9, 13);
     // keep most traces off the cloud so the icon reads clearly
-    if (sdfLocal(x, y) < 0.6 && rng.chance(0.8)) {
-      x += 7;
+    while (sdfLocal(x, y) < 0.6 && rng.chance(0.8)) {
+      x = rng.range(-14, 18);
+      y = rng.range(-9, 13);
     }
     const pts: [number, number][] = [[x, y]];
     let dir = rng.int(0, 3);
@@ -371,16 +375,20 @@ const makeTraces = (seeds: TraceSeed[]) => {
 const makeLabels = (rng: Random, count: number, duration: number) => {
   const qb = new QuadBuilder({ aInfo: 4 });
   for (let i = 0; i < count; i++) {
-    let x = rng.range(-12, 16);
-    const y = rng.range(-8, 12);
-    if (sdfLocal(x, y) < 0.4) x += 7.5;
+    // re-sample (rather than shift) so labels stay spread on every side
+    let x = rng.range(-12, 14);
+    let y = rng.range(-8, 11);
+    while (sdfLocal(x, y) < 0.4) {
+      x = rng.range(-12, 14);
+      y = rng.range(-8, 11);
+    }
     const t0 = i < count * 0.35 ? rng.range(0.5, 1.6) : rng.range(1.0, duration - 1.5);
     const blink = rng.chance(0.6) ? rng.range(0.6, 2.2) : 0;
-    const info = [t0, blink, rng.range(0, 6.28), rng.range(0.55, 1.0)];
+    const info = [t0, blink, rng.range(0, 6.28), rng.range(0.75, 1.0)];
     const kind = rng.next();
-    const h = 0.026;
+    const h = 0.034;
     if (kind < 0.45) {
-      qb.add(rect(x, y, rng.range(0.1, 0.2), h, 0.014), { aInfo: info });
+      qb.add(rect(x, y, rng.range(0.12, 0.24), h, 0.014), { aInfo: info });
     } else if (kind < 0.75) {
       // "▪ ▪ ▪" dotted cluster
       const n = rng.int(2, 4);
@@ -477,11 +485,11 @@ export const createPixelCloudStage =
     const rng = createRandom(1207);
     const duration = 12;
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(30, width / height, 0.5, 1000);
+    const camera = new THREE.PerspectiveCamera(34, width / height, 0.5, 1000);
 
     const board = new THREE.Group();
     board.rotation.order = "YXZ";
-    board.rotation.set(BOARD_TILT_X, BOARD_YAW, 0.0);
+    board.rotation.set(BOARD_TILT_X, BOARD_YAW, BOARD_ROLL);
     scene.add(board);
 
     const boardMesh = makeBoard();
@@ -494,9 +502,9 @@ export const createPixelCloudStage =
     const circuit = new THREE.Group();
     circuit.rotation.z = CIRCUIT_ANGLE;
     board.add(circuit);
-    const traces = makeTraces(makeTraceSeeds(rng, 150, duration));
+    const traces = makeTraces(makeTraceSeeds(rng, 175, duration));
     circuit.add(traces);
-    const labels = makeLabels(rng, 320, duration);
+    const labels = makeLabels(rng, 420, duration);
     circuit.add(labels);
     const particles = makeParticles(rng, 70);
     board.add(particles);
@@ -529,8 +537,8 @@ export const createPixelCloudStage =
       const center = cloudCenter.clone().applyMatrix4(board.matrixWorld);
       if (mode === "locked") {
         // Locked-off shot as in the reference: cloud sits left of frame centre.
-        camera.position.set(center.x + 1.55, center.y - 0.3, center.z + 13.6);
-        target.set(center.x + 1.55, center.y - 0.3, center.z);
+        camera.position.set(center.x + 1.4, center.y - 0.2, center.z + 11.6);
+        target.set(center.x + 1.4, center.y - 0.2, center.z);
       } else {
         // Alternative: a slow orbiting dolly that arcs around the icon and
         // pushes in, revealing the tilted circuit board in parallax.

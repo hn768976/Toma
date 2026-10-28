@@ -1,64 +1,52 @@
-// Signed distance (board units) to the classic cloud-icon silhouette.
+// Signed distance (board units) to the classic cloud-icon silhouette:
+// two large top lobes, two smaller side lobes and a flat base.
 // Negative inside, positive outside.
 
-const circle = (x: number, y: number, cx: number, cy: number, r: number) =>
-  Math.hypot(x - cx, y - cy) - r;
+type Circle = [cx: number, cy: number, r: number];
 
-// Horizontal capsule forming the flat cloud base.
-const capsule = (
-  x: number,
-  y: number,
-  x0: number,
-  x1: number,
-  cy: number,
-  r: number,
-) => {
-  const px = Math.min(Math.max(x, x0), x1);
-  return Math.hypot(x - px, y - cy) - r;
-};
+// Flat base: a horizontal capsule from BASE_X0 to BASE_X1 at BASE_Y.
+const BASE_X0 = -2.15;
+const BASE_X1 = 2.45;
+const BASE_Y = -0.75;
+const BASE_R = 0.8;
+const LOBES: Circle[] = [
+  [-2.1, -0.25, 0.95], // left side lobe
+  [-0.6, 0.6, 1.58], // left top lobe (largest)
+  [1.35, 0.4, 1.2], // right top lobe
+  [2.6, -0.32, 0.88], // right side lobe
+];
+const BLEND = 0.18;
 
 const smin = (a: number, b: number, k: number) => {
   const h = Math.max(k - Math.abs(a - b), 0) / k;
   return Math.min(a, b) - (h * h * k) / 4;
 };
 
-// The icon is squashed vertically for the low, wide silhouette of the reference.
-export const CLOUD_FLATTEN = 0.8;
+export const CLOUD_BOUNDS = { minX: -3.2, maxX: 3.6, minY: -1.65, maxY: 2.1 };
 
-export const CLOUD_BOUNDS = {
-  minX: -3.3,
-  maxX: 3.4,
-  minY: -1.95 * CLOUD_FLATTEN,
-  maxY: 2.35 * CLOUD_FLATTEN,
-};
-
-const baseSdf = (x: number, y: number) => {
-  let d = capsule(x, y, -2.1, 2.25, -0.9, 0.95);
-  d = smin(d, circle(x, y, -1.7, -0.12, 1.02), 0.1);
-  d = smin(d, circle(x, y, 0.4, 0.75, 1.48), 0.1);
-  d = smin(d, circle(x, y, 2.12, -0.15, 1.02), 0.1);
+export const cloudSdf = (x: number, y: number) => {
+  const px = Math.min(Math.max(x, BASE_X0), BASE_X1);
+  let d = Math.hypot(x - px, y - BASE_Y) - BASE_R;
+  for (const [cx, cy, r] of LOBES) {
+    d = smin(d, Math.hypot(x - cx, y - cy) - r, BLEND);
+  }
   return d;
 };
 
-export const cloudSdf = (x: number, y: number) =>
-  baseSdf(x, y / CLOUD_FLATTEN) * CLOUD_FLATTEN;
+const f = (n: number) => n.toFixed(3);
 
 // GLSL twin of cloudSdf, used to tuck circuit traces behind the icon.
 export const CLOUD_SDF_GLSL = /* glsl */ `
-float cCircle(vec2 p, vec2 c, float r) { return length(p - c) - r; }
-float cCapsule(vec2 p, float x0, float x1, float cy, float r) {
-  return length(p - vec2(clamp(p.x, x0, x1), cy)) - r;
-}
 float cSmin(float a, float b, float k) {
   float h = max(k - abs(a - b), 0.0) / k;
   return min(a, b) - h * h * k / 4.0;
 }
 float cloudSdf(vec2 p) {
-  p.y /= ${CLOUD_FLATTEN.toFixed(3)};
-  float d = cCapsule(p, -2.1, 2.25, -0.9, 0.95);
-  d = cSmin(d, cCircle(p, vec2(-1.7, -0.12), 1.02), 0.1);
-  d = cSmin(d, cCircle(p, vec2(0.4, 0.75), 1.48), 0.1);
-  d = cSmin(d, cCircle(p, vec2(2.12, -0.15), 1.02), 0.1);
-  return d * ${CLOUD_FLATTEN.toFixed(3)};
+  float d = length(p - vec2(clamp(p.x, ${f(BASE_X0)}, ${f(BASE_X1)}), ${f(BASE_Y)})) - ${f(BASE_R)};
+  ${LOBES.map(
+    ([cx, cy, r]) =>
+      `d = cSmin(d, length(p - vec2(${f(cx)}, ${f(cy)})) - ${f(r)}, ${f(BLEND)});`,
+  ).join("\n  ")}
+  return d;
 }
 `;
