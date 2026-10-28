@@ -180,9 +180,11 @@ const makeTiles = (rng: Random, z: number, layerGain: number, sizeScale: number)
         float blob = smoothstep(-0.15, 0.85, n1 * 0.75 + n2 * 0.45);
         float lr = (c.x - bounds.x) / (bounds.y - bounds.x);
         float bias = mix(1.25, 0.8, lr);
-        float flick = 0.86 + 0.14 * sin(uTime * (1.2 + aRand.x * 2.4) + aRand.y * 6.2831);
+        float flick = 0.8 + 0.2 * sin(uTime * (1.2 + aRand.x * 2.4) + aRand.y * 6.2831);
         float rim = mix(0.75, 1.0, aEdge);
-        vI = (0.62 + blob * 0.85) * bias * flick * rim;
+        // steady base with gentle drifting blobs, plus a few near-white tiles
+        float spark = step(0.94, fract(aRand.x * 7.13 + floor(uTime * 0.6 + aRand.y * 4.0) * 0.37)) * 0.3;
+        vI = (0.5 + blob * 0.6 + spark) * bias * flick * rim;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     `,
@@ -363,7 +365,7 @@ const makeTraces = (seeds: TraceSeed[]) => {
         float across = 1.0 - smoothstep(0.35, 1.0, abs(vAcross));
         vec3 col = cLine * vInfo.w + cHead * head * 0.9;
         // tuck traces behind the translucent icon
-        float behind = mix(0.25, 1.0, smoothstep(-0.1, 0.25, cloudSdf(vBoard)));
+        float behind = mix(0.65, 1.0, smoothstep(-0.1, 0.25, cloudSdf(vBoard)));
         gl_FragColor = vec4(col * across * life * behind, 1.0);
       }
     `,
@@ -496,8 +498,8 @@ export const createPixelCloudStage =
     (boardMesh.material as THREE.ShaderMaterial).uniforms.resolution.value.set(width, height);
     board.add(boardMesh);
 
-    const tilesBase = makeTiles(rng, 0.01, 0.45, 1.0);
-    const tilesTop = makeTiles(rng, CLOUD_LIFT, 0.95, 1.0);
+    const tilesBase = makeTiles(rng, 0.01, 0.3, 1.0);
+    const tilesTop = makeTiles(rng, CLOUD_LIFT, 0.8, 1.0);
     board.add(tilesBase, tilesTop);
     const circuit = new THREE.Group();
     circuit.rotation.z = CIRCUIT_ANGLE;
