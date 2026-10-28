@@ -120,12 +120,12 @@ export const makeCodePanel = (rng: Random) => {
   for (let c = 0; c < cards; c++) {
     const w = rng.range(260, 900);
     const h = rng.range(140, 520);
-    ctx.globalAlpha = rng.range(0.02, 0.05);
+    ctx.globalAlpha = rng.range(0.035, 0.075);
     ctx.fillRect(rng.range(0, W - w), rng.range(0, H - h), w, h);
   }
 
   // Short columns of small code text
-  const cols = rng.int(16, 24);
+  const cols = rng.int(10, 15);
   for (let c = 0; c < cols; c++) {
     const x = rng.range(0, W - 260);
     const y = rng.range(0, H - 200);
@@ -165,9 +165,9 @@ export const makeSpriteTextures = () => {
 
   // Hard-edged, text-filled light panel for the lens fly-by
   const soft = makeCanvas(512, 448);
-  soft.ctx.filter = "blur(4px)";
+  soft.ctx.filter = "blur(6px)";
   soft.ctx.fillStyle = "#fff";
-  soft.ctx.globalAlpha = 0.5;
+  soft.ctx.globalAlpha = 0.62;
   soft.ctx.fillRect(12, 12, 488, 424);
   soft.ctx.filter = "none";
   soft.ctx.globalAlpha = 1;

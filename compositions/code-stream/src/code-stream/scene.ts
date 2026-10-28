@@ -14,13 +14,13 @@ import { FONT_FAMILY, makeCodePanel, makeSpriteTextures } from "./textures";
 const FIELD_DEPTH = 54;
 // Camera speed profile (world units / second): a brisk push that eases into
 // a slow drift, following the reference's motion.
-const SPEED_START = 6.5;
-const SPEED_END = 1.9;
+const SPEED_START = 8.0;
+const SPEED_END = 0.6;
 const EASE_FROM = 4.6; // seconds
 const EASE_TO = 8.6;
 const PANEL_TILT = -0.3; // sheets lean back slightly; the view is near-frontal
 const PANEL_SLOTS = 14;
-const SPRITE_COUNT = 420;
+const SPRITE_COUNT = 280;
 const RISE = 0.1;
 const FOV = 50;
 // Panels are spread across the view frustum (in units of the half-extent at
@@ -183,7 +183,7 @@ export const createCodeStreamStage =
     // Hero panels: large translucent squares that sweep past the lens
     // around the 4-second mark, like the light-panel fly-by in the reference.
     scene.add(camera);
-    const heroColor = new THREE.Color(palette.accent);
+    const heroColor = new THREE.Color(palette.accent).lerp(new THREE.Color("#ffffff"), 0.2);
     const heroes = [
       // travels straight up through the right-centre of frame, bottom edge to top edge
       { t0: 3.6, t1: 4.34, from: [1.15, -3.0, -4.2], to: [1.15, 4.0, -4.2], w: 3.3, h: 2.7, peak: palette.heroPeak },
@@ -242,7 +242,7 @@ export const createCodeStreamStage =
     const scl = new THREE.Vector3();
 
     const depthFade = (d: number) =>
-      smoothstep(7, 13, d) * (1 - smoothstep(FIELD_DEPTH * 0.62, FIELD_DEPTH, d));
+      smoothstep(10, 16, d) * (1 - smoothstep(FIELD_DEPTH * 0.45, FIELD_DEPTH * 0.8, d));
     let dist = 0;
     const wrap = (d0: number) =>
       (((d0 - dist) % FIELD_DEPTH) + FIELD_DEPTH) % FIELD_DEPTH;
@@ -288,7 +288,7 @@ export const createCodeStreamStage =
         tmpCol.copy(nearCol).lerp(farCol, k);
         p.mesh.material.color.copy(tmpCol);
         // per-layer shimmer, like the flickering code in the reference
-        const shimmer = 0.78 + 0.22 * Math.sin(t * (3 + p.baseOpacity * 4) + p.d0 * 1.7);
+        const shimmer = 0.9 + 0.1 * Math.sin(t * (3 + p.baseOpacity * 4) + p.d0 * 1.7);
         p.mesh.material.opacity = p.baseOpacity * f * shimmer;
         p.mesh.visible = f > 0.001;
       }
@@ -299,7 +299,7 @@ export const createCodeStreamStage =
           const twinkle = 0.7 + 0.3 * Math.sin(t * it.rate * 1.6 + it.phase);
           const f = depthFade(d) * twinkle;
           pos.set(it.x * d * HALF_H * aspect, (it.y * HALF_H + RISE) * d, -d);
-          e.set(PANEL_TILT * 0.55, 0, it.spin * t);
+          e.set(0, 0, 0); // axis-aligned, like the reference
           q.setFromEuler(e);
           // sprite size is a fraction of the frame height at its depth
           const sz = it.size * d * HALF_H * 0.15;
