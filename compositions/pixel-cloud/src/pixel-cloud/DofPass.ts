@@ -11,7 +11,7 @@ const TAPS = 12;
  */
 export class DofPass extends Pass {
   focus = 10;
-  aperture = 6; // CoC pixels per world unit of defocus
+  aperture = 3.5; // CoC pixels per world unit of defocus
   maxCoc = 40; // pixels
   private camera: THREE.PerspectiveCamera;
   private temp: THREE.WebGLRenderTarget;

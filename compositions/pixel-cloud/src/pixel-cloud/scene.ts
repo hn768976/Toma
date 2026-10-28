@@ -14,7 +14,7 @@ export type CameraMode = "locked" | "orbit";
 const TILE_PITCH = 0.18;
 // The whole board (icon, traces, labels) is one plane: rolled in-plane so its
 // rows run diagonally up-right, then tilted back and turned, as in the reference.
-const BOARD_ROLL = 0.2;
+const BOARD_ROLL = 0.45;
 const BOARD_TILT_X = -0.62; // top of the board leans away from camera
 const BOARD_YAW = 0.42; // right side recedes
 const CLOUD_LIFT = 0.28; // raised top layer gives the icon some thickness
@@ -138,7 +138,7 @@ const makeBoard = () => {
 const makeTiles = (rng: Random, z: number, layerGain: number, sizeScale: number) => {
   const qb = new QuadBuilder({ aCell: 2, aRand: 2, aEdge: 1 });
   const { minX, maxX, minY, maxY } = CLOUD_BOUNDS;
-  const half = (TILE_PITCH * 0.8 * sizeScale) / 2;
+  const half = (TILE_PITCH * 0.86 * sizeScale) / 2;
   for (let y = minY; y <= maxY; y += TILE_PITCH) {
     for (let x = minX; x <= maxX; x += TILE_PITCH) {
       const d = cloudSdf(x, y);
@@ -184,7 +184,10 @@ const makeTiles = (rng: Random, z: number, layerGain: number, sizeScale: number)
         float rim = mix(0.75, 1.0, aEdge);
         // steady base with gentle drifting blobs, plus a few near-white tiles
         float spark = step(0.94, fract(aRand.x * 7.13 + floor(uTime * 0.6 + aRand.y * 4.0) * 0.37)) * 0.3;
-        vI = (0.5 + blob * 0.6 + spark) * bias * flick * rim;
+        // sparse, bright hotspot clusters (stationary noise, so the average
+        // brightness stays constant over the clip)
+        float hot = smoothstep(0.1, 0.75, n1 * 0.85 + n2 * 0.3);
+        vI = (0.45 + blob * 0.2 + hot * 0.95 + spark) * bias * flick * rim;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     `,
@@ -384,7 +387,8 @@ const makeLabels = (rng: Random, count: number, duration: number) => {
       x = rng.range(-12, 14);
       y = rng.range(-8, 11);
     }
-    const t0 = i < count * 0.35 ? rng.range(0.5, 1.6) : rng.range(1.0, duration - 1.5);
+    // all labels arrive in the first ~2 s (like the reference); later life comes from blinking
+    const t0 = rng.range(0.5, 2.2);
     const blink = rng.chance(0.6) ? rng.range(0.6, 2.2) : 0;
     const info = [t0, blink, rng.range(0, 6.28), rng.range(0.75, 1.0)];
     const kind = rng.next();
@@ -506,7 +510,7 @@ export const createPixelCloudStage =
     board.add(circuit);
     const traces = makeTraces(makeTraceSeeds(rng, 175, duration));
     circuit.add(traces);
-    const labels = makeLabels(rng, 420, duration);
+    const labels = makeLabels(rng, 480, duration);
     circuit.add(labels);
     const particles = makeParticles(rng, 70);
     board.add(particles);
@@ -527,7 +531,7 @@ export const createPixelCloudStage =
     composer.addPass(new RenderPass(scene, camera));
     const dof = new DofPass(camera, width, height);
     composer.addPass(dof);
-    composer.addPass(new UnrealBloomPass(new THREE.Vector2(width, height), 0.55, 0.7, 0.26));
+    composer.addPass(new UnrealBloomPass(new THREE.Vector2(width, height), 0.6, 0.7, 0.25));
     composer.addPass(new OutputPass());
 
     const cloudCenter = new THREE.Vector3(0.2, 0.1, CLOUD_LIFT);
@@ -539,8 +543,11 @@ export const createPixelCloudStage =
       const center = cloudCenter.clone().applyMatrix4(board.matrixWorld);
       if (mode === "locked") {
         // Locked-off shot as in the reference: cloud sits left of frame centre.
-        camera.position.set(center.x + 1.4, center.y - 0.2, center.z + 11.6);
-        target.set(center.x + 1.4, center.y - 0.2, center.z);
+        // locked-off framing with a slight handheld-style drift, as in the reference
+        const dx = t * 0.05 + Math.sin(t * 0.7) * 0.04;
+        const dy = Math.sin(t * 0.5 + 1.0) * 0.03;
+        camera.position.set(center.x + 1.4 + dx, center.y - 0.2 + dy, center.z + 11.6);
+        target.set(center.x + 1.4 + dx, center.y - 0.2 + dy, center.z);
       } else {
         // Alternative: a slow orbiting dolly that arcs around the icon and
         // pushes in, revealing the tilted circuit board in parallax.
