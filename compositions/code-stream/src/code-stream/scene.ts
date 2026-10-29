@@ -15,7 +15,7 @@ const FIELD_DEPTH = 54;
 // Camera speed profile (world units / second): a brisk push that eases into
 // a slow drift, following the reference's motion.
 const SPEED_START = 8.0;
-const SPEED_END = 1.1;
+const SPEED_END = 0.45;
 const EASE_FROM = 4.6; // seconds
 const EASE_TO = 8.6;
 const PANEL_TILT = -0.3; // sheets lean back slightly; the view is near-frontal
@@ -183,7 +183,7 @@ export const createCodeStreamStage =
     // Hero panels: large translucent squares that sweep past the lens
     // around the 4-second mark, like the light-panel fly-by in the reference.
     scene.add(camera);
-    const heroColor = new THREE.Color(palette.squareB).lerp(new THREE.Color("#ffffff"), 0.25);
+    const heroColor = new THREE.Color(palette.heroTint);
     const heroes = [
       // travels straight up through the right-centre of frame, bottom edge to top edge
       { t0: 3.6, t1: 4.34, from: [1.15, -3.0, -4.2], to: [1.15, 4.0, -4.2], w: 3.3, h: 2.7, peak: palette.heroPeak },
@@ -242,7 +242,7 @@ export const createCodeStreamStage =
     const scl = new THREE.Vector3();
 
     const depthFade = (d: number) =>
-      smoothstep(10, 16, d) * (1 - smoothstep(FIELD_DEPTH * 0.45, FIELD_DEPTH * 0.8, d));
+      smoothstep(7, 12, d) * (1 - smoothstep(FIELD_DEPTH * 0.45, FIELD_DEPTH * 0.8, d));
     let dist = 0;
     const wrap = (d0: number) =>
       (((d0 - dist) % FIELD_DEPTH) + FIELD_DEPTH) % FIELD_DEPTH;
@@ -288,7 +288,7 @@ export const createCodeStreamStage =
         tmpCol.copy(nearCol).lerp(farCol, k);
         p.mesh.material.color.copy(tmpCol);
         // per-layer shimmer, like the flickering code in the reference
-        const shimmer = 0.8 + 0.2 * Math.sin(t * (3 + p.baseOpacity * 4) + p.d0 * 1.7);
+        const shimmer = 0.92 + 0.08 * Math.sin(t * (3 + p.baseOpacity * 4) + p.d0 * 1.7);
         p.mesh.material.opacity = p.baseOpacity * f * shimmer;
         p.mesh.visible = f > 0.001;
       }
@@ -296,7 +296,7 @@ export const createCodeStreamStage =
       for (const set of spriteSets) {
         set.items.forEach((it, i) => {
           const d = wrap(it.d0);
-          const twinkle = 0.7 + 0.3 * Math.sin(t * it.rate * 1.6 + it.phase);
+          const twinkle = 0.85 + 0.15 * Math.sin(t * it.rate * 1.6 + it.phase);
           const f = depthFade(d) * twinkle;
           pos.set(it.x * d * HALF_H * aspect, (it.y * HALF_H + RISE) * d, -d);
           e.set(0, 0, 0); // axis-aligned, like the reference

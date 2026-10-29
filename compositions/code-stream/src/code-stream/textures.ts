@@ -61,7 +61,7 @@ const drawCodeBlock = (
   y: number,
 ) => {
   const lines = rng.pick(CODE_SNIPPETS);
-  const size = rng.range(11, 16);
+  const size = rng.range(14, 22);
   ctx.font = `400 ${size}px "${FONT_FAMILY}"`;
   const lh = size * 1.32;
   const start = rng.int(0, Math.max(0, lines.length - 6));
@@ -132,7 +132,7 @@ export const makeCodePanel = (rng: Random) => {
     drawMicroBlock(ctx, rng, x, y, rng.range(160, 380), rng.int(8, 30));
   }
   // Readable code blocks
-  const blocks = rng.int(0, 1);
+  const blocks = rng.int(1, 2);
   for (let b = 0; b < blocks; b++) {
     drawCodeBlock(ctx, rng, rng.range(20, W - 760), rng.range(20, H - 420));
   }
@@ -165,7 +165,7 @@ export const makeSpriteTextures = () => {
 
   // Hard-edged, text-filled light panel for the lens fly-by
   const soft = makeCanvas(512, 448);
-  soft.ctx.filter = "blur(12px)";
+  soft.ctx.filter = "blur(18px)";
   soft.ctx.fillStyle = "#fff";
   soft.ctx.globalAlpha = 0.42;
   soft.ctx.fillRect(12, 12, 488, 424);
