@@ -40,7 +40,7 @@ const drawMicroBlock = (
   w: number,
   rows: number,
 ) => {
-  const size = rng.range(9, 12);
+  const size = rng.range(10, 14);
   ctx.font = `300 ${size}px "${FONT_FAMILY}"`;
   const lh = size * rng.range(1.15, 1.5);
   const charW = size * 0.48;
@@ -61,7 +61,7 @@ const drawCodeBlock = (
   y: number,
 ) => {
   const lines = rng.pick(CODE_SNIPPETS);
-  const size = rng.range(16, 24);
+  const size = rng.range(11, 16);
   ctx.font = `400 ${size}px "${FONT_FAMILY}"`;
   const lh = size * 1.32;
   const start = rng.int(0, Math.max(0, lines.length - 6));
@@ -116,7 +116,7 @@ export const makeCodePanel = (rng: Random) => {
   ctx.textBaseline = "top";
 
   // Faint card rectangles: the lighter-blue slabs the code sits on.
-  const cards = rng.int(3, 6);
+  const cards = 0; // no slabs: they read as haze
   for (let c = 0; c < cards; c++) {
     const w = rng.range(260, 900);
     const h = rng.range(140, 520);
@@ -125,14 +125,14 @@ export const makeCodePanel = (rng: Random) => {
   }
 
   // Short columns of small code text
-  const cols = rng.int(10, 15);
+  const cols = rng.int(16, 22);
   for (let c = 0; c < cols; c++) {
     const x = rng.range(0, W - 260);
     const y = rng.range(0, H - 200);
     drawMicroBlock(ctx, rng, x, y, rng.range(160, 380), rng.int(8, 30));
   }
   // Readable code blocks
-  const blocks = rng.int(1, 3);
+  const blocks = rng.int(0, 1);
   for (let b = 0; b < blocks; b++) {
     drawCodeBlock(ctx, rng, rng.range(20, W - 760), rng.range(20, H - 420));
   }
@@ -165,9 +165,9 @@ export const makeSpriteTextures = () => {
 
   // Hard-edged, text-filled light panel for the lens fly-by
   const soft = makeCanvas(512, 448);
-  soft.ctx.filter = "blur(6px)";
+  soft.ctx.filter = "blur(12px)";
   soft.ctx.fillStyle = "#fff";
-  soft.ctx.globalAlpha = 0.62;
+  soft.ctx.globalAlpha = 0.42;
   soft.ctx.fillRect(12, 12, 488, 424);
   soft.ctx.filter = "none";
   soft.ctx.globalAlpha = 1;

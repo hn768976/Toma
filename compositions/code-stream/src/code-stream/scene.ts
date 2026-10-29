@@ -15,12 +15,12 @@ const FIELD_DEPTH = 54;
 // Camera speed profile (world units / second): a brisk push that eases into
 // a slow drift, following the reference's motion.
 const SPEED_START = 8.0;
-const SPEED_END = 0.6;
+const SPEED_END = 1.1;
 const EASE_FROM = 4.6; // seconds
 const EASE_TO = 8.6;
 const PANEL_TILT = -0.3; // sheets lean back slightly; the view is near-frontal
 const PANEL_SLOTS = 14;
-const SPRITE_COUNT = 280;
+const SPRITE_COUNT = 380;
 const RISE = 0.1;
 const FOV = 50;
 // Panels are spread across the view frustum (in units of the half-extent at
@@ -51,7 +51,7 @@ const backgroundMaterial = (p: Palette) =>
         // elliptical glow hugging the top-centre
         vec2 d = vec2((vUv.x - 0.5) * aspect * 0.55, (vUv.y - 1.04) * 1.6);
         float g = exp(-dot(d, d) * 4.5);
-        col = mix(col, glow, clamp(g, 0.0, 1.0) * 0.12);
+        col = mix(col, glow, clamp(g, 0.0, 1.0) * 0.4);
         // darker side edges
         float edge = smoothstep(0.0, 0.5, abs(vUv.x - 0.5));
         col *= 1.0 - edge * 0.45;
@@ -175,15 +175,15 @@ export const createCodeStreamStage =
       return { mesh, items };
     };
     const spriteSets = [
-      makeSet(spriteTex.fill, Math.round(SPRITE_COUNT * 0.6), 0.22, 0.55),
-      makeSet(spriteTex.outline, Math.round(SPRITE_COUNT * 0.25), 0.3, 0.6),
+      makeSet(spriteTex.fill, Math.round(SPRITE_COUNT * 0.6), 0.1, 0.42),
+      makeSet(spriteTex.outline, Math.round(SPRITE_COUNT * 0.25), 0.2, 0.5),
       makeSet(spriteTex.cross, Math.round(SPRITE_COUNT * 0.15), 0.12, 0.22),
     ];
 
     // Hero panels: large translucent squares that sweep past the lens
     // around the 4-second mark, like the light-panel fly-by in the reference.
     scene.add(camera);
-    const heroColor = new THREE.Color(palette.accent).lerp(new THREE.Color("#ffffff"), 0.2);
+    const heroColor = new THREE.Color(palette.squareB).lerp(new THREE.Color("#ffffff"), 0.25);
     const heroes = [
       // travels straight up through the right-centre of frame, bottom edge to top edge
       { t0: 3.6, t1: 4.34, from: [1.15, -3.0, -4.2], to: [1.15, 4.0, -4.2], w: 3.3, h: 2.7, peak: palette.heroPeak },
@@ -288,7 +288,7 @@ export const createCodeStreamStage =
         tmpCol.copy(nearCol).lerp(farCol, k);
         p.mesh.material.color.copy(tmpCol);
         // per-layer shimmer, like the flickering code in the reference
-        const shimmer = 0.9 + 0.1 * Math.sin(t * (3 + p.baseOpacity * 4) + p.d0 * 1.7);
+        const shimmer = 0.8 + 0.2 * Math.sin(t * (3 + p.baseOpacity * 4) + p.d0 * 1.7);
         p.mesh.material.opacity = p.baseOpacity * f * shimmer;
         p.mesh.visible = f > 0.001;
       }
@@ -306,7 +306,7 @@ export const createCodeStreamStage =
           scl.set(sz, sz, 1);
           m4.compose(pos, q, scl);
           set.mesh.setMatrixAt(i, m4);
-          tmpCol.copy(it.color).multiplyScalar(f * 0.85);
+          tmpCol.copy(it.color).multiplyScalar(f * 1.15);
           set.mesh.setColorAt(i, tmpCol);
         });
         set.mesh.instanceMatrix.needsUpdate = true;
