@@ -30,8 +30,8 @@
     "render": "node scripts/render.mjs",
     "render:v1": "node scripts/render.mjs NeonTunnel-V1",
     "render:v2": "node scripts/render.mjs NeonTunnel-V2",
-    "render:4k:v1": "remotion render NeonTunnel-V1 out/4k/NeonTunnel-V1_3840x2160.mp4 --codec=h264 --crf=12",
-    "render:4k:v2": "remotion render NeonTunnel-V2 out/4k/NeonTunnel-V2_3840x2160.mp4 --codec=h264 --crf=12"
+    "render:4k:v1": "remotion render NeonTunnel-V1 out/4k/NeonTunnel-V1_3840x2160.mp4 --codec=h264 --crf=12 --color-space=bt709",
+    "render:4k:v2": "remotion render NeonTunnel-V2 out/4k/NeonTunnel-V2_3840x2160.mp4 --codec=h264 --crf=12 --color-space=bt709"
   },
   "allowScripts": {
     "esbuild": false

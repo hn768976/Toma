@@ -1,5 +1,5 @@
 /**
- * Renders the 4K (3840x2160) master of each composition with Remotion, then makes
+ * Renders the 4K (3840x2160, BT.709) master of each composition with Remotion, then makes
  * the 1080p H.264 delivery file from it (Lanczos downscale) with Remotion's bundled ffmpeg.
  *
  *   node scripts/render.mjs                 -> both versions
@@ -37,6 +37,7 @@ for (const id of comps) {
     "--crf=12",
     "--x264-preset=medium",
     "--pixel-format=yuv420p",
+    "--color-space=bt709",
   ]);
   run([
     "remotion",
@@ -48,7 +49,8 @@ for (const id of comps) {
     "-i",
     master,
     "-vf",
-    "scale=1920:1080:flags=lanczos",
+    // the master is already BT.709 / limited range: resample only, no matrix conversion
+    "scale=1920:1080:flags=lanczos:in_color_matrix=bt709:out_color_matrix=bt709:in_range=tv:out_range=tv",
     "-c:v",
     "libx264",
     "-preset",
@@ -67,6 +69,8 @@ for (const id of comps) {
     "bt709",
     "-colorspace",
     "bt709",
+    "-color_range",
+    "tv",
     "-movflags",
     "+faststart",
     "-an",

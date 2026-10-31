@@ -30,8 +30,8 @@
     "render": "node scripts/render.mjs",
     "render:v1": "node scripts/render.mjs HudLoader-V1",
     "render:v2": "node scripts/render.mjs HudLoader-V2",
-    "render:4k:v1": "remotion render HudLoader-V1 out/4k/HudLoader-V1_3840x2160.mp4 --codec=h264 --crf=12",
-    "render:4k:v2": "remotion render HudLoader-V2 out/4k/HudLoader-V2_3840x2160.mp4 --codec=h264 --crf=12"
+    "render:4k:v1": "remotion render HudLoader-V1 out/4k/HudLoader-V1_3840x2160.mp4 --codec=h264 --crf=12 --color-space=bt709",
+    "render:4k:v2": "remotion render HudLoader-V2 out/4k/HudLoader-V2_3840x2160.mp4 --codec=h264 --crf=12 --color-space=bt709"
   },
   "allowScripts": {
     "esbuild": false
