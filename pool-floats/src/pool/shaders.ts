@@ -93,8 +93,8 @@ vec3 watermelonAlbedo(float phi, float th, float wPhi, float wTh) {
   float zig = abs(fract(phi / TAU * 64.0) - 0.5) * 2.0;          // 0..1 triangle
   // outer wall: wide rind band; inner wall (hole): only a thin dark crescent low down
   float outerness = smoothstep(-0.6, 0.4, cos(th));
-  float b1 = mix(-0.22, 0.45 + wave, outerness);                  // flesh / rind
-  float b2 = b1 - mix(0.1, 0.26, outerness) + 0.07 * zig * outerness + 0.02 * sin(phi * 7.0); // rind / skin
+  float b1 = mix(-0.22, 0.5 + wave, outerness);                  // flesh / rind
+  float b2 = b1 - mix(0.1, 0.22, outerness) + 0.07 * zig * outerness + 0.02 * sin(phi * 7.0); // rind / skin
   float hw = aa * abs(cos(th)) + 0.004;
 
   // dark green skin with soft stripes
@@ -159,7 +159,7 @@ vec3 shadeFloat(vec3 albedo, vec3 N, vec3 V, float occl) {
   vec3 env = skyRadiance(R);
   vec3 H = normalize(uSunDir + V);
   float spec = (pow(max(dot(N, H), 0.0), 50.0) * 0.3 + pow(max(dot(N, H), 0.0), 14.0) * 0.12) * occl;
-  return diffuse + env * mix(0.035, 0.55, fres) + vec3(spec);
+  return diffuse + env * mix(0.022, 0.55, fres) + vec3(spec);
 }
 
 vec3 toSRGB(vec3 c) {
@@ -196,6 +196,9 @@ void main() {
   float inner = smoothstep(0.2, -0.6, dot(normalize(vec3(vLocal.x, 0.0, vLocal.z)), nl));
   float occl = 1.0 - 0.25 * inner * smoothstep(0.3, -0.2, nl.y);
   vec3 col = shadeFloat(albedo, N, V, occl);
+  // underside picks up the bright blue of the water it sits on
+  float under = smoothstep(-0.05, -0.7, N.y);
+  col = mix(col, uWaterTint * 1.35, under * 0.55);
   // parts below the waterline (seen through the mesh where water is thin)
   float sub = smoothstep(0.0, -0.06, vWorld.y);
   col = mix(col, col * uWaterTint * 1.4, sub * 0.6);
@@ -413,7 +416,7 @@ void main() {
   // surface reflection
   vec3 R = reflect(-V, N);
   float fres = 0.02 + 0.98 * pow(1.0 - max(dot(N, V), 0.0), 5.0);
-  col = mix(col, skyRadiance(R), fres * 0.22);
+  col = mix(col, skyRadiance(R), fres * 0.15);
   
 
   outColor = vec4(toSRGB(col), 1.0);

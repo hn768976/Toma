@@ -11,7 +11,7 @@ const lin = (c: RGB) =>
   new THREE.Vector3(...c.map((v) => Math.pow(v / 255, 2.2)) as [number, number, number]);
 
 const SUN_DIR = new THREE.Vector3(0.13, 1.0, -1.4).normalize();
-const LIGHT_POS = new THREE.Vector3(12.0, 60.0, -86.0);
+const LIGHT_POS = new THREE.Vector3(5.5, 60.0, -67.0);
 
 type SceneHandles = {
   renderer: THREE.WebGLRenderer;

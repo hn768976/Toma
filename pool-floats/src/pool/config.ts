@@ -52,7 +52,7 @@ export const POOL_DEPTH = 2.3;
 export const POOL_PALETTE: Omit<Palette, "floatA" | "floatB" | "floatC" | "seeds"> = {
   floorLit: [138, 203, 244],
   floorDark: [62, 160, 226],
-  shadow: [0, 118, 204],
+  shadow: [0, 150, 206],
   caustic: [236, 248, 255],
   waterTint: [70, 170, 225],
   sky: [205, 230, 255],
@@ -63,7 +63,7 @@ export const STRIPES_V1: SceneConfig = {
   camera: "static",
   palette: {
     ...POOL_PALETTE,
-    floatA: [246, 44, 74], // red
+    floatA: [255, 40, 72], // red
     floatB: [246, 244, 242], // white
     floatC: [0, 0, 0],
     seeds: [0, 0, 0],
@@ -80,7 +80,7 @@ export const STRIPES_V2: SceneConfig = {
   palette: {
     floorLit: [48, 196, 186],
     floorDark: [16, 140, 150],
-    shadow: [6, 100, 120],
+    shadow: [8, 118, 132],
     caustic: [255, 226, 160],
     waterTint: [20, 130, 140],
     sky: [255, 214, 170],
@@ -98,10 +98,10 @@ export const WATERMELON_V1: SceneConfig = {
     ...POOL_PALETTE,
     floorLit: [180, 224, 248],
     floorDark: [124, 198, 238],
-    shadow: [0, 138, 210],
-    floatA: [252, 34, 52], // flesh
-    floatB: [222, 236, 44], // rind (yellow-green)
-    floatC: [18, 104, 66], // skin (green)
+    shadow: [0, 164, 214],
+    floatA: [255, 16, 40], // flesh
+    floatB: [204, 232, 22], // rind (yellow-green)
+    floatC: [14, 110, 56], // skin (green)
     seeds: [22, 14, 14],
   },
 };
