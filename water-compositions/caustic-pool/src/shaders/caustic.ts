@@ -105,43 +105,61 @@ void main() {
   vec2 uv = (frag - 0.5 * uResolution) / uResolution.y;
   float t = uTime;
 
+  // Anisotropic frame: the reference's structure is stretched / sheared
+  // along the lower-left -> upper-right diagonal.
+  const mat2 SHEAR = mat2(0.92, -0.16, -0.16, 0.92);
   // Gentle current: the whole pattern slides slowly to the upper-left.
-  vec2 p = uv * 2.6 + vec2(0.02, -0.014) * t;
+  vec2 p = SHEAR * uv * 3.5 + vec2(0.02, -0.014) * t;
 
   // Stage 1 warp: big liquid undulation.
   vec2 w1 = vec2(
-    fbm(p * 0.5 + 0.55 * vec2(cos(0.9 * t), sin(0.7 * t))),
-    fbm(p * 0.5 + vec2(5.2, 1.3) + 0.55 * vec2(sin(0.8 * t), cos(0.6 * t)))
+    fbm(p * 0.45 + 0.55 * vec2(cos(0.9 * t), sin(0.7 * t))),
+    fbm(p * 0.45 + vec2(5.2, 1.3) + 0.55 * vec2(sin(0.8 * t), cos(0.6 * t)))
   );
-  vec2 q = p + 1.05 * w1;
+  vec2 q = p + 1.15 * w1;
 
   // Stage 2 warp: smaller, faster ripples that smear the cell borders.
   vec2 w2 = vec2(
-    fbm(q * 1.6 + vec2(1.7, 9.2) + 0.5 * vec2(cos(3.1 * t), sin(2.6 * t))),
-    fbm(q * 1.6 + vec2(8.3, 2.8) + 0.5 * vec2(sin(2.9 * t), cos(3.4 * t)))
+    fbm(q * 1.5 + vec2(1.7, 9.2) + 0.5 * vec2(cos(3.1 * t), sin(2.6 * t))),
+    fbm(q * 1.5 + vec2(8.3, 2.8) + 0.5 * vec2(sin(2.9 * t), cos(3.4 * t)))
   );
-  vec2 r = q + 0.40 * w2;
+  vec2 r = q + 0.45 * w2;
 
-  // Main cells: rounded dark blotches + soft bright borders.
-  vec2 v = voronoi(r, t * 1.7);
+  // Stage 3 warp: fine, fast shimmer (surface micro-ripples).
+  vec2 w3 = vec2(
+    gnoise(r * 5.5 + 0.9 * vec2(cos(7.3 * t), sin(6.7 * t))),
+    gnoise(r * 5.5 + vec2(3.3, 8.1) + 0.9 * vec2(sin(6.9 * t), cos(7.6 * t)))
+  );
+  vec2 rs = r + 0.10 * w3;
+
+  // Main cells: rounded dark blotches + wide soft bright bands.
+  vec2 v = voronoi(rs, t * 1.7);
   float edge = v.y - v.x;
   float blob = 1.0 - smoothstep(0.15, 0.75, v.x);
-  float interior = blob * smoothstep(0.02, 0.2, edge);
-  float border = exp(-edge * 6.0);
+  float interior = blob * smoothstep(0.03, 0.22, edge);
+  float border = exp(-edge * 3.6);
 
-  // Fine filaments.
-  vec2 v2 = voronoi(r * 2.2 + vec2(4.0, 1.0) + 0.3 * w2, t * 3.2);
-  float e2 = v2.y - v2.x;
-  float fil = exp(-e2 * 10.0);
+  // Marbled, folded swirls inside the bright regions.
+  float mph = 11.0 * fbm(rs * 1.4 + 2.0) + 3.0 * w2.x;
+  float marble = smoothstep(0.55, 1.0, 0.5 + 0.5 * sin(mph));
+  float fold = smoothstep(0.75, 1.0, 0.5 + 0.5 * sin(2.0 * mph + 1.3));
+
+  // Small bright speckles / foam flecks.
+  float speck = smoothstep(0.30, 0.42, fbm(rs * 7.0 + vec2(17.0, 3.0)));
+
+  // Interior texture so dark cells are not flat blue.
+  float inner = fbm(rs * 2.6 + 5.0);
 
   // Depth / darkness modulation so not every cell is equally dark.
   float deep = 0.35 + 0.65 * smoothstep(-0.3, 0.3, fbm(q * 0.6 + 3.0));
 
-  float L = 0.535;
-  L -= 0.40 * interior * deep;
-  L += 0.12 * border;
-  L += 0.06 * fil * (0.5 + 0.5 * smoothstep(-0.2, 0.3, fbm(r * 1.3 + 7.0)));
-  // Large-scale drifting brightness + slight top-of-frame glow.
+  float L = 0.502;
+  L -= 0.34 * interior * deep * (0.8 + 0.5 * inner);
+  L += 0.13 * border;
+  L += 0.08 * marble * (1.0 - 0.6 * interior);
+  L -= 0.035 * fold * (1.0 - 0.5 * interior);
+  L += 0.06 * speck * (1.0 - 0.7 * interior);
+  // Large-scale drifting brightness.
   L += 0.08 * fbm(uv * 1.1 + 0.25 * vec2(cos(0.3 * t), sin(0.25 * t)) + 11.0);
   // Persistent sun-light falloff: glow at top-centre, brighter right side,
   // deeper water toward the lower-left (measured from the reference).
@@ -150,7 +168,7 @@ void main() {
   L += 0.13 * uv.x + 0.10 * uv.y;
   L += 0.22 * fbm(uv * 1.25 + vec2(31.0, 7.0));
   // Fine streaky detail that rides on the warp.
-  L += 0.05 * fbm(r * 5.0 + 0.6 * vec2(cos(3.9 * t), sin(3.3 * t)));
+  L += 0.05 * fbm(rs * 5.0 + 0.6 * vec2(cos(3.9 * t), sin(3.3 * t)));
 
   vec3 col = ramp(L);
 
