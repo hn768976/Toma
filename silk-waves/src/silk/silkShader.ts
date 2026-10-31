@@ -64,8 +64,8 @@ vec4 strandShape(int i) {
   return vec4(
     0.26 + 0.30 * h1,
     0.22 + 0.30 * h2,
-    -0.08 + 0.16 * h3,
-    0.025 + 0.056 * h4
+    -0.05 + 0.10 * h3,
+    0.022 + 0.045 * h4
   );
 }
 
@@ -94,10 +94,10 @@ void main() {
     float c = (fk < 2.0 ? 1.0 : -1.0) * (0.30 + 0.12 * mod(fk, 2.0));
     float yk = c - sign(c) * 0.26 * s * s
       + 0.05 * sin(1.7 * s + fk * 1.9 + ph * (1.0 + mod(fk, 2.0)));
-    float dk = (n - yk) / 0.11;
+    float dk = (n - yk) / 0.16;
     folds += exp(-dk * dk) * (0.55 + 0.45 * sin(2.0 * s + fk + ph));
   }
-  col += u_veil * folds * 0.06;
+  col += u_veil * folds * 0.10;
 
   // ---------- silk strands ------------------------------------------------
   vec3 light = vec3(0.0);
@@ -133,7 +133,11 @@ void main() {
     float s1 = 0.75 + 0.5 * hash11(fi * 2.2 + 5.0);
     float span = smoothstep(s0, s0 + 0.35, s) * (1.0 - smoothstep(s1 - 0.35, s1, s));
     float shimmer = 0.75 + 0.25 * sin(2.6 * s + phase * 2.0 + ph * m);
-    float amount = span * shimmer * energy;
+    // brighter lobes towards the left/right, dimmer across the centre and
+    // for the lower family (the reference reads as a draped sheet)
+    float lobe = 0.7 + 0.5 * smoothstep(0.15, 0.7, abs(s));
+    float family = side > 0.0 ? 1.0 : 0.75;
+    float amount = span * shimmer * energy * lobe * family;
     if (amount < 0.002) continue;
 
     // Outward side gets the soft veil, inward side the sharp edge.
@@ -144,13 +148,13 @@ void main() {
       : exp(-(dOut * dOut) / (w * w * 2.0)) * 0.35;
 
     // Fine fibres: high frequency across, low frequency along the strand.
-    float fib = vnoise(vec2(s * 5.0 + fi * 13.0, d * 0.45 * u_resolution.y / (1.0 + blur)));
+    float fib = vnoise(vec2(s * 5.0 + fi * 13.0, d * 0.3 * u_resolution.y / (1.0 + blur)));
     fib = mix(0.2, 1.15, fib * fib);
     float fibZone = exp(-abs(dOut) / (w * 2.5 + 0.002));
 
     light += u_veil * veil * amount;
     light += u_sheen * edge * amount * mix(0.6, 1.0, fib);
-    light += u_fiber * fibZone * amount * fib * fib * 0.42 / (1.0 + 0.6 * blur);
+    light += u_fiber * fibZone * amount * fib * fib * 0.55 / (1.0 + 0.6 * blur);
   }
   col += light * u_exposure;
 

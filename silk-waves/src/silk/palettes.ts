@@ -13,8 +13,8 @@ const rgb = (r: number, g: number, b: number): RGB => [r / 255, g / 255, b / 255
 
 /** Version 1 — matches the reference: midnight navy silk on charcoal. */
 export const MIDNIGHT_NAVY: SilkPalette = {
-  bgCenter: rgb(18, 20, 26),
-  bgEdge: rgb(24, 27, 33),
+  bgCenter: rgb(16, 18, 24),
+  bgEdge: rgb(25, 28, 38),
   veil: rgb(36, 42, 62),
   sheen: rgb(55, 70, 108),
   fiber: rgb(110, 130, 180),
