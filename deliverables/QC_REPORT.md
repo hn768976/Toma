@@ -10,8 +10,8 @@
 |---|------|----------------|-------------------|------------|
 | 1 | `Comp1_Underwater_V1_1080p.mp4` | `Underwater-V1` | Underwater light rays. Matches the reference: clear ocean blue. | WebGL 2 fragment shader |
 | 2 | `Comp1_Underwater_V2_1080p.mp4` | `Underwater-V2` | Alternative **colour palette**: emerald lagoon water with warm golden light shafts. | WebGL 2 fragment shader |
-| 3 | `Comp2_MoonSky_V1_1080p.mp4` | `MoonSky-V1` | Full moon in a starry night sky, in the reference's framing: a near-locked view with the moon low on the right. **Clouds removed on request.** | Three.js with a custom GLSL sky/moon shader |
-| 4 | `Comp2_MoonSky_V2_1080p.mp4` | `MoonSky-V2` | Alternative **camera move**: a banking turn to the right while tilting down. The moon swings from the right edge toward the centre and the horizon rolls up to 8°. | Three.js with a custom GLSL sky/moon shader |
+| 3 | `Comp2_MoonSky_V1_1080p.mp4` | `MoonSky-V1` | Full moon in a starry night sky, in the reference's framing (moon low on the right), with a **slow push in** towards the moon. **Clouds removed on request.** | Three.js with a custom GLSL sky/moon shader |
+| 4 | `Comp2_MoonSky_V2_1080p.mp4` | `MoonSky-V2` | Alternative **camera move**: a **slow pull out** combined with a banking turn to the right. The moon shrinks and swings from the right edge toward the centre while the horizon rolls up to 8°. | Three.js with a custom GLSL sky/moon shader |
 | 5 | `ocean-sky-compositions_4K_project.zip` | — | Complete project: source, configuration, lockfile and README. | — |
 
 Everything is generated procedurally, so the project has no external image, video or font assets.
@@ -37,7 +37,7 @@ Everything is generated procedurally, so the project has no external image, vide
 | Full decode errors | 0 | 0 | 0 | 0 |
 | Black frames (`blackdetect` d=0.04, pix_th=0.1) | none | none | none | none |
 | Frozen frames (`freezedetect` n=0.001, d=0.2) | none | none | none | none |
-| Largest frame-to-frame mean-luma step | 0.17 | 0.18 | 0.12 | 0.14 |
+| Largest frame-to-frame mean-luma step | 0.17 | 0.18 | 0.20 | 0.20 |
 | Audio | none (references have none) | none | none | none |
 
 ## Project ZIP checks
@@ -52,13 +52,11 @@ Everything is generated procedurally, so the project has no external image, vide
   - `remotion compositions` lists all four at **3840×2160, 30 fps** with the correct durations.
   - The documented `npm run render:c1v1` rendered the full 300-frame 1080p H.264 file in 9 min. Its first frame is bit-identical to the delivered `Comp1_Underwater_V1_1080p.mp4`.
   - Each other composition rendered successfully, as a 4K still and as a short 1080p test render.
-- **Final ZIP re-verified** after the clouds were removed:
+- **Final ZIP re-verified** after the push-in / pull-out moves were added:
   - The extracted source is identical to the repository.
   - `npm ci` and `npm run lint` are clean.
   - All four compositions are listed at 3840×2160.
-  - A 4K still of `MoonSky-V1` renders at 3840×2160.
-  - The documented `npm run render:c2v1` produces 1920×1080 H.264.
-  - Frame 0 rendered from the extracted project is bit-identical to frame 0 rendered from the repository. The encoded test clip matches the delivered file at 46.5 dB PSNR; the remaining difference is only the encoder's rate control on a shorter clip.
+  - Frame 200 of `MoonSky-V1` and of `MoonSky-V2`, rendered from the extracted project, is bit-identical to the same frame rendered from the repository.
 - `npm run lint` (ESLint and `tsc`) is clean.
 
 ## Independent agent verification
@@ -87,7 +85,7 @@ A separate reviewer agent compared each render with its reference. It used side-
 - Moon size: about 0.195 of frame width.
 - The cool, desaturated night palette.
 - Stars and Milky Way detail.
-- The near-locked framing of V1.
+- The reference framing of V1 at its first frame.
 
 **Moon surface.** It was reworked for this version:
 - maria with soft edges, concentrated on the upper part of the disc as on the real Moon
@@ -96,14 +94,14 @@ A separate reviewer agent compared each render with its reference. It used side-
 - a bright crater with rays in the south
 - a darker right limb
 
-**V2 vs V1.** Moon centre over the 8 s:
-- V1 stays locked near x≈0.69.
-- V2 sweeps from the right edge toward the centre and rises in frame, while the camera banks up to 8° of roll.
+**Camera moves (added on request).** The sky is infinitely distant, so both moves are lens moves (field of view), with eased in/out timing. The moon changes size while the stars stay pin-sharp points.
+- **V1, slow push in:** the vertical field of view narrows from 40° to 30°, so the moon grows about 1.35× over 8 s. The camera also turns 4° towards the moon so it stays framed on the right.
+- **V2, slow pull out:** the field of view widens from 32° to 46°, so the moon shrinks to about 0.66× while it swings from the right edge toward the centre and the camera banks up to 8° of roll.
 - So V2 is clearly a different camera move with the same concept and palette.
 
-**Technical:** both pass, as in the table above. The largest luma step is 0.12 for V1 and 0.14 for V2, with no flicker.
+**Technical:** both pass, as in the table above. The largest luma step is 0.20 for both, with no flicker.
 
 ## Known limitations
 
 - The underwater deliverable is 10.000 s against the reference's 10.010 s. This is the closest possible at 30 fps (see above).
-- Rendering uses WebGL in headless Chrome. Without a GPU it falls back to software rendering: about 9–13 min per underwater video and about 8 min per sky video on 4 CPU cores. `remotion.config.ts` raises the per-frame timeout to 10 min and sets concurrency to 2 so these renders don't time out.
+- Rendering uses WebGL in headless Chrome. Without a GPU it falls back to software rendering: about 9–13 min per underwater video and about 10–11 min per sky video on 4 CPU cores. `remotion.config.ts` raises the per-frame timeout to 10 min and sets concurrency to 2 so these renders don't time out.
