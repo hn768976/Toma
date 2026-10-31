@@ -146,7 +146,7 @@ export const buildScene = (
     sprites.push({
       pos: hub.pos,
       color: palette.halo,
-      alpha: 0.32,
+      alpha: 0.26,
       size: 4.2 * sc,
       minPx: 10,
       kind: SPRITE_GLOW,
@@ -176,16 +176,16 @@ export const buildScene = (
     });
     billboards.push({
       ...billboards[billboards.length - 1],
-      alpha: 0.3,
+      alpha: 0.16,
       extraBlur: 14,
     });
     // sparkle cloud
-    for (let i = 0; i < 220; i++) {
+    for (let i = 0; i < 340; i++) {
       sprites.push({
         pos: hub.pos
           .clone()
           .add(v3(gauss(rng), gauss(rng), gauss(rng)).multiplyScalar(0.7 * sc)),
-        color: rng() < 0.8 ? palette.sparkle : palette.satB,
+        color: rng() < 0.55 ? palette.sparkle : rng() < 0.8 ? palette.sparkleB : palette.satB,
         alpha: range(rng, 0.45, 1),
         size: range(rng, 0.035, 0.07),
         minPx: 2.6,
@@ -198,7 +198,7 @@ export const buildScene = (
     }
     // satellites + local mesh
     const sats: THREE.Vector3[] = [];
-    const nSat = 9 + Math.floor(rng() * 6);
+    const nSat = 14 + Math.floor(rng() * 7);
     for (let i = 0; i < nSat; i++) {
       const p = hub.pos
         .clone()
@@ -353,13 +353,13 @@ export const buildScene = (
   });
 
   /* ---- foreground streaks that cross the camera path ---- */
-  for (let i = 0; i < 26; i++) {
+  for (let i = 0; i < 40; i++) {
     const f = Math.floor(rng() * states.length);
     const streakBirth = f / fps < 3 ? -10 : f / fps - 3;
     const s = states[f];
     const p = s.pos
       .clone()
-      .add(randomUnit(rng).multiplyScalar(range(rng, 1.5, 6)));
+      .add(randomUnit(rng).multiplyScalar(range(rng, 1.0, 5)));
     const d = randomUnit(rng).multiplyScalar(range(rng, 30, 60));
     const orange = rng() < 0.2;
     const c = orange ? palette.lineWarm : palette.line;
@@ -368,9 +368,9 @@ export const buildScene = (
       b: p.clone().add(d),
       colorA: c,
       colorB: c,
-      alphaA: 0.38,
-      alphaB: 0.38,
-      width: 1.8,
+      alphaA: 0.45,
+      alphaB: 0.45,
+      width: 2.4,
       birth: streakBirth,
       grow: 1.6,
     });
@@ -402,6 +402,69 @@ export const buildScene = (
     const last = billboards[billboards.length - 1];
     billboards.push({ ...last, alpha: 0.45, extraBlur: 22 });
   }
+
+  /* ---- ringless sparkle-cluster nodes along the path ---- */
+  for (let i = 0; i < 14; i++) {
+    const f = Math.floor(((i + 0.5 + rng() * 0.5) / 14) * states.length);
+    const s = states[Math.min(states.length - 1, f)];
+    const fwd = s.target.clone().sub(s.pos).normalize();
+    const side = new THREE.Vector3().crossVectors(fwd, v3(0, 1, 0)).normalize();
+    const c = s.pos
+      .clone()
+      .add(fwd.multiplyScalar(range(rng, 9, 22)))
+      .add(side.multiplyScalar((rng() < 0.5 ? -1 : 1) * range(rng, 3, 9)))
+      .add(v3(0, range(rng, -4, 4), 0));
+    sprites.push({ pos: c, color: palette.core, alpha: 0.9, size: 0.45, minPx: 4, kind: SPRITE_GLOW });
+    sprites.push({ pos: c, color: palette.halo, alpha: 0.18, size: 2.6, minPx: 8, kind: SPRITE_GLOW });
+    for (let k = 0; k < 160; k++) {
+      sprites.push({
+        pos: c.clone().add(v3(gauss(rng), gauss(rng), gauss(rng)).multiplyScalar(0.6)),
+        color: rng() < 0.6 ? palette.sparkle : palette.sparkleB,
+        alpha: range(rng, 0.4, 1),
+        size: range(rng, 0.03, 0.06),
+        minPx: 2.2,
+        twinklePhase: rng(),
+        twinkleAmt: 0.7,
+        driftAmp: 0.06,
+        driftSpeed: range(rng, 0.3, 0.9),
+      });
+    }
+    for (let k = 0; k < 6; k++) {
+      const p = c.clone().add(randomUnit(rng).multiplyScalar(range(rng, 1, 2.6)));
+      const col = rng() < 0.6 ? palette.satA : palette.satB;
+      sprites.push({ pos: p, color: col, alpha: 0.9, size: 0.08, minPx: 2.4 });
+      lines.push({ a: c, b: p, colorA: palette.line, colorB: col, alphaA: 0.6, alphaB: 0.5, width: 1.2 });
+    }
+  }
+
+  /* ---- faint far-away background constellation ---- */
+  const far: THREE.Vector3[] = [];
+  for (let i = 0; i < 46; i++) {
+    far.push(
+      layout.center
+        .clone()
+        .add(randomUnit(rng).multiplyScalar(range(rng, 75, 120))),
+    );
+  }
+  far.forEach((p, i) => {
+    sprites.push({ pos: p, color: palette.core, alpha: 0.7, size: 0.5, minPx: 2.5, kind: SPRITE_GLOW });
+    const order = far
+      .map((q, j) => ({ j, d: q.distanceTo(p) }))
+      .filter((o) => o.j !== i)
+      .sort((a, b) => a.d - b.d);
+    for (let k = 0; k < 2; k++) {
+      if (order[k].j < i) continue;
+      lines.push({
+        a: p,
+        b: far[order[k].j],
+        colorA: palette.line,
+        colorB: palette.line,
+        alphaA: 0.5,
+        alphaB: 0.5,
+        width: 1.2,
+      });
+    }
+  });
 
   /* ---- dust ---- */
   for (let i = 0; i < 2600; i++) {

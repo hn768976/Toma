@@ -15,8 +15,6 @@ export type CrashPalette = {
   square: RGB;
   haze: RGB;
   dust: RGB;
-  /** CSS colour of the vignette edge */
-  vignette: string;
 };
 
 /** Version 1 — sampled from the reference: ember red / orange / hot white. */
@@ -35,7 +33,6 @@ export const EMBER_PALETTE: CrashPalette = {
   square: [1.0, 0.76, 0.62],
   haze: [0.85, 0.16, 0.02],
   dust: [1.0, 0.45, 0.15],
-  vignette: "rgba(0,0,0,0.92)",
 };
 
 /**
@@ -57,5 +54,4 @@ export const ARCTIC_PALETTE: CrashPalette = {
   square: [0.72, 0.9, 1.0],
   haze: [0.02, 0.2, 0.62],
   dust: [0.3, 0.7, 1.0],
-  vignette: "rgba(0,0,4,0.92)",
 };

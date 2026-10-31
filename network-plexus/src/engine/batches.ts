@@ -444,7 +444,8 @@ void main() {
     float o = vSeed * 6.0;
     a += 0.85 * cover(arcSdf(q, 0.42, 0.011, o + 0.6, 1.05)) * min(1.0, (0.011 + vPx) / bl());
     a += 0.85 * cover(arcSdf(q, 0.42, 0.011, o + 3.9, 0.55)) * min(1.0, (0.011 + vPx) / bl());
-    a += 0.35 * stroke(length(q) - 0.19, 0.006);
+    a += 0.75 * cover(arcSdf(q, 0.2, 0.016, o + 2.2, 1.2)) * min(1.0, (0.016 + vPx) / bl());
+    a += 0.75 * cover(arcSdf(q, 0.2, 0.016, o + 5.3, 0.7)) * min(1.0, (0.016 + vPx) / bl());
   } else if (vKind < 1.5) {
     // HUD panel: faint fill, thin frame, rows of bright "text" bars.
     float W = vAspect * 0.5;
@@ -553,5 +554,69 @@ export const createBackground = (
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
   mesh.frustumCulled = false;
   mesh.renderOrder = -10;
+  return mesh;
+};
+
+/* ------------------------------------------------------------------ */
+/* Final vignette / exposure pass (dithered, no banding)               */
+/* ------------------------------------------------------------------ */
+
+export type VignetteOptions = {
+  /** normalised radius where darkening starts */
+  inner: number;
+  /** normalised radius where darkening reaches `strength` */
+  outer: number;
+  /** 0..1 amount of darkening at `outer` */
+  strength: number;
+};
+
+/**
+ * Multiplies the frame by a smooth radial vignette and the exposure, and
+ * adds ±1 LSB of triangular dither so dark gradients never band in 8-bit.
+ * Blend: result = src.rgb + dst * src.a.
+ */
+export const createVignette = (opts: VignetteOptions, uniforms: SharedUniforms) => {
+  const mat = new THREE.ShaderMaterial({
+    uniforms: {
+      ...uniforms,
+      uInner: { value: opts.inner },
+      uOuter: { value: opts.outer },
+      uStrength: { value: opts.strength },
+      uExposure: { value: 1 },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = vec4(position.xy * 2.0, 0.0, 1.0); }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform vec2 uRes;
+      uniform float uTime;
+      uniform float uInner;
+      uniform float uOuter;
+      uniform float uStrength;
+      uniform float uExposure;
+      varying vec2 vUv;
+      float h(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+      void main() {
+        vec2 p = (vUv - 0.5) * 2.0;
+        p.x *= 0.92;
+        float d = length(p);
+        float v = 1.0 - uStrength * smoothstep(uInner, uOuter, d);
+        vec2 fc = floor(gl_FragCoord.xy) + floor(uTime * 30.0) * 7.0;
+        float n = (h(fc) + h(fc + 19.19) - 1.0) / 255.0;
+        gl_FragColor = vec4(vec3(max(n, 0.0)), v * uExposure);
+      }
+    `,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    blending: THREE.CustomBlending,
+    blendEquation: THREE.AddEquation,
+    blendSrc: THREE.OneFactor,
+    blendDst: THREE.SrcAlphaFactor,
+  });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 1000;
   return mesh;
 };

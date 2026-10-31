@@ -20,6 +20,7 @@ import {
   SpriteBatch,
   createBackground,
   createSharedUniforms,
+  createVignette,
 } from "../engine/batches";
 import { mulberry32, range } from "../engine/random";
 import { createTextPlane } from "../engine/textPlane";
@@ -143,6 +144,9 @@ const createEngine = (
   }));
   const trailBatch = new LineBatch(trailLines, uniforms);
   scene.add(trailBatch.mesh, sparkBatch.mesh);
+  // Heavy lens vignette (as in the reference), rendered in WebGL with dither
+  // so the dark falloff never bands.
+  scene.add(createVignette({ inner: 0.3, outer: 1.3, strength: 0.93 }, uniforms));
 
   const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
   const pa = new THREE.Vector3();
@@ -262,12 +266,6 @@ export const MarketCrash: React.FC<MarketCrashProps> = ({ variant }) => {
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
       <canvas ref={canvasRef} style={{ width, height, display: "block" }} />
-      {/* Heavy lens vignette, as in the reference */}
-      <AbsoluteFill
-        style={{
-          background: `radial-gradient(ellipse 72% 68% at 50% 50%, rgba(0,0,0,0) 38%, ${palette.vignette} 100%)`,
-        }}
-      />
     </AbsoluteFill>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useMemo, useRef } from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import {
   AbsoluteFill,
   cancelRender,
@@ -20,6 +20,7 @@ import {
   SpriteBatch,
   createBackground,
   createSharedUniforms,
+  createVignette,
 } from "../engine/batches";
 import { smoothstep } from "../engine/spline";
 import { CameraRig, computeStates, flyThroughRig, orbitRig } from "./camera";
@@ -116,7 +117,10 @@ const createEngine = (
     })),
     uniforms,
   );
-  scene.add(lineBatch.mesh, bbBatch.mesh, spriteBatch.mesh, pulseBatch.mesh);
+  // Soft, wide lens vignette + exposure, rendered in WebGL with dither.
+  const vignette = createVignette({ inner: 0.35, outer: 1.45, strength: 0.6 }, uniforms);
+  const vignetteMat = vignette.material as THREE.ShaderMaterial;
+  scene.add(lineBatch.mesh, bbBatch.mesh, spriteBatch.mesh, pulseBatch.mesh, vignette);
 
   const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
   const tmp = new THREE.Vector3();
@@ -136,6 +140,7 @@ const createEngine = (
 
       uniforms.uTime.value = t;
       uniforms.uFocus.value = s.focus;
+      vignetteMat.uniforms.uExposure.value = s.exposure;
 
       data.pulses.forEach((p, i) => {
         const u = (p.phase + t * p.speed) % 1;
@@ -193,26 +198,9 @@ export const NetworkPlexus: React.FC<NetworkPlexusProps> = ({ variant }) => {
     engineRef.current?.render(frame);
   }, [frame, variant, width, height]);
 
-  // Closing fade (matches the reference, which settles into darkness).
-  const exposure = useMemo(() => {
-    const t = frame / fps;
-    const d = durationInFrames / fps;
-    return 1 - 0.65 * smoothstep(d - 1.2, d, t);
-  }, [frame, fps, durationInFrames]);
-
   return (
     <AbsoluteFill style={{ backgroundColor: "#03070b" }}>
       <canvas ref={canvasRef} style={{ width, height, display: "block" }} />
-      {/* Lens vignette */}
-      <AbsoluteFill
-        style={{
-          background:
-            "radial-gradient(ellipse 75% 70% at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.45) 100%)",
-        }}
-      />
-      <AbsoluteFill
-        style={{ backgroundColor: "#000", opacity: 1 - exposure }}
-      />
     </AbsoluteFill>
   );
 };

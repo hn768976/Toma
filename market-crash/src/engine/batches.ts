@@ -613,3 +613,67 @@ export const createBackground = (
   mesh.renderOrder = -10;
   return mesh;
 };
+
+/* ------------------------------------------------------------------ */
+/* Final vignette / exposure pass (dithered, no banding)               */
+/* ------------------------------------------------------------------ */
+
+export type VignetteOptions = {
+  /** normalised radius where darkening starts */
+  inner: number;
+  /** normalised radius where darkening reaches `strength` */
+  outer: number;
+  /** 0..1 amount of darkening at `outer` */
+  strength: number;
+};
+
+/**
+ * Multiplies the frame by a smooth radial vignette and the exposure, and
+ * adds ±1 LSB of triangular dither so dark gradients never band in 8-bit.
+ * Blend: result = src.rgb + dst * src.a.
+ */
+export const createVignette = (opts: VignetteOptions, uniforms: SharedUniforms) => {
+  const mat = new THREE.ShaderMaterial({
+    uniforms: {
+      ...uniforms,
+      uInner: { value: opts.inner },
+      uOuter: { value: opts.outer },
+      uStrength: { value: opts.strength },
+      uExposure: { value: 1 },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = vec4(position.xy * 2.0, 0.0, 1.0); }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform vec2 uRes;
+      uniform float uTime;
+      uniform float uInner;
+      uniform float uOuter;
+      uniform float uStrength;
+      uniform float uExposure;
+      varying vec2 vUv;
+      float h(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+      void main() {
+        vec2 p = (vUv - 0.5) * 2.0;
+        p.x *= 0.92;
+        float d = length(p);
+        float v = 1.0 - uStrength * smoothstep(uInner, uOuter, d);
+        vec2 fc = floor(gl_FragCoord.xy) + floor(uTime * 30.0) * 7.0;
+        float n = (h(fc) + h(fc + 19.19) - 1.0) / 255.0;
+        gl_FragColor = vec4(vec3(max(n, 0.0)), v * uExposure);
+      }
+    `,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    blending: THREE.CustomBlending,
+    blendEquation: THREE.AddEquation,
+    blendSrc: THREE.OneFactor,
+    blendDst: THREE.SrcAlphaFactor,
+  });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 1000;
+  return mesh;
+};

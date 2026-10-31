@@ -8,6 +8,7 @@ export type Palette = {
   star: RGB;
   ring: RGB;
   sparkle: RGB;
+  sparkleB: RGB;
   satA: RGB;
   satB: RGB;
   line: RGB;
@@ -21,13 +22,14 @@ export type Palette = {
 
 /** Sampled from the reference: navy space, orange targets, ice-blue lines. */
 export const REFERENCE_PALETTE: Palette = {
-  bgInner: [0.06, 0.09, 0.13],
-  bgOuter: [0.008, 0.022, 0.035],
+  bgInner: [0.11, 0.155, 0.185],
+  bgOuter: [0.02, 0.05, 0.065],
   core: [1.0, 0.95, 0.98],
-  halo: [0.9, 0.62, 0.9],
+  halo: [0.82, 0.66, 1.0],
   star: [1.0, 0.86, 0.92],
   ring: [1.0, 0.47, 0.16],
-  sparkle: [1.0, 0.8, 0.9],
+  sparkle: [1.0, 0.8, 0.92],
+  sparkleB: [0.78, 0.72, 1.0],
   satA: [0.45, 0.85, 1.0],
   satB: [1.0, 0.58, 0.25],
   line: [0.62, 0.76, 1.0],
