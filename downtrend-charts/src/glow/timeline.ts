@@ -9,12 +9,13 @@ export const BAR_DEPTH = 0.64;
 export const barX = (i: number) => -3.66 + i * BAR_SPACING;
 
 /** Seconds at which each bar starts growing (measured from the reference). */
-export const BAR_START = [0.42, 1.92, 2.92, 3.92, 4.92, 5.92, 6.92];
-export const BAR_GROW = 1.3;
+export const BAR_START = [0.45, 1.65, 2.9, 3.92, 4.92, 5.92, 6.92];
+/** Growth duration per bar (bar 1 rises slowly on its own at the start). */
+export const BAR_GROW = [1.85, 1.35, 1.3, 1.3, 1.3, 1.3, 1.3];
 
 /** 0..1 growth of bar i at time t (seconds). */
 export const barProgress = (i: number, t: number) => {
-  const p = clamp01((t - BAR_START[i]) / BAR_GROW);
+  const p = clamp01((t - BAR_START[i]) / BAR_GROW[i]);
   return easeInOutSine(p);
 };
 
@@ -25,7 +26,14 @@ export const ARROW_END: [number, number] = [barX(6) + 0.35, 2.55];
 export const arrowReach = (t: number) =>
   interpolateKeys(
     t,
-    [1.85, 2.25, 2.6, 4.5, 7.0, 9.6],
+    [1.5, 1.95, 2.35, 4.5, 7.0, 9.6],
     [0, 0.4, 0.52, 0.8, 0.95, 1],
     easeOutCubic,
   );
+
+/**
+ * Base glow of bar i: fades in from just before the bar starts (a faint
+ * light pad on the floor, as in the reference) so nothing pops on.
+ */
+export const glowAmount = (i: number, t: number) =>
+  easeInOutSine(clamp01((t - BAR_START[i] + 0.35) / 0.75));

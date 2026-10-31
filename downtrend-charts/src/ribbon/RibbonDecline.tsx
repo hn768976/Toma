@@ -16,13 +16,13 @@ import { PostFX } from "../common/PostFX";
 /* ------------------------------------------------------------- layout */
 
 const SPACING = 0.9;
-const BAR_W = 0.54;
-const BAR_D = 0.54;
+const BAR_W = 0.46;
+const BAR_D = 0.34;
 const HEIGHTS = [3.0, 2.6, 2.95, 2.0, 1.6, 0.9, 0.62];
 const bx = (i: number) => i * SPACING;
 
 /** Seconds at which each bar starts rising (measured from the reference). */
-const BAR_START = [0.15, 0.9, 1.5, 2.05, 2.85, 3.6, 4.35];
+const BAR_START = [0.15, 0.75, 1.25, 2.0, 2.85, 3.6, 4.35];
 const BAR_GROW = 0.68;
 const barProgress = (i: number, t: number) =>
   easeInOutSine(clamp01((t - BAR_START[i]) / BAR_GROW));
@@ -31,7 +31,7 @@ const barProgress = (i: number, t: number) =>
 
 /** Zig-zag through the bar tops: (bar-index, height) control points. */
 const PATH_POINTS: [number, number][] = [
-  [-0.3, 3.6],
+  [-0.42, 3.88],
   [1.0, 2.8],
   [2.25, 3.78],
   [3.05, 2.28],
@@ -41,10 +41,10 @@ const PATH_POINTS: [number, number][] = [
   [6.9, 0.7],
 ];
 const RIBBON_Z = 0.3;
-const RIBBON_HALF_W = 0.19; // in the chart plane
-const RIBBON_HALF_D = 0.15; // depth (towards camera)
-const HEAD_HALF_W = 0.48;
-const HEAD_LEN = 0.7;
+const RIBBON_HALF_W = 0.21; // in the chart plane (flat, wide ribbon)
+const RIBBON_HALF_D = 0.08; // depth (towards camera)
+const HEAD_HALF_W = 0.4;
+const HEAD_LEN = 0.92;
 
 const curve = new THREE.CatmullRomCurve3(
   PATH_POINTS.map(([i, y]) => new THREE.Vector3(i * SPACING, y, RIBBON_Z)),
@@ -74,7 +74,7 @@ const headU = (t: number) => {
 
 /** Rounded-rectangle cross-section: (a along in-plane normal, b along z) + normals. */
 const PROFILE = (() => {
-  const r = 0.085;
+  const r = 0.035;
   const seg = 6;
   const out: { a: number; b: number; na: number; nb: number }[] = [];
   const corners: [number, number, number][] = [
@@ -297,8 +297,8 @@ const KeyLight: React.FC = () => {
     c.top = 18;
     c.bottom = -18;
     c.near = 1;
-    c.far = 45;
-    l.shadow.radius = 18;
+    c.far = 160;
+    l.shadow.radius = 28;
     l.shadow.blurSamples = 24;
     l.shadow.bias = -0.0004;
     return l;
@@ -316,8 +316,8 @@ const KeyLight: React.FC = () => {
 export type RibbonCameraMode = "static" | "orbit";
 
 const STATIC_CAM = {
-  pos: [8.0, 4.0, 9.0] as Vec3,
-  target: [3.4, 1.78, 0] as Vec3,
+  pos: [8.0, 3.3, 9.0] as Vec3,
+  target: [3.4, 1.95, 0] as Vec3,
   fov: 27,
 };
 
@@ -326,7 +326,7 @@ const ORBIT_PATH = new THREE.CatmullRomCurve3([
   new THREE.Vector3(-4.6, 1.1, 7.6),
   new THREE.Vector3(0.6, 1.9, 10.4),
   new THREE.Vector3(6.2, 3.4, 10.2),
-  new THREE.Vector3(10.4, 5.3, 8.0),
+  new THREE.Vector3(9.2, 4.4, 9.6),
 ]);
 
 const CameraRig: React.FC<{ t: number; mode: RibbonCameraMode; duration: number }> = ({
@@ -348,7 +348,7 @@ const CameraRig: React.FC<{ t: number; mode: RibbonCameraMode; duration: number 
     const tx = THREE.MathUtils.lerp(2.4, head.x * 0.35 + 1.9, 0.7);
     const ty = THREE.MathUtils.lerp(1.9, 1.5, e);
     camera.lookAt(tx, ty, 0);
-    camera.fov = THREE.MathUtils.lerp(37, 33, e);
+    camera.fov = THREE.MathUtils.lerp(37, 31, e);
   }
   camera.near = 0.1;
   camera.far = 200;
@@ -394,6 +394,13 @@ export const RibbonDecline: React.FC<{ cameraMode: RibbonCameraMode }> = ({
       >
         <Scene mode={cameraMode} />
       </ThreeCanvas>
+      {/* studio light fall-off: darker toward the left/top-left like the reference */}
+      <AbsoluteFill
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 95% at 64% 60%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.26) 100%)",
+        }}
+      />
     </AbsoluteFill>
   );
 };

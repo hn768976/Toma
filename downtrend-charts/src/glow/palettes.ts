@@ -13,9 +13,9 @@ export type GlowPalette = {
 
 /** Version 1 — matches the reference: red/orange neon bars, dark red arrow. */
 export const EMBER: GlowPalette = {
-  bars: ["#ff2410", "#ff4a12", "#ff6a14", "#ff7c16", "#ff8a18", "#ff961a", "#ffa21c"],
+  bars: ["#ff2410", "#ff4a12", "#ff6614", "#ff7416", "#ff7e17", "#ff8618", "#ff8c1a"],
   glow: "#ff1838",
-  arrow: "#8a0d10",
+  arrow: "#9a1014",
   arrowEmissive: "#3a0204",
   hotspot: "#ffe2e2",
   floor: "#9a9a9a",
@@ -23,10 +23,10 @@ export const EMBER: GlowPalette = {
 
 /** Version 2 — alternative palette: electric cyan/blue bars, violet arrow. */
 export const GLACIER: GlowPalette = {
-  bars: ["#2a4dff", "#2a6aff", "#2286ff", "#1ca2ff", "#16bcff", "#12d4ff", "#10eaff"],
+  bars: ["#2a4dff", "#2a66ff", "#227eff", "#1c96ff", "#16acff", "#12c0ff", "#10d0ff"],
   glow: "#1c5cff",
-  arrow: "#5b1fb0",
-  arrowEmissive: "#1c0640",
+  arrow: "#7a44e0",
+  arrowEmissive: "#26105c",
   hotspot: "#dff0ff",
   floor: "#8f9aae",
 };
