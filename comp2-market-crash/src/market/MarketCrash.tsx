@@ -22,6 +22,7 @@ import {
   buildMarketScene,
   FOV,
   FPS,
+  GAIN_KEYS,
   GLOW_KEYS,
   keyed,
 } from "./build";
@@ -89,7 +90,7 @@ const SceneContent: React.FC<{ variant: Variant }> = ({ variant }) => {
           float core = exp(-r * r * 9.0);
           float wide = exp(-r * r * 2.2);
           float haze = n(c * 3.0 + vec2(uTime * 0.05, 0.0)) * 0.5 + n(c * 7.0 - uTime * 0.03) * 0.25;
-          vec3 col = vec3(0.55, 0.11, 0.02) * core * 0.9 + vec3(0.22, 0.03, 0.0) * wide;
+          vec3 col = vec3(0.6, 0.125, 0.02) * core * 0.95 + vec3(0.24, 0.04, 0.0) * wide;
           col *= (0.8 + 0.4 * haze);
           return col * uGlow;
         }`,
@@ -99,15 +100,16 @@ const SceneContent: React.FC<{ variant: Variant }> = ({ variant }) => {
     const post = createPost({
       width,
       height,
-      threshold: 0.55,
-      bloomA: 0.55,
-      bloomB: 0.45,
+      threshold: 0.45,
+      bloomA: 0.85,
+      bloomB: 0.8,
       time: uniforms.uTime,
       gradeBody: /* glsl */ `
         vec3 grade(vec3 c, vec2 uv) {
           vec2 d = (uv - 0.5) * vec2(1.15, 1.0);
           float vig = 1.0 - smoothstep(0.28, 0.82, length(d)) * 0.93;
-          c *= vig;
+          c *= vig * 0.86;
+          c.r *= 1.12;
           // keep the red/orange monochrome look, let highlights burn to warm white
           float l = max(c.r, max(c.g, c.b));
           c = mix(c, vec3(l, l * 0.55, l * 0.32), smoothstep(1.0, 2.5, l) * 0.6);
@@ -146,6 +148,7 @@ const SceneContent: React.FC<{ variant: Variant }> = ({ variant }) => {
     built.uniforms.uTime.value = t;
     built.uniforms.uFocus.value = cf.focus;
     built.extra.uFlareGain.value = glow;
+    built.uniforms.uGain.value = keyed(GAIN_KEYS, t);
     built.bgUniforms.uGlow.value = glow;
     built.bgUniforms.uShift.value.set(
       Math.sin(t * 0.4) * 0.03,

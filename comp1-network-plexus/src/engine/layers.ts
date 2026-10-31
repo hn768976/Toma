@@ -236,6 +236,10 @@ varying vec4 vCol;
 varying float vSharp;
 varying vec4 vTiming;
 varying float vWidthPx;
+varying float vAlongW;
+varying float vW;
+varying float vLenPx;
+varying vec2 vExt;
 void main() {
   vec4 a = modelViewMatrix * vec4(iA, 1.0);
   vec4 b = modelViewMatrix * vec4(iB, 1.0);
@@ -259,10 +263,19 @@ void main() {
   float coc = cocPx(d);
   float core = iWidth * uResScale;
   float w = core * 3.0 + coc;
-  // extend slightly along the line so blurred ends are not cut square
-  float ext = coc * 0.35;
+  // extend along the line by part of the blur; the extension is tapered in
+  // the fragment shader so consecutive segments blend seamlessly at joints
+  float extA = cocPx(-a.z) * 0.35 + 0.5;
+  float extB = cocPx(-b.z) * 0.35 + 0.5;
+  float ext = atB ? extB : extA;
   s += nrm * position.y * w * 0.5 + dir * (atB ? ext : -ext);
   gl_Position = vec4(s / (0.5 * uViewport) * c.w, c.z, c.w);
+  // screen-linear along-line coordinate (w-multiplied to undo perspective interpolation)
+  float alongPx = atB ? len + extB : -extA;
+  vAlongW = alongPx * c.w;
+  vW = c.w;
+  vLenPx = len;
+  vExt = vec2(extA, extB);
   vAcross = position.y;
   vT = atB ? tb : ta;
   vCol = (atB ? iColB : iColA) * fogF(d) * sstep(uNear, uNear + 1.6, d);
@@ -280,6 +293,10 @@ varying vec4 vCol;
 varying float vSharp;
 varying vec4 vTiming;
 varying float vWidthPx;
+varying float vAlongW;
+varying float vW;
+varying float vLenPx;
+varying vec2 vExt;
 void main() {
   float grow = clamp((uTime - vTiming.x) / max(vTiming.y, 0.0001), 0.0, 1.0);
   if (grow <= 0.0 || vT > grow) discard;
@@ -298,6 +315,8 @@ void main() {
   }
   // fade towards growing tip
   float tip = sstep(grow, grow - 0.03, vT);
+  float along = vAlongW / vW;
+  tip *= sstep(-vExt.x, vExt.x, along) * sstep(vLenPx + vExt.y, vLenPx - vExt.y, along);
   vec3 col = max(vCol.rgb * vCol.a * prof * energy * (1.0 + pulse) * tip * uGain, vec3(0.0));
   if (max(col.r, max(col.g, col.b)) < 0.00025) discard;
   gl_FragColor = vec4(col, 1.0);

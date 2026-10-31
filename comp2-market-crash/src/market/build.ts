@@ -15,13 +15,13 @@ const v = (x: THREE.Vector3): V3 => [x.x, x.y, x.z];
 /* Palette (monochrome red/orange – the essence of the "market crash" look)   */
 /* ------------------------------------------------------------------------ */
 export const COLORS = {
-  text: [1.0, 0.26, 0.06] as V3,
+  text: [1.0, 0.27, 0.05] as V3,
   textHot: [1.0, 0.45, 0.16] as V3,
   line: [1.0, 0.42, 0.2] as V3,
   lineHot: [1.0, 0.72, 0.55] as V3,
-  led: [1.0, 0.66, 0.5] as V3,
+  led: [1.0, 0.7, 0.55] as V3,
   candle: [1.0, 0.32, 0.1] as V3,
-  flare: [1.0, 0.36, 0.06] as V3,
+  flare: [1.0, 0.37, 0.07] as V3,
   spark: [1.0, 0.55, 0.25] as V3,
   dust: [1.0, 0.34, 0.1] as V3,
 };
@@ -42,6 +42,16 @@ export const keyed = (keys: Key[], t: number) => {
   return keys[keys.length - 1][1];
 };
 
+/** Global exposure: the reference dips into a much darker passage ~8–10.5 s. */
+export const GAIN_KEYS: Key[] = [
+  [0, 1],
+  [7.0, 1],
+  [8.2, 0.42],
+  [10.2, 0.47],
+  [11.0, 1],
+  [13.34, 1],
+];
+
 /** Overall "energy" of the shot – bright glowing start, dark middle, bright end (as in the reference). */
 export const GLOW_KEYS: Key[] = [
   [0, 0.78],
@@ -49,9 +59,9 @@ export const GLOW_KEYS: Key[] = [
   [2.6, 1.0],
   [5.2, 1.0],
   [6.6, 0.75],
-  [7.6, 0.42],
-  [8.2, 0.22],
-  [10.2, 0.26],
+  [7.6, 0.38],
+  [8.2, 0.13],
+  [10.2, 0.16],
   [10.9, 0.5],
   [11.8, 0.62],
   [12.5, 0.8],
@@ -375,7 +385,7 @@ export const buildMarketScene = (seed = 21): MarketScene => {
     start: number,
     dur: number,
     intensity: number,
-    pitch = 0.16,
+    pitch = 0.19,
   ) => {
     const pts = crashCurve(rng, 60, 1.3).map(([x, y]) =>
       onPlane(fr, (x - 0.5) * w, y * h * 0.5),
@@ -389,11 +399,14 @@ export const buildMarketScene = (seed = 21): MarketScene => {
       for (let k = 0; k < n; k++) {
         const p = a.clone().lerp(b, k / n);
         const tt = start + ((i + k / n) / pts.length) * dur;
-        for (let row = -1; row <= 1; row++) {
+        for (let row = -2; row <= 2; row++) {
           billboards.push({
             pos: v(p.clone().add(fr.up.clone().multiplyScalar(row * pitch))),
-            size: [pitch * 0.62, pitch * 0.62],
-            color: c4(COLORS.led, intensity * (row === 0 ? 1.6 : 1.3)),
+            size: [pitch * 0.68, pitch * 0.68],
+            color: c4(
+              COLORS.led,
+              intensity * (row === 0 ? 1.9 : Math.abs(row) === 1 ? 1.6 : 1.2),
+            ),
             kind: MKIND.square,
             timing: [tt, 0.15, 0, 0],
             minPx: 2.5,
@@ -452,7 +465,7 @@ export const buildMarketScene = (seed = 21): MarketScene => {
   ) => {
     billboards.push({
       pos: v(p),
-      size: [h * 2.4 * 5, h * 2.4],
+      size: [h * 2.9 * 5, h * 2.9],
       color: c4(COLORS.flare, intensity * 1.4),
       kind: MKIND.flare,
       params: [rng.range(2, 6), rng.range(0, 6), rng.range(0, 6), streak],
@@ -726,7 +739,7 @@ export const buildMarketScene = (seed = 21): MarketScene => {
   // hero table – the camera pushes into it (~11.8 s)
   pushTable(
     at(11.9),
-    -0.5,
+    2.6,
     -0.7,
     -7.6,
     0.06,
