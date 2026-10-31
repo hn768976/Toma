@@ -5,7 +5,7 @@ A holographic "binary earth" built with Remotion and Three.js (WebGL 2 with cust
 | Composition | Size | FPS | Frames | Duration | Description |
 |---|---|---|---|---|---|
 | `HoloGlobeV1` | 3840×2160 (4K UHD) | 30 | 900 | 30.000 s | Matches the reference: dive out of giant defocused digits, through the digit surface, reveal Africa, settle on the ringed, spinning globe. |
-| `HoloGlobeV2` | 3840×2160 (4K UHD) | 30 | 900 | 30.000 s | Alternative **camera angle + movement**: top-down start over the Arctic, crane down through the ring plane while orbiting ~140°, end on a low "hero" angle with a slow push-in. |
+| `HoloGlobeV2` | 3840×2160 (4K UHD) | 30 | 900 | 30.000 s | Alternative **camera angle + movement**. A top-down dive out of the Arctic, then a low "orbital horizon" flight between the rings: the planet's curved limb fills the lower frame while the camera sweeps ~170° around it. It ends with a rising crane to a high three-quarter view. |
 
 ## Requirements
 
