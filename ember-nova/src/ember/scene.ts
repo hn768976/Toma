@@ -245,10 +245,12 @@ export const createEmberStage =
     };
     const burstData = Array.from({ length: 8000 }, () => {
       const [dx, dy] = unitSphere(rnd);
+      // Lopsided blast: debris flies further to the left / lower-left.
+      const bias = 1 + 0.45 * Math.max(0, -dx) + 0.2 * Math.max(0, dy) - 0.25 * Math.max(0, dx);
       return {
         dx,
         dy,
-        rmax: 0.06 + 0.5 * Math.pow(rnd(), 0.8),
+        rmax: (0.06 + 0.5 * Math.pow(rnd(), 0.8)) * bias,
         size: 0.0018 + rnd() * 0.0028,
         bright: 0.35 + rnd() * 0.65,
         hot: rnd(),
@@ -289,10 +291,11 @@ export const createEmberStage =
           [0, 0.08],
           [0.7, 0.9],
           [1.6, 1.05],
-          [3.0, 1.15],
+          [2.6, 1.0],
+          [3.05, 0.75],
           [3.35, 1.9],
-          [3.9, 2.6],
-          [4.5, 1.45],
+          [3.9, 2.25],
+          [4.5, 1.15],
           [5.3, 1.0],
           [9, 0.95],
         ],
@@ -446,9 +449,9 @@ export const createEmberStage =
       // ----- fusion sun ----------------------------------------------------
       const sunI = envelope(
         [
-          [2.95, 0],
-          [3.12, 0.45],
-          [3.25, 1.0],
+          [3.05, 0],
+          [3.17, 0.45],
+          [3.27, 1.0],
           [3.6, 1.15],
           [3.85, 0.95],
           [4.05, 0.42],
@@ -483,10 +486,11 @@ export const createEmberStage =
         [
           [BURST_T - 0.05, 0],
           [BURST_T + 0.12, 1],
-          [4.2, 1],
-          [4.55, 0.6],
-          [4.85, 0.22],
-          [5.15, 0],
+          [3.95, 0.85],
+          [4.3, 0.55],
+          [4.6, 0.28],
+          [4.85, 0.1],
+          [5.1, 0],
         ],
         t,
       );
@@ -504,10 +508,10 @@ export const createEmberStage =
       const shellI = envelope(
         [
           [3.7, 0],
-          [3.95, 1],
-          [4.4, 0.75],
-          [4.85, 0.25],
-          [5.2, 0],
+          [3.95, 0.9],
+          [4.4, 0.6],
+          [4.85, 0.18],
+          [5.15, 0],
         ],
         t,
       );

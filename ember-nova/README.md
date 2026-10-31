@@ -54,12 +54,13 @@ npm run render:1080p     # quick previews rendered directly at 1920x1080 (--scal
 ```
 
 The downscale step uses Remotion's bundled FFmpeg (`remotion ffmpeg`), so no
-system FFmpeg is needed. Output: H.264 (libx264, CRF 16), yuv420p, 30 fps, no
+system FFmpeg is needed. A very fine temporal grain is added while
+downscaling to keep the dark vignette gradients free of 8-bit banding. Output: H.264 (libx264, CRF 16), yuv420p, 30 fps, no
 audio. Equivalent raw CLI for one version:
 
 ```bash
 npx remotion render EmberNova-V1 out/EmberNova-V1_4K.mp4 --crf=12
-npx remotion ffmpeg -i out/EmberNova-V1_4K.mp4 -vf scale=1920:1080:flags=lanczos \
+npx remotion ffmpeg -i out/EmberNova-V1_4K.mp4 -vf scale=1920:1080:flags=lanczos,noise=alls=3:allf=t+u \
   -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r 30 out/EmberNova-V1_1080p.mp4
 ```
 

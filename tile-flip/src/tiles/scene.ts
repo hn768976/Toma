@@ -19,13 +19,13 @@ export const LOOK: TileLook = {
   cavity: [0.15, 0.19, 0.31],
   ambient: [0.42, 0.435, 0.49],
   sky: [0.07, 0.07, 0.08],
-  sun: [0.5, 0.465, 0.41],
+  sun: [0.43, 0.4, 0.355],
 };
 
 const TILE = 1;
 const DEPTH = 0.55; // cavity depth
 const THICK = 0.035; // flap thickness
-const MAX_GAP = 0.0065; // seam half-width revealed while a tile is "live"
+const MAX_GAP = 0.005; // seam half-width revealed while a tile is "live"
 
 const cellCenter = (row: number, col: number) =>
   new THREE.Vector2((col - (GRID - 1) / 2) * TILE, ((GRID - 1) / 2 - row) * TILE);
@@ -48,7 +48,7 @@ const flapAngle = (ev: FlipEvent, t: number) => {
 /** 0..1 visibility of the seam around a tile (fades in before, out after). */
 const seamAmount = (ev: FlipEvent, t: number) =>
   smoothstep(ev.start - 0.42, ev.start - 0.02, t) *
-  (1 - smoothstep(ev.start + ev.dur + 0.15, ev.start + ev.dur + 1.0, t));
+  (1 - smoothstep(ev.start + ev.dur + 0.1, ev.start + ev.dur + 0.75, t));
 
 export const createTileStage =
   (mode: CameraMode, durationSec: number, look: TileLook = LOOK): StageFactory =>
