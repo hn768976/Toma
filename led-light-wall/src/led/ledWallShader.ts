@@ -134,19 +134,22 @@ vec3 background(vec2 q) {
   vec3 bg = mix(uBgLeft, uBgMid, smoothstep(0.0, 0.35, uv.x));
   bg = mix(bg, uBgRight, smoothstep(0.4, 1.0, uv.x));
   // Navy vignette: bottom, left and bottom-right corners.
-  float deep = smoothstep(0.5, 1.05, uv.y) * 0.38
+  float deep = smoothstep(0.5, 1.05, uv.y) * 0.28
              + smoothstep(0.45, 0.0, uv.x) * smoothstep(0.45, 1.0, uv.y) * 0.32
              + smoothstep(0.65, 1.0, uv.x) * smoothstep(0.6, 1.0, uv.y) * 0.25
              + smoothstep(0.18, 0.0, uv.x) * 0.18;
   bg = mix(bg, uBgDeep, clamp(deep, 0.0, 1.0));
+  // Top-right corner leans toward the ray colour (cyan in V1).
+  float tr = smoothstep(0.6, 1.0, uv.x) * smoothstep(0.55, 0.0, uv.y);
+  bg = mix(bg, uRay * 0.85, tr * 0.4);
   // Central hotspot.
   float hot = exp(-dot((uv - vec2(0.5, 0.45)) * vec2(1.6, 2.2), (uv - vec2(0.5, 0.45)) * vec2(1.6, 2.2)));
-  bg *= 0.62 + 0.38 * hot;
+  bg *= 0.6 + 0.48 * hot;
 
   // Moving smoky haze.
   float hz = fbm(uv * vec2(3.2, 2.4) + vec2(uTime * 0.07, -uTime * 0.035));
   float hz2 = fbm(uv * vec2(1.5, 1.2) - vec2(uTime * 0.045, uTime * 0.012) + 5.0);
-  bg *= 0.62 + 0.45 * hz + 0.18 * hz2;
+  bg *= 0.72 + 0.32 * hz + 0.12 * hz2;
   bg += uHaze * pow(hz2, 2.0) * 0.16 * (0.4 + hot);
 
   // 4-6 broad, soft beams fanning in from the top-right corner.
