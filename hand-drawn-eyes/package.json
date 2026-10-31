@@ -1,0 +1,25 @@
+{
+  "name": "hand-drawn-eyes-unknown-person",
+  "version": "1.0.0",
+  "description": "Hand-drawn eyes in the dark and scribbled unknown-person figures (Remotion, 30fps, 4K)",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "remotion studio",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "p5.brush": "2.2.3",
+    "perfect-freehand": "1.2.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "roughjs": "4.6.6"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  }
+}
