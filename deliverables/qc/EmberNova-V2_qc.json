@@ -12,16 +12,16 @@
   "expected_frames": 270,
   "stream_duration_s": 9.0,
   "format_duration_s": 9.0,
-  "size_bytes": 9118207,
-  "bit_rate": 8105072,
+  "size_bytes": 8822605,
+  "bit_rate": 7842315,
   "audio_streams": 0,
   "decode_errors": "",
   "black_segments": [],
-  "luma_min": 20.4,
-  "luma_max": 85.65,
+  "luma_min": 20.43,
+  "luma_max": 84.2,
   "max_frame_to_frame_luma_step": [
-    5.9,
-    96
+    7.95,
+    97
   ],
   "one_frame_flicker_spikes": [],
   "duplicate_consecutive_frames": 0,
