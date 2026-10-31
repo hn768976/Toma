@@ -251,7 +251,7 @@ export class NetworkMapEngine {
       uniforms: {
         time: { value: 0 },
         resolution: { value: new THREE.Vector2(width, height) },
-        width: { value: 8.5 },
+        width: { value: 11 },
         pxScale: { value: this.pxScale },
         coreColor: { value: col(palette.arcCore) },
         glowColor: { value: col(palette.arcGlow) },
@@ -337,8 +337,8 @@ export class NetworkMapEngine {
       if (head < 1) {
         arcPoint(arc, head, p);
         this.headPos.set([p.x, p.y, p.z], k * 3);
-        this.headSize[k] = 40 + 12 * arc.intensity;
-        this.headBright[k] = 1.1 * arc.intensity * Math.min(1, head * 12);
+        this.headSize[k] = 50 + 16 * arc.intensity;
+        this.headBright[k] = 1.35 * arc.intensity * Math.min(1, head * 12);
         k++;
       }
       const arrive = arc.start + this.arrivalTime(arc);

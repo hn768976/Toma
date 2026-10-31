@@ -14,7 +14,7 @@ Config.setDefaultPremountInSeconds(2);
 // Delivery format: H.264 MP4, 8-bit 4:2:0 (plays everywhere), high quality.
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
-Config.setCrf(16);
+Config.setCrf(18); // keeps each 30 s 1080p file < 100 MB with the film grain
 Config.setColorSpace("bt709");
 
 // The scene is rendered with WebGL 2 (Three.js). "angle" uses the GPU when one

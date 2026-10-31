@@ -56,7 +56,7 @@ export const scheduleArcs = (keys: Key[], lights: LightPoint[], seed: number, du
       a: a.clone(),
       b: b.clone(),
       angle,
-      height: 0.012 + angle * 0.32,
+      height: 0.015 + angle * 0.42,
       start,
       duration: (0.9 + angle * 5.0 + rnd() * 0.5) / speed,
       seed: rnd(),
@@ -64,23 +64,23 @@ export const scheduleArcs = (keys: Key[], lights: LightPoint[], seed: number, du
     };
   };
 
-  for (let t = 1.3; t < duration - 0.6; t += 0.22) {
+  for (let t = 1.3; t < duration - 0.6; t += 0.15) {
     const look = sampleTrack(keys, Math.min(duration, t + 0.9));
     const center = latLonToVec3(look[0], look[1]);
     // hubs in (or about to enter) the frame
     const near: number[] = [];
     hubVec.forEach((h, i) => {
-      if (h.angleTo(center) < 0.3 && (cooldown.get(i) ?? -99) < t) near.push(i);
+      if (h.angleTo(center) < 0.4 && (cooldown.get(i) ?? -99) < t) near.push(i);
     });
-    if (near.length && rnd() < 0.62) {
+    if (near.length && rnd() < 0.85) {
       const hi = near[Math.floor(rnd() * near.length)];
-      cooldown.set(hi, t + 4 + rnd() * 2);
+      cooldown.set(hi, t + 2.5 + rnd() * 1.5);
       const hub = hubVec[hi];
       // fan-out burst to nearby lit places
       const n = 6 + Math.floor(rnd() * 7);
       const cand = dests.filter((d) => {
         const ang = d.angleTo(hub);
-        return ang > 0.03 && ang < 0.22;
+        return ang > 0.06 && ang < 0.3;
       });
       for (let k = 0; k < n && cand.length; k++) {
         const d = cand[Math.floor(rnd() * cand.length)];
@@ -88,7 +88,7 @@ export const scheduleArcs = (keys: Key[], lights: LightPoint[], seed: number, du
         if (arc) arcs.push(arc);
       }
       // long-haul link to another hub
-      if (rnd() < 0.45) {
+      if (rnd() < 0.65) {
         const far = hubVec.filter((h) => {
           const ang = h.angleTo(hub);
           return ang > 0.2 && ang < 0.55;
@@ -100,7 +100,7 @@ export const scheduleArcs = (keys: Key[], lights: LightPoint[], seed: number, du
       }
     }
     // stray single links between lit places in view
-    if (rnd() < 0.12) {
+    if (rnd() < 0.3) {
       const inView = dests.filter((d) => d.angleTo(center) < 0.35);
       if (inView.length > 2) {
         const a = inView[Math.floor(rnd() * inView.length)];
@@ -202,7 +202,7 @@ void main() {
   float age = time - (start + dur);
   float dotsN = max(14.0, vLen * 420.0);
   float dots = smoothstep(0.35, 0.5, fract(vT * dotsN)) * (1.0 - smoothstep(0.5, 0.65, fract(vT * dotsN)));
-  float resid = (vT <= min(head, 1.0)) ? 0.5 * dots * (1.0 - smoothstep(0.8, 6.0, age)) : 0.0;
+  float resid = (vT <= min(head, 1.0)) ? 0.65 * dots * (1.0 - smoothstep(1.0, 7.0, age)) : 0.0;
   float a = max(comet, resid) * inten;
   // soften the ends of the arc
   a *= smoothstep(0.0, 0.03, vT) * (0.6 + 0.4 * smoothstep(1.0, 0.94, vT));
