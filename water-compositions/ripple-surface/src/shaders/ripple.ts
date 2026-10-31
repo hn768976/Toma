@@ -87,7 +87,7 @@ void addSwell(inout Surface s, vec2 q, vec2 dir, float k, float w, float ph,
   s.h += a * sin(phase);
   s.grad += a * k * cos(phase) * d;
   // Broad soft bright bands on the swell crests.
-  s.glow += 1.3 * a * pow(0.5 + 0.5 * sin(phase), 3.0);
+  s.glow += 0.9 * a * pow(0.5 + 0.5 * sin(phase), 8.0);
 }
 
 // Adds one circular ripple train radiating from centre c.
@@ -107,7 +107,7 @@ void addRing(inout Surface s, vec2 q, vec2 c, float k, float chirp, float w,
   float bl = bandLimit(kLocal, fp);
   // Slow packet envelope: busy everywhere, but with varying strength.
   float env = 0.5 + 0.5 * sin(4.5 * r - 0.8 * t + ph);
-  env = (0.12 + 0.88 * env * env * env) * amp * bl / sqrt(1.0 + 1.2 * r);
+  env = (0.25 + 0.75 * env * env * env) * amp * bl / sqrt(1.0 + 1.2 * r);
   // Zig-zag kinks along bold crests (arc-length modulated phase).
   float arc = r * atan(dv.y, dv.x);
   // Short-lived: gated by a fast-evolving noise so kinks appear, morph and
@@ -117,7 +117,7 @@ void addRing(inout Surface s, vec2 q, vec2 c, float k, float chirp, float w,
   float kink = boldness * boldness * 0.7 * kinkGate
              * sin(arc * (45.0 + 12.0 * sin(0.9 * t + ph)) + 6.0 * t + ph);
   // Irregular crest spacing and occasional S-bends.
-  float jitter = 2.4 * fbm3(dv * 1.6 + vec2(0.08 * t, -0.06 * t) + ph * 3.1);
+  float jitter = 3.2 * fbm3(dv * 1.6 + vec2(0.08 * t, -0.06 * t) + ph * 3.1);
   float phase = k * r + chirp * r * r - w * t + 1.7 * ph + 2.0 * s.h + kink + jitter;
   float sn = sin(phase);
   float cs = cos(phase);
@@ -147,7 +147,7 @@ Surface surface(vec2 p, float t, float fp) {
   );
 
   // Fast-changing field that decides which crests flare up bold & crisp.
-  float boldness = smoothstep(-0.18, 0.32,
+  float boldness = smoothstep(-0.32, 0.22,
     fbm3(q * 2.3 + vec2(0.45 * t, -0.55 * t) + 9.0));
 
   addSwell(s, q, vec2(0.3, 1.0), 15.0, 2.0, 0.0, 0.40, t, fp);
@@ -165,7 +165,7 @@ Surface surface(vec2 p, float t, float fp) {
   // Fine, busy, thin wiggly crests along the top edge of the frame.
   vec2 c3 = vec2(0.25, 1.55) + 0.20 * vec2(sin(0.2 * t + 1.0), cos(0.14 * t));
   float topMask = smoothstep(0.05, 0.42, p.y);
-  addRing(s, q, c3, 78.0, 10.0, 12.0, 0.9, 0.30 * topMask, 0.55, boldness * 0.5, t, fp);
+  addRing(s, q, c3, 78.0, 10.0, 12.0, 0.9, 0.30 * topMask, 0.45, 0.85, t, fp);
   return s;
 }
 
@@ -177,11 +177,11 @@ float glints(vec2 p, float t, float fp) {
     for (int i = 0; i <= 1; i++) {
       vec2 id = cell + vec2(float(i), float(j));
       vec2 h = hash22(id + 3.7);
-      float isOn = step(0.955, hash12(id + 11.3));
+      float isOn = step(0.94, hash12(id + 11.3));
       vec2 pos = (id + h) / 14.0;
       float life = fract(0.23 * t + h.x * 7.0 + h.y);
       float flare = exp(-pow((life - 0.5) * 14.0, 2.0));
-      float rad = max(0.014, 1.5 * fp);
+      float rad = max(0.018, 1.5 * fp);
       float d = length(p - pos) / rad;
       g += isOn * flare * exp(-d * d);
     }
@@ -203,7 +203,7 @@ float shade(Surface s, vec3 v, float lineFade) {
   float L = 0.64;
   L += 0.10 * slope;
   // Crest lines: a few bold crisp caustics among many soft faint ones.
-  L += lineFade * 0.56 * (1.0 - exp(-2.1 * s.line));
+  L += lineFade * 0.60 * (1.0 - exp(-2.3 * s.line));
   L += lineFade * 0.20 * (1.0 - exp(-1.3 * s.glow));
   // Slightly darker troughs between the bright lines.
   L -= lineFade * 0.12 * (1.0 - exp(-1.5 * s.trough));
@@ -256,7 +256,7 @@ void main() {
   // Mottled soft light/dark patches in the water.
   L += 0.075 * fbm3(p * 1.5 + vec2(0.12 * t, -0.09 * t) + 21.0);
   // Specular glints riding on the crests.
-  L += 0.75 * lineFade * glints(p, t, fp) * smoothstep(0.05, 0.6, s.line);
+  L += 1.0 * lineFade * glints(p, t, fp) * smoothstep(0.05, 0.6, s.line);
   // Gentle vignette, darker toward the top-right corner as in the reference.
   L -= 0.06 * smoothstep(0.25, 0.95, dot(uv, normalize(vec2(1.0, 0.8))));
   L -= 0.04 * smoothstep(0.55, 1.05, length(uv * vec2(0.9, 1.3)));
