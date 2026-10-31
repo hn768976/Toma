@@ -52,6 +52,12 @@ npm run render:v1:4k
 npm run render:v2:4k
 ```
 
+Each `render:*` script renders the video with Remotion, then uses
+Remotion's bundled ffmpeg (`remotion ffmpeg`) to losslessly remux it with a
+silent stereo 48 kHz AAC track trimmed to exactly 901/30 s, so video, audio
+and container durations are all 30.033 s (AAC frame padding would otherwise
+stretch the container to 30.037 s).
+
 Rendering note: on machines without a GPU, Chrome falls back to software
 WebGL (SwiftShader). Expect ~1.5 s/frame at 1080p on 4 CPU cores
 (~25 min per version), much faster with a GPU (`--gl=angle`). The config

@@ -21,14 +21,20 @@ frame — rebuilt from the 20 s reference clip.
 
 ## How it matches the reference
 
-* Sphere centre (0.898 W, 0.486 H), vertex radius 0.345 W and the spin axis
-  were measured from the reference by tracking ~380 vertex dots across
-  frames and least-squares fitting a rigid rotation.
-* One full revolution per clip (the reference is a seamless 20 s loop —
-  frame 600 ≡ frame 0, verified).
+* Layout and motion were measured from the reference by tracking vertex
+  dots across frames and least-squares fitting rigid rotations over sliding
+  2 s windows: the spin rate is constant (|ω| ≈ 0.0149 rad/frame) while the
+  spin axis precesses once per clip. This is reproduced exactly as a
+  clockwise roll about the view axis composed with a spin about an in-plane
+  axis — two whole turns per 20 s, so the clip is a seamless loop like the
+  reference (frame 600 ≡ frame 0).
+* Sphere centre (0.89 W, 0.447 H), vertex radius 0.33 W, small loop-safe
+  per-node drift (integer harmonics of the clip length).
 * ~58 vertices on a sphere (Poisson-disk sampled), triangulated via a 3D
-  convex hull; ~230 dust particles concentrated in a soft shell halo.
-* Depth cueing: back edges/dots are lighter; mild perspective.
+  convex hull; ~170 dust particles, mostly in a soft shell halo.
+* Depth cueing: back edges/dots are lighter and drawn on a softly blurred
+  layer (shallow depth of field); mild perspective.
+* V2 background gradient is dithered (±1.5 LSB) to prevent 8-bit banding.
 
 ## Commands
 
