@@ -6,7 +6,7 @@ cd "$(dirname "$0")"
 OUT="${1:-out}"
 mkdir -p "$OUT"
 render() {
-  npx remotion render "$1" "$OUT/$2" --codec=h264 --pixel-format=yuv420p --crf=16 --scale=0.5 --concurrency="${CONCURRENCY:-2}"
+  npx remotion render "$1" "$OUT/$2" --codec=h264 --pixel-format=yuv420p --color-space=bt709 --image-format=png --crf=16 --scale=0.5 --concurrency="${CONCURRENCY:-2}"
 }
 render Comp1-StripedFloat-V1     comp1_striped-float_v1_1080p.mp4
 render Comp1-StripedFloat-V2     comp1_striped-float_v2_1080p.mp4

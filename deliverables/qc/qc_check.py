@@ -71,6 +71,8 @@ def main():
             "codec": v["codec_name"],
             "profile": v.get("profile"),
             "pix_fmt": v.get("pix_fmt"),
+            "color_range": v.get("color_range"),
+            "color_space": v.get("color_space"),
             "width": v["width"],
             "height": v["height"],
             "r_frame_rate": f"{num}/{den}",
@@ -96,6 +98,7 @@ def main():
         }
         entry["pass"] = bool(
             entry["codec"] == "h264"
+            and entry["pix_fmt"] == "yuv420p"
             and entry["width"] == 1920
             and entry["height"] == 1080
             and num == 30 and den == 1

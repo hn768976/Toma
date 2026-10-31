@@ -9,8 +9,9 @@ import { existsSync } from "node:fs";
 import { Config } from "@remotion/cli/config";
 
 Config.setRspack(true);
-Config.setVideoImageFormat("jpeg");
-Config.setJpegQuality(95);
+// PNG frames + BT.709 => standard limited-range yuv420p H.264 (not full-range yuvj420p)
+Config.setVideoImageFormat("png");
+Config.setColorSpace("bt709");
 Config.setOverwriteOutput(true);
 Config.setDefaultPremountInSeconds(2);
 // WebGL2 via ANGLE + SwiftShader works headless on any machine (no GPU needed).
