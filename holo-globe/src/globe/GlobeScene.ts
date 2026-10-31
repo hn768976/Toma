@@ -213,7 +213,7 @@ export const createGlobeScene =
     // one sits over central Africa, in front of the lens during the dive.
     const panelDefs: [number, number, number, number][] = [
       // lat, lon, rows, groups
-      [6, 14, 7, 3],
+      [6, 14, 10, 4],
       [-28, 60, 9, 2],
       [22, -60, 6, 3],
       [-18, -120, 8, 2],
@@ -257,7 +257,7 @@ export const createGlobeScene =
           data.push(
             rowSeed * 0.999,
             0.85 + rand() * 0.15,
-            1.25,
+            pi === 0 ? 1.6 : 1.25,
             0.6 + rand() * 0.4,
           );
           kind.push(1);
@@ -296,6 +296,7 @@ export const createGlobeScene =
         uBackFade: { value: 0.1 },
         uExposure: { value: 1 },
         uGain: { value: 1 },
+        uPanelBoost: { value: 1 },
         uDeep: { value: colDeep },
         uMain: { value: colMain },
         uHot: { value: colHot },
@@ -518,8 +519,8 @@ export const createGlobeScene =
           if (!keep) continue;
           const rr = lr + (rand() - 0.5) * 0.006;
           p.push(rr * Math.cos(a), (rand() - 0.5) * 0.004, rr * Math.sin(a));
-          sz.push(inArc ? 1.8 + rand() * 1.0 : 1.4 + rand() * 1.4);
-          br.push(inArc ? 0.4 + rand() * 0.3 : 0.2 + rand() * 0.3);
+          sz.push(inArc ? 2.4 + rand() * 1.2 : 1.8 + rand() * 1.6);
+          br.push(inArc ? 0.6 + rand() * 0.3 : 0.32 + rand() * 0.35);
           lv.push(inArc ? 0.62 + rand() * 0.25 : 0.45 + rand() * 0.25);
         }
       }
@@ -539,10 +540,11 @@ export const createGlobeScene =
     /* ---------------------------------------------------------------- */
     const labelAnchors: number[] = [];
     const labelChars: number[] = [];
-    const LABELS = 34;
+    const LABELS = 22;
     for (let l = 0; l < LABELS; l++) {
-      const a = rand() * Math.PI * 2;
-      const r = l < 24 ? 1.03 + rand() * 0.22 : 1.3 + rand() * 0.35;
+      // Stratified angles keep read-outs from piling on top of each other.
+      const a = ((l + 0.2 + rand() * 0.6) / LABELS) * Math.PI * 2 * 2.0;
+      const r = l % 3 !== 2 ? 1.04 + rand() * 0.2 : 1.3 + rand() * 0.35;
       const y = (rand() - 0.5) * (r < 1.3 ? 1.5 : 0.3);
       const anchor = new Vector3(r * Math.cos(a), y, r * Math.sin(a));
       const len = 7 + Math.floor(rand() * 2);
@@ -572,7 +574,7 @@ export const createGlobeScene =
       uniforms: {
         uAtlas: { value: atlas },
         uTime: { value: 0 },
-        uCharH: { value: 0.062 },
+        uCharH: { value: 0.054 },
         uExposure: { value: 1 },
         uHot: { value: colHot },
       },
@@ -643,7 +645,7 @@ export const createGlobeScene =
     composer.addPass(new RenderPass(scene, camera));
     const bloom = new UnrealBloomPass(
       new Vector2(width * pixelRatio, height * pixelRatio),
-      0.48,
+      0.62,
       0.4,
       0.22,
     );
@@ -688,12 +690,19 @@ export const createGlobeScene =
       u.uExposure.value = exposure;
       // Tiny far-away glyphs lose ink to mip-mapping; compensate so the
       // continents read as solid bright dot fields like the reference.
-      u.uGain.value = 1 + 2.6 * smoothstep(1.25, 3.2, cam.distance);
+      u.uGain.value = 1 + 3.2 * smoothstep(1.15, 2.8, cam.distance);
+      // The reference's "glow burst" (~1.8-2.8 s): floating data panels flare
+      // up while the camera is mid-way out of the dive.
+      u.uPanelBoost.value =
+        1 +
+        2.2 *
+          smoothstep(1.45, 1.85, cam.distance) *
+          (1 - smoothstep(2.5, 3.3, cam.distance));
       // Back hemisphere fades out entirely when we're skimming the surface.
       u.uBackFade.value = 0.1 * smoothstep(1.3, 2.2, cam.distance);
       labelMat.uniforms.uTime.value = t;
       labelMat.uniforms.uExposure.value =
-        exposure * smoothstep(1.6, 2.6, cam.distance);
+        exposure * smoothstep(1.45, 2.3, cam.distance);
       atmoMat.uniforms.uExposure.value =
         exposure * (0.35 + 0.65 * smoothstep(1.2, 2.5, cam.distance));
       halo.material.opacity =
@@ -702,8 +711,13 @@ export const createGlobeScene =
         m.uniforms.uTime.value = t;
         m.uniforms.uExposure.value = exposure;
       }
+      const ringsByDistance = smoothstep(1.7, 3.2, cam.distance);
+      const ringsByTime =
+        config.ringsCloseFrom === undefined
+          ? 0
+          : smoothstep(config.ringsCloseFrom, config.ringsCloseFrom + 1.5, t);
       ringMat.uniforms.uExposure.value =
-        exposure * smoothstep(1.7, 3.2, cam.distance);
+        exposure * Math.max(ringsByDistance, ringsByTime);
 
       // Per-vertex line brightness: fade lines on the far hemisphere.
       globe.updateMatrixWorld(true);

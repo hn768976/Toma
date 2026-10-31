@@ -39,6 +39,7 @@ export const digitVertex = /* glsl */ `
   uniform float uBackFade;
   uniform float uExposure;
   uniform float uGain;
+  uniform float uPanelBoost;
   varying vec2 vUv;
   varying float vGlyph;
   varying float vAlpha;
@@ -77,7 +78,7 @@ export const digitVertex = /* glsl */ `
       float g = hash11(floor(uTime * 2.5 + iData.x * 5.0) * 7.1 + iData.x * 33.0);
       panelGate = g > 0.22 ? 1.0 : 0.15;
     }
-    vAlpha = front * twinkle * panelGate * uExposure * (1.0 - 0.35 * blur) * mix(uGain, 1.0 + 0.4 * (uGain - 1.0), iKind);
+    vAlpha = front * twinkle * panelGate * uExposure * (1.0 - 0.35 * blur) * mix(uGain, (1.0 + 0.4 * (uGain - 1.0)) * uPanelBoost, iKind);
     vLevel = iData.y;
     vBlur = blur;
   }

@@ -34,31 +34,57 @@ export type GlobeConfig = {
   camera: (t: number) => CameraState;
   /** Globe spin in degrees as a function of time (seconds). */
   spin: (t: number) => number;
+  /**
+   * Keep the orbital rings visible even when the camera is close to the
+   * planet (from this time on). Version 1 hides them while skimming the
+   * surface, like the reference; version 2 flies between them.
+   */
+  ringsCloseFrom?: number;
 };
 
+// Saturated electric blue / cyan on a navy-to-black field, sampled from the
+// reference (highlights ~ rgb(40,175,240), background corners near black).
 export const BLUE_PALETTE: GlobePalette = {
-  bgCenter: "#082440",
-  bgEdge: "#010409",
-  deep: "#0f5a9e",
-  main: "#1f8fe0",
-  hot: "#a8e4ff",
-  rim: "#2a9ff0",
+  bgCenter: "#0a2c52",
+  bgEdge: "#000207",
+  deep: "#0a4f9c",
+  main: "#169cff",
+  hot: "#86d8ff",
+  rim: "#1a98ff",
 };
 
 // Earth spins west-to-east: from the camera's side the surface drifts to
-// the right, revealing the Americas after Africa, about 14.7 deg/s, with
-// Africa (lon ~18E) facing the lens at t = 2.8 s - as in the reference.
+// the right, revealing the Americas after Africa, at 14.7 deg/s - as in the
+// reference. While the camera skims the surface the spin is eased in from
+// rest: at full speed the glyphs right under the lens would jump most of
+// the frame height every frame (temporal aliasing / strobing).
 const SPIN_RATE = 14.7;
-const spinV1 = (t: number) => -18 + SPIN_RATE * (t - 2.8);
+const rampedTurns = (() => {
+  // Integral of SPIN_RATE * smoothstep(0.2, 3.6, t), tabulated per 1/120 s.
+  const dt = 1 / 120;
+  const table: number[] = [0];
+  for (let i = 1; i <= 31 * 120; i++) {
+    const t = (i - 0.5) * dt;
+    const x = Math.min(1, Math.max(0, (t - 0.2) / 3.4));
+    table.push(table[i - 1] + SPIN_RATE * x * x * (3 - 2 * x) * dt);
+  }
+  return (t: number) => {
+    const f = Math.max(0, t) / dt;
+    const i = Math.min(table.length - 2, Math.floor(f));
+    return table[i] + (table[i + 1] - table[i]) * (f - i);
+  };
+})();
+// Africa (lon ~18E) faces the lens at t = 2.8 s.
+const spinV1 = (t: number) => -18 + rampedTurns(t) - rampedTurns(2.8);
 
 /** Logarithmic zoom keys: values are log(distance - 1) so the dive feels even. */
 const logKeys = (keys: Key[]): Key[] =>
   keys.map(([t, v]) => [t, Math.log(v - 1)]);
 
-// Version 1 - matches the reference: start a few digits above the surface
-// (huge, defocused "1"/"0" glyphs), pull straight back through the dotted
-// surface, reveal Africa, then settle into a fixed, slightly elevated
-// framing with the globe spinning inside its orbital rings.
+// Version 1 - matches the reference: ~0.3 s of empty navy, then a few
+// digits above the surface (huge, defocused glyphs), pull straight back
+// through the digit surface, reveal Africa, then settle into a fixed,
+// slightly elevated framing with the globe spinning inside its rings.
 const v1Distance = track(
   logKeys([
     [0, 1.024],
@@ -98,18 +124,19 @@ const v1LookY = track([
 ]);
 const v1Defocus = track([
   [0, 1],
-  [0.35, 0.7],
-  [0.6, 0.05],
-  [1.0, 0.0],
+  [0.3, 0.9],
+  [0.75, 0.15],
+  [1.1, 0.0],
   [1.8, 0],
   [2.3, 0.35],
   [2.8, 0.15],
   [3.6, 0],
   [30, 0],
 ]);
-const v1Exposure = track([
-  [0, 0.15],
-  [0.55, 1],
+const introExposure = track([
+  [0, 0],
+  [0.25, 0.04],
+  [0.7, 1],
   [30, 1],
 ]);
 
@@ -123,72 +150,84 @@ export const GLOBE_V1: GlobeConfig = {
     roll: v1Roll(t),
     lookY: v1LookY(t),
     defocus: v1Defocus(t),
-    exposure: v1Exposure(t),
+    exposure: introExposure(t),
   }),
 };
 
-// Version 2 - alternative CAMERA ANGLE + MOVEMENT (same palette and
-// content). The dive starts top-down over the Arctic, then the camera
-// sweeps a ~265 deg orbit around the planet while craning down through the
-// ring plane to a low angle looking up from beneath the rings (~16 s),
-// pushing in close, and finally cranes back up above the rings as it pulls
-// out - a continuously travelling shot instead of the locked-off hold.
+// Version 2 - alternative CAMERA ANGLE + MOVEMENT (same palette/content).
+// Instead of V1's straight pull-back to a locked-off, centred globe:
+// 0-3 s   top-down dive out of the Arctic,
+// 3-20 s  a low "orbital horizon" flight: the camera skims ~0.6 radii above
+//         the planet, flying between the rings, the planet's curved limb
+//         filling the lower frame while it sweeps ~140 deg around it,
+// 20-30 s a rising crane pull-out to a high three-quarter view, the rings
+//         opening into wide ellipses below the globe.
 const v2Distance = track(
   logKeys([
     [0, 1.06],
     [0.7, 1.12],
     [1.6, 1.42],
-    [2.6, 2.1],
-    [3.8, 3.2],
-    [5.2, 4.6],
-    [7.0, 5.3],
-    [11, 4.6],
-    [16, 3.95],
-    [22, 4.3],
-    [30, 5.4],
+    [2.6, 1.95],
+    [4.0, 2.25],
+    [6.0, 1.75],
+    [10, 1.6],
+    [14, 1.62],
+    [18, 1.8],
+    [22, 2.6],
+    [26, 4.1],
+    [30, 5.1],
   ]),
 );
 const v2Elevation = track([
   [0, 72],
-  [3, 55],
-  [7, 28],
-  [11, 6],
-  [16, -20],
-  [22, -6],
-  [30, 32],
+  [3, 52],
+  [6, 28],
+  [10, 16],
+  [14, 12],
+  [18, 16],
+  [22, 26],
+  [26, 40],
+  [30, 46],
 ]);
 const v2Azimuth = track([
   [0, -30],
-  [6, 25],
-  [15, 120],
-  [24, 195],
-  [30, 235],
+  [6, -62],
+  [14, -120],
+  [22, -168],
+  [30, -200],
 ]);
 const v2Roll = track([
   [0, -18],
-  [4, -8],
-  [11, 4],
-  [16, 12],
-  [22, 6],
+  [4, -6],
+  [8, 7],
+  [14, 9],
+  [20, 3],
+  [26, -4],
   [30, -6],
 ]);
 const v2LookY = track([
   [0, 0],
-  [3, 0.25],
-  [6, 0.05],
-  [20, -0.02],
-  [30, 0.1],
+  [3, 0.2],
+  [6, 0.72],
+  [10, 0.9],
+  [15, 0.9],
+  [19, 0.75],
+  [23, 0.4],
+  [27, 0.08],
+  [30, 0.0],
 ]);
 const v2Defocus = track([
   [0, 1],
-  [0.7, 0.7],
-  [1.3, 0.0],
+  [0.3, 0.9],
+  [0.9, 0.1],
+  [1.4, 0.0],
   [30, 0],
 ]);
 
 export const GLOBE_V2: GlobeConfig = {
   palette: BLUE_PALETTE,
-  spin: (t) => 10 + SPIN_RATE * t,
+  spin: (t) => 10 + rampedTurns(t),
+  ringsCloseFrom: 3.0,
   camera: (t) => ({
     distance: 1 + Math.exp(v2Distance(t)),
     azimuth: v2Azimuth(t),
@@ -196,6 +235,6 @@ export const GLOBE_V2: GlobeConfig = {
     roll: v2Roll(t),
     lookY: v2LookY(t),
     defocus: v2Defocus(t),
-    exposure: v1Exposure(t),
+    exposure: introExposure(t),
   }),
 };
