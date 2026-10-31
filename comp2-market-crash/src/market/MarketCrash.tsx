@@ -155,13 +155,15 @@ const SceneContent: React.FC<{ variant: Variant }> = ({ variant }) => {
     built.uniforms.uTime.value = t;
     built.uniforms.uFocus.value = cf.focus;
     built.extra.uFlareGain.value = glow;
-    built.uniforms.uGain.value = keyed(GAIN_KEYS, t);
+    // V2 (wider, more distant framing) uses a gentler mid-section dip
+    const gain = keyed(GAIN_KEYS, t);
+    built.uniforms.uGain.value = variant === "v1" ? gain : 0.45 + 0.55 * gain;
     built.bgUniforms.uGlow.value = glow;
     built.bgUniforms.uShift.value.set(
       Math.sin(t * 0.4) * 0.03,
       Math.cos(t * 0.3) * 0.02,
     );
-  }, [frame, built, camera, width, height]);
+  }, [frame, built, camera, width, height, variant]);
 
   return null;
 };

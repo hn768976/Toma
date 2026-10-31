@@ -234,18 +234,19 @@ export const buildCameraV2 = () => {
   for (let f = 0; f < DURATION_FRAMES; f++) {
     const t = f / FPS;
     const u = t / DURATION;
-    // lift and offset to the right; slowly descend while tracking
+    // lifted and offset to the right, slowly descending while it tracks
+    // (kept moderate so camera-facing chart planes never go edge-on)
     const off = new THREE.Vector3(
-      lerp(14, 6, u),
-      lerp(11, 3.5, u),
-      lerp(4, 6, u),
+      lerp(8.5, 4.5, u),
+      lerp(6.5, 2.8, u),
+      lerp(3, 4.5, u),
     );
     const p = basePos[f].clone().add(off);
-    // look at a point between the V1 camera position and its target
-    const look = basePos[f]
+    // aim at the same subjects the V1 camera frames, slightly below them
+    const look = baseTgt[f]
       .clone()
-      .lerp(baseTgt[f], 0.55)
-      .add(new THREE.Vector3(-2, -2.5, 0));
+      .lerp(basePos[f], 0.25)
+      .add(new THREE.Vector3(-1, -1.5, 0));
     pos.push(p);
     tgt.push(look);
     roll.push(0);
