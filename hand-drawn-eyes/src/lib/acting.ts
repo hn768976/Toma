@@ -26,12 +26,14 @@ const DEFAULT_TARGETS: [number, number][] = [
   [-1, 0], [1, 0], [0, -0.9], [0, 0.85], [-0.8, -0.6], [0.8, -0.6], [-0.75, 0.6], [0.75, 0.6],
 ];
 
-// Blink openness profile; k = 0..1 through the blink. Closed for the middle third.
+// Blink openness profile; k = 0..1 through the blink (sampled on twos).
+// First drawing already half-closed, then shut, then half-open, then open:
+// for a 6-frame blink that is 0.45 / 0 / 0.42 on twos.
 const blinkProfile = (k: number) => {
-  if (k <= 0 || k >= 1) return 1;
-  if (k < 1 / 3) return lerp(1, 0, k * 3) ** 1.2 * 0.9;
+  if (k < 0 || k >= 1) return 1;
+  if (k < 0.3) return 0.45 * (1 - k / 0.3);
   if (k < 0.5) return 0;
-  return lerp(0, 1, (k - 0.5) * 2) ** 0.9;
+  return Math.pow((k - 0.5) / 0.5, 0.8) * 0.75 + 0.05;
 };
 
 export const buildActing = (rng: Rng, o: ActingOpts) => {
