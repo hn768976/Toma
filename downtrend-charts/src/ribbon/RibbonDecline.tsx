@@ -290,15 +290,16 @@ const KeyLight: React.FC = () => {
     l.position.set(-3.5, 9, 7);
     l.target.position.set(2.6, 0, -0.5);
     l.castShadow = true;
-    l.shadow.mapSize.set(1024, 1024);
+    l.shadow.mapSize.set(2048, 2048);
     const c = l.shadow.camera;
-    c.left = -18;
-    c.right = 18;
-    c.top = 18;
-    c.bottom = -18;
+    // wide enough that no frustum edge ever crosses the visible cyclorama
+    c.left = -40;
+    c.right = 40;
+    c.top = 40;
+    c.bottom = -40;
     c.near = 1;
     c.far = 160;
-    l.shadow.radius = 28;
+    l.shadow.radius = 25;
     l.shadow.blurSamples = 24;
     l.shadow.bias = -0.0004;
     return l;
