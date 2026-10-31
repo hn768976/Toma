@@ -51,8 +51,8 @@ export const generatePieces = (seed: number): Piece[] => {
     let x = -R - rand() * 2;
     while (x < R) {
       const i = x;
-      x += 1 + [0.5, 0.5, 1, 1, 1.5][Math.floor(rand() * 5)];
-      if (rand() < 0.05) continue;
+      x += 1 + [0.5, 0.5, 0.5, 0.5, 1][Math.floor(rand() * 5)];
+      if (rand() < 0.03) continue;
       const x0 = i;
       const span = 1;
       const kind = rand();

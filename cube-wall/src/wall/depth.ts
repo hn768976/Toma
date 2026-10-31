@@ -18,7 +18,7 @@ export const makeTileParams = (seed: number): TileParams[] => {
     out.push({
       phaseA: rand(),
       phaseB: rand(),
-      cyclesA: 1 + Math.floor(rand() * 3),
+      cyclesA: 2 + Math.floor(rand() * 3),
       cyclesB: 3 + Math.floor(rand() * 2),
       bias: rand() * 2 - 1,
     });
@@ -40,16 +40,15 @@ export const tileDepth = (
   const x = col - COLS / 2 + 0.5;
   const y = row - ROWS / 2 + 0.5;
   const field =
-    0.55 * Math.sin(TAU * u + x * 0.55 + y * 0.21) +
+    0.55 * Math.sin(TAU * 2 * u + x * 0.55 + y * 0.21) +
     0.45 * Math.sin(TAU * 3 * u - x * 0.23 + y * 0.62 + 1.3) +
-    0.35 * Math.sin(TAU * 2 * u - (x * 0.4 - y * 0.47) + 4.1);
+    0.35 * Math.sin(TAU * 3 * u - (x * 0.4 - y * 0.47) + 4.1);
   const own =
     0.8 * Math.sin(TAU * (p.cyclesA * u + p.phaseA)) +
     0.35 * Math.sin(TAU * (p.cyclesB * u + p.phaseB));
-  const v = 0.62 * field + 0.42 * own + 0.2 * p.bias;
+  const v = 0.62 * field + 0.55 * own + 0.12 * p.bias;
   // A main soft step (two resting levels, like the reference) plus a small
   // secondary step so a few tiles poke out a little further.
-  const level =
-    0.82 * smoothstep(-0.25, 0.25, v) + 0.18 * smoothstep(0.7, 1.1, v);
+  const level = 0.8 * smoothstep(-0.5, 0.5, v) + 0.2 * smoothstep(0.6, 1.2, v);
   return level * MAX_DEPTH;
 };

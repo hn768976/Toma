@@ -10,7 +10,7 @@ along Z, and the camera travels exactly that far in 270 frames.
 | Composition ID              | Size        | FPS | Frames | Duration | Notes |
 |-----------------------------|-------------|-----|--------|----------|-------|
 | `LatticeDrift-V1-Reference` | 3840 x 2160 | 30  | 270    | 9.0 s    | Matches the reference: orthographic near-isometric view (45° azimuth, 57° elevation), drift speed and heading measured from the reference with phase correlation (1.04 px/frame at 768 px, heading 40° up-right). Seamless loop. |
-| `LatticeDrift-V2-Crane`     | 3840 x 2160 | 30  | 270    | 9.0 s    | Alternative camera: a perspective crane/orbit move that starts high, swings ~70° around the lattice and descends to a low angle. Same palette and scene. |
+| `LatticeDrift-V2-Crane`     | 3840 x 2160 | 30  | 270    | 9.0 s    | Alternative camera: a perspective crane/orbit move that starts high, swings ~50° around the lattice and descends to a low angle (gentle, near-linear speed to avoid temporal aliasing). Same palette and scene. |
 
 Everything is procedural (seeded PRNG), so there are no external assets and
 every render produces the same frames.

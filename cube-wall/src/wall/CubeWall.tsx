@@ -38,7 +38,7 @@ const Lights: React.FC<{ palette: Palette }> = ({ palette }) => {
     );
     // Mostly frontal, slightly from the upper left: soft blue shadows fall
     // to the right of / below raised tiles, as in the reference.
-    l.position.set(-4.5, 4.5, 20);
+    l.position.set(-3, 3, 20);
     l.target.position.set(0, 0, 0);
     l.castShadow = true;
     l.shadow.mapSize.set(2048, 2048);
@@ -50,7 +50,7 @@ const Lights: React.FC<{ palette: Palette }> = ({ palette }) => {
     cam.near = 1;
     cam.far = 60;
     l.shadow.bias = -0.0005;
-    l.shadow.radius = 8;
+    l.shadow.radius = 3;
     l.shadow.blurSamples = 16;
     return l;
   }, [palette.keyLight, palette.keyIntensity]);
@@ -61,7 +61,7 @@ const Lights: React.FC<{ palette: Palette }> = ({ palette }) => {
       <primitive object={key.target} />
       {/* Broad light near the camera: bright centre, natural fall-off. */}
       <pointLight
-        position={[0.4, -1.6, 9]}
+        position={[-1.6, -1.8, 9]}
         color={palette.fillLight}
         intensity={palette.fillIntensity}
         decay={2}
@@ -164,7 +164,7 @@ export const CubeWall: React.FC<CubeWallProps> = ({ palette, seed }) => {
       <AbsoluteFill
         style={{
           pointerEvents: "none",
-          background: `radial-gradient(ellipse 75% 75% at 50% 58%, transparent 45%, ${palette.vignetteColor} 140%)`,
+          background: `radial-gradient(ellipse 75% 75% at 44% 58%, transparent 45%, ${palette.vignetteColor} 140%)`,
           opacity: palette.vignette,
         }}
       />

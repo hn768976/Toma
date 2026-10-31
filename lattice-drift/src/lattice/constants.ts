@@ -9,7 +9,7 @@ export const HEIGHT = 2160;
 
 // Lattice geometry, in grid units.
 export const BAR = 0.16; // square cross-section of every bar
-export const POST_HEIGHT = 1.25; // height of the upright posts
+export const POST_HEIGHT = 0.8; // height of the upright posts
 export const ROW_PITCH = 0.5; // spacing of the frame rows along Z
 // The camera drifts exactly this far along Z over the clip and the field
 // repeats with this period along Z, so the last frame flows into the first.
@@ -34,7 +34,7 @@ export type Palette = {
 export const REFERENCE_PALETTE: Palette = {
   background: "#98a3a7",
   groundA: "#a6b1b4",
-  groundB: "#838f93",
+  groundB: "#78858a",
   bar: "#f6f6f4",
   sky: "#f2f6f7",
   groundBounce: "#7f8c90",

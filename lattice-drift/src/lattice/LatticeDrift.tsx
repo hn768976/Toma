@@ -62,10 +62,10 @@ const referencePose = (
 // lattice so the depth of the structures reads strongly.
 const cranePose = (frame: number, durationInFrames: number): CameraPose => {
   const t = frame / (durationInFrames - 1);
-  const e = smoothstep(0, 1, t) * 0.65 + t * 0.35; // eased but never static
+  const e = smoothstep(0, 1, t) * 0.4 + t * 0.6; // gentle ease, low peak speed
   const target = new THREE.Vector3(-1.5 + 3 * e, 0.3, 1.1 - 2.2 * e);
-  const azimuth = BASE_AZIMUTH - 34 * DEG + 70 * DEG * e;
-  const elevation = (58 - 22 * e) * DEG;
+  const azimuth = BASE_AZIMUTH - 26 * DEG + 50 * DEG * e;
+  const elevation = (58 - 20 * e) * DEG;
   const distance = 13 - 2.8 * e;
   return {
     position: orbitPosition(target, azimuth, elevation, distance),
@@ -151,6 +151,14 @@ export const LatticeDrift: React.FC<LatticeDriftProps> = ({
         <StripeGround palette={palette} angle={90 * DEG} />
         <Bars pieces={pieces} time={time} palette={palette} />
       </ThreeCanvas>
+      {/* The reference is slightly darker towards the top-left. */}
+      <AbsoluteFill
+        style={{
+          pointerEvents: "none",
+          background:
+            "linear-gradient(135deg, rgba(40,52,58,0.10) 0%, rgba(40,52,58,0) 55%, rgba(255,255,255,0.04) 100%)",
+        }}
+      />
     </AbsoluteFill>
   );
 };
