@@ -17,20 +17,20 @@
     "reference_duration_s": 10.0,
     "duration_match": true,
     "audio_streams": 0,
-    "bitrate_kbps": 13674,
-    "size_mb": 17.09,
+    "bitrate_kbps": 13644,
+    "size_mb": 17.05,
     "decode_errors": "none",
     "black_frame_events": "none",
     "freeze_events": "none",
     "luma_mean_min_max": [
-      186.0,
-      187.7
+      186.4,
+      187.9
     ],
-    "luma_std_min": 32.1,
-    "max_frame_to_frame_luma_jump": 0.39,
-    "mean_frame_to_frame_abs_diff": 4.36,
-    "max_frame_to_frame_abs_diff": 4.75,
-    "min_frame_to_frame_abs_diff": 3.97,
+    "luma_std_min": 30.7,
+    "max_frame_to_frame_luma_jump": 0.29,
+    "mean_frame_to_frame_abs_diff": 4.35,
+    "max_frame_to_frame_abs_diff": 4.72,
+    "min_frame_to_frame_abs_diff": 3.95,
     "pass": true
   },
   {
@@ -51,20 +51,20 @@
     "reference_duration_s": 10.0,
     "duration_match": true,
     "audio_streams": 0,
-    "bitrate_kbps": 16548,
-    "size_mb": 20.68,
+    "bitrate_kbps": 16533,
+    "size_mb": 20.67,
     "decode_errors": "none",
     "black_frame_events": "none",
     "freeze_events": "none",
     "luma_mean_min_max": [
-      165.3,
-      167.1
+      164.8,
+      166.5
     ],
-    "luma_std_min": 33.8,
-    "max_frame_to_frame_luma_jump": 0.43,
-    "mean_frame_to_frame_abs_diff": 4.76,
-    "max_frame_to_frame_abs_diff": 5.19,
-    "min_frame_to_frame_abs_diff": 4.32,
+    "luma_std_min": 33.6,
+    "max_frame_to_frame_luma_jump": 0.32,
+    "mean_frame_to_frame_abs_diff": 4.77,
+    "max_frame_to_frame_abs_diff": 5.2,
+    "min_frame_to_frame_abs_diff": 4.33,
     "pass": true
   },
   {
@@ -85,20 +85,20 @@
     "reference_duration_s": 10.0,
     "duration_match": true,
     "audio_streams": 0,
-    "bitrate_kbps": 11404,
+    "bitrate_kbps": 11403,
     "size_mb": 14.25,
     "decode_errors": "none",
     "black_frame_events": "none",
     "freeze_events": "none",
     "luma_mean_min_max": [
-      193.2,
-      194.6
+      192.8,
+      194.2
     ],
-    "luma_std_min": 36.2,
-    "max_frame_to_frame_luma_jump": 0.26,
-    "mean_frame_to_frame_abs_diff": 3.0,
-    "max_frame_to_frame_abs_diff": 3.3,
-    "min_frame_to_frame_abs_diff": 2.79,
+    "luma_std_min": 36.4,
+    "max_frame_to_frame_luma_jump": 0.22,
+    "mean_frame_to_frame_abs_diff": 2.98,
+    "max_frame_to_frame_abs_diff": 3.24,
+    "min_frame_to_frame_abs_diff": 2.75,
     "pass": true
   },
   {
@@ -119,20 +119,20 @@
     "reference_duration_s": 10.0,
     "duration_match": true,
     "audio_streams": 0,
-    "bitrate_kbps": 12696,
-    "size_mb": 15.87,
+    "bitrate_kbps": 12773,
+    "size_mb": 15.97,
     "decode_errors": "none",
     "black_frame_events": "none",
     "freeze_events": "none",
     "luma_mean_min_max": [
-      192.5,
-      196.6
+      193.7,
+      198.0
     ],
-    "luma_std_min": 34.2,
-    "max_frame_to_frame_luma_jump": 0.24,
-    "mean_frame_to_frame_abs_diff": 3.34,
-    "max_frame_to_frame_abs_diff": 3.73,
-    "min_frame_to_frame_abs_diff": 2.83,
+    "luma_std_min": 32.4,
+    "max_frame_to_frame_luma_jump": 0.2,
+    "mean_frame_to_frame_abs_diff": 3.33,
+    "max_frame_to_frame_abs_diff": 3.67,
+    "min_frame_to_frame_abs_diff": 2.79,
     "pass": true
   }
 ]
