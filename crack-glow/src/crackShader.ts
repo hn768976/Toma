@@ -175,12 +175,11 @@ void main() {
   vec2 bdir = vor.yz;                   // border normal, towards neighbour
   float aa = max(pixelWorld * 1.2, 1e-4);
 
-  // edge identity (order independent) for per-crack variation
-  ivec2 lo = min(cid, nid), hi = max(cid, nid);
-  float eRand = h1(lo * 31 + hi * 7 + ivec2(13, 71));
-  float eRand2 = h1(lo * 11 + hi * 53 + ivec2(5, 3));
 
-  float gapW = 0.010 + 0.010 * eRand2;  // half-width of the crack gap
+  // spatially continuous variation fields (no hard switches at crack junctions)
+  float varA = fbm(p * 1.6 + vec2(7.1, 2.3));
+  float varB = fbm(p * 2.3 + vec2(-4.2, 9.7));
+  float gapW = 0.010 + 0.010 * varB;  // half-width of the crack gap
   float gap = 1.0 - smoothstep(gapW - aa, gapW + aa, ed);
 
   // ---- Tile shading --------------------------------------------------------
@@ -220,26 +219,27 @@ void main() {
   float x = clamp((tc - 4.0) / 62.0, 0.0, 1.0);
   float R = 3.8 * pow(x, 0.6);                        // radius of the wavefront
   // each crack segment ignites slightly early or late -> ragged, organic front
-  float behind = R - r - (eRand2 - 0.5) * 0.5 - (fbm(p * 1.3) - 0.5) * 0.5;
+  float behind = R - r - (varB - 0.5) * 0.6 - (fbm(p * 1.3) - 0.5) * 0.5;
   float lit = smoothstep(-0.12, 0.08, behind);
-  float trail = exp(-max(behind, 0.0) / 0.42);      // centre goes dark behind the front
+  float trail = exp(-max(behind, 0.0) / (1.05 - 0.8 * x));      // centre goes dark behind the front
   float energy = lit * trail;
-  energy *= mix(0.55, 1.0, smoothstep(3.0, 16.0, tc)) * (1.0 - smoothstep(54.0, 80.0, tc)) * step(4.0, tc);
+  energy *= mix(0.25, 1.0, smoothstep(4.0, 28.0, tc)) * (1.0 - smoothstep(54.0, 80.0, tc)) * step(4.0, tc);
 
   // per-crack variation: some cracks stay dark, some burn hotter
-  float edgeOn = smoothstep(0.18, 0.40, eRand) * (0.55 + 0.75 * eRand2);
+  float edgeOn = smoothstep(0.10, 0.36, varA) * (0.7 + 0.6 * varB);
   energy *= edgeOn;
 
   // colour follows direction from the impact: accent (warm) towards the
   // upper right, mid tone in between, primary towards the lower left.
   float dirW = dot(normalize(rel + 1e-4), normalize(vec2(0.75, 0.66)));
   dirW += 0.45 * (fbm(p * 0.8 + vec2(3.7, 1.3)) - 0.5) + uAccentAmount;
-  vec3 crackCol = mix(uCrackA, uCrackM, smoothstep(-0.55, 0.0, dirW));
-  crackCol = mix(crackCol, uCrackB, smoothstep(0.15, 0.55, dirW));
+  vec3 crackCol = mix(uCrackA, uCrackM, smoothstep(-0.45, 0.15, dirW));
+  crackCol = mix(crackCol, uCrackB, smoothstep(0.35, 0.75, dirW));
 
+  crackCol = mix(crackCol, uCrackB, 0.45 * exp(-r / 0.45) * (1.0 - smoothstep(16.0, 40.0, tc)) * smoothstep(0.0, 0.6, dirW));
   float core = exp(-max(ed - gapW * 0.2, 0.0) / (0.005 + aa));
   float halo = exp(-ed / 0.022);
-  float glowAmt = 0.80 * core * mix(0.4, 1.0, gap) + 0.16 * halo;
+  float glowAmt = 0.40 * core * mix(0.4, 1.0, gap) + 0.10 * halo;
   vec3 glow = crackCol * energy * glowAmt;
   // the hottest cracks near the leading edge flare slightly brighter
   glow *= 1.0 + 0.6 * exp(-pow(behind / 0.25, 2.0));
@@ -256,13 +256,14 @@ void main() {
   float along = dot(d, sdir);
   float perp = abs(dot(d, vec2(-sdir.y, sdir.x)));
   float streakEnv = smoothstep(1.0, 3.0, tc) * (1.0 - smoothstep(7.0, 15.0, tc));
-  float streakLen = smoothstep(-0.18, 0.02, along) * (1.0 - smoothstep(0.5, 1.2, along));
-  float streak = exp(-perp / 0.0025) * 1.1 + exp(-perp / 0.015) * 0.18;
+  float streakLen = smoothstep(-0.005, 0.03, along) * (1.0 - smoothstep(0.15, 0.55, along));
+  float wedgeW = 0.004 + 0.03 * smoothstep(0.0, 0.5, along);
+  float streak = exp(-perp / (0.0025 + 0.3 * wedgeW)) * 0.9 + exp(-perp / wedgeW) * 0.22;
   col += uStreak * streak * streakLen * streakEnv;
 
   // compact impact burst with fine radial spikes
   float ang = atan(d.y, d.x);
-  float burstEnv = smoothstep(2.0, 5.0, tc) * exp(-max(tc - 6.0, 0.0) / 6.0);
+  float burstEnv = 0.7 * smoothstep(2.0, 5.0, tc) * exp(-max(tc - 6.0, 0.0) / 5.0);
   float spikes = pow(angNoise(ang, 72, 1.0), 5.0) + 0.6 * pow(angNoise(ang, 24, 2.0), 6.0);
   float burst = exp(-dl / 0.012) * 0.9 + exp(-dl / 0.05) * 0.10 + spikes * exp(-dl / 0.10) * 0.15;
   col += uFlare * burst * burstEnv;
@@ -272,7 +273,7 @@ void main() {
   float rays = pow(angNoise(ang, 44, 5.0), 4.0) * 0.8 + pow(angNoise(ang, 14, 9.0), 4.0) * 0.6;
   col += uCrackM * rays * exp(-dl / 0.22) * smoothstep(0.02, 0.10, dl) * rayEnv * 0.035;
   // soft coloured haze hanging over the freshly lit region
-  col += mix(uCrackA, uCrackM, 0.5) * 0.006 * exp(-dl / 0.28) * smoothstep(4.0, 10.0, tc) * (1.0 - smoothstep(16.0, 40.0, tc));
+  col += mix(uCrackA, uCrackM, 0.6) * 0.0025 * exp(-dl / 0.32) * smoothstep(8.0, 22.0, tc) * (1.0 - smoothstep(30.0, 50.0, tc));
 
   // ---- Grade --------------------------------------------------------------
   float vig = smoothstep(1.25, 0.25, length(uv * vec2(0.85, 1.1)));
