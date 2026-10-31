@@ -49,7 +49,7 @@ type Slot = {
 };
 
 /** Show period: each position re-fires every 2 s, like the reference. */
-export const PERIOD = 2.0;
+export const PERIOD = 2.15;
 
 // Layout traced from the reference: a wide, roughly mirror-symmetric cluster
 // with a big orange shell in the middle, red / gold shells top-left and
@@ -57,28 +57,28 @@ export const PERIOD = 2.0;
 // the right and softer shells at the back.
 const SLOTS: Slot[] = [
   // top-left red
-  { x: 140, y: 146, radius: 66, color: "red", alt: "orange", phase: -0.12, intensity: 1, trail: 0.59, gravity: 9, decay: 0.75, life: 2.5 },
+  { x: 140, y: 146, radius: 66, color: "red", alt: "orange", phase: 0.02, intensity: 1, trail: 0.59, gravity: 14, decay: 0.75, life: 2.5 },
   // centre big orange (first shown as a golden flash)
-  { x: 384, y: 228, radius: 92, color: "orange", alt: "orange", phase: -0.08, intensity: 1.1, trail: 0.62, gravity: 8, decay: 0.7, life: 2.6 },
+  { x: 384, y: 228, radius: 92, color: "orange", alt: "orange", phase: 0.05, intensity: 1.1, trail: 0.62, gravity: 12, decay: 0.7, life: 2.6 },
   // top-right gold
-  { x: 536, y: 146, radius: 62, color: "gold", alt: "amber", phase: 0.3, intensity: 1, trail: 0.59, gravity: 9, decay: 0.75, life: 2.5 },
+  { x: 536, y: 146, radius: 62, color: "gold", alt: "amber", phase: 0.3, intensity: 1, trail: 0.59, gravity: 14, decay: 0.75, life: 2.5 },
   // left-mid gold
-  { x: 244, y: 196, radius: 54, color: "gold", alt: "gold", phase: 0.8, intensity: 1, trail: 0.55, gravity: 9, decay: 0.8, life: 2.4 },
+  { x: 244, y: 196, radius: 54, color: "gold", alt: "gold", phase: 0.8, intensity: 1, trail: 0.55, gravity: 14, decay: 0.8, life: 2.4 },
   // low-left orange (bright ball that grows into a drooping curtain)
-  { x: 176, y: 270, radius: 82, color: "orange", alt: "amber", phase: 0.95, intensity: 1.05, trail: 0.82, gravity: 22, decay: 1.4, life: 2.7 },
+  { x: 176, y: 270, radius: 82, color: "orange", alt: "amber", phase: 0.95, intensity: 1.05, trail: 0.82, gravity: 33, decay: 1.4, life: 2.7 },
   // low-right orange
-  { x: 582, y: 270, radius: 82, color: "orange", alt: "amber", phase: 1.0, intensity: 1.05, trail: 0.82, gravity: 22, decay: 1.4, life: 2.7 },
+  { x: 582, y: 270, radius: 82, color: "orange", alt: "amber", phase: 1.0, intensity: 1.05, trail: 0.82, gravity: 33, decay: 1.4, life: 2.7 },
   // right pink
-  { x: 638, y: 196, radius: 36, color: "pink", alt: "pink", phase: 1.22, intensity: 1, trail: 0.47, gravity: 8, decay: 0.85, life: 2.1 },
+  { x: 638, y: 196, radius: 36, color: "pink", alt: "pink", phase: 1.22, intensity: 1, trail: 0.47, gravity: 12, decay: 0.85, life: 2.1 },
   // back-left amber (soft)
-  { x: 236, y: 108, radius: 46, color: "amber", alt: "gold", phase: 1.35, intensity: 0.7, trail: 0.7, gravity: 10, decay: 0.9, life: 2.4 },
+  { x: 236, y: 108, radius: 46, color: "amber", alt: "gold", phase: 1.35, intensity: 0.7, trail: 0.7, gravity: 15, decay: 0.9, life: 2.4 },
   // back-right red (soft)
-  { x: 632, y: 112, radius: 50, color: "red", alt: "orange", phase: 1.5, intensity: 0.75, trail: 0.7, gravity: 10, decay: 0.9, life: 2.4 },
+  { x: 632, y: 112, radius: 50, color: "red", alt: "orange", phase: 1.5, intensity: 0.75, trail: 0.7, gravity: 15, decay: 0.9, life: 2.4 },
   // small top accents
-  { x: 112, y: 106, radius: 22, color: "pink", alt: "red", phase: 1.62, intensity: 0.9, trail: 0.39, gravity: 7, decay: 1.0, life: 1.8 },
-  { x: 664, y: 104, radius: 18, color: "orange", alt: "pink", phase: 1.78, intensity: 0.85, trail: 0.39, gravity: 7, decay: 1.0, life: 1.7 },
+  { x: 112, y: 106, radius: 22, color: "pink", alt: "red", phase: 1.62, intensity: 0.9, trail: 0.39, gravity: 10, decay: 1.0, life: 1.8 },
+  { x: 664, y: 104, radius: 18, color: "orange", alt: "pink", phase: 1.78, intensity: 0.85, trail: 0.39, gravity: 10, decay: 1.0, life: 1.7 },
   // sparse glitter shell drifting at the right edge
-  { x: 700, y: 236, radius: 40, color: "amber", alt: "red", phase: 1.9, intensity: 0.45, trail: 0.98, gravity: 13, decay: 0.7, life: 2.6 },
+  { x: 700, y: 236, radius: 40, color: "amber", alt: "red", phase: 1.9, intensity: 0.45, trail: 0.98, gravity: 20, decay: 0.7, life: 2.6 },
 ];
 
 const makeStars = (count: number, seed: number): Burst["stars"] => {
@@ -91,7 +91,7 @@ const makeStars = (count: number, seed: number): Burst["stars"] => {
   for (let i = 0; i < count; i++) {
     // Uniform direction on a sphere, projected to the image plane: gives the
     // dense-rimmed chrysanthemum look of a real spherical break.
-    const z = rnd() * 2 - 1;
+    const z = (rnd() * 2 - 1) * 0.995;
     const r = Math.sqrt(1 - z * z);
     const a = rnd() * Math.PI * 2;
     dx[i] = Math.cos(a) * r;
@@ -110,10 +110,10 @@ export const buildShow = (durationSeconds: number): Burst[] => {
   for (const slot of SLOTS) {
     for (let t = slot.phase; t < durationSeconds + 0.1; t += PERIOD) {
       const isFirst = t === slot.phase;
-      const jitterT = isFirst ? 0 : (rnd() - 0.5) * 0.12;
+      const jitterT = isFirst ? 0 : (rnd() - 0.5) * 0.3;
       const jx = (rnd() - 0.5) * 8;
       const jy = (rnd() - 0.5) * 6;
-      const radius = slot.radius * (0.94 + rnd() * 0.12);
+      const radius = slot.radius * 1.18 * (0.92 + rnd() * 0.16);
       const color = rnd() < 0.22 ? slot.alt : slot.color;
       const count = Math.round(160 + radius * 4.2);
       bursts.push({

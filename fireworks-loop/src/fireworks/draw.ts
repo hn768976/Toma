@@ -91,14 +91,14 @@ export const drawFrame = (
     // Trails are spatial (a fraction of the travelled distance) because the
     // burning sparks hang in the air behind each star.
     const head = travel(age);
-    const L = Math.min(0.62, b.trail * 0.8);
+    const L = Math.min(0.58, b.trail * 0.75);
     const d = [head * (1 - L), head * (1 - 0.55 * L), head * (1 - 0.22 * L), head];
     const fall = 0.5 * g * age * age;
     const drop = [fall * 0.55, fall * 0.75, fall * 0.9, fall];
     // very compact young shells would saturate to white under additive
     // blending; compensate for the star density so they stay coloured
-    const density = 0.4 + 0.6 * smoothstep(0.15, 0.75, head);
-    const segAlpha = [0.4, 0.75, 1.0];
+    const density = 0.2 + 0.8 * smoothstep(0.12, 0.8, head);
+    const segAlpha = [0.3, 0.6, 0.85];
     const segWidth = [0.75, 0.9, 1.05].map((v) => v * s);
 
     for (let group = 0; group < 2; group++) {
@@ -127,7 +127,7 @@ export const drawFrame = (
       if (glitter > 0) {
         // deterministic twinkle; only a minority of stars blink at once
         const h = hash2(seed[i], frame >> 1);
-        if (h < glitter * 0.45) continue;
+        if (h < glitter * 0.6) continue;
       }
       const x = cx + dx[i] * speed[i] * R * d[3];
       const y = cy + dy[i] * speed[i] * R * d[3] + drop[3];
@@ -152,7 +152,7 @@ export const drawFrame = (
   sctx.globalCompositeOperation = "copy";
   sctx.imageSmoothingEnabled = true;
   sctx.imageSmoothingQuality = "high";
-  sctx.filter = `blur(${(1.2 * s) / 4}px)`;
+  sctx.filter = `blur(${(2.0 * s) / 4}px)`;
   sctx.drawImage(ctx.canvas, 0, 0, glow.small.width, glow.small.height);
   sctx.filter = "none";
 
@@ -160,7 +160,7 @@ export const drawFrame = (
   tctx.globalCompositeOperation = "copy";
   tctx.imageSmoothingEnabled = true;
   tctx.imageSmoothingQuality = "high";
-  tctx.filter = `blur(${(6 * s) / 16}px)`;
+  tctx.filter = `blur(${(9 * s) / 16}px)`;
   tctx.drawImage(glow.small, 0, 0, glow.tiny.width, glow.tiny.height);
   tctx.filter = "none";
 
@@ -171,7 +171,9 @@ export const drawFrame = (
   ctx.drawImage(glow.small, 0, 0, W, H);
   ctx.globalAlpha = 0.3;
   ctx.drawImage(glow.small, 0, 0, W, H);
-  ctx.globalAlpha = 1.0;
+  ctx.globalAlpha = 1;
+  ctx.drawImage(glow.tiny, 0, 0, W, H);
+  ctx.globalAlpha = 0.5;
   ctx.drawImage(glow.tiny, 0, 0, W, H);
   ctx.restore();
 };

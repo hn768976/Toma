@@ -14,11 +14,11 @@ export type PaletteName = "classic" | "arctic";
  */
 export const PALETTES: Record<PaletteName, Record<ShellColorName, ShellColor>> = {
   classic: {
-    orange: { hot: [255, 140, 52], main: [255, 92, 24], end: [186, 38, 12] },
-    gold: { hot: [255, 190, 96], main: [255, 146, 40], end: [204, 84, 20] },
-    red: { hot: [255, 140, 92], main: [236, 58, 30], end: [150, 22, 14] },
-    pink: { hot: [255, 168, 184], main: [255, 78, 108], end: [184, 30, 70] },
-    amber: { hot: [255, 160, 70], main: [255, 122, 36], end: [184, 56, 16] },
+    orange: { hot: [255, 120, 44], main: [255, 78, 18], end: [180, 34, 10] },
+    gold: { hot: [255, 160, 70], main: [255, 118, 30], end: [196, 66, 14] },
+    red: { hot: [255, 110, 70], main: [232, 48, 24], end: [146, 18, 12] },
+    pink: { hot: [255, 140, 160], main: [255, 66, 96], end: [180, 26, 64] },
+    amber: { hot: [255, 136, 56], main: [255, 98, 24], end: [180, 46, 12] },
   },
   arctic: {
     orange: { hot: [150, 224, 255], main: [52, 182, 255], end: [24, 78, 210] },
