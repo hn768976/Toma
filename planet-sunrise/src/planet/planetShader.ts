@@ -5,10 +5,10 @@
  * canvas, so the 3840x2160 composition renders at 5 px per ref px.
  *
  * Measured from the reference clip:
- *   - Planet limb is a circle, centre (384, -962), radius 1074 ->
- *     y = 41 at the frame edges, y ~ 112 at the centre.
- *   - Sun sits on the limb at (384, 108) and pulses on an ~88-frame
- *     cycle with 2nd/3rd harmonics (uSunPulse, computed in JS).
+ *   - Planet limb is a circle, centre (384, -932.5), radius 1046.5 ->
+ *     y = 41 at the frame edges, y = 114 at the centre.
+ *   - Sun sits on the limb at (384, 116) and pulses following the
+ *     reference's measured brightness curve (uSunPulse, from JS).
  *   - Lens-flare ghosts lie on the line sun -> frame centre at
  *     0.97, 1.45, 1.96, 2.17, 2.56 x (centre - sun).
  *
@@ -33,9 +33,9 @@ out vec4 outColor;
 
 const vec2 REF = vec2(768.0, 432.0);
 const vec2 CENTER = vec2(384.0, 216.0);
-const vec2 PC = vec2(384.0, -962.0);
-const float PR = 1074.0;
-const vec2 SUN = vec2(384.0, 108.0);
+const vec2 PC = vec2(384.0, -932.5);
+const float PR = 1046.5;
+const vec2 SUN = vec2(384.0, 116.0);
 
 float hash11(float p) {
   p = fract(p * 0.1031);
@@ -97,8 +97,9 @@ vec3 stars(vec2 p, float cell, float density, float seed, float sizeMax) {
       vec2 pos = (id + 0.15 + 0.7 * vec2(hash21(id + seed + 1.3), hash21(id + seed + 2.7))) * cell;
       pos += (vec2(hash21(id + 5.1), hash21(id + 6.3)) - 0.5) * uTime * 0.18;
       float size = mix(0.32, sizeMax, pow(hash21(id + seed + 4.1), 3.0));
-      float tw = 0.5 + 0.5 * sin(uTime * (1.2 + 4.0 * hash21(id + 9.9)) + h * 60.0);
-      float br = mix(0.25, 1.0, pow(hash21(id + seed + 8.0), 2.0)) * (0.35 + 0.65 * tw);
+      // Sparkle: mostly dim with brief bright peaks (~3x swing).
+      float tw = 0.5 + 0.5 * sin(uTime * (2.0 + 5.0 * hash21(id + 9.9)) + h * 60.0);
+      float br = mix(0.3, 1.0, pow(hash21(id + seed + 8.0), 1.5)) * (0.35 + 1.6 * pow(tw, 8.0));
       vec3 tint = mix(vec3(0.85, 0.95, 1.0), vec3(0.45, 1.0, 0.95), step(0.8, hash21(id + 3.3)));
       float d = length(p - pos);
       acc += tint * br * exp(-d * d / (2.0 * size * size));
@@ -111,15 +112,20 @@ vec3 space(vec2 p) {
   vec2 uv = p / REF;
   float n1 = fbm(p * 0.0055 + vec2(3.1, uTime * 0.01));
   float n2 = fbm(p * 0.012 + vec2(-uTime * 0.012, 7.7));
-  vec3 base = mix(vec3(0.0, 0.035, 0.065), vec3(0.06, 0.25, 0.36), smoothstep(0.3, 0.85, n1));
-  base = mix(base, vec3(0.1, 0.28, 0.32), smoothstep(0.55, 0.95, n2) * 0.4);
+  vec3 base = mix(vec3(0.0, 0.1, 0.16), vec3(0.06, 0.28, 0.4), smoothstep(0.3, 0.85, n1));
+  base = mix(base, vec3(0.1, 0.3, 0.36), smoothstep(0.55, 0.95, n2) * 0.4);
   float vig = smoothstep(1.25, 0.25, length((uv - vec2(0.5, 0.25)) * vec2(1.0, 1.15)));
-  base *= 0.28 + 0.8 * vig;
-  // Broad yellow-green light cone falling from the sun.
+  base *= 0.3 + 0.78 * vig;
+  // Teal-black corners.
+  float corner = smoothstep(0.35, 0.75, length((uv - vec2(0.5, 0.35)) * vec2(1.0, 1.3)));
+  base = mix(base, vec3(0.0, 0.1, 0.17), corner * 0.9);
+  // Right side of the nebula is darker / greener than the left.
+  base *= mix(vec3(1.0), vec3(0.95, 0.8, 0.68), smoothstep(0.45, 0.95, uv.x));
+  // Broad light cone falling from the sun.
   vec2 ds = p - SUN;
   float ang = atan(ds.x, ds.y);
   float cone = exp(-ang * ang / (2.0 * 0.42 * 0.42)) * exp(-length(ds) / 420.0);
-  base += vec3(0.2, 0.27, 0.17) * cone * 0.75;
+  base += vec3(0.36, 0.4, 0.26) * cone * 0.8;
   return base;
 }
 
@@ -129,51 +135,54 @@ vec3 planet(vec2 p, float d) {
   vec3 n = vec3(rel, z);
   float lon = atan(n.x, n.z) + uTime * 0.0035;
   float lat = asin(clamp(n.y, -1.0, 1.0));
-  vec2 tc = vec2(lon * 9.0, lat * 9.0) * 1.15;
+  vec2 tc = vec2(lon * 9.0, lat * 9.0) * 1.4;
   float cl = fbm(tc + vec2(0.0, uTime * 0.02));
   float cl2 = fbm(tc * 2.3 + 4.0);
-  float clouds = smoothstep(0.45, 0.9, cl * 0.8 + cl2 * 0.3);
+  // Dark cloud blotches, lit (bright edges) only near the rim.
+  float clouds = smoothstep(0.48, 0.78, cl * 0.8 + cl2 * 0.3);
   float limbDist = PR - d;
-  float lit = exp(-limbDist / 40.0);
-  // Scattered sunlight over the night side near the sun.
-  float sunScatter = exp(-length((p - SUN) * vec2(1.0, 1.6)) / 170.0);
-  float sideFade = smoothstep(60.0, 300.0, abs(p.x - SUN.x));
-  vec3 col = vec3(0.01, 0.045, 0.055);
-  col += vec3(0.05, 0.22, 0.27) * lit;
-  col += vec3(0.1, 0.36, 0.42) * clouds * (lit * 0.7 + 0.05) * sideFade;
-  col += vec3(0.22, 0.38, 0.32) * clouds * exp(-limbDist / 120.0) * 0.35 * sideFade;
-  col += vec3(0.34, 0.48, 0.36) * sunScatter * (0.8 + 0.2 * clouds);
+  float lit = exp(-limbDist / 38.0);
+  float sunScatter = exp(-length((p - SUN) * vec2(0.8, 1.7)) / 160.0);
+  vec3 col = vec3(0.025, 0.13, 0.16);                    // teal night side
+  col *= 0.55 + 0.45 * smoothstep(250.0, 0.0, limbDist);
+  col = mix(col, vec3(0.03, 0.08, 0.13), clouds * 0.75); // dark blue blotches
+  col += vec3(0.06, 0.32, 0.4) * lit * (0.5 + 0.5 * (1.0 - clouds));
+  col += vec3(0.3, 0.55, 0.6) * clouds * lit * 0.5;      // rim-lit cloud edges
+  col += vec3(0.4, 0.5, 0.36) * sunScatter * (0.75 + 0.25 * clouds);
   return col;
 }
 
 vec3 atmosphere(vec2 p, float d, float pulse) {
   float sd = d - PR;
-  float nearSun = exp(-abs(p.x - SUN.x) / 230.0);
-  float rimLine = exp(-abs(sd + 1.6) / 1.5);
-  float inner = exp(-max(-sd, 0.0) / 10.0) * step(sd, 0.0);
-  float outer = exp(-max(sd, 0.0) / 13.0) * step(0.0, sd);
-  float haze = exp(-max(sd, 0.0) / 45.0) * step(0.0, sd);
-  vec3 rimCol = mix(vec3(0.12, 0.72, 0.9), vec3(0.85, 1.0, 1.0), nearSun);
-  float k = 0.75 + 0.9 * nearSun * pulse;
-  return rimCol * (rimLine * 1.15 + inner * 0.38 + outer * 0.5) * k
-       + vec3(0.1, 0.45, 0.55) * haze * 0.22 * (0.5 + nearSun);
+  float nearSun = exp(-abs(p.x - SUN.x) / 120.0);
+  // Soft, saturated cyan rim (~25 ref px of glow), white only near the sun.
+  float rimLine = exp(-pow(sd / 3.2, 2.0));
+  float inner = exp(-max(-sd, 0.0) / 9.0) * step(sd, 0.0);
+  float outer = exp(-max(sd, 0.0) / 9.0) * step(0.0, sd);
+  float haze = exp(-max(sd, 0.0) / 40.0) * step(0.0, sd);
+  vec3 rimCol = mix(vec3(0.05, 0.72, 0.92), vec3(0.75, 1.0, 1.0), nearSun);
+  float k = 0.7 + 0.8 * nearSun * pulse;
+  return rimCol * (rimLine * 0.75 + inner * 0.45 + outer * 0.55) * k
+       + vec3(0.05, 0.42, 0.55) * haze * 0.25 * (0.5 + nearSun);
 }
 
 vec3 sun(vec2 p, float pulse) {
   vec2 ds = p - SUN;
   float r = length(ds);
-  float core = exp(-r * r / (2.0 * 15.0 * 15.0));
-  float glow = exp(-r / 34.0) * 0.9 + exp(-r / 95.0) * 0.55 + exp(-r / 230.0) * 0.2;
-  float streak = exp(-abs(ds.y) / 2.2) * exp(-abs(ds.x) / 85.0) * 0.6
-               + exp(-abs(ds.y) / 9.0) * exp(-abs(ds.x) / 150.0) * 0.18;
+  // Wide horizontal glare ellipse along the rim (about 2:1).
+  float re = length(ds * vec2(0.5, 1.0));
+  float core = exp(-re * re / (2.0 * 14.0 * 14.0));
+  float glow = exp(-re / 30.0) * 0.95 + exp(-r / 85.0) * 0.5 + exp(-r / 220.0) * 0.2;
+  float streak = exp(-abs(ds.y) / 2.2) * exp(-abs(ds.x) / 85.0) * 0.4
+               + exp(-abs(ds.y) / 9.0) * exp(-abs(ds.x) / 150.0) * 0.05;
   float ang = atan(ds.x, ds.y);
   float rays = pow(noise1(ang * 16.0 + uTime * 0.12), 2.5) * 0.6
              + pow(noise1(ang * 37.0 - uTime * 0.2 + 3.0), 3.0) * 0.4;
   rays *= exp(-r / 230.0) * smoothstep(0.0, 25.0, r);
-  vec3 c = vec3(1.0, 0.98, 0.88) * core * 2.6
-         + vec3(0.86, 0.96, 0.58) * glow
-         + vec3(0.8, 1.0, 1.0) * streak
-         + vec3(0.55, 0.75, 0.5) * rays * 0.03;
+  vec3 c = vec3(0.95, 1.0, 1.0) * core * 2.6
+         + vec3(0.8, 0.96, 0.86) * glow
+         + vec3(0.7, 1.0, 1.0) * streak
+         + vec3(0.55, 0.8, 0.75) * rays * 0.03;
   return c * pulse;
 }
 
@@ -186,24 +195,30 @@ vec3 ghost(vec2 q, vec2 pos, float rad, vec3 col, float soft) {
 
 vec3 flares(vec2 q, float pulse) {
   vec2 axis = CENTER - uSunScreen;
+  vec2 dir = normalize(axis);
   vec3 c = vec3(0.0);
-  c += ghost(q, uSunScreen + axis * 0.97, 9.0, vec3(0.5, 0.82, 1.0) * 0.9, 0.95);
-  c += ghost(q, uSunScreen + axis * 0.97, 2.5, vec3(0.8, 0.95, 1.0) * 0.8, 0.9);
-  c += ghost(q, uSunScreen + axis * 1.45, 5.0, vec3(0.55, 0.6, 0.32) * 0.35, 0.7);
-  c += ghost(q, uSunScreen + axis * 1.96, 8.5, vec3(1.0, 0.8, 0.28) * 0.75, 0.35);
-  c += ghost(q, uSunScreen + axis * 2.17, 6.5, vec3(1.0, 0.72, 0.2) * 0.55, 0.4);
-  // Large faint ring ghost.
+  // Soft blue-white ghost.
+  c += ghost(q, uSunScreen + axis * 0.97, 16.0, vec3(0.4, 0.75, 1.0) * 0.45, 1.0);
+  c += ghost(q, uSunScreen + axis * 0.97, 4.0, vec3(0.75, 0.92, 1.0) * 0.7, 0.9);
+  // Soft amber blob.
+  c += ghost(q, uSunScreen + axis * 1.45, 20.0, vec3(0.5, 0.4, 0.16) * 0.22, 1.0);
+  // Gold ghosts (lower one oval, elongated along the flare axis).
+  c += ghost(q, uSunScreen + axis * 1.96, 11.0, vec3(0.85, 0.55, 0.06) * 0.75, 0.35);
+  vec2 o = q - (uSunScreen + axis * 2.17);
+  vec2 oo = vec2(dot(o, vec2(-dir.y, dir.x)), dot(o, dir) / 1.3);
+  float od = length(oo);
+  c += vec3(0.75, 0.52, 0.1) * (smoothstep(8.5, 5.0, od) + exp(-od / 7.0) * 0.3) * 0.55;
+  // Large disc ghost: amber-brown fill, soft edge, plus a faint outer ring.
   vec2 rp = uSunScreen + axis * 2.56;
   float rd = length(q - rp);
-  float ring = smoothstep(46.0, 40.0, rd) * (0.35 + 0.65 * smoothstep(20.0, 44.0, rd));
-  c += vec3(0.55, 0.55, 0.3) * ring * 0.16;
-  c += vec3(0.4, 0.45, 0.25) * exp(-rd / 30.0) * 0.12;
+  float disc = smoothstep(46.0, 40.0, rd) * (0.45 + 0.55 * smoothstep(18.0, 44.0, rd));
+  c += vec3(0.3, 0.24, 0.06) * disc * 0.3;
+  c += vec3(0.4, 0.42, 0.25) * exp(-pow((rd - 60.0) / 4.0, 2.0)) * 0.07;
   // Soft veil along the flare axis.
-  vec2 dir = normalize(axis);
   vec2 rel = q - uSunScreen;
   float along = dot(rel, dir);
   float across = abs(dot(rel, vec2(-dir.y, dir.x)));
-  c += vec3(0.35, 0.4, 0.25) * exp(-across / 18.0) * smoothstep(0.0, 120.0, along)
+  c += vec3(0.35, 0.42, 0.3) * exp(-across / 18.0) * smoothstep(0.0, 120.0, along)
        * exp(-along / 260.0) * 0.12;
   return c * pulse;
 }
@@ -212,7 +227,7 @@ void main() {
   vec2 frag = vec2(gl_FragCoord.x, uResolution.y - gl_FragCoord.y);
   vec2 q = frag / uResolution * REF;
 
-  float pulse = 1.0 + 0.16 * uSunPulse;
+  float pulse = 1.0 + 0.26 * uSunPulse;
 
   // Layers with parallax: far nebula/stars (0.35), planet & sun (1.0), dust (1.35).
   vec2 pFar = toWorld(q, 0.35);
@@ -227,26 +242,30 @@ void main() {
   vec3 sky = vec3(0.0);
   if (inside < 1.0) {
     sky = space(pFar);
-    sky += stars(pFar, 8.0, 0.3, 1.0, 0.8) * 0.6;
-    sky += stars(pMid, 21.0, 0.45, 11.0, 1.2) * 0.75;
+    sky += stars(pFar, 8.0, 0.45, 1.0, 0.85) * 0.8;
+    sky += stars(pMid, 19.0, 0.6, 11.0, 1.25) * 1.0;
   }
   vec3 col = sky;
   if (inside > 0.0) col = mix(sky, planet(p, d), inside);
   // Floating near-field dust motes (in front of everything).
-  col += stars(pNear + vec2(uTime * 2.2, -uTime * 1.1), 37.0, 0.25, 23.0, 1.0) * 0.4;
+  col += stars(pNear + vec2(uTime * 2.2, -uTime * 1.1), 30.0, 0.3, 23.0, 1.0) * 0.55;
+  // Sparse stars/dust also read over the planet's night side.
+  if (inside > 0.0) col += stars(pMid, 26.0, 0.35, 31.0, 1.0) * 0.55 * inside;
 
   col += atmosphere(p, d, pulse);
   col += sun(p, pulse);
   col += flares(q, pulse);
 
   // Highlight shoulder + roll to white.
+  // Grade: cooler (less red, more blue), teal-black corners.
+  col *= vec3(1.0, 1.0, 0.94);
   vec3 shoulder = 0.8 + 0.2 * (1.0 - exp(-(col - 0.8) / 0.2));
   vec3 mapped = mix(col, shoulder, step(0.8, col));
   float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
   mapped = mix(mapped, vec3(1.0), smoothstep(1.2, 3.0, lum) * 0.7);
 
   float grain = hash21(frag + fract(uFrame * 0.618) * 1000.0) - 0.5;
-  mapped += grain * (2.0 / 255.0);
+  mapped += grain * (6.0 / 255.0);
   outColor = vec4(clamp(mapped, 0.0, 1.0), 1.0);
 }
 `;

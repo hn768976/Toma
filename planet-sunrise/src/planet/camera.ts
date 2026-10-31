@@ -8,7 +8,7 @@ export type CameraState = {
 
 export type CameraMode = "static" | "dolly-roll";
 
-const SUN: readonly [number, number] = [384, 108];
+const SUN: readonly [number, number] = [384, 116];
 const CENTER: readonly [number, number] = [384, 216];
 
 /** Camera for a given frame. */
