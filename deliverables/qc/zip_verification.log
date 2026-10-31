@@ -1,0 +1,42 @@
+== Comp1_GlobalNetworkMap_4K_RemotionProject.zip: 11M
+== Comp2_EarthNetwork_4K_RemotionProject.zip: 4.6M
+== verifying Comp1_GlobalNetworkMap_4K_RemotionProject.zip
+No errors detected in compressed data of /home/user/Toma/deliverables/Comp1_GlobalNetworkMap_4K_RemotionProject.zip.
+public/data:
+lights.json
+
+public/textures:
+land_8k.png
+relief_4k.png
+npm ci: ok
+lint + tsc: ok
+NetworkMap-V1-Reference       30      3840x2160      900 (30.00 sec)
+NetworkMap-V2-AmberPalette    30      3840x2160      900 (30.00 sec)
+render:v1 (frames 0-29): ok
+render:v2 (frames 0-29): ok
+out/Comp1_V1_Reference_1080p.mp4: h264,1920,1080,30/1,30
+out/Comp1_V2_AmberPalette_1080p.mp4: h264,1920,1080,30/1,30
+out/still_4k_v1.png (3840, 2160)
+out/still_4k_v2.png (3840, 2160)
+== verifying Comp2_EarthNetwork_4K_RemotionProject.zip
+No errors detected in compressed data of /home/user/Toma/deliverables/Comp2_EarthNetwork_4K_RemotionProject.zip.
+public/data:
+lights.json
+
+public/textures:
+clouds_4k.jpg
+day_4k.jpg
+land_8k.png
+night_4k.jpg
+npm ci: ok
+lint + tsc: ok
+EarthNetwork-V1-Reference          30      3840x2160      900 (30.00 sec)
+EarthNetwork-V2-OrbitalPullback    30      3840x2160      900 (30.00 sec)
+render:v1 (frames 0-29): ok
+render:v2 (frames 0-29): ok
+out/Comp2_V1_Reference_1080p.mp4: h264,1920,1080,30/1,30
+out/Comp2_V2_OrbitalPullback_1080p.mp4: h264,1920,1080,30/1,30
+out/still_4k_v1.png (3840, 2160)
+out/still_4k_v2.png (3840, 2160)
+ALL_ZIP_CHECKS_PASSED
+exit 0
