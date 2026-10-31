@@ -69,8 +69,8 @@ export const makeScribbleEyes = (cfg: ScribbleCfg): DrawFn => {
 
   // The two eyes are drawn separately by hand: never quite the same shape.
   const specs: AlmondSpec[] = [
-    { ...spec, w: spec.w * 1.03, h: spec.h * 0.96, upperSkew: spec.upperSkew - 0.1 },
-    { ...spec, w: spec.w * 0.96, h: spec.h * 1.05, upperSkew: spec.upperSkew + 0.12, lowerSkew: spec.lowerSkew - 0.08 },
+    { ...spec, w: spec.w * 1.06, h: spec.h * 0.93, upperSkew: spec.upperSkew - 0.15 },
+    { ...spec, w: spec.w * 0.93, h: spec.h * 1.08, upperSkew: spec.upperSkew + 0.12, lowerSkew: spec.lowerSkew - 0.08 },
   ];
 
   let built: null | {
@@ -249,13 +249,13 @@ export const makeScribbleEyes = (cfg: ScribbleCfg): DrawFn => {
       const ij = B.irisJit[e][v];
       const ir = spec.h * 0.58;
       const ring: Pt[] = [];
-      for (let k = 0; k <= 9; k++) {
-        const a = (k / 9) * Math.PI * 2;
+      for (let k = 0; k <= 14; k++) {
+        const a = (k / 14) * Math.PI * 2;
         const jj = ij[k % 9];
         ring.push([ix + Math.cos(a) * (ir + jj[0] * 0.7), iy + Math.sin(a) * (ir * 1.04 + jj[1] * 0.7)]);
       }
       ctx.fillStyle = cfg.iris;
-      ctx.fill(outlineToPath(ring.slice(0, 9)));
+      ctx.fill(outlineToPath(ring.slice(0, 14)));
       const pts: Pt[] = [];
       const pr: number[] = [];
       for (let k = 0; k < 9; k++) {

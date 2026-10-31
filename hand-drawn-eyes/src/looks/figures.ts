@@ -413,10 +413,10 @@ const getVariant = (id: string, i: number, v: number, s: number, dpr: number): V
   if (hit) return hit;
   const rng = makeRng(id, "fig", i, v);
   const g = figureGeom(i, s, rng);
-  const w = s * 1.2;
-  const h = s * 1.25;
+  const w = s * 1.4;
+  const h = s * 1.5;
   const ox = w / 2;
-  const oy = s * 0.18; // room above the head for spikes / flying loops
+  const oy = s * 0.42; // room above the head for spikes / flying loops (nothing may be cut off)
   const { c, ctx } = makeCanvas(w * dpr, h * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, ox * dpr, oy * dpr);
   drawFigureScribble(ctx, g.outline, g.face, g.faceR, g.def, s, [id, "fig", i, v], { wild: 0 });
