@@ -7,10 +7,10 @@ import { lerp, smoothstep } from "./random";
 type Swatch = { color: [number, number, number]; weight: number; gain: [number, number] };
 
 export const LINE_SWATCHES: Swatch[] = [
-  { color: [0.05, 0.18, 1.0], weight: 0.46, gain: [0.2, 0.5] }, // deep blue
-  { color: [0.1, 0.42, 1.0], weight: 0.24, gain: [0.4, 0.85] }, // azure
-  { color: [0.18, 0.78, 1.0], weight: 0.18, gain: [0.7, 1.3] }, // cyan
-  { color: [0.55, 0.88, 1.0], weight: 0.03, gain: [0.8, 1.2] }, // ice white
+  { color: [0.05, 0.2, 1.0], weight: 0.3, gain: [0.25, 0.55] }, // deep blue
+  { color: [0.1, 0.45, 1.0], weight: 0.28, gain: [0.45, 0.9] }, // azure
+  { color: [0.2, 0.8, 1.0], weight: 0.26, gain: [0.7, 1.3] }, // cyan
+  { color: [0.55, 0.9, 1.0], weight: 0.07, gain: [0.8, 1.2] }, // ice white
   { color: [0.38, 0.22, 1.0], weight: 0.06, gain: [0.5, 0.9] }, // violet
   { color: [0.8, 0.25, 1.0], weight: 0.03, gain: [0.45, 0.8] }, // magenta
 ];
@@ -22,7 +22,7 @@ export const BACKGROUND = {
   top: new THREE.Color(0.0, 0.01, 0.04),
   horizon: new THREE.Color(0.01, 0.05, 0.16),
   bottom: new THREE.Color(0.0, 0.015, 0.06),
-  glowColor: new THREE.Color(0.02, 0.1, 0.32),
+  glowColor: new THREE.Color(0.012, 0.06, 0.2),
 };
 
 /* ------------------------------------------------------------------------ */
@@ -38,6 +38,7 @@ export type CameraState = {
   focus: number; // focus distance
   coc: number; // depth-of-field strength (1080p px)
   glow: [number, number]; // horizon glow position (uv)
+  exposure: number; // tone-mapping exposure
 };
 
 const v3 = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
@@ -55,57 +56,62 @@ export const cameraFor = (
   const k = t / duration;
   if (version === "reference") {
     if (shot === 0) {
+      // the reference camera is essentially locked off: a barely-there push
       return {
-        pos: mix3(v3(-0.4, 0.3, 12.0), v3(0.0, 0.45, 11.4), k),
-        target: mix3(v3(1.2, 1.4, -2), v3(1.5, 1.5, -2), k),
+        pos: mix3(v3(-0.3, 0.3, 12.0), v3(-0.2, 0.32, 11.8), k),
+        target: mix3(v3(1.9, 1.0, -2), v3(1.95, 1.02, -2), k),
         fov: 42,
-        roll: lerp(-0.02, 0.0, k),
-        focus: 11.5,
-        coc: 7,
-        glow: [0.62, 0.78],
+        roll: 0,
+        focus: 6.5,
+        coc: 6,
+        glow: [0.62, 0.8],
+        exposure: 2.0,
       };
     }
     return {
-      pos: mix3(v3(1.6, 7.6, 6.2), v3(1.3, 7.3, 5.7), k),
-      target: mix3(v3(2.4, 0.0, -1.4), v3(2.2, 0.1, -1.6), k),
-      fov: 46,
-      roll: lerp(0.0, -0.015, k),
-      focus: 10.0,
-      coc: 8,
+      pos: mix3(v3(1.0, 5.6, 6.6), v3(0.85, 5.45, 6.3), k),
+      target: mix3(v3(1.9, 0.6, -2.4), v3(1.8, 0.6, -2.5), k),
+      fov: 50,
+      roll: lerp(0.0, -0.01, k),
+      focus: 8.0,
+      coc: 9,
       glow: [0.3, 0.95],
+      exposure: 1.35,
     };
   }
   // ---- Version 2: alternative camera movement --------------------------
   if (shot === 0) {
     // Low tracking shot that sweeps right-to-left along the foot of the
-    // crest while craning up and banking.
+    // wall, banking all the way and staying low.
     const e = ease(k);
     return {
-      pos: v3(lerp(6.5, -5.0, e), lerp(-0.4, 1.6, e), lerp(9.5, 11.0, e)),
-      target: v3(lerp(-1.0, 2.5, e), lerp(3.2, 2.0, e), -3),
-      fov: lerp(38, 46, e),
-      roll: lerp(0.16, -0.1, e),
+      pos: v3(lerp(7.5, -6.0, e), lerp(-0.5, 0.4, e), lerp(9.5, 10.5, e)),
+      target: v3(lerp(-1.0, 3.5, e), lerp(3.4, 2.6, e), -3),
+      fov: lerp(36, 44, e),
+      roll: lerp(0.2, 0.1, e),
       focus: lerp(9.5, 12.0, e),
-      coc: 8,
+      coc: 9,
       glow: [lerp(0.35, 0.7, e), 0.8],
+      exposure: 1.9,
     };
   }
-  // Overhead crane that orbits around the hairpin and descends into it.
+  // Overhead crane that orbits around the hairpin, staying high above it.
   const e = ease(k);
-  const ang = lerp(-0.9, 0.35, e);
-  const radius = lerp(9.5, 7.0, e);
-  const centre = v3(0.4, 0, -0.3);
+  const ang = lerp(-1.1, 1.0, e);
+  const radius = lerp(9.0, 7.5, e);
+  const centre = v3(0.6, 0, -0.3);
   return {
     pos: v3(
       centre.x + Math.sin(ang) * radius,
-      lerp(11.5, 4.2, e),
+      lerp(12.0, 7.0, e),
       centre.z + Math.cos(ang) * radius,
     ),
-    target: v3(lerp(-0.4, 1.2, e), lerp(-0.2, 0.8, e), lerp(0.0, -0.8, e)),
-    fov: lerp(44, 50, e),
-    roll: lerp(-0.25, 0.05, e),
-    focus: lerp(12.0, 7.5, e),
-    coc: 8,
+    target: v3(lerp(-0.6, 1.0, e), lerp(-0.2, 0.6, e), lerp(0.0, -0.8, e)),
+    fov: lerp(46, 52, e),
+    roll: lerp(-0.25, 0.1, e),
+    focus: lerp(12.0, 8.5, e),
+    coc: 9,
     glow: [lerp(0.7, 0.4, e), 0.95],
+    exposure: 1.2,
   };
 };

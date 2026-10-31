@@ -95,10 +95,10 @@ void main() {
   float gain = vInfo.z;
 
   // travelling light streaks along the line
-  float x = u * (1.2 + 2.2 * fract(seed * 7.13)) - uTime * uFlow * (0.6 + 0.8 * fract(seed * 3.7)) + seed * 17.0;
+  float x = u * (2.0 + 3.0 * fract(seed * 7.13)) - uTime * uFlow * (0.6 + 0.8 * fract(seed * 3.7)) + seed * 17.0;
   float s1 = 0.5 + 0.5 * sin(6.2831853 * x);
   float s2 = 0.5 + 0.5 * sin(6.2831853 * (x * 0.37 + seed * 3.1));
-  float streak = 0.55 + 1.1 * pow(s1, 3.0) * (0.4 + 0.6 * s2) + 0.3 * s2;
+  float streak = 0.28 + 1.6 * pow(s1, 6.0) * (0.4 + 0.6 * s2) + 0.25 * s2;
   float hot = pow(s1, 14.0) * step(0.55, fract(seed * 11.7));
 
   vec3 col = mix(vColor, uHot, hot * 0.6) * (streak + hot * 0.8);
@@ -137,7 +137,7 @@ void main() {
   vec2 q = gl_PointCoord * 2.0 - 1.0;
   float r2 = dot(q, q) * 6.25;   // gl_PointSize = 2.5 * size
   float g = exp(-1.5 * r2);
-  gl_FragColor = vec4(uColor * g * vEnergy * vTwinkle * 1.6, 1.0);
+  gl_FragColor = vec4(uColor * g * vEnergy * vTwinkle * 2.4, 1.0);
 }
 `;
 
@@ -212,8 +212,11 @@ void main() {
   col *= 1.0 - 0.55 * dot(q, q);
   col *= uFadeIn;
 
-  float n = hash12(gl_FragCoord.xy + fract(uFrame * 0.618) * 97.0) - 0.5;
-  col += n * (1.6 / 255.0);
+  // temporal dither + fine grain: keeps the dark gradients from banding
+  // after 8-bit H.264 encoding
+  vec2 fc = gl_FragCoord.xy + fract(uFrame * 0.618) * 97.0;
+  float n = (hash12(fc) + hash12(fc + 31.7) - 1.0);
+  col += n * (3.0 / 255.0);
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
 `;

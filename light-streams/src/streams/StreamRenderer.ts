@@ -20,7 +20,7 @@ type ShotObjects = {
   sparkleGeo: THREE.BufferGeometry;
 };
 
-const FLOW_SPEED = 0.22;
+const FLOW_SPEED = 0.45;
 
 /**
  * Owns the WebGL renderer and all GPU resources for the light-stream
@@ -79,7 +79,7 @@ export class StreamRenderer {
       fragmentShader: LINE_FRAGMENT,
       uniforms: {
         ...common,
-        uCore: { value: 1.0 },
+        uCore: { value: 0.85 },
         uFlow: { value: FLOW_SPEED },
         uHot: { value: HOT_COLOR },
       },
@@ -339,6 +339,7 @@ export class StreamRenderer {
 
     this.compositeMat.uniforms.uFrame.value = frame;
     this.compositeMat.uniforms.uGlowPos.value.set(cam.glow[0], cam.glow[1]);
+    this.compositeMat.uniforms.uExposure.value = cam.exposure;
     this.pass(this.compositeMat, null);
     // make sure the frame is complete before Remotion takes the screenshot
     this.renderer.getContext().finish();

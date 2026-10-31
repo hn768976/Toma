@@ -31,12 +31,12 @@ const makeAcross = (lines: number, seed: number) => {
 /* bends over a crest, sweeping away to the right into the distance.        */
 /* ------------------------------------------------------------------------ */
 export const makeCrestShot = (): Shot => {
-  const lines = 300;
+  const lines = 440;
   const points = 220;
   const across = makeAcross(lines, 11);
   const length = 34;
 
-  const sparkles = 700;
+  const sparkles = 1400;
   const rnd = mulberry32(99);
   const sp = Array.from({ length: sparkles }, () => ({
     v: rnd(),
@@ -115,19 +115,19 @@ export const makeCrestShot = (): Shot => {
 /* branch curls up into a rising wall on the right.                          */
 /* ------------------------------------------------------------------------ */
 export const makeFoldShot = (): Shot => {
-  const lines = 340;
+  const lines = 420;
   const points = 300;
   const across = makeAcross(lines, 23);
-  const R = 4.3; // centre-line radius of the hairpin
-  const W = 8.2; // ribbon width (inner radius = R - W/2)
+  const R = 5.6; // centre-line radius of the hairpin
+  const W = 10.8; // ribbon width (inner radius = R - W/2)
   const nearLen = 18;
   const farLen = 12;
   const arcLen = Math.PI * R;
   const total = nearLen + arcLen + farLen;
   const wallStart = 3.0; // x where the far branch starts to curl up
-  const wallR = 3.0;
+  const wallR = 5.0;
 
-  const sparkles = 700;
+  const sparkles = 1400;
   const rnd = mulberry32(7);
   const sp = Array.from({ length: sparkles }, () => ({
     v: rnd(),
@@ -157,7 +157,7 @@ export const makeFoldShot = (): Shot => {
     if (s > arcLen && x > wallStart) {
       // curl up into a wall
       const d = x - wallStart;
-      const maxA = Math.PI * 0.32;
+      const maxA = Math.PI * 0.47;
       const alpha = Math.min(d / wallR, maxA);
       const rest = Math.max(0, d - wallR * maxA);
       x = wallStart + wallR * Math.sin(alpha) + rest * Math.sin(maxA);

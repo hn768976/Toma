@@ -5,8 +5,8 @@ Two 4K (3840×2160) compositions of glowing light lines flowing over animated
 
 | Composition ID     | Version | Description |
 |--------------------|---------|-------------|
-| `LightStreams-V1`  | 1 — reference match | Shot A (0–4.0 s): a sheet of lines climbs away from the camera into a tall wall on the left and sweeps right towards the horizon. Hard cut at 4.0 s (as in the reference) to Shot B: the sheet folds into a hairpin and its far branch curls up into a wall on the right. Gentle camera drift, travelling light streaks, depth of field, sparkles. |
-| `LightStreams-V2`  | 2 — alternative camera | Same scenes and palette, re-shot with sweeping camera moves: Shot A is a low, banking truck shot moving right-to-left along the foot of the wall while craning up; Shot B is an overhead crane that starts top-down, orbits ~70° around the hairpin and descends into it. |
+| `LightStreams-V1`  | 1 — reference match | Shot A (0–4.0 s): a sheet of lines climbs away from the camera into a tall wall on the left and sweeps right towards the horizon. Hard cut at 4.0 s (as in the reference) to Shot B: the sheet folds into a hairpin and its far branch curls up into a wall on the right. Near-locked camera with a subtle push, travelling light streaks, depth of field, sparkles. |
+| `LightStreams-V2`  | 2 — alternative camera | Same scenes and palette, re-shot with sweeping camera moves: Shot A is a low, banked (dutch-angle) truck shot moving right-to-left along the foot of the wall; Shot B is an overhead crane that starts nearly top-down and orbits ~120° around the hairpin while descending. |
 
 * **Frame rate:** 30 fps
 * **Duration:** 241 frames = 8.033 s. The reference is 8.04 s (201 frames @ 25 fps);
