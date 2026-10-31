@@ -15,7 +15,9 @@ Config.setOverwriteOutput(true);
 Config.setDefaultPremountInSeconds(2);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
-Config.setCrf(16);
+// CRF 18: visually transparent at 1080p while keeping the high-entropy
+// water texture under ~100 MB per 30 s file.
+Config.setCrf(18);
 // WebGL shader compile + 4K float buffers can be slow on software GL.
 Config.setTimeoutInMilliseconds(300000);
 
