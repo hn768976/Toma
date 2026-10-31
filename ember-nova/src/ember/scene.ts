@@ -64,7 +64,7 @@ const backgroundFrag = /* glsl */ `
     col *= 1.0 - uVig * pow(side, 2.2);
     col *= 1.0 - 0.35 * pow(abs(vUv.y - 0.45) * 1.8, 2.0);
     // Ordered noise dithering prevents banding in the dark gradients.
-    col += (hash12(gl_FragCoord.xy + uSeed) - 0.5) / 255.0;
+    col += (hash12(gl_FragCoord.xy + uSeed) - 0.5) * (2.5 / 255.0);
     gl_FragColor = vec4(col, 1.0);
   }
 `;
@@ -257,11 +257,13 @@ export const createEmberStage =
     });
     const shellData = Array.from({ length: 12000 }, () => {
       const [dx, dy] = unitSphere(rnd);
-      const wake = rnd() < 0.22;
+      // Debris spray is lopsided towards the left / lower-left, as in the
+      // reference, with a light scattering everywhere else.
+      const wake = (dx < -0.1 && dy > -0.5 && rnd() < 0.6) || rnd() < 0.07;
       return {
         dx,
         dy,
-        rr: wake ? 1.0 + Math.pow(rnd(), 1.5) * 0.55 : 0.9 + rnd() * 0.12,
+        rr: wake ? 1.0 + Math.pow(rnd(), 1.4) * 0.85 : 0.9 + rnd() * 0.12,
         size: 0.0012 + rnd() * 0.0024,
         bright: 0.25 + rnd() * 0.75,
         phase: rnd() * Math.PI * 2,
@@ -285,9 +287,9 @@ export const createEmberStage =
       bgUniforms.uCenterAmt.value = envelope(
         [
           [0, 0.08],
-          [0.7, 0.7],
-          [1.6, 0.85],
-          [3.0, 1.0],
+          [0.7, 0.9],
+          [1.6, 1.05],
+          [3.0, 1.15],
           [3.35, 1.9],
           [3.9, 2.6],
           [4.5, 1.45],
@@ -394,11 +396,11 @@ export const createEmberStage =
           const fl = 1 + 0.1 * Math.sin(t * 41 + comet.seed) + 0.06 * Math.sin(t * 73 + comet.seed * 2);
           const k = alive * fl;
           const { hot, mid, core } = palette;
-          halos.push(hx, hy, 0.26 * p, 0.26 * p, 0, mid[0], mid[1], mid[2], 0.42 * k);
-          halos.push(hx, hy, 0.075 * p, 0.075 * p, 0, hot[0], hot[1], hot[2], 0.85 * k);
+          halos.push(hx, hy, 0.3 * p, 0.3 * p, 0, mid[0], mid[1], mid[2], 0.5 * k);
+          halos.push(hx, hy, 0.11 * p, 0.11 * p, 0, hot[0], hot[1], hot[2], 1.0 * k);
           halos.push(hx, hy, 0.3 * p, 0.0065 * p, 0, hot[0], hot[1], hot[2], 0.95 * k);
           halos.push(hx, hy, 0.13 * p, 0.016 * p, 0, mid[0], mid[1], mid[2], 0.5 * k);
-          cores.push(hx, hy, 0.034 * p, 0.034 * p, 0, core[0], core[1], core[2], 1.5 * k);
+          cores.push(hx, hy, 0.045 * p, 0.045 * p, 0, core[0], core[1], core[2], 1.5 * k);
 
           // Smoke puffs shed along the path.
           const SM = 0.045;
@@ -413,8 +415,8 @@ export const createEmberStage =
             const [bx, by] = sampleKeys(comet.keys, tb);
             const px = bx * A + (h1 - 0.5) * 0.05 + (h2 - 0.5) * 0.07 * age;
             const py = by + (h3 - 0.5) * 0.05 - 0.012 * age;
-            const size = (0.05 + 0.11 * age + 0.04 * h2) * persp(by);
-            const a = 0.6 * Math.pow(Math.sin(Math.PI * clamp(age / life)), 1.3) * (1 - smoothstep(MERGE_T, MERGE_T + 0.6, t));
+            const size = (0.06 + 0.14 * age + 0.05 * h2) * persp(by);
+            const a = 0.9 * Math.pow(Math.sin(Math.PI * clamp(age / life)), 1.3) * (1 - smoothstep(MERGE_T, MERGE_T + 0.6, t));
             const sm = palette.smoke;
             smoke.push(px, py, size, size, h1 * 6.283 + (h3 - 0.5) * age * 0.8, sm[0], sm[1], sm[2], a);
           }
@@ -444,9 +446,9 @@ export const createEmberStage =
       // ----- fusion sun ----------------------------------------------------
       const sunI = envelope(
         [
-          [2.9, 0],
-          [3.15, 0.35],
-          [3.33, 1.0],
+          [2.95, 0],
+          [3.12, 0.45],
+          [3.25, 1.0],
           [3.6, 1.15],
           [3.85, 0.95],
           [4.05, 0.42],
@@ -464,9 +466,11 @@ export const createEmberStage =
         halos.push(sx, sy, 1.7, 1.7, 0, mid[0], mid[1], mid[2], 0.6 * sunI);
         halos.push(sx, sy, 0.75 * shrink, 0.75 * shrink, 0, mid[0], mid[1], mid[2], 0.7 * sunI);
         halos.push(sx, sy, 0.32 * shrink, 0.32 * shrink, 0, hot[0], hot[1], hot[2], 1.0 * sunI * pulse);
-        halos.push(sx, sy, 1.0, 0.02, 0, hot[0], hot[1], hot[2], 0.55 * sunI);
+        // Large soft fireball: additive orange saturates to yellow in the middle.
+        halos.push(sx, sy, 0.48 * shrink, 0.48 * shrink, 0, hot[0], hot[1], hot[2], 1.25 * sunI * pulse);
+        halos.push(sx, sy, 0.9, 0.018, 0, hot[0], hot[1], hot[2], 0.35 * sunI);
         halos.push(sx, sy, 0.6, 0.06, 0, mid[0], mid[1], mid[2], 0.45 * sunI);
-        cores.push(sx, sy, 0.17 * shrink, 0.17 * shrink, 0, core[0], core[1], core[2], 2.2 * sunI * pulse);
+        cores.push(sx, sy, 0.24 * shrink, 0.24 * shrink, 0, core[0], core[1], core[2], 2.2 * sunI * pulse);
       }
       halos.end();
       cores.end();
@@ -479,16 +483,16 @@ export const createEmberStage =
         [
           [BURST_T - 0.05, 0],
           [BURST_T + 0.12, 1],
-          [4.25, 1],
-          [4.65, 0.75],
-          [5.0, 0.38],
-          [5.55, 0],
+          [4.2, 1],
+          [4.55, 0.6],
+          [4.85, 0.22],
+          [5.15, 0],
         ],
         t,
       );
-      const R = ringAge > 0 ? 0.72 * (1 - Math.exp(-ringAge * 2.4)) + 0.025 * ringAge : 0;
-      const rcx = A * envelope([[4.35, 0.5], [5.4, 0.4]], t);
-      const rcy = envelope([[4.35, 0.5], [5.4, 0.58]], t);
+      const R = ringAge > 0 ? 0.72 * (1 - Math.exp(-ringAge * 2.4)) + 0.06 * ringAge : 0;
+      const rcx = A * envelope([[4.3, 0.5], [5.1, 0.4]], t);
+      const rcy = envelope([[4.3, 0.5], [5.1, 0.58]], t);
       ring.visible = ringI > 0;
       ringUniforms.uCenter.value.set(rcx, rcy);
       ringUniforms.uRadius.value = R;
@@ -501,9 +505,9 @@ export const createEmberStage =
         [
           [3.7, 0],
           [3.95, 1],
-          [4.5, 0.85],
-          [5.1, 0.35],
-          [5.7, 0],
+          [4.4, 0.75],
+          [4.85, 0.25],
+          [5.2, 0],
         ],
         t,
       );
@@ -545,7 +549,7 @@ export const createEmberStage =
           const a =
             b.bright *
             smoothstep(0, 0.06, age) *
-            (1 - smoothstep(0.55, 1.9, age));
+            (1 - smoothstep(0.45, 1.4, age));
           const c = b.hot > 0.7 ? core : b.hot > 0.25 ? hot : mid;
           burst.push(
             px,

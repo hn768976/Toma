@@ -45,20 +45,30 @@ npm install
 
 npm run dev              # Remotion Studio preview
 
-npm run render:1080p     # both versions -> out/*_1080p.mp4 (4K comp rendered at --scale=0.5)
-npm run render:v1        # TileFlip-V1 only, 1920x1080
-npm run render:v2        # TileFlip-V2 only, 1920x1080
+# Final deliverables: render the 4K composition, then Lanczos-downscale to 1080p
+npm run master           # both versions -> out/TileFlip-V1_4K.mp4, out/TileFlip-V1_1080p.mp4, ...
+npm run master:v1        # V1 only (4K render + 1080p downscale)
+npm run master:v2        # V2 only
 
-npm run render:4k        # both versions at native 3840x2160
+npm run render:4k        # 4K renders only (3840x2160)
+npm run render:1080p     # quick previews rendered directly at 1920x1080 (--scale=0.5)
 ```
 
-Equivalent raw CLI: `npx remotion render TileFlip-V1 out/v1.mp4 --scale=0.5`.
+The downscale step uses Remotion's bundled FFmpeg (`remotion ffmpeg`), so no
+system FFmpeg is needed. Output: H.264 (libx264, CRF 16), yuv420p, 30 fps, no
+audio. Equivalent raw CLI for one version:
+
+```bash
+npx remotion render TileFlip-V1 out/TileFlip-V1_4K.mp4 --crf=12
+npx remotion ffmpeg -i out/TileFlip-V1_4K.mp4 -vf scale=1920:1080:flags=lanczos \
+  -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r 30 out/TileFlip-V1_1080p.mp4
+```
 
 ### Renderer notes
 
 - WebGL defaults to `swangle` (SwiftShader via ANGLE), which works on any
   machine including GPU-less servers. On a workstation with a GPU you can
-  speed things up with `REMOTION_GL=angle npm run render:1080p`.
+  speed things up with `REMOTION_GL=angle npm run master`.
 - On first render Remotion downloads Chrome Headless Shell. On an offline
   machine, point it at an existing Chromium instead:
-  `REMOTION_BROWSER_EXECUTABLE=/path/to/chrome-headless-shell npm run render:1080p`.
+  `REMOTION_BROWSER_EXECUTABLE=/path/to/chrome-headless-shell npm run master`.

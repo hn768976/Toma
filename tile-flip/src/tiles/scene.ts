@@ -17,9 +17,9 @@ export type TileLook = {
 export const LOOK: TileLook = {
   wall: [0.735, 0.72, 0.69],
   cavity: [0.15, 0.19, 0.31],
-  ambient: [0.36, 0.375, 0.43],
-  sky: [0.1, 0.1, 0.11],
-  sun: [0.6, 0.56, 0.5],
+  ambient: [0.42, 0.435, 0.49],
+  sky: [0.07, 0.07, 0.08],
+  sun: [0.5, 0.465, 0.41],
 };
 
 const TILE = 1;
@@ -85,13 +85,19 @@ export const createTileStage =
     sun.shadow.camera.far = 20;
     sun.shadow.bias = -0.0004;
     sun.shadow.normalBias = 0.01;
-    sun.shadow.radius = 5;
+    sun.shadow.radius = 9;
     sun.shadow.blurSamples = 16;
     scene.add(sun, sun.target);
     // Soft warm hot-spot towards the upper-left, like the reference.
     const spot = new THREE.PointLight(new THREE.Color(0.1, 0.09, 0.08), Math.PI, 0, 0);
     spot.position.set(-6, 5, 4);
     scene.add(spot);
+    // Soft bounce light from below-front: keeps lifted flaps light grey like
+    // the reference instead of falling into deep shade.
+    const fill = new THREE.DirectionalLight(new THREE.Color(0.17, 0.17, 0.18), Math.PI);
+    fill.position.set(0.3, -3.5, 2.2);
+    fill.target.position.set(0, 0, 0);
+    scene.add(fill, fill.target);
 
     // --- materials -------------------------------------------------------------
     const wallMat = new THREE.MeshLambertMaterial({
@@ -128,6 +134,7 @@ export const createTileStage =
       col: number;
       pivot: THREE.Group;
       flap: THREE.Mesh;
+      cover: THREE.Mesh;
       events: FlipEvent[];
     };
     const events = allEvents(durationSec);
@@ -155,6 +162,12 @@ export const createTileStage =
         }
         scene.add(box);
 
+        // Wall-coloured cover just under an idle flap: hides sub-pixel
+        // cracks between neighbouring flaps so idle cells are seamless.
+        const cover = new THREE.Mesh(cavityFloor, wallMat);
+        cover.position.set(c.x, c.y, -THICK - 0.004);
+        scene.add(cover);
+
         const pivot = new THREE.Group();
         const flap = new THREE.Mesh(flapGeo, flapMat);
         flap.castShadow = true;
@@ -166,6 +179,7 @@ export const createTileStage =
           col,
           pivot,
           flap,
+          cover,
           events: events
             .filter((ev) => ev.row === row && ev.col === col)
             .sort((a, b) => a.start - b.start),
@@ -176,9 +190,8 @@ export const createTileStage =
     const placeFlap = (cell: Cell, hinge: Hinge, angleDeg: number, gap: number) => {
       const c = cellCenter(cell.row, cell.col);
       const a = THREE.MathUtils.degToRad(angleDeg);
-      // Idle flaps overlap their neighbours very slightly so no hairline
-      // cracks show; a 'live' tile shrinks to reveal its seam.
-      const s = TILE * 1.004 - gap * 2;
+      // A 'live' tile shrinks very slightly to reveal its seam.
+      const s = TILE - gap * 2;
       cell.flap.scale.set(s / TILE, s / TILE, 1);
       const hs = s / 2;
       cell.pivot.rotation.set(0, 0, 0);
@@ -250,6 +263,7 @@ export const createTileStage =
           }
         }
         placeFlap(cell, hinge, angle, MAX_GAP * gap);
+        cell.cover.visible = gap < 0.001 && angle < 0.01;
       }
       renderer.render(scene, camera);
     };

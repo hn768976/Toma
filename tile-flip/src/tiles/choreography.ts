@@ -17,6 +17,8 @@ export const GRID = 4;
 export const PHRASE = 4.0;
 export const DURATION_FRAMES = 234; // reference: 7.8078 s @ 29.97 -> 234 frames @ 30 fps
 
+// Reference flaps mostly lift to a steep-but-not-vertical angle, so from the
+// head-on camera they still cover part of their cavity (peaks scaled by 0.78).
 const e = (
   row: number,
   col: number,
@@ -24,7 +26,7 @@ const e = (
   start: number,
   peak = 82,
   dur = 0.78,
-): FlipEvent => ({ row, col, hinge, start, peak, dur });
+): FlipEvent => ({ row, col, hinge, start, peak: peak * 0.78, dur });
 
 export const PHRASE_EVENTS: FlipEvent[] = [
   // Sparse edge flips

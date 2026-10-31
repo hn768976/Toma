@@ -17,7 +17,9 @@ import * as THREE from "three";
  *
  * The drawing buffer follows the composition size multiplied by the
  * device pixel ratio, so `--scale=1` renders a native 3840x2160 frame and
- * `--scale=0.5` renders the same 4K composition straight to 1920x1080.
+ * `--scale=0.5` renders the same 4K composition directly at 1920x1080
+ * (quick previews). Final 1080p masters are made by rendering 4K and
+ * downscaling (see README: `npm run master`).
  */
 export type Stage = {
   render: (t: number, frame: number) => void;
