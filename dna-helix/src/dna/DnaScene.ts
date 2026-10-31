@@ -184,13 +184,13 @@ export class DnaScene {
     stickGeo.rotateZ(Math.PI / 2); // along X
 
     const ballMat = new THREE.MeshPhysicalMaterial({
-      color: 0xb6e8fd,
+      color: 0xb0ecff,
       roughness: 0.3,
       metalness: 0,
       clearcoat: 1,
       clearcoatRoughness: 0.18,
       emissive: new THREE.Color(0x0b2d66),
-      emissiveIntensity: 0.3,
+      emissiveIntensity: 0.38,
       envMapIntensity: 1.1,
     });
     const stickMat = new THREE.MeshPhysicalMaterial({
@@ -205,7 +205,7 @@ export class DnaScene {
     this.sticks = new THREE.InstancedMesh(stickGeo, stickMat, RUNG_COUNT);
     // subtle base-pair tint variation (A-T vs C-G look)
     const tintA = new THREE.Color(0xffffff);
-    const tintB = new THREE.Color(0xeee6ff);
+    const tintB = new THREE.Color(0xe8f2ff);
     const tintC = new THREE.Color(0xe6f6ff);
     for (let i = 0; i < RUNG_COUNT; i++) {
       const h = hash(i + 3);
@@ -224,7 +224,7 @@ export class DnaScene {
       roughness: 0.28,
       clearcoat: 1,
       clearcoatRoughness: 0.2,
-      emissive: new THREE.Color(0x5e0a22),
+      emissive: new THREE.Color(0x7a1030),
       emissiveIntensity: 0.6,
       transparent: true,
     });
@@ -488,7 +488,7 @@ export class DnaScene {
       mat.depthWrite = vis > 0.98;
     }
     const glow = redGlow(f);
-    this.redBallMat.emissiveIntensity = 0.6 + 1.6 * glow;
+    this.redBallMat.emissiveIntensity = 0.9 + 1.6 * glow;
     this.redStickMat.emissiveIntensity = 0.6 + 1.2 * glow;
     // darken as it dissolves (as in the reference)
     this.redBallMat.color.setHex(0xff5a78).multiplyScalar(mix(0.25, 1, vis));
@@ -499,7 +499,7 @@ export class DnaScene {
     this.newPair.position.set(Math.cos(redTh) * inc.offset, redY, Math.sin(redTh) * inc.offset);
     this.newPair.rotation.set(0, -redTh, 0);
     const ghost = new THREE.Color(0x9cc8f2);
-    const solid = new THREE.Color(0xb6e8fd);
+    const solid = new THREE.Color(0xb0ecff);
     this.newBallMat.color.copy(ghost).lerp(solid, inc.solidity);
     this.newBallMat.emissive.setHex(0x3b78d0).lerp(new THREE.Color(0x0b2d66), inc.solidity);
     this.newBallMat.emissiveIntensity = mix(0.9, 0.3, inc.solidity);

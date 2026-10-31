@@ -111,7 +111,7 @@ export type IncomingPair = {
 };
 
 export const incomingPair = (f: number): IncomingPair => {
-  const t = easeInOutCubic((f - 236) / (310 - 236));
+  const t = easeInOutCubic((f - 236) / (318 - 236));
   // Starts ~1.5 rung-lengths to the right, glides back into the helix.
   const offset = mix(3.2, 0, t);
   const opacity = smoothstep(238, 258, f);
@@ -149,12 +149,12 @@ export type Variant = "match" | "orbit";
 
 /**
  * V1 ("match"): locked-off camera framing the helix at ~37 % of frame width.
- * Holds its distance until ~frame 315, then dollies out (≈0.79× scale by the
+ * Holds its distance until ~frame 300, then dollies out (≈0.79× scale by the
  * last frame) and is still moving at the cut, as in the reference.
  */
 const cameraMatch = (f: number): CameraState => {
-  const pull = clamp((f - 315) / (DURATION - 1 - 315));
-  const dist = mix(10.0, 12.7, Math.pow(pull, 1.5));
+  const pull = clamp((f - 300) / (DURATION - 1 - 300));
+  const dist = mix(10.0, 12.7, Math.pow(pull, 1.25));
   // keep the helix axis at 37 % of frame width as the camera pulls back
   const halfW = dist * Math.tan(((32 / 2) * Math.PI) / 180) * (16 / 9);
   const x = 0.26 * halfW + 0.05 * Math.sin(f / 90);
@@ -182,15 +182,23 @@ const cameraOrbit = (f: number): CameraState => {
   // is seen from a clear 3/4 front angle.
   const az = mix(-1.15, 1.45, easeInOutCubic(f / DURATION)) - 0.22 * Math.sin((f / DURATION) * Math.PI);
   // Push-in curve: wide → tight on the repair (frames 200–312) → wide again
+  // Three framing states blended over time:
+  //   open – tight low-angle framing on the lower helix, so the red pair can
+  //          still "enter" from the top edge (~frame 66) as in the reference
+  //   push – close 3/4 view of the repair (frames ~250–320)
+  //   end  – medium, re-centred framing for the slow-spin finale
+  const open = 1 - smoothstep(70, 200, f);
   const push = smoothstep(150, 250, f) * (1 - smoothstep(322, 435, f));
-  const dist = mix(13.0, 8.6, push) + 1.2 * (f / DURATION);
-  const height = mix(-3.4, -1.2, push) + 0.6 * Math.sin(f / 110);
+  const end = smoothstep(330, 440, f);
+  const pre = (wide: number, tight: number, fin: number) => mix(mix(wide, tight, open), fin, end);
+  const dist = mix(pre(11.5, 9.2, 10.2), 8.6, push);
+  const height = mix(pre(-3.0, -2.4, -1.9), -1.2, push) + 0.5 * Math.sin(f / 110);
   const pos: [number, number, number] = [Math.sin(az) * dist, height, Math.cos(az) * dist];
   return {
     position: pos,
-    target: [mix(0.9, 1.1, push), mix(0.4, 0.0, push), 0],
+    target: [mix(pre(0.8, 0.5, -0.7), 1.1, push), mix(pre(0.3, -0.75, 0.1), 0.0, push), 0],
     up: [0, 1, 0],
-    fov: mix(40, 34, push),
+    fov: mix(pre(40, 36, 37), 34, push),
     roll: mix(0.4, 0.26, push) + 0.04 * Math.sin(f / 70),
     helixTiltZ: 0,
     helixTiltX: 0.1,
