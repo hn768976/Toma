@@ -23,6 +23,8 @@ export const FIGURE = {
   ] as [number, number, number][],
   boilHold: 3,
   boilVariants: 4,
+  bloomPx: 9, // tight bloom under the lines, at 4K
+  bloomAlpha: 0.45,
 };
 
 const W = 3840;
@@ -76,7 +78,7 @@ export const FIGURES: FigureDef[] = [
     faceR: 0.088,
     hairY: 0.14,
     spiky: true,
-    strands: 18,
+    strands: 11,
   },
 ];
 
@@ -112,7 +114,9 @@ export const figureOutline = (def: FigureDef, rng: Rng | null, wob: number): Pt[
   const ctrl = [...R, ...left].map(([x, y]): Pt =>
     rng ? [x + rng.gauss() * wob, y + rng.gauss() * wob * (y > 0.9 ? 0 : 1)] : [x, y],
   );
-  let pts = resample(catmull(ctrl, 8), N_OUTLINE, true);
+  // Heads are drawn a little large (a scribble head reads bigger than life).
+  const headScale = (y: number) => 1 + 0.2 * clamp((0.44 - y) / 0.1);
+  let pts = resample(catmull(ctrl.map(([x, y]): Pt => [x * headScale(y), y]), 8), N_OUTLINE, true);
   if (def.spiky) {
     const sr = makeRng("spikes"); // same spike layout for every variant
     const head: Pt = [0, 0.2];
@@ -123,7 +127,7 @@ export const figureOutline = (def: FigureDef, rng: Rng | null, wob: number): Pt[
       const k = smoothstep((def.hairY + 0.03 - y) / 0.06);
       phase = i;
       const spike = Math.max(0, Math.sin(a * 11 + 0.6)) ** 3;
-      const amp = 0.075 * k * (0.7 + 0.6 * Math.abs(Math.sin(a * 5.3 + 1.7)));
+      const amp = 0.04 * k * (0.7 + 0.6 * Math.abs(Math.sin(a * 5.3 + 1.7)));
       const j = rng ? rng.gauss() * 0.004 : 0;
       return [x + Math.cos(a) * (spike * amp + j), y + Math.sin(a) * (spike * amp + j)];
     });
@@ -234,15 +238,15 @@ export const drawFigureScribble = (
   for (let pass = 0; pass < 1; pass++) {
     const path = roughFill(body, {
       fillStyle: "zigzag",
-      hachureGap: 70 * k * (1 + wild * 0.6),
-      hachureAngle: rng.range(-75, -15),
+      hachureGap: 95 * k * (1 + wild * 0.6),
+      hachureAngle: rng.pick([-1, 1]) * rng.range(25, 50),
       fillWeight: 6 * k,
-      roughness: 5 + wild * 3,
-      bowing: 14,
+      roughness: 6 + wild * 3,
+      bowing: 16,
       seed: seedFor(...seedParts, "fill", pass),
     });
-    ctx.lineWidth = 7 * k;
-    ctx.globalAlpha = 0.7;
+    ctx.lineWidth = 8 * k;
+    ctx.globalAlpha = 0.4;
     ctx.stroke(path);
   }
   ctx.globalAlpha = 1;
@@ -250,7 +254,7 @@ export const drawFigureScribble = (
   // 2. Interior tangles: loopy random walks inside the silhouette.
   ctx.save();
   ctx.clip(polyPath(body));
-  const walkers = 15;
+  const walkers = 11;
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const [x, y] of body) {
     minX = Math.min(minX, x); maxX = Math.max(maxX, x);
@@ -259,8 +263,9 @@ export const drawFigureScribble = (
   for (let wk = 0; wk < walkers; wk++) {
     let x = 0, y = 0;
     for (let t = 0; t < 50; t++) {
-      x = rng.range(minX, maxX);
-      y = rng.range(minY, maxY);
+      // The first few walks start in the head so it is always filled.
+      x = wk < 3 ? rng.range(-0.12, 0.12) * s : rng.range(minX, maxX);
+      y = wk < 3 ? minY + rng.range(0.04, 0.3) * s : rng.range(minY, maxY);
       if (inside(body, x, y)) break;
     }
     const guide: Pt[] = [[x, y]];
@@ -269,8 +274,8 @@ export const drawFigureScribble = (
     for (let st = 0; st < 22; st++) {
       ang += rng.gauss() * 0.5;
       if (def.longHair && hair) ang = Math.PI / 2 + rng.gauss() * 0.3;
-      const nx = x + Math.cos(ang) * 60 * k;
-      const ny = y + Math.sin(ang) * 60 * k;
+      const nx = x + Math.cos(ang) * 75 * k;
+      const ny = y + Math.sin(ang) * 75 * k;
       if (!inside(body, nx, ny)) {
         ang += Math.PI * rng.range(0.6, 1.4);
         continue;
@@ -280,9 +285,9 @@ export const drawFigureScribble = (
       guide.push([x, y]);
     }
     if (guide.length < 3) continue;
-    const loops = loopsAlong(guide, rng.range(40, 72) * k * (1 + wild * 1.5), 52 * k, rng);
+    const loops = loopsAlong(guide, rng.range(60, 105) * k * (1 + wild * 1.5), 80 * k, rng);
     for (const st of penStrokes(loops, rng)) {
-      ctx.fill(freehand(st, { size: rng.range(12, 20) * k, thinning: 0.55, smoothing: 0.4, streamline: 0.2 }));
+      ctx.fill(freehand(st, { size: rng.range(14, 24) * k, thinning: 0.2, smoothing: 0.4, streamline: 0.2 }));
     }
   }
   ctx.restore();
@@ -295,9 +300,9 @@ export const drawFigureScribble = (
       const inset = pass === 0 ? -6 * k : 18 * k;
       return [x - nx * inset, y - ny * inset];
     });
-    const loops = loopsAlong(shifted, (pass === 0 ? 38 : 52) * k * (1 + wild * 2), 44 * k, rng, 0.05 + wild * 0.4, outward);
+    const loops = loopsAlong(shifted, (pass === 0 ? 46 : 66) * k * (1 + wild * 2), 58 * k, rng, 0.05 + wild * 0.4, outward);
     for (const st of penStrokes(loops, rng, 30, 120)) {
-      ctx.fill(freehand(st, { size: rng.range(10, 18) * k, thinning: 0.6, smoothing: 0.45, streamline: 0.25 }));
+      ctx.fill(freehand(st, { size: rng.range(13, 22) * k, thinning: 0.2, smoothing: 0.45, streamline: 0.25 }));
     }
   }
 
@@ -308,10 +313,10 @@ export const drawFigureScribble = (
     return [(x - hx) / n, (y - hy) / n];
   };
   for (let i = 0; i < (def.strands ?? 0); i++) {
-    const top = outline.filter(([, y]) => y < minY + (def.longHair ? 0.55 : 0.16) * s);
+    const top = outline.filter(([, y]) => y < minY + (def.longHair ? 0.55 : def.spiky ? 0.3 : 0.16) * s);
     const [sx, sy] = top[Math.floor(rng.next() * top.length)];
     const [nx, ny] = def.spiky ? radial([sx, sy]) : outward([sx, sy]);
-    const len = rng.range(def.spiky ? 0.08 : 0.06, def.spiky ? 0.2 : 0.11) * s * (1 + wild);
+    const len = rng.range(def.spiky ? 0.1 : 0.06, def.spiky ? 0.22 : 0.11) * s * (1 + wild);
     const bend = rng.gauss() * (def.spiky ? 0.12 : 0.6);
     const pts: Pt[] = [];
     for (let j = 0; j <= 8; j++) {
@@ -319,7 +324,7 @@ export const drawFigureScribble = (
       const a = Math.atan2(ny, nx) + bend * t;
       pts.push([sx - nx * 12 * k + Math.cos(a) * len * t, sy - ny * 12 * k + Math.sin(a) * len * t]);
     }
-    ctx.fill(freehand(pts, { size: rng.range(10, 16) * k, thinning: 0.7, smoothing: 0.5, start: { taper: 0 }, end: { taper: len * 0.6 } }));
+    ctx.fill(freehand(pts, { size: rng.range(def.spiky ? 16 : 10, def.spiky ? 26 : 16) * k, thinning: 0.5, smoothing: 0.5, start: { taper: 0 }, end: { taper: len * 0.6 } }));
   }
 
   // 5. Face: a dark gap, a dense white scribble disc, a black "?".
@@ -350,9 +355,19 @@ export const drawFigureScribble = (
     }
     const loops = loopsAlong(circ, 34 * k * (1 + wild * 2), 34 * k, rng);
     for (const st of penStrokes(loops, rng, 60, 160)) {
-      ctx.fill(freehand(st, { size: rng.range(12, 18) * k, thinning: 0.5, smoothing: 0.4 }));
+      ctx.fill(freehand(st, { size: rng.range(16, 24) * k, thinning: 0.2, smoothing: 0.4 }));
     }
   }
+  // Overlapping strokes blow out to a white core behind the "?".
+  const core = ctx.createRadialGradient(fx, fy, 0, fx, fy, R * 1.05);
+  core.addColorStop(0, "rgba(245,245,245,1)");
+  core.addColorStop(0.6, "rgba(245,245,245,0.85)");
+  core.addColorStop(1, "rgba(245,245,245,0)");
+  ctx.fillStyle = core;
+  ctx.beginPath();
+  ctx.arc(fx, fy, R * 1.05, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = FIGURE.line;
   if (wild < 0.6) {
     const qa = 1 - smoothstep((wild - 0.3) / 0.3);
     const q = R * 0.95;
@@ -401,7 +416,13 @@ const getVariant = (id: string, i: number, v: number, s: number, dpr: number): V
   return out;
 };
 
-const blitVariant = (ctx: CanvasRenderingContext2D, vr: Variant, x: number, top: number) => {
+// A tight bloom under the lines (overlaps merge, edges soften), then the lines.
+const blitVariant = (ctx: CanvasRenderingContext2D, vr: Variant, x: number, top: number, dpr = 1) => {
+  ctx.save();
+  ctx.filter = `blur(${FIGURE.bloomPx * dpr}px)`;
+  ctx.globalAlpha = FIGURE.bloomAlpha;
+  ctx.drawImage(vr.c, x - vr.ox, top - vr.oy, vr.w, vr.h);
+  ctx.restore();
   ctx.drawImage(vr.c, x - vr.ox, top - vr.oy, vr.w, vr.h);
 };
 
@@ -439,7 +460,7 @@ export const makeUnknownCycle = (id: string): DrawFn => {
     const k = f - seg * FIGURE.changeEvery - (FIGURE.changeEvery - FIGURE.changeFrames);
     const v = mod(Math.floor(frame / FIGURE.boilHold), FIGURE.boilVariants);
     if (k < 0) {
-      blitVariant(ctx, getVariant(id, seg, v, s, dpr), x, top);
+      blitVariant(ctx, getVariant(id, seg, v, s, dpr), x, top, dpr);
       return;
     }
     // Re-scribble: tangle wildly, settle into the next figure (on twos).
@@ -473,7 +494,7 @@ export const makeUnknownLineup = (id: string): DrawFn => {
         const g = figureGeom(i, s, makeRng(id, "flare", i, kq));
         drawLive(ctx, dpr, x, top, s, g.outline, g.face, g.faceR, g.def, [id, "flare", i, kq], clamp(wild));
       } else {
-        blitVariant(ctx, getVariant(id, i, v, s, dpr), x, top);
+        blitVariant(ctx, getVariant(id, i, v, s, dpr), x, top, dpr);
       }
     }
   };

@@ -11,10 +11,10 @@ import { makeRng } from "../lib/rng";
 
 // ---- data ------------------------------------------------------------------
 export const PALE = {
-  eyeW: 0.28, // look 5: fraction of frame width per eye
+  eyeW: 0.3, // look 5: fraction of frame width per eye
   aspect: 0.27,
   eyeY: 0.5,
-  spacing: 0.455, // centre-to-centre, fraction of frame width
+  spacing: 0.43, // centre-to-centre, fraction of frame width
   white: "#D8D4CE",
   corner: "#3A3230", // the whites darken towards the corners
   rim: "#4A1414",
@@ -80,25 +80,29 @@ const drawPaleEye = (
     ctx.clip(path);
     // Shadow under the upper lid.
     const sh = ctx.createLinearGradient(0, -h / 2, 0, h * 0.15);
-    sh.addColorStop(0, "rgba(40,14,12,0.45)");
+    sh.addColorStop(0, "rgba(40,14,12,0.18)");
     sh.addColorStop(1, "rgba(30,14,12,0)");
     ctx.fillStyle = sh;
     ctx.fillRect(-w / 2, -h, w, h * 1.15);
     const lo = ctx.createLinearGradient(0, h * 0.5, 0, h * 0.1);
-    lo.addColorStop(0, "rgba(70,60,58,0.55)");
+    lo.addColorStop(0, "rgba(70,60,58,0.15)");
     lo.addColorStop(1, "rgba(70,60,58,0)");
     ctx.fillStyle = lo;
     ctx.fillRect(-w / 2, 0, w, h);
     // Pupil (and a faint grey iris around it).
     const px = pose.gx * mirror * w * 0.24;
-    const py = h * 0.06 + pose.gy * h * 0.12;
-    const pr = h * 0.33 * pose.slit;
+    const py = h * 0.02 + pose.gy * h * 0.12;
+    const pr = h * 0.29 * pose.slit;
     // Soft dark red-brown ring, then a slightly wobbly black pupil.
     ctx.save();
-    ctx.filter = `blur(${(w / 960) * 1.5 * Math.hypot(ctx.getTransform().a, ctx.getTransform().b)}px)`;
-    ctx.fillStyle = "rgba(66,36,30,0.95)";
+    ctx.filter = `blur(${(w / 960) * 3 * Math.hypot(ctx.getTransform().a, ctx.getTransform().b)}px)`;
+    // Soft, lumpy brown-red falloff around the pupil (no hard ring).
+    const fall = ctx.createRadialGradient(px, py, pr * 0.9, px + pr * 0.06, py + pr * 0.06, pr + (w / 960) * 34);
+    fall.addColorStop(0, "rgba(70,34,28,0.95)");
+    fall.addColorStop(1, "rgba(70,34,28,0)");
+    ctx.fillStyle = fall;
     ctx.beginPath();
-    ctx.arc(px, py, pr + (w / 960) * 20, 0, Math.PI * 2);
+    ctx.arc(px, py, pr + (w / 960) * 36, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
     ctx.fillStyle = "#000000";
@@ -113,6 +117,13 @@ const drawPaleEye = (
     ctx.restore();
   }
   // Thin dark-red rim along both lids (pressure strokes), over a faint red halo.
+  // Deep blood-red glow outside the lids, then the dull maroon line.
+  ctx.save();
+  ctx.strokeStyle = "rgba(140,0,0,0.4)";
+  ctx.lineWidth = (w / 960) * 60;
+  ctx.filter = `blur(${(w / 960) * 16 * Math.hypot(ctx.getTransform().a, ctx.getTransform().b)}px)`;
+  ctx.stroke(path);
+  ctx.restore();
   ctx.save();
   ctx.strokeStyle = "rgba(66,50,48,0.6)";
   ctx.lineWidth = (w / 960) * 26;

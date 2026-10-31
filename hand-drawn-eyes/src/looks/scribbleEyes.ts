@@ -20,7 +20,7 @@ export type ScribbleCfg = {
 // ---- data (one place to tune) ----------------------------------------------
 export const SCRIBBLE = {
   eyeW: 0.16, // fraction of frame width per eye
-  eyeAspect: 0.3,
+  eyeAspect: 0.25,
   eyeY: 0.46, // fraction of frame height
   eyeSpacing: 0.33, // centre-to-centre, fraction of frame width
   scratchCount: 1300,
@@ -84,11 +84,14 @@ export const makeScribbleEyes = (cfg: ScribbleCfg): DrawFn => {
       const rho = Math.hypot(ex, ey);
       if (rho < 0.75) continue;
       // Sparse flecks everywhere, a little denser towards the edges.
-      if (rng.next() > 0.1 + 0.9 * smoothstep((rho - 1.3) / 2.2) ** 1.6) continue;
+      // Densest along the frame edges and in the corners, sparse inside.
+      const edge = Math.min(x, W - x, y, H - y);
+      const edgeTerm = smoothstep(1 - edge / 520) ** 1.4;
+      if (rng.next() > 0.07 + 0.93 * Math.max(edgeTerm, 0.35 * smoothstep((rho - 1.4) / 2))) continue;
       const theta0 = Math.atan2(ey, ex);
       // Short, chunky slivers (like light showing between black scribbles).
-      const len = rng.next() < 0.8 ? rng.range(12, 48) : rng.range(50, 130);
-      const width = rng.range(4, 11);
+      const len = rng.next() < 0.8 ? rng.range(8, 34) : rng.range(36, 110);
+      const width = rng.range(3, 9);
       const nDash = len > 60 && rng.next() < 0.5 ? 2 : 1;
       const bend = rng.range(-0.18, 0.18) * len;
       const period = rng.pick([60, 75, 100, 150]);
@@ -103,7 +106,7 @@ export const makeScribbleEyes = (cfg: ScribbleCfg): DrawFn => {
         omega: 0.0026 / Math.sqrt(rho),
         width,
         alpha: rng.next() < 0.7 ? 1 : rng.range(0.55, 0.85),
-        soft: rng.next() < 0.3,
+        soft: rng.next() < 0.35,
         paths: [],
         jit: [],
       };
@@ -209,8 +212,8 @@ export const makeScribbleEyes = (cfg: ScribbleCfg): DrawFn => {
     ctx.globalAlpha = 1;
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.filter = `blur(${4 * dpr}px)`;
-    ctx.globalAlpha = 0.75;
+    ctx.filter = `blur(${2.5 * dpr}px)`;
+    ctx.globalAlpha = 0.4;
     ctx.drawImage(softLayer.c, 0, 0);
     ctx.restore();
 
@@ -222,7 +225,7 @@ export const makeScribbleEyes = (cfg: ScribbleCfg): DrawFn => {
       const mirror = e === 1 ? -1 : 1;
       const ex = cx + (e === 0 ? -spacing / 2 : spacing / 2);
       // Outer corners tilt up a little (cat eye).
-      const tilt = 0.035;
+      const tilt = 0.015;
       ctx.setTransform(dpr * mirror, 0, 0, dpr, ex * dpr, cy * dpr);
       ctx.rotate(tilt);
       const L = frayLids(lids(spec, B.jit[e][v], pose.open), B.jit[e][v], spec.w * 0.004);
@@ -235,9 +238,9 @@ export const makeScribbleEyes = (cfg: ScribbleCfg): DrawFn => {
       ctx.clip(path);
       const gx = pose.gx * mirror;
       const ix = gx * spec.w * 0.17;
-      const iy = pose.gy * spec.h * 0.1;
+      const iy = -spec.h * 0.12 + pose.gy * spec.h * 0.1; // tucked under the upper lid
       const ij = B.irisJit[e][v];
-      const ir = spec.h * 0.5;
+      const ir = spec.h * 0.58;
       const ring: Pt[] = [];
       for (let k = 0; k <= 9; k++) {
         const a = (k / 9) * Math.PI * 2;
@@ -254,9 +257,9 @@ export const makeScribbleEyes = (cfg: ScribbleCfg): DrawFn => {
         pts.push([ix + Math.sin(t * Math.PI) * 2 + ij[k][0] * 0.4, iy + yy + ij[k][1] * 0.4]);
         pr.push(Math.min(1, Math.sin(t * Math.PI) * 1.6) ** 0.5);
       }
-      const slitW = ir * 0.32 * pose.slit;
+      const slitW = ir * 0.3 * pose.slit;
       ctx.fillStyle = cfg.pupil;
-      ctx.fill(freehand(pts, { size: slitW, thinning: 0.7, pressures: pr, smoothing: 0.6, streamline: 0.2 }));
+      ctx.fill(freehand(pts, { size: slitW, thinning: 0.45, pressures: pr, smoothing: 0.6, streamline: 0.2 }));
       ctx.restore();
 
       // Lid lines: pressure strokes over the edge, overshooting the outer corner.

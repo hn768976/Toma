@@ -20,15 +20,15 @@ export type CrayonCfg = {
 export const CRAYON = {
   pairWidth: 0.8, // both eyes together, fraction of frame width
   gap: 0.11, // between the eyes, fraction of frame width
-  eyeY: 0.47, // fraction of frame height
+  eyeY: 0.52, // fraction of frame height
   aspect: 0.33,
-  irisDiameter: 1.16, // fraction of eye height
+  irisDiameter: 1.3, // fraction of eye height
   pupil: 0.31, // fraction of iris radius
   white: "#FCFBF8",
   glowPx: 11, // glow blur radius at 4K
   glowAlpha: 1,
   haloPx: 30, // a second, fainter halo (fades out within ~10px at 720p)
-  haloAlpha: 0.45,
+  haloAlpha: 0.7,
   boilHold: 3,
   boilVariants: 4,
 };
@@ -203,7 +203,6 @@ export const makeCrayonEyes = (cfg: CrayonCfg): DrawFn => {
       lc.clearRect(0, 0, lw, lh);
       // Eye-local coordinates (4K units), centred in the layer.
       lc.setTransform(dpr * mirror, 0, 0, dpr, lw / 2, lh / 2);
-      lc.rotate(-0.045); // outer corners sit a little lower (suspicious)
 
       const open = Math.min(1, pose.open);
       const stretch = Math.max(1, pose.open); // widen: the drawing stretches
