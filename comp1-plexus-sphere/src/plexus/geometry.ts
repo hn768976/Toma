@@ -3,9 +3,14 @@
 
 export type Vec3 = [number, number, number];
 
+// Loop-safe drift: integer harmonics of the clip length, so every point
+// returns exactly to its start on the last frame → seamless loop.
+export type Wobble = { amp: Vec3; phase: Vec3; k: [number, number, number] };
+
 export type PlexusNode = {
   p: Vec3; // unit-sphere position (radius ~1)
   size: number; // relative dot radius multiplier
+  wob: Wobble;
 };
 
 export type PlexusEdge = {
@@ -17,6 +22,7 @@ export type PlexusEdge = {
 export type Dust = {
   p: Vec3;
   size: number;
+  wob: Wobble;
 };
 
 export type PlexusGeometry = {
@@ -104,17 +110,31 @@ const hullEdges = (pts: Vec3[]) => {
   return [...set].map((s) => s.split("-").map(Number) as [number, number]);
 };
 
+const makeWobble = (rnd: () => number, amp: number): Wobble => ({
+  amp: [(rnd() * 2 - 1) * amp, (rnd() * 2 - 1) * amp, (rnd() * 2 - 1) * amp],
+  phase: [rnd() * Math.PI * 2, rnd() * Math.PI * 2, rnd() * Math.PI * 2],
+  k: [1 + Math.floor(rnd() * 3), 1 + Math.floor(rnd() * 3), 1 + Math.floor(rnd() * 3)],
+});
+
+// Displace a point by its wobble at loop phase t (0..1).
+export const wobbleAt = (p: Vec3, w: Wobble, t: number): Vec3 => [
+  p[0] + w.amp[0] * Math.sin(Math.PI * 2 * w.k[0] * t + w.phase[0]),
+  p[1] + w.amp[1] * Math.sin(Math.PI * 2 * w.k[1] * t + w.phase[1]),
+  p[2] + w.amp[2] * Math.sin(Math.PI * 2 * w.k[2] * t + w.phase[2]),
+];
+
 export const buildGeometry = (seed: number): PlexusGeometry => {
   const rnd = mulberry32(seed);
+  const wrnd = mulberry32(seed ^ 0x5bd1e995);
   const verts = sampleSphere(rnd, 58, 0.31);
 
   const nodes: PlexusNode[] = verts.map((p) => {
     const r = rnd();
     // Mostly small/medium vertices with a few heavy "hub" dots.
-    const size = r < 0.2 ? 1.95 + rnd() * 0.6 : r < 0.75 ? 1.15 + rnd() * 0.5 : 0.8 + rnd() * 0.3;
+    const size = r < 0.2 ? 1.7 + rnd() * 0.45 : r < 0.75 ? 1.15 + rnd() * 0.5 : 0.8 + rnd() * 0.3;
     // Slight radial jitter so the hull is not a perfect geodesic.
     const s = 1 + (rnd() - 0.5) * 0.04;
-    return { p: [p[0] * s, p[1] * s, p[2] * s], size };
+    return { p: [p[0] * s, p[1] * s, p[2] * s], size, wob: makeWobble(wrnd, 0.045) };
   });
 
   const edges: PlexusEdge[] = hullEdges(verts).map(([a, b]) => ({
@@ -124,20 +144,22 @@ export const buildGeometry = (seed: number): PlexusGeometry => {
   }));
 
   const dust: Dust[] = [];
-  for (let i = 0; i < 230; i++) {
+  for (let i = 0; i < 150; i++) {
     const u = randomUnit(rnd);
     const shell = rnd();
     // ~55% hug the outer shell (forming the soft halo seen at the
     // silhouette), the rest float inside the volume.
-    const rad = shell < 0.6 ? 0.99 + rnd() * 0.16 : Math.cbrt(rnd()) * 0.95;
+    const rad = shell < 0.75 ? 0.99 + rnd() * 0.16 : Math.cbrt(rnd()) * 0.95;
     const size = 0.65 + rnd() * 0.55;
-    dust.push({ p: [u[0] * rad, u[1] * rad, u[2] * rad], size });
+    const wob = makeWobble(wrnd, 0.03);
+    dust.push({ p: [u[0] * rad, u[1] * rad, u[2] * rad], size, wob });
     // Occasional tight pairs of dust (visible in the reference).
     if (rnd() < 0.12) {
       const o = 0.018 + rnd() * 0.02;
       dust.push({
         p: [u[0] * rad + o, u[1] * rad + (rnd() - 0.5) * o, u[2] * rad],
         size: size * 0.8,
+        wob,
       });
     }
   }
