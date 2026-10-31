@@ -93,6 +93,21 @@ export const scheduleNetwork = (
     active.push(p);
   };
 
+  // Eastward growth front timed against the reference: US / Mexico by ~5 s,
+  // reaches West Africa ~12 s and Iberia ~14 s, then fans over Europe/Africa.
+  const FRONT: [number, number][] = [[1.5, -97], [5, -72], [9, -38], [12, -14], [14, -4], [20, 30], [26, 62], [30, 80]];
+  const frontLon = (t: number) => {
+    for (let i = 1; i < FRONT.length; i++) {
+      if (t <= FRONT[i][0]) {
+        const [t0, l0] = FRONT[i - 1];
+        const [t1, l1] = FRONT[i];
+        return l0 + ((l1 - l0) * (t - t0)) / (t1 - t0);
+      }
+    }
+    return FRONT[FRONT.length - 1][1];
+  };
+  const lonOf = (p: THREE.Vector3) => (Math.atan2(-p.z, p.x) * 180) / Math.PI;
+
   activate(0, 1.5); // the hub
   for (let t = 1.6; t < duration - 1.2; t += 0.1) {
     const v = sampleTrack(keys, Math.min(duration, t + 0.5));
@@ -100,7 +115,7 @@ export const scheduleNetwork = (
     const R = viewRadius(v[2]);
     const cand: { i: number; d: number }[] = [];
     pool.forEach((p, i) => {
-      if (used.has(i) || p.angleTo(center) > R) return;
+      if (used.has(i) || p.angleTo(center) > R || lonOf(p) > frontLon(t)) return;
       let d = 9;
       for (const q of active) d = Math.min(d, q.angleTo(p));
       if (d < 1.0) cand.push({ i, d: d + rnd() * 0.08 });

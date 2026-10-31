@@ -20,8 +20,8 @@ export const LOOKS: Record<EarthNetworkProps["variant"], Look> = {
     keys: KEYS_V1,
     flat: true,
     curvature: 0.12,
-    fov: 26,
-    post: {},
+    fov: 20,
+    post: { haze: 0.45, hazeColor: [0.42, 0.62, 0.74], bottomDark: 0.26, saturation: 0.92 },
     viewRadius: () => 0.75,
   },
   // V2: true globe, rising orbital pull-back

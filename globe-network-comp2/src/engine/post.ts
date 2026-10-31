@@ -58,6 +58,7 @@ uniform float bloomA, bloomB, vignette, grain, time, exposure, saturation;
 uniform vec3 lift, gain, tint;
 uniform vec2 resolution;
 uniform float flipY;
+uniform vec3 hazeColor; uniform float hazeAmount, hazeX, contrast, bottomDark;
 varying vec2 vUv;
 float hash(vec2 p) { p = fract(p * vec2(443.897, 441.423)); p += dot(p, p.yx + 19.19); return fract((p.x + p.y) * p.x); }
 void main() {
@@ -71,6 +72,12 @@ void main() {
   vec3 col = amt < 0.5 ? mix(sharp, dA, amt * 2.0) : mix(dA, dB, amt * 2.0 - 1.0);
   col += texture2D(tBloomA, uv).rgb * bloomA + texture2D(tBloomB, uv).rgb * bloomB;
   col *= exposure;
+  // atmospheric haze brightening towards the horizon (top of frame), hottest
+  // around hazeX (art-directed, moves with the camera)
+  float hz = smoothstep(0.35, 1.0, uv.y) * (0.55 + 0.45 * exp(-pow((uv.x - hazeX) / 0.35, 2.0)));
+  col = mix(col, hazeColor, clamp(hazeAmount * hz, 0.0, 1.0));
+  col = (col - 0.32) * contrast + 0.32;
+  col *= 1.0 - bottomDark * (1.0 - smoothstep(0.0, 0.6, uv.y));
   // grade
   col = col * gain + lift * (1.0 - col);
   float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
@@ -105,6 +112,11 @@ export type PostParams = {
   lift: [number, number, number];
   gain: [number, number, number];
   tint: [number, number, number];
+  haze?: number;
+  hazeColor?: [number, number, number];
+  hazeX?: number;
+  contrast?: number;
+  bottomDark?: number;
 };
 
 const rt = (w: number, h: number, type: THREE.TextureDataType) =>
@@ -186,6 +198,11 @@ export class PostFX {
       tint: { value: new THREE.Vector3(1, 1, 1) },
       resolution: { value: new THREE.Vector2(w, h) },
       flipY: { value: 1 },
+      hazeColor: { value: new THREE.Vector3(0.36, 0.57, 0.7) },
+      hazeAmount: { value: 0 },
+      hazeX: { value: 0.5 },
+      contrast: { value: 1 },
+      bottomDark: { value: 0 },
     });
     this.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.down);
     this.quad.frustumCulled = false;
@@ -258,6 +275,11 @@ export class PostFX {
     u.lift.value.set(...p.lift);
     u.gain.value.set(...p.gain);
     u.tint.value.set(...p.tint);
+    u.hazeAmount.value = p.haze ?? 0;
+    u.hazeX.value = p.hazeX ?? 0.5;
+    u.contrast.value = p.contrast ?? 1;
+    u.bottomDark.value = p.bottomDark ?? 0;
+    if (p.hazeColor) u.hazeColor.value.set(...p.hazeColor);
     this.pass(this.comp, null);
   }
 

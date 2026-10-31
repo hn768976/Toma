@@ -9,8 +9,8 @@ import { DEG, Key, latLonToVec3, sampleTrack } from "./math";
  * [lat, lon, distance (earth radii), tilt (deg from nadir), heading (deg)]
  */
 export const KEYS_V1: Key[] = [
-  { t: 0, v: [12, -76, 1.75, 40, 0] },
-  { t: 30, v: [27, 31, 1.75, 40, 0] },
+  { t: 0, v: [13, -85, 2.3, 37, 0] },
+  { t: 30, v: [31, 34, 2.3, 37, 0] },
 ];
 
 /**
