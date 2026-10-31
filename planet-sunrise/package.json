@@ -1,0 +1,41 @@
+{
+  "name": "planet-sunrise",
+  "version": "1.0.0",
+  "description": "My Remotion video",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.539",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.539"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.539",
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "render:v1:4k": "remotion render PlanetSunrise-V1-Reference-4K out/PlanetSunrise-V1-Reference-4K.mp4",
+    "render:v1:1080p": "remotion render PlanetSunrise-V1-Reference-4K out/PlanetSunrise-V1-Reference-1080p.mp4 --scale=0.5",
+    "render:v2:4k": "remotion render PlanetSunrise-V2-CameraMove-4K out/PlanetSunrise-V2-CameraMove-4K.mp4",
+    "render:v2:1080p": "remotion render PlanetSunrise-V2-CameraMove-4K out/PlanetSunrise-V2-CameraMove-1080p.mp4 --scale=0.5",
+    "render:all:1080p": "npm run render:v1:1080p && npm run render:v2:1080p",
+    "render:all:4k": "npm run render:v1:4k && npm run render:v2:4k",
+    "test:render": "remotion render PlanetSunrise-V1-Reference-4K out/smoke-test.mp4 --frames=0-5 --scale=0.25"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}
