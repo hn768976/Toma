@@ -33,10 +33,10 @@ float hash12(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453
 // Palette of the reference: cyan -> electric blue -> magenta -> pink/violet.
 vec3 streakColor(float k) {
   vec3 cyan    = vec3(0.04, 0.66, 0.88);
-  vec3 blue    = vec3(0.16, 0.34, 1.00);
+  vec3 blue    = vec3(0.14, 0.32, 0.82);
   vec3 magenta = vec3(0.90, 0.06, 0.58);
-  vec3 pink    = vec3(1.00, 0.08, 0.36);
-  vec3 violet  = vec3(0.56, 0.06, 1.00);
+  vec3 pink    = vec3(1.00, 0.06, 0.30);
+  vec3 violet  = vec3(0.70, 0.05, 0.95);
   k = clamp(k, 0.0, 1.0) * 4.0;
   if (k < 1.0) return mix(cyan, blue, k);
   if (k < 2.0) return mix(blue, magenta, k - 1.0);
@@ -87,7 +87,10 @@ vec3 streakLayer(float r, float ang, float s, float spacing, float wMin, float w
 }
 
 vec3 scene(vec2 p, float pxRef) {
-  vec2 d = p - ARC_CENTER;
+  // The reference arc is lopsided: steeper on the left, flatter on the right.
+  vec2 q = p;
+  q.x = ARC_CENTER.x + (p.x - ARC_CENTER.x) * (1.0 + 0.32 * (1.0 - smoothstep(0.0, ARC_CENTER.x, p.x)));
+  vec2 d = q - ARC_CENTER;
   float r = length(d);
   float ang = atan(d.x, d.y);              // 0 straight below the centre, <0 left
   float s = ang * 900.0;                   // arc length on a nominal radius
@@ -98,29 +101,32 @@ vec3 scene(vec2 p, float pxRef) {
   // where streaks live: a wide band below the dark void at the top
   float band = smoothstep(835.0, 905.0, r) * (1.0 - smoothstep(1200.0, 1320.0, r));
   // the bottom-left corner of the reference is darker
-  float cornerDark = 1.0 - 0.88 * (1.0 - smoothstep(20.0, 300.0, length((p - vec2(0.0, 432.0)) * vec2(0.75, 1.0))));
+  float cornerDark = 1.0 - 0.93 * (1.0 - smoothstep(60.0, 420.0, length((p - vec2(0.0, 432.0)) * vec2(0.65, 1.0))));
 
   // background: deep navy with cyan top-left and violet bottom-right glows
   vec3 col = vec3(0.0, 0.002, 0.112);
   col += vec3(0.01, 0.0, 0.04) * smoothstep(950.0, 1150.0, r);
   col += vec3(0.0, 0.42, 0.72) * exp(-pow(length(p - vec2(-20.0, -10.0)) / 125.0, 2.0)) * 1.0;
-  col += vec3(0.42, 0.0, 0.80) * exp(-pow(length(p - vec2(790.0, 440.0)) / 170.0, 2.0)) * 0.9;
-  col += vec3(0.06, 0.0, 0.16) * band * 0.4;
+  col += vec3(0.42, 0.0, 0.72) * exp(-pow(length(p - vec2(790.0, 440.0)) / 170.0, 2.0)) * 0.72;
+  col += vec3(0.09, 0.0, 0.12) * band * 0.6;
 
   // soft, out-of-focus wide streaks
-  vec3 soft = streakLayer(r, ang, s, 16.0, 4.0, 11.0, 0.9, 2.2,
-                          150.0, 240.0, 0.8, 0.0, pxRef);
+  vec3 soft = streakLayer(r, ang, s, 16.0, 5.0, 13.0, 0.9, 2.4,
+                          150.0, 260.0, 1.15, 0.0, pxRef);
   // the reference's left side is dominated by broad, soft teal trails
-  soft *= mix(1.7, 1.0, smoothstep(-0.5, 0.05, ang));
+  float leftSide = 1.0 - smoothstep(-0.5, 0.05, ang);
+  soft *= mix(vec3(1.0), vec3(1.15, 2.6, 1.9), leftSide);
   // sharper light trails
-  vec3 sharp = streakLayer(r, ang, s, 7.0, 0.7, 2.0, 0.6, 3.0,
-                           170.0, 300.0, 1.35, 1000.0, pxRef);
+  vec3 sharp = streakLayer(r, ang, s, 7.0, 1.1, 3.0, 0.6, 4.0,
+                           170.0, 320.0, 1.6, 1000.0, pxRef);
   // hairline highlights
   vec3 hair = streakLayer(r, ang, s, 13.0, 0.3, 0.6, 0.4, 5.0,
-                          200.0, 320.0, 1.3, 5000.0, pxRef);
+                          200.0, 320.0, 0.8, 5000.0, pxRef);
 
   col *= mix(0.4, 1.0, cornerDark);
-  col += (soft + sharp + hair) * band * bundle * cornerDark;
+  // slight 2 s "breathing" of the light, as in the reference (loop-safe)
+  float breathe = 1.0 + 0.05 * sin(2.0 * PI * uTime / uLoop);
+  col += (soft + sharp + hair) * band * bundle * cornerDark * breathe;
   return col;
 }
 
