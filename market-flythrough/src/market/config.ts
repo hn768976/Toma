@@ -14,9 +14,9 @@ export type MarketPalette = {
 
 export const GREEN_PALETTE: MarketPalette = {
   background: "#010605",
-  main: "#3fd8a4",
-  hot: "#c6ffeb",
-  glow: "#0f7a5c",
+  main: "#2fe6a6",
+  hot: "#b8ffe2",
+  glow: "#10a275",
 };
 
 /** Version 2: amber "trading terminal" palette - same scene, new colour story. */
@@ -24,7 +24,7 @@ export const AMBER_PALETTE: MarketPalette = {
   background: "#070401",
   main: "#ffaa33",
   hot: "#fff0cf",
-  glow: "#8a4a08",
+  glow: "#a85a08",
 };
 
 export type MarketCamera = {
@@ -41,28 +41,29 @@ export type MarketCamera = {
 // 8-10.7 s medium drift across a third chart, tables and candlesticks,
 // 10.7-13.3 s the data dissolves into glow and network lines, a distant
 //           chart sits in the centre like the opening frame.
-const T = [0, 1.4, 2.7, 4.0, 5.0, 5.8, 6.45, 7.1, 8.0, 9.3, 10.7, 12.0, 13.34];
+const T = [0, 1.4, 2.7, 4.0, 4.8, 5.6, 6.45, 7.2, 7.95, 9.3, 10.7, 12.0, 13.34];
 const keys = (vals: number[]) => track(T.map((t, i) => [t, vals[i]]));
 
 const px = keys([
-  0.0, 0.25, 0.7, 1.9, 3.6, 5.2, 6.35, 5.2, 2.6, 2.0, 2.6, 2.4, 2.1,
+  0.0, 0.3, 0.9, 2.4, 3.55, 5.0, 6.35, 4.6, 2.9, -0.4, 0.6, 1.4, 1.9,
 ]);
 const py = keys([
-  0.3, 0.38, 0.55, 0.9, 1.25, 1.05, 0.95, 0.55, 0.2, -0.2, -0.35, -0.2, 0.0,
+  0.35, 0.45, 0.75, 1.5, 2.45, 1.6, 0.95, 0.5, 0.15, 0.4, 0.2, 0.1, 0.0,
 ]);
 const pz = keys([
-  16, 13.4, 9.6, 5.3, 2.2, 0.55, -0.62, -2.5, -6.3, -9.6, -12.4, -14.6, -16.6,
+  15, 11.4, 7.6, 3.6, 0.75, -0.2, -0.62, -3.0, -5.95, -10.6, -13.6, -16.2,
+  -18.6,
 ]);
 
 const lx = keys([
-  -0.2, 0.0, 0.4, 1.6, 4.6, 6.0, 6.6, 4.4, 1.5, 0.6, 2.8, 1.6, 0.9,
+  -0.4, 0.0, 0.6, 2.6, 4.6, 6.2, 6.6, 3.8, 3.2, -1.8, 1.0, 1.4, 1.0,
 ]);
 const ly = keys([
-  0.0, 0.1, 0.3, 0.8, 0.9, 0.8, 0.8, -0.2, -0.6, -0.6, 0.2, 0.3, 0.2,
+  0.0, 0.2, 0.6, 1.4, 1.6, 1.0, 0.8, -0.2, -0.4, 0.9, 0.4, 0.3, 0.2,
 ]);
-const lz = keys([0, -1, -2, -3, -3.5, -4.5, -6, -9, -14, -18, -22, -26, -34]);
+const lz = keys([0, -1, -2, -3, -4, -5, -6, -9, -11, -17, -24, -30, -38]);
 
-const roll = keys([-2, -1.5, -0.5, 1.5, 4, 3, 1.5, -2.5, -3, -1, 1, 0.5, 0]);
+const roll = keys([-2, -1.5, -0.5, 2, 5, 3, 1.5, -3, -4, -1.5, 1, 1.5, 2.5]);
 
 export const marketCamera = (t: number): MarketCamera => ({
   pos: [px(t), py(t), pz(t)],
