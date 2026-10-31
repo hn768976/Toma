@@ -222,7 +222,7 @@ export const createMarketScene =
       fadeC,
     );
     const candC = makeCandleTexture(24, rand);
-    addPanel(candC.texture, candC.aspect, [1.6, -1.4, -15.2], 2.4, 1, fadeC);
+    addPanel(candC.texture, candC.aspect, [0.4, -1.2, -16.6], 2.8, 1, fadeC);
 
     // Faint ticker "walls" high in the background, as in the reference.
     for (let i = 0; i < 7; i++) {
@@ -267,7 +267,7 @@ export const createMarketScene =
       progress: (t: number) => number;
     }[] = [];
     const lineMats: LineMaterial[] = [];
-    const ledColor = colMain.clone().lerp(colHot, 0.38);
+    const ledColor = colMain.clone().lerp(colHot, 0.62);
     const addChart = (def: ChartDef) => {
       const series = makeSeries(
         def.n,
@@ -332,7 +332,7 @@ export const createMarketScene =
         register(mat, def.fade ?? always);
         const mesh = new InstancedMesh(plane, mat, cells.length);
         const m = new Matrix4();
-        const cellW = pitch * 0.74;
+        const cellW = pitch * 0.8;
         const cellH = pitch * 0.62;
         cells.forEach((p, i) => {
           m.copy(basis)
@@ -341,7 +341,7 @@ export const createMarketScene =
           mesh.setMatrixAt(i, m);
           mesh.setColorAt(
             i,
-            ledColor.clone().multiplyScalar(0.72 + rand() * 0.28),
+            ledColor.clone().multiplyScalar(0.9 + rand() * 0.25),
           );
         });
         mesh.frustumCulled = false;
@@ -541,7 +541,7 @@ export const createMarketScene =
       [
         [-3.0, 2.3, -2.2, 4.4],
         [2.9, 1.5, -3.4, 3.4],
-        [-1.2, 0.4, -14.5, 3.6],
+        [-4.5, 3.2, -24, 3.6],
       ] as const
     ).forEach(([x, y, z, sc]) => {
       const mat = new SpriteMaterial({
@@ -566,6 +566,24 @@ export const createMarketScene =
         node: nodes.length - 1,
       });
     });
+
+    // The bright "laser" network beam that sweeps across the final shot.
+    const beamGeo = new LineGeometry();
+    beamGeo.setPositions([-9, -4.5, -27, 9, 3.5, -31]);
+    const beamMat = new LineMaterial({
+      color: colMain.clone().lerp(colHot, 0.5),
+      linewidth: 3.2 * pxScale,
+      transparent: true,
+      opacity: 0.9,
+      blending: AdditiveBlending,
+      depthWrite: false,
+      depthTest: false,
+    });
+    beamMat.resolution.set(bufW, bufH);
+    register(beamMat, window_(11.4, 0.7, 12.9, 0.4));
+    const beam = new Line2(beamGeo, beamMat);
+    beam.frustumCulled = false;
+    scene.add(beam);
 
     /* ------------------------------------------------------------- */
     /* Floating data bits                                             */
@@ -626,9 +644,9 @@ export const createMarketScene =
       [3, 0.39],
       [6, 0.35],
       [8.5, 0.38],
-      [10.7, 0.53],
-      [12, 0.64],
-      [13.34, 0.6],
+      [10.7, 0.7],
+      [12, 1.0],
+      [13.34, 1.0],
     ]);
 
     const target = new WebGLRenderTarget(bufW, bufH, {
@@ -665,6 +683,9 @@ export const createMarketScene =
       });
       charts.forEach((c) => c.setProgress(clamp(c.progress(t))));
       glowMat.opacity = Math.min(1, glowLevel(t) * master);
+      // The haze swells as the data dissolves (last ~2.5 s).
+      const swell = 1 + 0.35 * smoothstep(10.5, 12.5, t);
+      glow.scale.set(10.5 * swell, 6.2 * swell, 1);
 
       // Network: fade with distance (fog) and very close to the lens.
       const arr = netColors.data.array;

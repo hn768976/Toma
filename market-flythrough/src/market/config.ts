@@ -14,9 +14,9 @@ export type MarketPalette = {
 
 export const GREEN_PALETTE: MarketPalette = {
   background: "#010605",
-  main: "#27dbb2",
-  hot: "#b8ffea",
-  glow: "#0e9a80",
+  main: "#00dda0",
+  hot: "#aaffe2",
+  glow: "#00a277",
 };
 
 /** Version 2: amber "trading terminal" palette - same scene, new colour story. */
@@ -41,7 +41,9 @@ export type MarketCamera = {
 // 8-10.7 s medium drift across a third chart, tables and candlesticks,
 // 10.7-13.3 s the data dissolves into glow and network lines, a distant
 //           chart sits in the centre like the opening frame.
-const T = [0, 1.4, 2.7, 4.0, 4.8, 5.3, 6.45, 7.2, 7.95, 9.3, 10.7, 12.0, 13.34];
+const T = [
+  0, 1.4, 2.7, 4.0, 4.8, 5.3, 6.45, 7.35, 8.25, 9.4, 10.7, 12.0, 13.34,
+];
 const keys = (vals: number[]) => track(T.map((t, i) => [t, vals[i]]));
 
 const px = keys([
