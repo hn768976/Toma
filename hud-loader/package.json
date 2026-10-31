@@ -1,0 +1,39 @@
+{
+  "name": "hud-loader",
+  "version": "1.0.0",
+  "description": "HUD Loader — Canvas 2D loading-bar recreation (4K, 30 fps) with a 3D-camera version",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.539",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.539"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.539",
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "render": "node scripts/render.mjs",
+    "render:v1": "node scripts/render.mjs HudLoader-V1",
+    "render:v2": "node scripts/render.mjs HudLoader-V2",
+    "render:4k:v1": "remotion render HudLoader-V1 out/4k/HudLoader-V1_3840x2160.mp4 --codec=h264 --crf=12",
+    "render:4k:v2": "remotion render HudLoader-V2 out/4k/HudLoader-V2_3840x2160.mp4 --codec=h264 --crf=12"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}
