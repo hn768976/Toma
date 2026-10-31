@@ -6,6 +6,8 @@ import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 
+const BLOOM_REFERENCE_HEIGHT = 1080;
+
 /**
  * Post-processing chain: multisampled HDR render -> optional bloom -> tone map / sRGB.
  * Takes over rendering (useFrame priority 1), which @remotion/three drives
@@ -30,6 +32,14 @@ export const PostFX: React.FC<{
     const c = new EffectComposer(gl, target);
     c.addPass(new RenderPass(scene, camera));
     const b = new UnrealBloomPass(new THREE.Vector2(1, 1), 1, 0.5, 0.8);
+    // The bloom blur kernels are measured in pixels, so the glow would get
+    // tighter as resolution rises. Run the bloom at a fixed 1080-line working
+    // resolution (upsampled when compositing) so 1080p and 4K renders match.
+    const setBloomSize = b.setSize.bind(b);
+    b.setSize = (w: number, h: number) => {
+      const k = Math.min(1, BLOOM_REFERENCE_HEIGHT / h);
+      setBloomSize(Math.max(1, Math.round(w * k)), Math.max(1, Math.round(h * k)));
+    };
     c.addPass(b);
     c.addPass(new OutputPass());
     return { composer: c, bloom: b };
