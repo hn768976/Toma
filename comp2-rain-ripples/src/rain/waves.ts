@@ -35,18 +35,20 @@ export const buildWaves = (seed: number) => {
           ? 0.014 * Math.pow(0.03 / 0.014, j)
           : 0.0065 * Math.pow(0.013 / 0.0065, j)) *
       (0.9 + 0.2 * r1);
-    const weight = band === 0 ? 1.0 : band === 1 ? 0.9 : 0.1;
+    const weight = band === 0 ? 1.0 : band === 1 ? 0.85 : 0.17;
     // swell: isotropic golden-angle fan; chop & capillaries: symmetric fan
     // around world-y (crests run across frame → horizontally elongated
     // glints, as in the reference) with no net diagonal bias.
     const ang =
       band === 0
         ? i * 2.39996 + (r2 - 0.5) * 0.3
-        : Math.PI / 2 + (((i * 5) % 8) / 7 - 0.5) * 2.2 + (r2 - 0.5) * 0.15;
+        : Math.PI / 2 + (((i * 5) % 8) / 7 - 0.5) * 2.0 + (r2 - 0.5) * 0.5;
     const k = (Math.PI * 2) / lambda;
     // dispersion; fine waves move fastest (glitter decorrelates quickly)
     // but stay < 1.4 rad/frame at 30 fps so crests never strobe.
-    const omega = Math.min(1.1 * Math.sqrt(k), 42);
+    // per-train speed jitter breaks up any common beat/rhythm
+    const r4 = rnd();
+    const omega = Math.min(1.1 * Math.sqrt(k) * (0.7 + 0.7 * r4), 42);
     a.set([Math.cos(ang), Math.sin(ang), k, omega], i * 4);
     b.set([weight * lambda, r3 * Math.PI * 2], i * 2);
   }

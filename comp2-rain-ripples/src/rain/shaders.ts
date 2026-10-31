@@ -133,7 +133,7 @@ vec3 ripples(vec2 p, float fp) {
         float lam = 0.0125 * (0.85 + 0.3 * s) * (1.0 + 0.35 * age);
         float x = d - r;
         // thin packet: 1–3 visible crests around the expanding front
-        float env = exp(-(x * x) / (0.55 * lam * lam));
+        float env = exp(-(x * x) / (0.7 * lam * lam));
         float born = smoothstep(0.04, 0.16, age);      // ring forms after the splash
         float fade = smoothstep(LIFE, LIFE * 0.5, age);
         float amp = 0.006 * s * born * fade * exp(-age / 0.9) / (1.0 + r / 0.1);
@@ -142,11 +142,11 @@ vec3 ripples(vec2 p, float fp) {
         // impact: dark crater for ~0.15 s with a bright splash rim
         float cw = 0.011 * (0.6 + 0.6 * s);
         float q = d / cw;
-        float life = exp(-age / 0.13);
+        float life = smoothstep(0.0, 0.05, age) * exp(-max(age - 0.05, 0.0) / 0.16);
         float cr = life * exp(-q * q);
         h -= 0.006 * s * cr;
         crater += cr * s;
-        float rim = exp(-age / 0.07) * exp(-pow((q - 1.15) / 0.3, 2.0));
+        float rim = smoothstep(0.0, 0.04, age) * exp(-max(age - 0.04, 0.0) / 0.09) * exp(-pow((q - 1.15) / 0.3, 2.0));
         sparkle += rim * s;
       }
     }
@@ -167,8 +167,9 @@ void main() {
   vec2 warp2 = vec2(vnoise3(vec3(p * 32.0, uTime * 0.6 + 4.0)),
                     vnoise3(vec3(p * 32.0 + 13.1, uTime * 0.6 + 9.0)));
   vec2 q = p + warp * 0.02 + warp2 * 0.0045;
-  // rings use the un-warped position so they stay perfectly round
-  vec3 rp = ripples(p, fp);
+  // rings are bent only by the smooth low-frequency warp (a high-frequency
+  // value-noise warp would facet them into polygons)
+  vec3 rp = ripples(p + warp * 0.0025, fp);
   float h = uWaveGain * waves(q, fp) + uRippleGain * rp.x;
   float on = uRippleGain > 0.0 ? 1.0 : 0.0;
   // r: height, g: crater mask, b: world units per pixel, a: splash sparkle
@@ -233,8 +234,8 @@ void main() {
   // splash sparkle on the crater rim
   col = mix(col, vec3(0.97, 0.98, 1.0), clamp(c.a, 0.0, 1.0) * 0.9);
   // sharp sun-glint lobe on the steepest light-facing facets
-  float glint = smoothstep(2.0, 3.2, sl / uSigma);
-  col = mix(col, vec3(1.0), glint * 0.85);
+  float glint = smoothstep(1.8, 2.4, sl / uSigma);
+  col = mix(col, vec3(1.0), glint * 0.95);
 
   // far-field sky reflection for low camera angles
   if (uFresnel > 0.0) {
