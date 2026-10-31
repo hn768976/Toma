@@ -21,6 +21,7 @@ uniform float uWarp;
 uniform vec3  uRing;       // intensities: back rectangle, middle ring, near ring
 uniform float uFill;       // wall spill light when the whole corridor is lit
 uniform float uSpill;      // how much the back rectangle lights the walls (low on flash frames)
+uniform float uVig;        // vignette strength (strong only in the opening cycle, like the reference)
 uniform vec3  uBase;       // darkest tone of the image
 uniform vec3  uWood;       // lit-wood tint
 uniform vec3  uGlow;       // neon glow tint
@@ -209,7 +210,8 @@ void main() {
     int sid2;
     float t2 = traceCorridor(p + rr * 1e-3, rr, sid2);
     vec3 q = p + rr * t2;
-    float blur = foot * 0.6 + t2 * 0.035;
+    // glossy blur; on flash frames the floor ghost is a soft smear rather than a sharp copy
+    float blur = foot * 0.6 + t2 * (0.035 + 0.25 * (1.0 - uSpill));
     vec2 n2 = neonAt(q, blur);
     float fres = 0.3 + 0.7 * pow(1.0 - abs(rd.y), 3.0);
     float rough = 0.45 + 0.55 * clamp(alb * 1.4, 0.0, 1.0);
@@ -227,7 +229,7 @@ void main() {
   // gentle vignette
   vec2 vq = (frag / uRes) - 0.5;
   // soft but deep vignette: the reference falls to near-black at the side margins
-  float vig = 1.0 - smoothstep(0.22, 0.74, length(vq * vec2(1.25, 0.9)));
+  float vig = 1.0 - uVig * smoothstep(0.22, 0.74, length(vq * vec2(1.25, 0.9)));
   col = uBase * mix(0.85, 1.0, vig) + max(col - uBase, 0.0) * clamp(vig, 0.0, 1.0);
   // fine film grain
   float gr = hash12(frag + vec2(uFrame * 17.13, uFrame * 3.71)) - 0.5;

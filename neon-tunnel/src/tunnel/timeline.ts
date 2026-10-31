@@ -231,6 +231,7 @@ export type TunnelParams = {
   ring2: number;
   fill: number;
   spill: number;
+  vig: number;
   warp: number;
 };
 
@@ -238,9 +239,11 @@ const lightLevels = (n: number) => {
   const st = STATES[Math.max(0, Math.min(REF_FRAMES - 1, n))];
   const c = cycleOf(n);
   // per-cycle strength of the middle ring, near ring and wall spill: the light "dies" over time
-  const mid = [0.55, 0.7, 0.38, 0.12][c];
-  const near = [1.0, 0.56, 0.36, 0][c];
-  let fill = [1.6, 0.55, 0.4, 0][c];
+  const mid = [0.5, 0.51, 0.17, 0.12][c];
+  const near = [1.0, 0.46, 0.31, 0][c];
+  // back rectangle level while the other rings are on
+  const rectLit = [0.85, 0.8, 0.5, 0.5][c];
+  let fill = [2.0, 0.45, 0.38, 0][c];
   if (c === 0 && n >= 31 && n <= 49) {
     fill *= 1 - 0.45 * ((n - 31) / 18);
   }
@@ -250,7 +253,7 @@ const lightLevels = (n: number) => {
   let warp = 0;
   switch (st) {
     case "1":
-      ring0 = c === 3 ? 0.4 : 0.5;
+      ring0 = [0.36, 0.32, 0.28, 0.3][c];
       break;
     case "d":
       ring0 = 0.38;
@@ -259,22 +262,21 @@ const lightLevels = (n: number) => {
       ring0 = 0.9;
       break;
     case "g":
-      ring0 = 0.42;
+      ring0 = 0.3;
       warp = -0.42;
       break;
     case "2":
-      ring0 = 1;
+      ring0 = rectLit;
       ring1 = mid;
       break;
     case "3":
-      ring0 = 1;
+      ring0 = rectLit;
       ring1 = mid;
       ring2 = near;
       break;
     case "e": {
-      ring0 = n < 316 ? 0.34 : 0.28;
-      const fade =
-        n < 295 ? 1 : n < 316 ? 0.55 - 0.25 * ((n - 295) / 21) : 0.12;
+      ring0 = n < 295 ? 0.26 : n < 316 ? 0.21 : 0.11;
+      const fade = n < 295 ? 1 : n < 316 ? 0.4 - 0.2 * ((n - 295) / 21) : 0.06;
       ring1 = mid * fade;
       break;
     }
@@ -284,7 +286,9 @@ const lightLevels = (n: number) => {
   if (st !== "3") fill = 0;
   // on the rolled flash frames the walls barely catch the light (faint ghost only)
   const spill = st === "f" || st === "g" ? 0.3 : 1;
-  return { ring0, ring1, ring2, fill, spill, warp };
+  // the reference only darkens its frame edges heavily during the first cycle
+  const vig = c === 0 ? 1 : 0.7;
+  return { ring0, ring1, ring2, fill, spill, vig, warp };
 };
 
 /** Parameters for a composition frame (30 fps). */

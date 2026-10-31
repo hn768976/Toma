@@ -25,6 +25,7 @@ const UNIFORMS = [
   "uRing",
   "uFill",
   "uSpill",
+  "uVig",
   "uBase",
   "uWood",
   "uGlow",
@@ -100,6 +101,7 @@ export const NeonTunnel: React.FC<{ palette: Palette }> = ({ palette }) => {
     gl.uniform3f(u.uRing, p.ring0, p.ring1, p.ring2);
     gl.uniform1f(u.uFill, p.fill);
     gl.uniform1f(u.uSpill, p.spill);
+    gl.uniform1f(u.uVig, p.vig);
     gl.uniform3fv(u.uBase, palette.base);
     gl.uniform3fv(u.uWood, palette.wood);
     gl.uniform3fv(u.uGlow, palette.glow);
