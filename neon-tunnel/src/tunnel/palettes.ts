@@ -14,7 +14,7 @@ export const WARM_SEPIA: Palette = {
   glow: [0.92, 0.64, 0.38],
   core: [1.0, 0.8, 0.6],
   reflTint: [0.9, 0.78, 0.6],
-  exposure: 1.15,
+  exposure: 1.45,
 };
 
 /** Version 2 — alternative palette: electric magenta neon in a violet-stained corridor. */
@@ -24,5 +24,5 @@ export const MAGENTA_VIOLET: Palette = {
   glow: [1.0, 0.16, 0.62],
   core: [1.0, 0.42, 0.86],
   reflTint: [0.35, 0.55, 1.0],
-  exposure: 1.15,
+  exposure: 1.45,
 };

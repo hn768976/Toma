@@ -20,6 +20,7 @@ uniform float uFocal;
 uniform float uWarp;
 uniform vec3  uRing;       // intensities: back rectangle, middle ring, near ring
 uniform float uFill;       // wall spill light when the whole corridor is lit
+uniform float uSpill;      // how much the back rectangle lights the walls (low on flash frames)
 uniform vec3  uBase;       // darkest tone of the image
 uniform vec3  uWood;       // lit-wood tint
 uniform vec3  uGlow;       // neon glow tint
@@ -151,7 +152,7 @@ float illum(vec3 p) {
   float d2 = ringDist(p, Z2);
   // the back rectangle washes the back wall softly
   float back = (p.z < Z0 + 0.01) ? 1.0 : 0.6;
-  float l = uRing.x * back * (0.14 / (1.0 + pow(d0 / 0.5, 2.0)) + 0.05)
+  float l = uRing.x * uSpill * back * (0.14 / (1.0 + pow(d0 / 0.5, 2.0)) + 0.05)
           + uRing.y * (0.16 / (1.0 + pow(d1 / 0.3, 2.0)) + 0.03 / (1.0 + pow(d1 / 1.0, 2.0)))
           + uRing.z * (0.45 / (1.0 + pow(d2 / 0.33, 2.0)) + 0.08 / (1.0 + pow(d2 / 1.1, 2.0)));
   // overall spill when every ring is on (stronger near the camera)
@@ -212,7 +213,8 @@ void main() {
     vec2 n2 = neonAt(q, blur);
     float fres = 0.3 + 0.7 * pow(1.0 - abs(rd.y), 3.0);
     float rough = 0.45 + 0.55 * clamp(alb * 1.4, 0.0, 1.0);
-    refl = (n2.x * 1.3 + n2.y * 1.1) * fres * rough * 0.9;
+    // on flash frames the floor only gives a faint, soft ghost of the rectangle
+    refl = (n2.x * 1.3 * uSpill + n2.y * 1.1) * fres * rough * 0.9 * mix(0.35, 1.0, uSpill);
   }
 
   float glow = neon.y + refl;
@@ -224,7 +226,8 @@ void main() {
   col = 1.0 - exp(-col * uExposure);
   // gentle vignette
   vec2 vq = (frag / uRes) - 0.5;
-  float vig = 1.0 - 1.0 * pow(length(vq * vec2(1.2, 0.9)) * 1.3, 2.0);
+  // soft but deep vignette: the reference falls to near-black at the side margins
+  float vig = 1.0 - smoothstep(0.22, 0.74, length(vq * vec2(1.25, 0.9)));
   col = uBase * mix(0.85, 1.0, vig) + max(col - uBase, 0.0) * clamp(vig, 0.0, 1.0);
   // fine film grain
   float gr = hash12(frag + vec2(uFrame * 17.13, uFrame * 3.71)) - 0.5;

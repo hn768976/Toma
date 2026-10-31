@@ -230,6 +230,7 @@ export type TunnelParams = {
   ring1: number;
   ring2: number;
   fill: number;
+  spill: number;
   warp: number;
 };
 
@@ -239,7 +240,7 @@ const lightLevels = (n: number) => {
   // per-cycle strength of the middle ring, near ring and wall spill: the light "dies" over time
   const mid = [0.85, 0.8, 0.58, 0.2][c];
   const near = [1.0, 0.56, 0.42, 0][c];
-  let fill = [1.45, 0.5, 0.36, 0][c];
+  let fill = [1.6, 0.55, 0.4, 0][c];
   if (c === 0 && n >= 31 && n <= 49) {
     fill *= 1 - 0.45 * ((n - 31) / 18);
   }
@@ -281,7 +282,9 @@ const lightLevels = (n: number) => {
       break;
   }
   if (st !== "3") fill = 0;
-  return { ring0, ring1, ring2, fill, warp };
+  // on the rolled flash frames the walls barely catch the light (faint ghost only)
+  const spill = st === "f" || st === "g" ? 0.3 : 1;
+  return { ring0, ring1, ring2, fill, spill, warp };
 };
 
 /** Parameters for a composition frame (30 fps). */
