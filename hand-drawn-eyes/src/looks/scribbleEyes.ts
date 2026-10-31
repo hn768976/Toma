@@ -1,8 +1,8 @@
 // Looks 1-2 · Scribble Eyes: two flat almond eyes with slit irises inside a
 // restless, slowly swirling field of scratchy strokes (Rough.js).
-import type { DrawFn } from "../lib/CanvasHost";
+import { makeCanvas, type DrawFn } from "../lib/CanvasHost";
 import { buildActing } from "../lib/acting";
-import { lidPath, lids, makeJitter, type AlmondJitter, type AlmondSpec } from "../lib/eye";
+import { frayLids, lidPath, lids, makeJitter, type AlmondJitter, type AlmondSpec } from "../lib/eye";
 import { freehand, outlineToPath } from "../lib/freehand";
 import { lerp, mod, smoothstep, type Pt } from "../lib/math";
 import { roughCurve } from "../lib/rough";
@@ -23,7 +23,7 @@ export const SCRIBBLE = {
   eyeAspect: 0.3,
   eyeY: 0.46, // fraction of frame height
   eyeSpacing: 0.33, // centre-to-centre, fraction of frame width
-  scratchCount: 2000,
+  scratchCount: 1300,
   boilHold: 3, // frames each eye variant is held
   boilVariants: 4,
   fieldHold: 2, // the scratch field is redrawn every 2 frames...
@@ -44,6 +44,7 @@ type Stroke = {
   omega: number; // swirl speed, rad/frame
   width: number;
   alpha: number;
+  soft: boolean; // drawn out of focus (blurred layer)
   paths: Path2D[]; // one per field variant
   jit: { dx: number; dy: number; da: number }[];
 };
@@ -83,7 +84,7 @@ export const makeScribbleEyes = (cfg: ScribbleCfg): DrawFn => {
       const rho = Math.hypot(ex, ey);
       if (rho < 0.75) continue;
       // Sparse flecks everywhere, a little denser towards the edges.
-      if (rng.next() > 0.3 + 0.7 * smoothstep((rho - 1) / 2.6)) continue;
+      if (rng.next() > 0.1 + 0.9 * smoothstep((rho - 1.3) / 2.2) ** 1.6) continue;
       const theta0 = Math.atan2(ey, ex);
       // Short, chunky slivers (like light showing between black scribbles).
       const len = rng.next() < 0.8 ? rng.range(12, 48) : rng.range(50, 130);
@@ -95,13 +96,14 @@ export const makeScribbleEyes = (cfg: ScribbleCfg): DrawFn => {
         rho,
         theta0,
         // Local eddies on top of the global swirl.
-        dev: rng.range(-0.8, 0.8) + 0.9 * Math.sin(x / 520 + 1.3) * Math.cos(y / 430 - 0.7),
+        dev: rng.range(-0.3, 0.3) + 1.5 * Math.sin(x / 610 + 1.3) * Math.cos(y / 470 - 0.7),
         period,
         phase: rng.int(0, period - 1),
         life: rng.range(0.55, 0.85),
         omega: 0.0026 / Math.sqrt(rho),
         width,
-        alpha: rng.range(0.6, 1),
+        alpha: rng.next() < 0.7 ? 1 : rng.range(0.55, 0.85),
+        soft: rng.next() < 0.3,
         paths: [],
         jit: [],
       };
@@ -156,6 +158,8 @@ export const makeScribbleEyes = (cfg: ScribbleCfg): DrawFn => {
     return built;
   };
 
+  let softLayer: ReturnType<typeof makeCanvas> | null = null;
+
   const acting = buildActing(makeRng(cfg.id, "acting"), {
     duration: LOOP,
     glanceDur: [6, 9],
@@ -172,9 +176,19 @@ export const makeScribbleEyes = (cfg: ScribbleCfg): DrawFn => {
     // ---- scratch field: redrawn every 2 frames from 6 variants ----
     const fq = frame - mod(frame, SCRIBBLE.fieldHold);
     const fv = mod(fq / SCRIBBLE.fieldHold, SCRIBBLE.fieldVariants);
-    ctx.strokeStyle = cfg.ink;
-    ctx.lineCap = "butt";
-    ctx.lineJoin = "miter";
+    // Sharp strokes straight onto the frame; ~30% go onto a layer that is
+    // blurred as a whole, so some flecks sit out of focus (depth).
+    const lw = Math.round(W * dpr);
+    const lh = Math.round(H * dpr);
+    if (!softLayer || softLayer.c.width !== lw) softLayer = makeCanvas(lw, lh);
+    const sl = softLayer.ctx;
+    sl.setTransform(1, 0, 0, 1, 0, 0);
+    sl.clearRect(0, 0, lw, lh);
+    for (const c of [ctx, sl]) {
+      c.strokeStyle = cfg.ink;
+      c.lineCap = "butt";
+      c.lineJoin = "miter";
+    }
     for (const s of B.strokes) {
       const age = mod(fq + s.phase, s.period);
       if (age > s.life * s.period) continue;
@@ -186,12 +200,19 @@ export const makeScribbleEyes = (cfg: ScribbleCfg): DrawFn => {
       const ang = Math.atan2(ry0 * Math.cos(th), -rx0 * Math.sin(th)) + s.dev + j.da;
       const c = Math.cos(ang);
       const sn = Math.sin(ang);
-      ctx.setTransform(c * dpr, sn * dpr, -sn * dpr, c * dpr, x * dpr, y * dpr);
-      ctx.globalAlpha = s.alpha;
-      ctx.lineWidth = s.width;
-      ctx.stroke(s.paths[fv]);
+      const g = s.soft ? sl : ctx;
+      g.setTransform(c * dpr, sn * dpr, -sn * dpr, c * dpr, x * dpr, y * dpr);
+      g.globalAlpha = s.alpha;
+      g.lineWidth = s.soft ? s.width * 1.6 : s.width;
+      g.stroke(s.paths[fv]);
     }
     ctx.globalAlpha = 1;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.filter = `blur(${4 * dpr}px)`;
+    ctx.globalAlpha = 0.75;
+    ctx.drawImage(softLayer.c, 0, 0);
+    ctx.restore();
 
     // ---- eyes: 4 variants held 3 frames each ----
     const v = mod(Math.floor(frame / SCRIBBLE.boilHold), SCRIBBLE.boilVariants);
@@ -204,7 +225,7 @@ export const makeScribbleEyes = (cfg: ScribbleCfg): DrawFn => {
       const tilt = 0.035;
       ctx.setTransform(dpr * mirror, 0, 0, dpr, ex * dpr, cy * dpr);
       ctx.rotate(tilt);
-      const L = lids(spec, B.jit[e][v], pose.open);
+      const L = frayLids(lids(spec, B.jit[e][v], pose.open), B.jit[e][v], spec.w * 0.004);
       const path = lidPath(L);
       ctx.fillStyle = cfg.eyeFill;
       ctx.fill(path);
@@ -231,11 +252,11 @@ export const makeScribbleEyes = (cfg: ScribbleCfg): DrawFn => {
         const t = k / 8;
         const yy = lerp(-0.62, 0.62, t) * ir;
         pts.push([ix + Math.sin(t * Math.PI) * 2 + ij[k][0] * 0.4, iy + yy + ij[k][1] * 0.4]);
-        pr.push(Math.sin(t * Math.PI) ** 1.1);
+        pr.push(Math.min(1, Math.sin(t * Math.PI) * 1.6) ** 0.5);
       }
-      const slitW = ir * 0.36 * pose.slit;
+      const slitW = ir * 0.32 * pose.slit;
       ctx.fillStyle = cfg.pupil;
-      ctx.fill(freehand(pts, { size: slitW, thinning: 0.9, pressures: pr, smoothing: 0.6, streamline: 0.2 }));
+      ctx.fill(freehand(pts, { size: slitW, thinning: 0.7, pressures: pr, smoothing: 0.6, streamline: 0.2 }));
       ctx.restore();
 
       // Lid lines: pressure strokes over the edge, overshooting the outer corner.
@@ -254,7 +275,7 @@ export const drawScribbleEyesBlue = makeScribbleEyes({
   ink: "#F2F2F2",
   eyeFill: "#F8F8F8",
   iris: "#3A6AE8",
-  pupil: "#0A0A0A",
+  pupil: "#000000",
 });
 
 export const drawScribbleEyesOrange = makeScribbleEyes({

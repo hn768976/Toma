@@ -55,7 +55,7 @@ export const FIGURES: FigureDef[] = [
   // B: longer hair falling to the shoulders.
   {
     right: [
-      [0.35, 1.04], [0.355, 0.82], [0.342, 0.665], [0.305, 0.58], [0.245, 0.545], [0.212, 0.53],
+      [0.325, 1.04], [0.33, 0.82], [0.32, 0.665], [0.29, 0.58], [0.245, 0.545], [0.212, 0.53],
       [0.205, 0.46], [0.197, 0.37], [0.183, 0.27], [0.172, 0.17], [0.152, 0.09], [0.108, 0.033],
       [0.045, 0.002], [0, -0.004],
     ],
@@ -68,7 +68,7 @@ export const FIGURES: FigureDef[] = [
   // C: wild spiky hair with loose strands.
   {
     right: [
-      [0.39, 1.04], [0.395, 0.82], [0.383, 0.67], [0.338, 0.582], [0.24, 0.535], [0.11, 0.508],
+      [0.345, 1.04], [0.35, 0.82], [0.342, 0.67], [0.31, 0.582], [0.24, 0.535], [0.11, 0.508],
       [0.075, 0.462], [0.07, 0.395], [0.09, 0.348], [0.12, 0.296], [0.137, 0.215], [0.158, 0.15],
       [0.17, 0.085], [0.135, 0.02], [0.065, -0.012], [0, -0.018],
     ],
@@ -76,7 +76,7 @@ export const FIGURES: FigureDef[] = [
     faceR: 0.088,
     hairY: 0.14,
     spiky: true,
-    strands: 9,
+    strands: 18,
   },
 ];
 
@@ -234,15 +234,15 @@ export const drawFigureScribble = (
   for (let pass = 0; pass < 1; pass++) {
     const path = roughFill(body, {
       fillStyle: "zigzag",
-      hachureGap: 46 * k * (1 + wild * 0.6),
-      hachureAngle: rng.range(-60, -30),
-      fillWeight: 4 * k,
-      roughness: 3.6 + wild * 3,
-      bowing: 6,
+      hachureGap: 70 * k * (1 + wild * 0.6),
+      hachureAngle: rng.range(-75, -15),
+      fillWeight: 6 * k,
+      roughness: 5 + wild * 3,
+      bowing: 14,
       seed: seedFor(...seedParts, "fill", pass),
     });
-    ctx.lineWidth = 4.5 * k;
-    ctx.globalAlpha = 0.85;
+    ctx.lineWidth = 7 * k;
+    ctx.globalAlpha = 0.7;
     ctx.stroke(path);
   }
   ctx.globalAlpha = 1;
@@ -250,7 +250,7 @@ export const drawFigureScribble = (
   // 2. Interior tangles: loopy random walks inside the silhouette.
   ctx.save();
   ctx.clip(polyPath(body));
-  const walkers = 26;
+  const walkers = 15;
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const [x, y] of body) {
     minX = Math.min(minX, x); maxX = Math.max(maxX, x);
@@ -280,9 +280,9 @@ export const drawFigureScribble = (
       guide.push([x, y]);
     }
     if (guide.length < 3) continue;
-    const loops = loopsAlong(guide, rng.range(36, 62) * k * (1 + wild * 1.5), 44 * k, rng);
+    const loops = loopsAlong(guide, rng.range(40, 72) * k * (1 + wild * 1.5), 52 * k, rng);
     for (const st of penStrokes(loops, rng)) {
-      ctx.fill(freehand(st, { size: rng.range(6, 11) * k, thinning: 0.55, smoothing: 0.4, streamline: 0.2 }));
+      ctx.fill(freehand(st, { size: rng.range(12, 20) * k, thinning: 0.55, smoothing: 0.4, streamline: 0.2 }));
     }
   }
   ctx.restore();
@@ -295,26 +295,31 @@ export const drawFigureScribble = (
       const inset = pass === 0 ? -6 * k : 18 * k;
       return [x - nx * inset, y - ny * inset];
     });
-    const loops = loopsAlong(shifted, (pass === 0 ? 26 : 40) * k * (1 + wild * 2), 36 * k, rng, 0.05 + wild * 0.4, outward);
+    const loops = loopsAlong(shifted, (pass === 0 ? 38 : 52) * k * (1 + wild * 2), 44 * k, rng, 0.05 + wild * 0.4, outward);
     for (const st of penStrokes(loops, rng, 30, 120)) {
-      ctx.fill(freehand(st, { size: rng.range(5, 10) * k, thinning: 0.6, smoothing: 0.45, streamline: 0.25 }));
+      ctx.fill(freehand(st, { size: rng.range(10, 18) * k, thinning: 0.6, smoothing: 0.45, streamline: 0.25 }));
     }
   }
 
-  // 4. Loose strands (B, C).
+  // 4. Loose strands (B), long straight spikes radiating from the head (C).
+  const radial = ([x, y]: Pt): Pt => {
+    const hx = 0, hy = minY + 0.2 * s;
+    const n = Math.hypot(x - hx, y - hy) || 1;
+    return [(x - hx) / n, (y - hy) / n];
+  };
   for (let i = 0; i < (def.strands ?? 0); i++) {
     const top = outline.filter(([, y]) => y < minY + (def.longHair ? 0.55 : 0.16) * s);
     const [sx, sy] = top[Math.floor(rng.next() * top.length)];
-    const [nx, ny] = outward([sx, sy]);
-    const len = rng.range(0.06, def.spiky ? 0.17 : 0.11) * s * (1 + wild);
-    const bend = rng.gauss() * (def.spiky ? 0.25 : 0.6);
+    const [nx, ny] = def.spiky ? radial([sx, sy]) : outward([sx, sy]);
+    const len = rng.range(def.spiky ? 0.08 : 0.06, def.spiky ? 0.2 : 0.11) * s * (1 + wild);
+    const bend = rng.gauss() * (def.spiky ? 0.12 : 0.6);
     const pts: Pt[] = [];
     for (let j = 0; j <= 8; j++) {
       const t = j / 8;
       const a = Math.atan2(ny, nx) + bend * t;
       pts.push([sx - nx * 12 * k + Math.cos(a) * len * t, sy - ny * 12 * k + Math.sin(a) * len * t]);
     }
-    ctx.fill(freehand(pts, { size: rng.range(5, 9) * k, thinning: 0.7, smoothing: 0.5, start: { taper: 0 }, end: { taper: len * 0.6 } }));
+    ctx.fill(freehand(pts, { size: rng.range(10, 16) * k, thinning: 0.7, smoothing: 0.5, start: { taper: 0 }, end: { taper: len * 0.6 } }));
   }
 
   // 5. Face: a dark gap, a dense white scribble disc, a black "?".
@@ -322,34 +327,35 @@ export const drawFigureScribble = (
   const R = faceR;
   const discPts: Pt[] = [];
   for (let i = 0; i < 14; i++) discPts.push([fx + Math.cos((i / 14) * TAU) * R, fy + Math.sin((i / 14) * TAU) * R]);
-  ctx.lineWidth = 5 * k;
-  for (let pass = 0; pass < 2; pass++) {
+  ctx.lineWidth = 7 * k;
+  for (let pass = 0; pass < 1; pass++) {
     ctx.stroke(
       roughFill(discPts, {
         fillStyle: "zigzag",
-        hachureGap: 16 * k,
+        hachureGap: 30 * k,
         hachureAngle: pass ? rng.range(30, 60) : rng.range(-60, -30),
         fillWeight: 5 * k,
-        roughness: 1.6 + wild * 3,
+        roughness: 3 + wild * 3,
+        bowing: 6,
         seed: seedFor(...seedParts, "disc", pass),
       }),
     );
   }
-  for (let ringI = 0; ringI < 3; ringI++) {
-    const rr = R * (0.45 + ringI * 0.25);
+  for (let ringI = 0; ringI < 4; ringI++) {
+    const rr = R * (0.3 + ringI * 0.22);
     const circ: Pt[] = [];
     for (let i = 0; i <= 40; i++) {
       const a = (i / 40) * TAU;
       circ.push([fx + Math.cos(a) * rr, fy + Math.sin(a) * rr]);
     }
-    const loops = loopsAlong(circ, 24 * k * (1 + wild * 2), 30 * k, rng);
+    const loops = loopsAlong(circ, 34 * k * (1 + wild * 2), 34 * k, rng);
     for (const st of penStrokes(loops, rng, 60, 160)) {
-      ctx.fill(freehand(st, { size: rng.range(6, 10) * k, thinning: 0.5, smoothing: 0.4 }));
+      ctx.fill(freehand(st, { size: rng.range(12, 18) * k, thinning: 0.5, smoothing: 0.4 }));
     }
   }
   if (wild < 0.6) {
     const qa = 1 - smoothstep((wild - 0.3) / 0.3);
-    const q = R * 0.78;
+    const q = R * 0.95;
     const j = () => rng.gauss() * 0.025 * q;
     const hook: Pt[] = [
       [-0.55, -0.42], [-0.45, -0.75], [-0.1, -0.95], [0.32, -0.88], [0.55, -0.6], [0.48, -0.3],
@@ -358,9 +364,9 @@ export const drawFigureScribble = (
     ctx.save();
     ctx.globalAlpha = qa;
     ctx.globalCompositeOperation = "destination-out";
-    ctx.fill(freehand(hook, { size: q * 0.36, thinning: 0.45, smoothing: 0.6, streamline: 0.3, start: { taper: q * 0.4 }, end: { taper: 0 } }));
+    ctx.fill(freehand(hook, { size: q * 0.42, thinning: 0.45, smoothing: 0.6, streamline: 0.3, start: { taper: q * 0.4 }, end: { taper: 0 } }));
     ctx.beginPath();
-    ctx.ellipse(fx + j(), fy + q * 0.72 + j(), q * 0.15, q * 0.14, rng.range(0, 1), 0, TAU);
+    ctx.ellipse(fx + j(), fy + q * 0.74 + j(), q * 0.18, q * 0.17, rng.range(0, 1), 0, TAU);
     ctx.fill();
     ctx.restore();
   }

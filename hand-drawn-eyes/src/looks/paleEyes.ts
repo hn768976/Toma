@@ -12,13 +12,13 @@ import { makeRng } from "../lib/rng";
 // ---- data ------------------------------------------------------------------
 export const PALE = {
   eyeW: 0.28, // look 5: fraction of frame width per eye
-  aspect: 0.24,
+  aspect: 0.27,
   eyeY: 0.5,
-  spacing: 0.42, // centre-to-centre, fraction of frame width
+  spacing: 0.455, // centre-to-centre, fraction of frame width
   white: "#D8D4CE",
   corner: "#3A3230", // the whites darken towards the corners
   rim: "#4A1414",
-  blurPx: 5, // softness at 4K, for a 960px eye (scales with size)
+  blurPx: 2.2, // softness at 4K, for a 960px eye (scales with size)
   boilHold: 3,
   boilVariants: 4,
 };
@@ -38,8 +38,8 @@ const LOOP = 300;
 export const paleSpec = (w: number): AlmondSpec => ({
   w,
   h: w * PALE.aspect,
-  upperPow: 1.05,
-  lowerPow: 1.05,
+  upperPow: 0.8,
+  lowerPow: 0.85,
   upperSkew: 0,
   lowerSkew: 0,
   closeAt: 0.6,
@@ -60,7 +60,7 @@ const drawPaleEye = (
     pts.map(([x, y], i): [number, number] => {
       const t = i / (pts.length - 1);
       const env = Math.sin(Math.PI * t);
-      return [x, y + env * w * 0.004 * (Math.sin(i * 2.7 + jit.up[0].phase * 7 + k) + 0.6 * Math.sin(i * 5.3 + jit.lo[1].phase * 5))];
+      return [x, y + env * w * 0.0065 * (Math.sin(i * 2.7 + jit.up[0].phase * 7 + k) + 0.6 * Math.sin(i * 5.3 + jit.lo[1].phase * 5))];
     });
   L.upper = fray(L.upper, 0);
   L.lower = fray(L.lower, 3);
@@ -70,8 +70,8 @@ const drawPaleEye = (
     // Local +x is the inner corner (towards the nose) for both eyes.
     g.addColorStop(0, PALE.corner);
     g.addColorStop(0.18, "#6E6662");
-    g.addColorStop(0.42, "#B9B3AC");
-    g.addColorStop(0.6, PALE.white);
+    g.addColorStop(0.3, "#B9B3AC");
+    g.addColorStop(0.45, PALE.white);
     g.addColorStop(0.88, PALE.white);
     g.addColorStop(1, "#A8A29C");
     ctx.fillStyle = g;
@@ -95,10 +95,10 @@ const drawPaleEye = (
     const pr = h * 0.33 * pose.slit;
     // Soft dark red-brown ring, then a slightly wobbly black pupil.
     ctx.save();
-    ctx.filter = `blur(${(w / 960) * 5 * Math.hypot(ctx.getTransform().a, ctx.getTransform().b)}px)`;
-    ctx.fillStyle = "rgba(78,30,24,0.85)";
+    ctx.filter = `blur(${(w / 960) * 1.5 * Math.hypot(ctx.getTransform().a, ctx.getTransform().b)}px)`;
+    ctx.fillStyle = "rgba(66,36,30,0.95)";
     ctx.beginPath();
-    ctx.arc(px, py, pr + (w / 960) * 22, 0, Math.PI * 2);
+    ctx.arc(px, py, pr + (w / 960) * 20, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
     ctx.fillStyle = "#000000";
@@ -114,13 +114,13 @@ const drawPaleEye = (
   }
   // Thin dark-red rim along both lids (pressure strokes), over a faint red halo.
   ctx.save();
-  ctx.strokeStyle = "rgba(82,44,40,0.75)";
-  ctx.lineWidth = (w / 960) * 48;
-  ctx.filter = `blur(${(w / 960) * 13 * Math.hypot(ctx.getTransform().a, ctx.getTransform().b)}px)`;
+  ctx.strokeStyle = "rgba(66,50,48,0.6)";
+  ctx.lineWidth = (w / 960) * 26;
+  ctx.filter = `blur(${(w / 960) * 6 * Math.hypot(ctx.getTransform().a, ctx.getTransform().b)}px)`;
   ctx.stroke(path);
   ctx.restore();
   ctx.fillStyle = PALE.rim;
-  ctx.globalAlpha = 0.75;
+  ctx.globalAlpha = 0.9;
   const s = w / 960;
   ctx.fill(freehand(L.upper, { size: 15 * s, thinning: 0.5, smoothing: 0.6, streamline: 0.3 }));
   ctx.fill(freehand(L.lower, { size: 10 * s, thinning: 0.5, smoothing: 0.6, streamline: 0.3 }));

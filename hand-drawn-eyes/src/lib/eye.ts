@@ -80,3 +80,15 @@ export const lidPath = (l: Lids) => {
 
 // Lid outline as a polygon (upper left->right, lower right->left).
 export const lidPolygon = (l: Lids): Pt[] => [...l.upper, ...[...l.lower].reverse()];
+
+// Frays lid curves with small per-variant wobbles: the edge of a shape cut
+// or painted by hand. Zero at the corners.
+export const frayLids = (l: Lids, j: AlmondJitter, amp: number): Lids => {
+  const fray = (pts: Pt[], k: number) =>
+    pts.map(([x, y], i): Pt => {
+      const env = Math.sin((Math.PI * i) / (pts.length - 1));
+      const n = Math.sin(i * 2.7 + j.up[0].phase * 7 + k) + 0.6 * Math.sin(i * 5.3 + j.lo[1].phase * 5 + k);
+      return [x, y + env * amp * n];
+    });
+  return { upper: fray(l.upper, 0), lower: fray(l.lower, 3), closed: l.closed };
+};

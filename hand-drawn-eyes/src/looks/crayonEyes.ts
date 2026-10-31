@@ -18,15 +18,17 @@ export type CrayonCfg = {
 
 // ---- data ------------------------------------------------------------------
 export const CRAYON = {
-  pairWidth: 0.78, // both eyes together, fraction of frame width
-  gap: 0.085, // between the eyes, fraction of frame width
-  eyeY: 0.44, // fraction of frame height
-  aspect: 0.37,
-  irisDiameter: 1.04, // fraction of eye height
+  pairWidth: 0.8, // both eyes together, fraction of frame width
+  gap: 0.11, // between the eyes, fraction of frame width
+  eyeY: 0.47, // fraction of frame height
+  aspect: 0.33,
+  irisDiameter: 1.16, // fraction of eye height
   pupil: 0.31, // fraction of iris radius
   white: "#FCFBF8",
   glowPx: 11, // glow blur radius at 4K
-  glowAlpha: 0.95,
+  glowAlpha: 1,
+  haloPx: 30, // a second, fainter halo (fades out within ~10px at 720p)
+  haloAlpha: 0.45,
   boilHold: 3,
   boilVariants: 4,
 };
@@ -49,12 +51,12 @@ export const makeCrayonEyes = (cfg: CrayonCfg): DrawFn => {
   const spec: AlmondSpec = {
     w: ew,
     h: eh,
-    upperPow: 0.7,
-    lowerPow: 1.05,
+    upperPow: 0.85,
+    lowerPow: 1.45,
     upperSkew: -0.15,
     lowerSkew: 0.1,
     closeAt: 0.68,
-    upperFrac: 0.6,
+    upperFrac: 0.62,
   };
   const pad = 70;
   const texW = ew + pad * 2;
@@ -137,7 +139,7 @@ export const makeCrayonEyes = (cfg: CrayonCfg): DrawFn => {
       0,
       0,
     );
-    ictx.drawImage(colorize(rimMask, cfg.irisRim, 0.45), 0, 0);
+    ictx.drawImage(colorize(rimMask, cfg.irisRim, 0.3), 0, 0);
     ictx.drawImage(colorize(pupilMask, "#040404"), 0, 0);
     ictx.drawImage(colorize(pupilMask, "#040404"), 0, 0);
 
@@ -201,6 +203,7 @@ export const makeCrayonEyes = (cfg: CrayonCfg): DrawFn => {
       lc.clearRect(0, 0, lw, lh);
       // Eye-local coordinates (4K units), centred in the layer.
       lc.setTransform(dpr * mirror, 0, 0, dpr, lw / 2, lh / 2);
+      lc.rotate(-0.045); // outer corners sit a little lower (suspicious)
 
       const open = Math.min(1, pose.open);
       const stretch = Math.max(1, pose.open); // widen: the drawing stretches
@@ -227,9 +230,9 @@ export const makeCrayonEyes = (cfg: CrayonCfg): DrawFn => {
       lc.globalCompositeOperation = "source-over";
       // Catchlight: fixed to the eye (same screen side for both eyes).
       const csz = tex.catch.width / dpr;
-      const cxl = mirror * R * 0.24;
+      const cxl = mirror * R * 0.2;
       lc.globalAlpha = 0.95;
-      lc.drawImage(tex.catch, cxl - csz / 2 + ix * 0.15, -R * 0.3 - csz / 2 + iy * 0.15 + eh * 0.05, csz, csz);
+      lc.drawImage(tex.catch, cxl - csz / 2 + ix * 0.15, -R * 0.2 - csz / 2 + iy * 0.15 + eh * 0.05, csz, csz);
       lc.globalAlpha = 1;
       lc.restore();
       if (pose.open < 0.35) {
@@ -243,6 +246,9 @@ export const makeCrayonEyes = (cfg: CrayonCfg): DrawFn => {
       const x0 = cx - lw / dpr / 2;
       const y0 = cy - lh / dpr / 2;
       ctx.save();
+      ctx.filter = `blur(${CRAYON.haloPx * dpr}px)`;
+      ctx.globalAlpha = CRAYON.haloAlpha;
+      ctx.drawImage(L.c, x0, y0, lw / dpr, lh / dpr);
       ctx.filter = `blur(${CRAYON.glowPx * dpr}px)`;
       ctx.globalAlpha = CRAYON.glowAlpha;
       ctx.drawImage(L.c, x0, y0, lw / dpr, lh / dpr);
@@ -255,8 +261,8 @@ export const makeCrayonEyes = (cfg: CrayonCfg): DrawFn => {
 export const drawCrayonEyesBlue = makeCrayonEyes({
   id: "CrayonEyes_Blue",
   iris: "#2A9AE8",
-  irisRim: "#16639F",
-  irisCore: "#4FB2F0",
+  irisRim: "#1A78BC",
+  irisCore: "#22B2F2",
 });
 
 export const drawCrayonEyesAmber = makeCrayonEyes({
