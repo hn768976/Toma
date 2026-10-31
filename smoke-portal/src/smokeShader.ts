@@ -112,7 +112,7 @@ mat2 rot(float a) { float c = cos(a), s = sin(a); return mat2(c, s, -s, c); }
 // swirl around the core: inner smoke rotates faster than outer smoke
 vec2 swirl(vec2 p, float t, float k) {
   float r = length(p);
-  float ang = k * (0.07 * t + 0.35 * sin(0.45 * t + 0.5) * exp(-r * 2.5));
+  float ang = k * (0.35 * sin(0.45 * t + 0.5) * exp(-r * 2.5) + 0.12 * sin(1.3 * t + 2.0) * exp(-r * 4.0));
   return rot(ang) * p;
 }
 
@@ -125,18 +125,18 @@ float smoke(vec2 p, float t, float radius, vec2 stretch, float morph, float seed
   q /= stretch;
   float r = length(q);
   vec2 dir = q / max(r, 1e-4);
-  float edgeN = fbm(dir * lobes + vec2(seed, t * 0.65 + seed), 4);
+  float edgeN = fbm(dir * lobes + vec2(seed, t * 0.95 + seed), 4);
   float R = radius * (1.0 + edgeAmt * edgeN);
-  vec2 w = vec2(fbm(q * 2.2 + vec2(seed, t * 0.55), 4), fbm(q * 2.2 + vec2(-t * 0.5, seed + 3.1), 4));
+  vec2 w = vec2(fbm(q * 2.2 + vec2(seed, t * 0.85), 4), fbm(q * 2.2 + vec2(-t * 0.8, seed + 3.1), 4));
   vec2 qw = q + warpAmt * w;
   float rw = length(qw);
   float env = smoothstep(R, R * 0.5, rw + 0.08 * w.x);
-  float puff = 0.5 + 0.55 * fbm(qw * 3.4 + vec2(seed * 1.7, t * 0.45), 5);
+  float puff = 0.5 + 0.55 * fbm(qw * 3.4 + vec2(seed * 1.7, t * 0.7), 5);
   vec2 dw = qw / max(rw, 1e-4);
   float fib = 0.5 + 0.6 * fbm(dw * 5.0 + vec2(rw * 3.0 - t * 0.35, seed), 4);
   float tex = mix(puff, fib, fiber * smoothstep(0.12, 0.3, rw));
   // crisp billowing lobes (cauliflower detail)
-  float det = 1.0 - billow(qw * 9.0 + vec2(t * 0.6, seed * 2.3), 4);
+  float det = 1.0 - billow(qw * 9.0 + vec2(t * 0.9, seed * 2.3), 4);
   tex *= 0.65 + 0.6 * det;
   fibOut = fib;
   texOut = tex;
@@ -156,17 +156,17 @@ void main() {
 
   // ---- timeline --------------------------------------------------------------
   float ignite = smoothstep(0.0, 1.5, f);                     // ring appears
-  float grow = 1.0 - exp(-max(f - 2.0, 0.0) / 8.0);           // explosive expansion
+  float grow = 1.0 - exp(-max(f - 2.0, 0.0) / 6.5);           // explosive expansion
   float burst = smoothstep(3.0, 10.0, f);
-  float plumeR = 0.07 + 0.36 * grow + 0.06 * smoothstep(60.0, 300.0, f);
+  float plumeR = 0.08 + 0.34 * grow;
   float outerR = plumeR * 1.15 + 0.05 + 0.55 * (1.0 - exp(-max(f - 10.0, 0.0) / 26.0));
   float outerOn = smoothstep(7.0, 18.0, f);
   float hot = exp(-max(f - 6.0, 0.0) / 18.0);                 // early smoke is white-hot
   float settle = smoothstep(26.0, 80.0, f);
   // the plume keeps re-forming: its long axis swings and the stretch pulses
-  float morph = 0.55 * sin(t * 0.95 + 0.4) + 0.35 * sin(t * 2.15 + 1.3);
-  float pulse = 0.5 + 0.5 * sin(t * 1.7 + 0.8);                  // plume turns streaky & elongated
-  vec2 stretch = mix(vec2(1.0), mix(vec2(1.25, 0.95), vec2(1.65, 0.75), pulse), settle);
+  float morph = 0.28 * sin(t * 1.3 + 0.4) + 0.16 * sin(t * 2.9 + 1.3);
+  float pulse = 0.5 + 0.5 * sin(t * 2.2 + 0.8);                  // plume turns streaky & elongated
+  vec2 stretch = mix(vec2(1.0), mix(vec2(1.2, 0.9), vec2(1.55, 0.72), pulse), settle);
 
   // ---- background --------------------------------------------------------------
   float vgn = length(uv * vec2(0.9, 1.2));
@@ -179,9 +179,9 @@ void main() {
   float outerShade = 0.10 + 1.05 * smoothstep(0.25, 0.85, texO);
   vec2 gO = vec2(dFdx(texO), dFdy(texO)) * (uResolution.y / 1080.0) * 40.0;
   outerShade *= clamp(0.85 + 0.35 * dot(gO, normalize(vec2(-0.5, 0.8))) / (1.0 + length(gO)), 0.55, 1.2);
-  vec3 outerCol = uOuter * outerShade * (0.4 + 0.6 * exp(-rFar / 0.45));
+  vec3 outerCol = uOuter * outerShade * (0.26 + 0.5 * exp(-rFar / 0.45));
   outerCol = mix(outerCol, mix(uOuter, uInner, 0.35), 0.35 * hot);
-  col = mix(col, outerCol, clamp(dOut * 0.85, 0.0, 1.0));
+  col = mix(col, outerCol, clamp(dOut * 0.78, 0.0, 1.0));
 
   // ---- inner magenta plume ------------------------------------------------------
   float fibI, texI;
@@ -193,10 +193,10 @@ void main() {
   vec3 innerCol = uInner * (0.75 + 0.45 * exp(-rN / 0.2)) * (0.7 + 0.5 * texI) * lobeShade;
   innerCol = mix(innerCol, mix(uInner, uCore, 0.45), hot * 0.4);
   // white-hot heart and lighter swirls inside the plume
-  innerCol = mix(innerCol, mix(uInner, uCore, 0.5), clamp(exp(-rN / 0.13) * 0.35, 0.0, 0.45));
+  innerCol = mix(innerCol, mix(uInner, uCore, 0.55), clamp(exp(-rN / 0.17) * 0.55, 0.0, 0.55));
   innerCol *= 0.8 + 0.4 * smoothstep(0.2, 0.8, dIn);
   innerCol = mix(innerCol, mix(uInner, uOuter, 0.5), smoothstep(0.5, 0.05, dIn) * 0.45);
-  col = mix(col, innerCol, clamp(dIn * 1.8, 0.0, 1.0));
+  col = mix(col, innerCol, clamp(dIn * 1.6, 0.0, 1.0));
 
   // ---- white energy wisps --------------------------------------------------------
   // thin bright filaments carried by the churning plume
@@ -205,8 +205,8 @@ void main() {
   vec2 qf = qs + 0.22 * fw;
   float ridgeA = 1.0 - abs(gnoise(qf * 3.2 + vec2(t * 0.35, 4.0)));
   float ridgeB = 1.0 - abs(gnoise(qf * 6.5 + vec2(-t * 0.5, 9.0)));
-  float fil = pow(ridgeA, 18.0) + 0.55 * pow(ridgeB, 24.0);
-  float filMask = smoothstep(0.08, 0.13, rN) * smoothstep(0.08, 0.5, dIn) * (0.6 + 0.8 * exp(-rN / 0.2));
+  float fil = pow(ridgeA, 22.0) + 0.3 * pow(ridgeB, 30.0);
+  float filMask = smoothstep(0.08, 0.12, rN) * smoothstep(0.1, 0.6, dIn) * exp(-rN / 0.16);
   // one loose, broken loop hugging the core
   vec2 pr = qs / mix(vec2(1.0), vec2(1.2, 0.9), settle);
   float rr = length(pr);
@@ -214,7 +214,7 @@ void main() {
   float Ri = 0.135 * (1.0 + 0.32 * angNoise(ar, t * 0.6, 2));
   float loopFade = smoothstep(-0.2, 0.55, angNoise(ar, t * 0.8 + 11.0, 3));
   float loopL = exp(-pow((rr - Ri) / 0.012, 2.0)) * loopFade;
-  col += uCore * (fil * filMask * 0.85 + loopL * 0.45) * burst * (0.75 + 0.5 * hot);
+  col += uCore * (fil * filMask * 0.9 + loopL * 0.5) * burst * (0.75 + 0.5 * hot);
 
   // ---- the igniting ring (first frames) ------------------------------------------
   float ringR = 0.10 + 0.08 * grow;

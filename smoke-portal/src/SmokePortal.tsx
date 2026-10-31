@@ -23,7 +23,7 @@ export type SmokePortalProps = z.infer<typeof smokePortalSchema>;
 
 /** Version 1 - matches the reference: locked-off camera, magenta / violet smoke. */
 export const smokePortalV1: SmokePortalProps = {
-  inner: [1.9, 0.02, 0.55],
+  inner: [2.0, 0.02, 0.62],
   outer: [0.11, 0.065, 0.85],
   core: [2.4, 1.5, 2.3],
   hole: [0.07, 0.006, 0.035],
