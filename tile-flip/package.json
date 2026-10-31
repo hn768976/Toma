@@ -41,8 +41,8 @@
     "render:v1:4k": "remotion render TileFlip-V1 out/TileFlip-V1_4K.mp4 --crf=12",
     "render:v2:4k": "remotion render TileFlip-V2 out/TileFlip-V2_4K.mp4 --crf=12",
     "render:4k": "npm run render:v1:4k && npm run render:v2:4k",
-    "downscale:v1": "remotion ffmpeg -y -i out/TileFlip-V1_4K.mp4 -vf scale=1920:1080:flags=lanczos -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r 30 -an -movflags +faststart out/TileFlip-V1_1080p.mp4",
-    "downscale:v2": "remotion ffmpeg -y -i out/TileFlip-V2_4K.mp4 -vf scale=1920:1080:flags=lanczos -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r 30 -an -movflags +faststart out/TileFlip-V2_1080p.mp4",
+    "downscale:v1": "remotion ffmpeg -y -i out/TileFlip-V1_4K.mp4 -vf zscale=w=1920:h=1080:filter=lanczos:dither=error_diffusion -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r 30 -an -movflags +faststart out/TileFlip-V1_1080p.mp4",
+    "downscale:v2": "remotion ffmpeg -y -i out/TileFlip-V2_4K.mp4 -vf zscale=w=1920:h=1080:filter=lanczos:dither=error_diffusion -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r 30 -an -movflags +faststart out/TileFlip-V2_1080p.mp4",
     "master:v1": "npm run render:v1:4k && npm run downscale:v1",
     "master:v2": "npm run render:v2:4k && npm run downscale:v2",
     "master": "npm run master:v1 && npm run master:v2"

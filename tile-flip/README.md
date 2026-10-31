@@ -55,12 +55,13 @@ npm run render:1080p     # quick previews rendered directly at 1920x1080 (--scal
 ```
 
 The downscale step uses Remotion's bundled FFmpeg (`remotion ffmpeg`), so no
-system FFmpeg is needed. Output: H.264 (libx264, CRF 16), yuv420p, 30 fps, no
+system FFmpeg is needed. The Lanczos resize uses error-diffusion
+dithering so soft gradients stay free of 8-bit banding. Output: H.264 (libx264, CRF 16), yuv420p, 30 fps, no
 audio. Equivalent raw CLI for one version:
 
 ```bash
 npx remotion render TileFlip-V1 out/TileFlip-V1_4K.mp4 --crf=12
-npx remotion ffmpeg -i out/TileFlip-V1_4K.mp4 -vf scale=1920:1080:flags=lanczos \
+npx remotion ffmpeg -i out/TileFlip-V1_4K.mp4 -vf zscale=w=1920:h=1080:filter=lanczos:dither=error_diffusion \
   -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r 30 out/TileFlip-V1_1080p.mp4
 ```
 
