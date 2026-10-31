@@ -23,10 +23,12 @@ uniform float uCamTilt;      // camera tilt from straight-down (radians)
 uniform float uCamDist;      // base camera distance
 uniform float uCamOrbit;     // amount of orbit across the cycle (radians)
 uniform float uCamPush;      // dolly amount across the cycle
+uniform vec2 uTarget;        // camera target = impact point on the surface
 
 // Palette
 uniform vec3 uCrackA;        // primary crack colour
-uniform vec3 uCrackB;        // accent crack colour
+uniform vec3 uCrackB;        // accent (warm side) crack colour
+uniform vec3 uCrackM;        // mid-tone crack colour
 uniform vec3 uStreak;        // light-streak colour
 uniform vec3 uFlare;         // impact starburst colour
 uniform vec3 uTile;          // diffuse tint of the stone tiles
@@ -131,15 +133,15 @@ struct Cam { vec3 ro; vec3 fw; vec3 rt; vec3 up; float focal; };
 Cam makeCam(float tc) {
   float k = tc / uCycle;                       // 0..1 across the pulse
   float ease = k * k * (3.0 - 2.0 * k);
-  float yaw = uCamYaw + mix(-0.5, 0.5, ease) * uCamOrbit;
+  float yaw = uCamYaw + (ease - 0.5) * uCamOrbit;
   float dist = uCamDist * (1.0 + uCamPush * (ease - 0.5));
-  vec3 target = vec3(0.35 + 0.25 * ease, 0.15 - 0.10 * ease, 0.0);
+  vec3 target = vec3(uTarget, 0.0);
   float tilt = uCamTilt;
   vec3 offs = vec3(sin(yaw) * sin(tilt), -cos(yaw) * sin(tilt), cos(tilt)) * dist;
   Cam c;
   c.ro = target + offs;
   c.fw = normalize(target - c.ro);
-  float roll = -0.10 + 0.12 * ease;
+  float roll = -0.05;
   vec3 worldUp = normalize(vec3(-sin(yaw), cos(yaw), 0.0) + vec3(cos(yaw), sin(yaw), 0.0) * roll);
   c.rt = normalize(cross(c.fw, worldUp));
   c.up = cross(c.rt, c.fw);
@@ -182,97 +184,98 @@ void main() {
   float gap = 1.0 - smoothstep(gapW - aa, gapW + aa, ed);
 
   // ---- Tile shading --------------------------------------------------------
+  // The stone is almost black; only bevelled shard edges catch a faint rim
+  // light, mostly towards the frame borders (the centre reads as a dark pit).
   vec2 cr = h2(cid * 3 + ivec2(7, 1)) - 0.5;
-  vec3 nTile = normalize(vec3(cr * 0.55, 1.0));
-  float bevelW = 0.032;
-  float bev = 1.0 - smoothstep(gapW, gapW + bevelW, ed);
-  vec3 nBevel = normalize(vec3(bdir * 1.4, 0.55));
-  vec3 N = normalize(mix(nTile, nBevel, bev * bev));
+  vec3 nTile = normalize(vec3(cr * 0.6, 1.0));
+  float bevelW = 0.05;
+  float bevT = 1.0 - smoothstep(gapW, gapW + bevelW, ed);
+  float bev = bevT * bevT * (3.0 - 2.0 * bevT);
+  vec3 nBevel = normalize(vec3(bdir * 1.2, 0.6));
+  vec3 N = normalize(mix(nTile, nBevel, bev));
 
   vec3 Ldir = normalize(vec3(-0.80, -0.30, 0.32));
   vec3 V = normalize(cam.ro - P);
   vec3 H = normalize(Ldir + V);
   float diff = max(dot(N, Ldir), 0.0);
-  float spec = pow(max(dot(N, H), 0.0), 60.0);
-  // the key light is a broad soft spot that favours the left side of frame
-  float spot = 0.15 + 0.85 * smoothstep(0.9, -0.75, uv.x + 0.35 * uv.y);
-  float cellVar = 0.65 + 0.7 * h1(cid + ivec2(91, 17));
-  vec3 tile = uTile * 0.010 * (0.02 + 0.98 * diff * diff * diff) * spot * cellVar;
-  tile += uSpec * 0.035 * spec * (0.15 + 1.4 * bev) * spot;
-  tile += uBg * 0.35;
-  tile *= 1.0 - gap * 0.92;
+  float spec = pow(max(dot(N, H), 0.0), 40.0);
+  float rimZone = smoothstep(0.45, 1.05, length(uv * vec2(0.85, 1.35)));
+  float cellVar = 0.5 + h1(cid + ivec2(91, 17));
+  vec3 tile = uTile * 0.006 * (0.10 + diff * diff) * (0.25 + 0.75 * rimZone) * cellVar;
+  tile += uSpec * 0.09 * spec * bev * rimZone * cellVar;
+  tile += uBg * 0.15;
+  tile *= 1.0 - gap;
 
   // ---- Energy wave through the cracks -------------------------------------
-  vec3 impact = vec3(0.55, 0.55, 0.0);
-  float r = length(p - impact.xy);
-  float t0 = 4.0;
-  float x = clamp((tc - t0) / 78.0, 0.0, 1.0);
-  float R = 6.4 * pow(x, 0.72);                      // lit radius
+  // The impact point is the camera target, so it sits at frame centre.
+  vec3 impact = vec3(uTarget, 0.0);
+  vec2 rel = p - impact.xy;
+  float r = length(rel);
+  float x = clamp((tc - 4.0) / 62.0, 0.0, 1.0);
+  float R = 3.8 * pow(x, 0.6);                        // radius of the wavefront
   // each crack segment ignites slightly early or late -> ragged, organic front
-  float behind = R - r - (eRand2 - 0.5) * 0.9 - (fbm(p * 1.3) - 0.5) * 0.8;
-  float lit = smoothstep(-0.15, 0.10, behind);
-  float decay = exp(-max(behind, 0.0) / (0.45 + 0.6 * x));
-  float front = exp(-pow(behind / 0.35, 2.0));
-  float flash = exp(-r / 0.9) * exp(-max(tc - 9.0, 0.0) / 6.0) * smoothstep(3.0, 7.0, tc);
-  float env = smoothstep(2.5, 6.0, tc) * (1.0 - smoothstep(58.0, 86.0, tc));
-  float energy = (lit * (0.55 * decay + 0.75 * front) + 1.6 * flash) * env;
+  float behind = R - r - (eRand2 - 0.5) * 0.5 - (fbm(p * 1.3) - 0.5) * 0.5;
+  float lit = smoothstep(-0.12, 0.08, behind);
+  float trail = exp(-max(behind, 0.0) / 0.42);      // centre goes dark behind the front
+  float energy = lit * trail;
+  energy *= mix(0.55, 1.0, smoothstep(3.0, 16.0, tc)) * (1.0 - smoothstep(54.0, 80.0, tc)) * step(4.0, tc);
 
-  // per-crack flicker / variation: some cracks stay dark, some burn hotter
-  float edgeOn = smoothstep(0.22, 0.42, eRand) * (0.55 + 0.75 * eRand2);
+  // per-crack variation: some cracks stay dark, some burn hotter
+  float edgeOn = smoothstep(0.18, 0.40, eRand) * (0.55 + 0.75 * eRand2);
   energy *= edgeOn;
 
-  // accent colour lives in patches, biased towards the upper-right of impact
-  vec2 rel = p - impact.xy;
-  float accentField = fbm(p * 0.55 + vec2(3.7, 1.3)) + 0.35 * dot(normalize(rel + 1e-4), normalize(vec2(0.6, 0.8)));
-  float accent = smoothstep(0.62 - uAccentAmount, 0.80 - uAccentAmount, accentField);
-  vec3 crackCol = mix(uCrackA, uCrackB, accent);
-  crackCol = mix(crackCol, mix(crackCol, vec3(1.0), 0.5), 0.25 * front * env);
+  // colour follows direction from the impact: accent (warm) towards the
+  // upper right, mid tone in between, primary towards the lower left.
+  float dirW = dot(normalize(rel + 1e-4), normalize(vec2(0.75, 0.66)));
+  dirW += 0.45 * (fbm(p * 0.8 + vec2(3.7, 1.3)) - 0.5) + uAccentAmount;
+  vec3 crackCol = mix(uCrackA, uCrackM, smoothstep(-0.55, 0.0, dirW));
+  crackCol = mix(crackCol, uCrackB, smoothstep(0.15, 0.55, dirW));
 
-  float core = exp(-max(ed - gapW * 0.2, 0.0) / (0.006 + aa));
-  float halo = exp(-ed / 0.03);
-  float bloom = exp(-ed / 0.16);
-  vec3 glow = crackCol * energy * (2.2 * core * mix(0.35, 1.0, gap) + 0.20 * halo + 0.006 * bloom);
-  // glow reflected on the near bevel faces of the slabs
+  float core = exp(-max(ed - gapW * 0.2, 0.0) / (0.005 + aa));
+  float halo = exp(-ed / 0.022);
+  float glowAmt = 0.80 * core * mix(0.4, 1.0, gap) + 0.16 * halo;
+  vec3 glow = crackCol * energy * glowAmt;
+  // the hottest cracks near the leading edge flare slightly brighter
+  glow *= 1.0 + 0.6 * exp(-pow(behind / 0.25, 2.0));
 
   vec3 col = tile + glow;
 
-  // ---- Screen-space effects (streak, starburst, rays) ----------------------
+  // ---- Screen-space effects (streak, small impact burst) -------------------
   vec2 s = projectToScreen(cam, impact);
   vec2 d = uv - s;
   float dl = length(d);
 
-  // diagonal light streak coming in from the top of frame
+  // thin light streak arriving diagonally from the top of frame
   vec2 sdir = normalize(vec2(-0.42, 1.0));
   float along = dot(d, sdir);
   float perp = abs(dot(d, vec2(-sdir.y, sdir.x)));
-  float streakEnv = smoothstep(1.5, 4.0, tc) * (1.0 - smoothstep(8.0, 18.0, tc));
-  float streakLen = smoothstep(-0.25, 0.05, along) * (1.0 - smoothstep(0.6, 1.6, along));
-  float streak = (exp(-perp / 0.0035) * 1.4 + exp(-perp / 0.03) * 0.35 + exp(-perp / 0.12) * 0.10);
-  col += uStreak * streak * streakLen * streakEnv * 1.6;
+  float streakEnv = smoothstep(1.0, 3.0, tc) * (1.0 - smoothstep(7.0, 15.0, tc));
+  float streakLen = smoothstep(-0.18, 0.02, along) * (1.0 - smoothstep(0.5, 1.2, along));
+  float streak = exp(-perp / 0.0025) * 1.1 + exp(-perp / 0.015) * 0.18;
+  col += uStreak * streak * streakLen * streakEnv;
 
-  // impact starburst
+  // compact impact burst with fine radial spikes
   float ang = atan(d.y, d.x);
-  float burstEnv = smoothstep(3.0, 6.0, tc) * exp(-max(tc - 8.0, 0.0) / 9.0);
-  float spikes = pow(angNoise(ang, 72, 1.0), 4.0) + 0.6 * pow(angNoise(ang, 24, 2.0), 6.0);
-  float burst = exp(-dl / 0.02) * 1.4 + exp(-dl / 0.10) * 0.18 + spikes * exp(-dl / 0.24) * 0.3;
+  float burstEnv = smoothstep(2.0, 5.0, tc) * exp(-max(tc - 6.0, 0.0) / 6.0);
+  float spikes = pow(angNoise(ang, 72, 1.0), 5.0) + 0.6 * pow(angNoise(ang, 24, 2.0), 6.0);
+  float burst = exp(-dl / 0.012) * 0.9 + exp(-dl / 0.05) * 0.10 + spikes * exp(-dl / 0.10) * 0.15;
   col += uFlare * burst * burstEnv;
 
-  // volumetric-style rays radiating from the lit region
-  float rayEnv = smoothstep(4.0, 10.0, tc) * (1.0 - smoothstep(18.0, 44.0, tc));
-  float rays = pow(angNoise(ang, 44, 5.0), 3.0) * 0.8 + pow(angNoise(ang, 14, 9.0), 3.0) * 0.6;
-  col += mix(uCrackA, uFlare, 0.5) * rays * exp(-dl / 0.55) * smoothstep(0.03, 0.25, dl) * rayEnv * 0.05;
-
-  // ambient haze lit by the energy
-  col += mix(uCrackA, uCrackB, 0.25) * 0.006 * env * exp(-dl / 0.6) * exp(-x * 3.0);
+  // faint radial light shafts around the lit core
+  float rayEnv = smoothstep(4.0, 10.0, tc) * (1.0 - smoothstep(14.0, 34.0, tc));
+  float rays = pow(angNoise(ang, 44, 5.0), 4.0) * 0.8 + pow(angNoise(ang, 14, 9.0), 4.0) * 0.6;
+  col += uCrackM * rays * exp(-dl / 0.22) * smoothstep(0.02, 0.10, dl) * rayEnv * 0.035;
+  // soft coloured haze hanging over the freshly lit region
+  col += mix(uCrackA, uCrackM, 0.5) * 0.006 * exp(-dl / 0.28) * smoothstep(4.0, 10.0, tc) * (1.0 - smoothstep(16.0, 40.0, tc));
 
   // ---- Grade --------------------------------------------------------------
   float vig = smoothstep(1.25, 0.25, length(uv * vec2(0.85, 1.1)));
-  col *= mix(0.35, 1.0, vig);
-  col = max(col - 0.0012, 0.0);
+  col *= mix(0.45, 1.0, vig);
   col = 1.0 - exp(-col * 1.15);                  // soft filmic shoulder
   col = pow(col, vec3(1.0 / 2.2));
-  // tiny deterministic dither against banding
-  col += (h1(ivec2(frag) + ivec2(int(uFrame) * 7, 3)) - 0.5) / 255.0;
+  // fine per-frame grain (also prevents banding)
+  float g = h1(ivec2(frag) + ivec2(int(uFrame) * 7919, int(uFrame) * 104729)) + h1(ivec2(frag) * 3 + ivec2(int(uFrame) * 31, 17));
+  col += (g - 1.0) * (2.0 / 255.0);
   outColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
 `;
