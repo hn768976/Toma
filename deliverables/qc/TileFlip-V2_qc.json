@@ -1,0 +1,41 @@
+{
+  "file": "TileFlip-V2_1080p.mp4",
+  "codec": "h264",
+  "profile": "High",
+  "pix_fmt": "yuv420p",
+  "width": 1920,
+  "height": 1080,
+  "r_frame_rate": "30/1",
+  "avg_frame_rate": "30/1",
+  "fps": 30.0,
+  "nb_read_frames": 234,
+  "expected_frames": 234,
+  "stream_duration_s": 7.8,
+  "format_duration_s": 7.8,
+  "size_bytes": 2477198,
+  "bit_rate": 2540715,
+  "audio_streams": 0,
+  "decode_errors": "",
+  "black_segments": [],
+  "luma_min": 155.24,
+  "luma_max": 174.71,
+  "max_frame_to_frame_luma_step": [
+    2.3,
+    212
+  ],
+  "one_frame_flicker_spikes": [],
+  "duplicate_consecutive_frames": 0,
+  "longest_identical_run": 1,
+  "checks": {
+    "h264": true,
+    "1080p": true,
+    "30fps": true,
+    "frame_count": true,
+    "duration": true,
+    "yuv420p": true,
+    "decodes_clean": true,
+    "no_black_frames": true,
+    "no_flicker_spikes": true
+  },
+  "pass": true
+}

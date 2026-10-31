@@ -1,0 +1,41 @@
+{
+  "file": "EmberNova-V2_1080p.mp4",
+  "codec": "h264",
+  "profile": "High",
+  "pix_fmt": "yuv420p",
+  "width": 1920,
+  "height": 1080,
+  "r_frame_rate": "30/1",
+  "avg_frame_rate": "30/1",
+  "fps": 30.0,
+  "nb_read_frames": 270,
+  "expected_frames": 270,
+  "stream_duration_s": 9.0,
+  "format_duration_s": 9.0,
+  "size_bytes": 9118207,
+  "bit_rate": 8105072,
+  "audio_streams": 0,
+  "decode_errors": "",
+  "black_segments": [],
+  "luma_min": 20.4,
+  "luma_max": 85.65,
+  "max_frame_to_frame_luma_step": [
+    5.9,
+    96
+  ],
+  "one_frame_flicker_spikes": [],
+  "duplicate_consecutive_frames": 0,
+  "longest_identical_run": 1,
+  "checks": {
+    "h264": true,
+    "1080p": true,
+    "30fps": true,
+    "frame_count": true,
+    "duration": true,
+    "yuv420p": true,
+    "decodes_clean": true,
+    "no_black_frames": true,
+    "no_flicker_spikes": true
+  },
+  "pass": true
+}
