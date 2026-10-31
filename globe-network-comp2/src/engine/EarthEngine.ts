@@ -95,7 +95,7 @@ void main() {
   float cl = c0;
   // thin, see-through satellite cloud plus a faint veil (opaque only where thick)
   // (values below ~0.12 in this cloud map carry ghost land/bathymetry patterns)
-  float cloudA = smoothstep(0.06, 0.75, cl) * 0.86;
+  float cloudA = smoothstep(0.04, 0.65, cl) * 0.88;
   float shadow = smoothstep(0.1, 0.8, texture2D(tClouds, cuv + vec2(0.0006, 0.0009)).r);
 
   float pool = exp(-pow(distance(vW, focus) / 1.4, 2.0));
@@ -111,8 +111,9 @@ void main() {
   landCol *= clamp(0.85 + 1.2 * (lum - texture2D(tDay, vUv, 4.0).g), 0.6, 1.3);
   landCol = mix(landCol, cIce, smoothstep(0.86, 0.98, lum));
   // enclosed seas (Mediterranean, Black, Caspian, Red, Persian Gulf) read pale/icy
-  float lat = 90.0 - vUv.y * 180.0, lon = vUv.x * 360.0 - 180.0;
-  float sea = box(lat, lon, 30.0, 46.0, -5.5, 36.5) + box(lat, lon, 40.5, 47.5, 27.0, 42.0)
+  // SphereGeometry UVs: v = 1 at the north pole, u = 0 at lon -180
+  float lat = vUv.y * 180.0 - 90.0, lon = vUv.x * 360.0 - 180.0;
+  float sea = box(lat, lon, 30.0, 41.0, -4.5, 3.5) + box(lat, lon, 30.0, 46.0, 3.0, 36.5) + box(lat, lon, 40.5, 47.5, 27.0, 42.0)
             + box(lat, lon, 36.5, 47.5, 46.5, 55.0) + box(lat, lon, 12.0, 30.0, 32.0, 44.0)
             + box(lat, lon, 23.5, 30.5, 47.5, 57.0);
   ocean = mix(ocean, cSea, clamp(sea, 0.0, 1.0) * 0.85);
@@ -125,7 +126,7 @@ void main() {
   // city lights: sodium orange, white-hot cores, sparkle so they read as points
   float sp = vnoise(vUv * vec2(26000.0, 13000.0));
   float L = pow(lights, 1.35) * (0.55 + 0.9 * sp);
-  vec3 lightCol = cLightWarm * L * 3.6 + cLightHot * pow(lights, 2.0) * 2.6;
+  vec3 lightCol = cLightWarm * L * 4.2 + cLightHot * pow(lights, 2.0) * 2.8;
   surf += lightCol * (1.0 - 0.75 * cloudA) * land;
 
   // clouds lit from the sun side, bluish in their shadows
@@ -288,7 +289,7 @@ export class EarthEngine {
         cLandLight: { value: col("#1a6280") },
         cIce: { value: col("#9cc4d4") },
         cGlint: { value: col("#9fd2ea") },
-        cLightWarm: { value: col("#ff9a2e") },
+        cLightWarm: { value: col("#ff9124") },
         cLightHot: { value: col("#ffe9bf") },
         cCloud: { value: col("#dbe6ec") },
         cCloudShade: { value: col("#5f7f91") },

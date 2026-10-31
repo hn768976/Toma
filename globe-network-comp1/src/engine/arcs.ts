@@ -56,7 +56,7 @@ export const scheduleArcs = (keys: Key[], lights: LightPoint[], seed: number, du
       a: a.clone(),
       b: b.clone(),
       angle,
-      height: 0.015 + angle * 0.42,
+      height: 0.006 + angle * 0.2,
       start,
       duration: (0.9 + angle * 5.0 + rnd() * 0.5) / speed,
       seed: rnd(),
@@ -64,7 +64,7 @@ export const scheduleArcs = (keys: Key[], lights: LightPoint[], seed: number, du
     };
   };
 
-  for (let t = 1.3; t < duration - 0.6; t += 0.15) {
+  for (let t = 1.3; t < duration - 0.6; t += 0.2) {
     const look = sampleTrack(keys, Math.min(duration, t + 0.9));
     const center = latLonToVec3(look[0], look[1]);
     // hubs in (or about to enter) the frame
@@ -72,15 +72,15 @@ export const scheduleArcs = (keys: Key[], lights: LightPoint[], seed: number, du
     hubVec.forEach((h, i) => {
       if (h.angleTo(center) < 0.4 && (cooldown.get(i) ?? -99) < t) near.push(i);
     });
-    if (near.length && rnd() < 0.85) {
+    if (near.length && rnd() < 0.7) {
       const hi = near[Math.floor(rnd() * near.length)];
-      cooldown.set(hi, t + 2.5 + rnd() * 1.5);
+      cooldown.set(hi, t + 3.5 + rnd() * 2);
       const hub = hubVec[hi];
       // fan-out burst to nearby lit places
-      const n = 6 + Math.floor(rnd() * 7);
+      const n = 5 + Math.floor(rnd() * 5);
       const cand = dests.filter((d) => {
         const ang = d.angleTo(hub);
-        return ang > 0.06 && ang < 0.3;
+        return ang > 0.07 && ang < 0.36;
       });
       for (let k = 0; k < n && cand.length; k++) {
         const d = cand[Math.floor(rnd() * cand.length)];
@@ -100,7 +100,7 @@ export const scheduleArcs = (keys: Key[], lights: LightPoint[], seed: number, du
       }
     }
     // stray single links between lit places in view
-    if (rnd() < 0.3) {
+    if (rnd() < 0.1) {
       const inView = dests.filter((d) => d.angleTo(center) < 0.35);
       if (inView.length > 2) {
         const a = inView[Math.floor(rnd() * inView.length)];
@@ -202,7 +202,7 @@ void main() {
   float age = time - (start + dur);
   float dotsN = max(14.0, vLen * 420.0);
   float dots = smoothstep(0.35, 0.5, fract(vT * dotsN)) * (1.0 - smoothstep(0.5, 0.65, fract(vT * dotsN)));
-  float resid = (vT <= min(head, 1.0)) ? 0.65 * dots * (1.0 - smoothstep(1.0, 7.0, age)) : 0.0;
+  float resid = (vT <= min(head, 1.0)) ? 0.65 * dots * (1.0 - smoothstep(0.8, 4.5, age)) : 0.0;
   float a = max(comet, resid) * inten;
   // soften the ends of the arc
   a *= smoothstep(0.0, 0.03, vT) * (0.6 + 0.4 * smoothstep(1.0, 0.94, vT));

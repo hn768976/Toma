@@ -214,8 +214,8 @@ export class NetworkMapEngine {
       latLonToVec3(la, lo, 1.0012, v);
       dp.set([v.x, v.y, v.z], i * 3);
       // reference look: fewer, larger, brighter lights that bloom
-      const keep = b > 0.42 || rnd() < 0.18;
-      ds[i] = keep ? 30 + 46 * b + rnd() * 8 : 0;
+      const keep = b > 0.5 || rnd() < 0.1;
+      ds[i] = keep ? 18 + 32 * b + rnd() * 6 : 0;
       db[i] = keep ? 0.55 + 0.75 * b : 0;
       dseed[i] = rnd();
     });
