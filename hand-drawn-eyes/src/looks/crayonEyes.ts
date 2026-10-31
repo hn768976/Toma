@@ -81,10 +81,22 @@ export const makeCrayonEyes = (cfg: CrayonCfg): DrawFn => {
   );
 
   const cache = new Map<string, EyeTex>();
+  // p5.brush keeps a little compositing state between paints, so textures are
+  // always painted in one fixed order (all variants, both eyes) the first time
+  // any is needed. Every browser tab then paints identically, whichever frame
+  // it starts on.
   const getTex = (e: number, v: number, dpr: number): EyeTex => {
     const key = `${e}:${v}:${dpr}`;
-    const hit = cache.get(key);
-    if (hit) return hit;
+    if (!cache.has(key)) {
+      for (let vv = 0; vv < CRAYON.boilVariants; vv++)
+        for (let ee = 0; ee < 2; ee++) {
+          const k = `${ee}:${vv}:${dpr}`;
+          if (!cache.has(k)) cache.set(k, paintTex(ee, vv, dpr));
+        }
+    }
+    return cache.get(key)!;
+  };
+  const paintTex = (e: number, v: number, dpr: number): EyeTex => {
     const seed = (part: string) => seedFor(cfg.id, part, e, v);
     const toTex = ([x, y]: Pt): Pt => [x + texW / 2, y + texH / 2];
     const poly = lidPolygon(lids(specs[e], jit[e][v], 1)).map(toTex);
@@ -207,7 +219,6 @@ export const makeCrayonEyes = (cfg: CrayonCfg): DrawFn => {
       lidLine: resampleTo(colorize(lidMask, CRAYON.white), dpr),
       ragged,
     };
-    cache.set(key, tex);
     return tex;
   };
 
