@@ -235,7 +235,7 @@ export const makeCrayonEyes = (cfg: CrayonCfg): DrawFn => {
 
   let layer: ReturnType<typeof makeCanvas> | null = null;
 
-  return (ctx, frame, { dpr }) => {
+  const drawEyes: DrawFn = (ctx, frame, { dpr }) => {
     const v = mod(Math.floor(frame / CRAYON.boilHold), CRAYON.boilVariants);
     const pose = acting.poseAt(frame);
     const lw = Math.ceil(texW * dpr);
@@ -303,6 +303,22 @@ export const makeCrayonEyes = (cfg: CrayonCfg): DrawFn => {
       ctx.drawImage(L.c, x0, y0, lw / dpr, lh / dpr);
     }
   };
+
+  let warmed = -1;
+  return (ctx, frame, env) => {
+    if (warmed !== env.dpr) {
+      // First frame in this browser tab: paint every texture, then do one
+      // throwaway composite. Chrome's first composite after the WebGL texture
+      // painting can differ by a level or two from every later one, so this
+      // makes a cold-start frame identical to the same frame mid-render.
+      getTex(0, 0, env.dpr);
+      const scratch = makeCanvas(env.W * env.dpr, env.H * env.dpr);
+      scratch.ctx.setTransform(env.dpr, 0, 0, env.dpr, 0, 0);
+      drawEyes(scratch.ctx, frame, env);
+      warmed = env.dpr;
+    }
+    drawEyes(ctx, frame, env);
+  };
 };
 
 export const drawCrayonEyesBlue = makeCrayonEyes({
@@ -318,4 +334,3 @@ export const drawCrayonEyesAmber = makeCrayonEyes({
   irisRim: "#8A4A06",
   irisCore: "#F6C25A",
 });
-
