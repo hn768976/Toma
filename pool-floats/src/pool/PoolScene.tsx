@@ -149,7 +149,6 @@ export const PoolScene: React.FC<{ config: SceneConfig }> = ({ config }) => {
     const gl = handles.renderer.getContext();
     const err = gl.getError();
     if (err !== gl.NO_ERROR) {
-      // eslint-disable-next-line no-console
       console.error("WebGL error", err);
     }
   }, [handles, frame]);
