@@ -44,7 +44,7 @@ npx remotion render src/index.ts UnknownPerson-Cycle        out/UnknownPerson_Cy
 npx remotion render src/index.ts UnknownPerson-Lineup       out/UnknownPerson_Lineup.mp4
 ```
 
-`remotion.config.ts` already sets H.264, `yuv420p`, CRF 16, PNG frames and the
+`remotion.config.ts` already sets H.264, `yuv420p`, CRF 16, no audio, PNG frames and the
 SwiftShader GL renderer. For a 720p preview add `--scale=0.3333333333333333`
 (or run `tools/render-previews.sh`). Add `--props='{"loopCheck":true}'` to render 301
 frames and compare frame 300 with frame 0.
@@ -79,7 +79,8 @@ full 3840×2160 (not an upscale) and previews rasterise at 1280×720 from the sa
   paint grain masks, once per variant, on a hidden canvas (black crayon on white, turned
   into an alpha mask and coloured in Canvas 2D). Every frame is composited in Canvas 2D.
   The first frame a browser tab renders for each variant pays ~8 s of painting at 4K
-  (delayRender timeout is raised to 10 min).
+  (delayRender timeout is raised to 10 min). They are painted in a fixed order, followed by
+  one throwaway composite, so a cold-start frame is byte-identical to the same frame mid-render.
 - **Unknown person:** each figure variant is a fresh scribble (Rough.js zigzag fill +
   perfect-freehand loops along the outline and loopy random walks inside) pre-rendered into
   an offscreen canvas. The re-scribble (look 7, frames 92–99, 192–199, 292–299) and the
@@ -88,4 +89,49 @@ full 3840×2160 (not an upscale) and previews rasterise at 1280×720 from the sa
 
 ## Timings
 
-TIMINGS_PLACEHOLDER
+Measured in the build container (4 vCPU, no GPU; headless Chrome, SwiftShader for WebGL,
+Remotion default concurrency). Wall-clock times include browser start-up and the H.264 encode.
+
+**720p previews** (`--scale=0.3333333333333333`, 300 frames):
+
+| Composition | Total | Per frame |
+|---|---|---|
+| ScribbleEyes_Blue | 45.5 s | 0.15 s |
+| ScribbleEyes_OrangeOnWhite | 46.0 s | 0.15 s |
+| CrayonEyes_Blue | 313.9 s | 1.05 s * |
+| CrayonEyes_Amber | 318.9 s | 1.06 s * |
+| PaleEyes_Dark | 43.8 s | 0.15 s |
+| EyesCrowd_Dark | 49.5 s | 0.17 s |
+| UnknownPerson_Cycle | 42.6 s | 0.14 s |
+| UnknownPerson_Lineup | 53.2 s | 0.18 s |
+
+\* Most of the crayon time is p5.brush painting its textures (8 per look, at full 4K
+resolution) once in each browser tab, about 30 s per tab on a CPU rasteriser; after
+that a crayon frame composites in a few milliseconds. On a machine with a GPU this
+drops a lot.
+
+**4K** (`--scale=1`, PNG frames, one tab):
+
+| Composition | One cold frame (incl. browser start) | Warm, per frame (20 frames) |
+|---|---|---|
+| ScribbleEyes_Blue | 2.9 s | 0.63 s |
+| EyesCrowd_Dark | 3.7 s | 1.64 s |
+
+A full 4K render of one look is therefore roughly 2–8 minutes on a similar 4-core
+machine (crayon looks add the one-off texture painting per tab).
+
+## Verification tools
+
+- `tools/verify.py probe <mp4…>` — 1280×720, 30/1, H.264, yuv420p, no audio, 10.0 s, 300 frames.
+- `tools/verify.py bg <mp4> <0|255>` — 50 empty points × 9 frames must equal the background (±1).
+- `tools/check-loops.sh` — frame 300 vs frame 0 (301-frame `loopCheck` render) and a cold-start
+  frame 150 vs the full PNG-sequence render, byte for byte.
+- `tools/boil-check.py`, `tools/acting-check.py`, `tools/sheet.py` — boil cadence, blink/gaze
+  analysis and contact sheets on a PNG sequence.
+
+## Notes on matching the references
+
+The brief's numbers were kept where it gives them (figure heights 60% / 55%, scribble-eye width
+~13–16%, pale eyes ~30% each, crayon pair ~80% wide). Where the brief says "as in the reference",
+the reference won: the crayon eyes sit at about the frame's vertical centre (as in the
+reference clip) rather than in the top third.
