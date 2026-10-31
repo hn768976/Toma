@@ -15,6 +15,8 @@ Config.setDefaultPremountInSeconds(2);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
+// Standard limited-range BT.709 (tv range, tagged), the broadcast/web norm.
+Config.setColorSpace("bt709");
 
 // The compositions are WebGL 2 shaders. "swangle" (ANGLE on SwiftShader)
 // renders identically on every machine, with or without a GPU. On a machine

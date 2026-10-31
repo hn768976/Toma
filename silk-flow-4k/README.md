@@ -37,7 +37,7 @@ npm run render:v2:4k
 npm run lint           # eslint + TypeScript type check
 ```
 
-Render settings live in `remotion.config.ts`: H.264, yuv420p, CRF 16, and the
+Render settings live in `remotion.config.ts`: H.264, yuv420p, CRF 16, BT.709 colour space, and the
 `swangle` OpenGL backend (WebGL on SwiftShader). `swangle` works on any
 machine, with or without a GPU. On a machine with a working GPU, add `--gl=angle`
 to the render command for much faster renders.
