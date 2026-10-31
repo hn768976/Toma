@@ -1,0 +1,534 @@
+[
+ {
+  "file": "Composition1_V1_Reference_1080p.mp4",
+  "size_bytes": 21379099,
+  "sha256": "0194094116f6a7fb42b9a9204a97651f76200b70c8ce790a3577b0c797a4503a",
+  "container": "mov,mp4,m4a,3gp,3g2,mj2",
+  "video_streams": 1,
+  "audio_streams": 0,
+  "codec": "h264",
+  "profile": "High",
+  "pix_fmt": "yuv420p",
+  "width": 1920,
+  "height": 1080,
+  "r_frame_rate": "30/1",
+  "avg_frame_rate": "30/1",
+  "nb_read_frames": 480,
+  "stream_duration_s": 16.0,
+  "format_duration_s": 16.0,
+  "bit_rate": 10689549,
+  "decode_errors": null,
+  "black_segments": [],
+  "frozen_segments": [],
+  "luma_mean": 124.69,
+  "luma_min_max": [
+   123.45,
+   126.76
+  ],
+  "max_luma_jump_between_frames": 0.31,
+  "ref_max_luma_jump_between_frames": 0.546,
+  "frame_diff_min_mean_max": [
+   1.643,
+   2.093,
+   2.578
+  ],
+  "duplicate_consecutive_frames": 0,
+  "diff_spikes_over_3x_median": 0,
+  "colour": {
+   "mean_rgb": [
+    3.5,
+    155.39999389648438,
+    223.6999969482422
+   ],
+   "pct_rgb": {
+    "1": [
+     0.0,
+     94.0,
+     164.0
+    ],
+    "10": [
+     0.0,
+     120.0,
+     186.0
+    ],
+    "50": [
+     0.0,
+     159.0,
+     214.0
+    ],
+    "90": [
+     6.0,
+     201.0,
+     235.0
+    ],
+    "99": [
+     59.0,
+     222.0,
+     245.0
+    ]
+   }
+  },
+  "ref_colour": {
+   "mean_rgb": [
+    2.200000047683716,
+    151.8000030517578,
+    222.89999389648438
+   ],
+   "pct_rgb": {
+    "1": [
+     0.0,
+     93.0,
+     165.0
+    ],
+    "10": [
+     0.0,
+     111.0,
+     183.0
+    ],
+    "50": [
+     0.0,
+     153.0,
+     212.0
+    ],
+    "90": [
+     2.0,
+     201.0,
+     236.0
+    ],
+    "99": [
+     49.0,
+     221.0,
+     244.0
+    ]
+   }
+  },
+  "motion_lag_mean_abs_diff": {
+   "1": 2.09,
+   "5": 6.68,
+   "15": 11.99,
+   "30": 14.78
+  },
+  "ref_motion_lag_mean_abs_diff": {
+   "1": 3.34,
+   "5": 9.23,
+   "15": 12.89,
+   "30": 14.74
+  },
+  "ref_frames": 480,
+  "ref_duration_s": 16.016,
+  "checks": {
+   "h264": true,
+   "mp4_container": true,
+   "1080p": true,
+   "fps_30_exact": true,
+   "frame_count_matches_reference": true,
+   "duration_equals_frames_over_30": true,
+   "decodes_cleanly": true,
+   "no_black_frames": true,
+   "no_frozen_segments": true,
+   "no_duplicate_frames": true,
+   "no_diff_spikes": true,
+   "yuv420p": true
+  },
+  "all_pass": true
+ },
+ {
+  "file": "Composition1_V2_EmeraldLagoon_1080p.mp4",
+  "size_bytes": 23909142,
+  "sha256": "2372de40acc327c7bf1aad479c4c5922aa64aee90239b094761728406b281e3f",
+  "container": "mov,mp4,m4a,3gp,3g2,mj2",
+  "video_streams": 1,
+  "audio_streams": 0,
+  "codec": "h264",
+  "profile": "High",
+  "pix_fmt": "yuv420p",
+  "width": 1920,
+  "height": 1080,
+  "r_frame_rate": "30/1",
+  "avg_frame_rate": "30/1",
+  "nb_read_frames": 480,
+  "stream_duration_s": 16.0,
+  "format_duration_s": 16.0,
+  "bit_rate": 11954571,
+  "decode_errors": null,
+  "black_segments": [],
+  "frozen_segments": [],
+  "luma_mean": 96.39,
+  "luma_min_max": [
+   94.14,
+   99.56
+  ],
+  "max_luma_jump_between_frames": 0.506,
+  "ref_max_luma_jump_between_frames": 0.546,
+  "frame_diff_min_mean_max": [
+   2.505,
+   3.257,
+   4.056
+  ],
+  "duplicate_consecutive_frames": 0,
+  "diff_spikes_over_3x_median": 0,
+  "colour": {
+   "mean_rgb": [
+    32.5,
+    148.60000610351562,
+    106.80000305175781
+   ],
+   "pct_rgb": {
+    "1": [
+     2.0,
+     81.0,
+     61.0
+    ],
+    "10": [
+     5.0,
+     110.0,
+     80.0
+    ],
+    "50": [
+     19.0,
+     150.0,
+     104.0
+    ],
+    "90": [
+     75.0,
+     195.0,
+     131.0
+    ],
+    "99": [
+     161.0,
+     226.0,
+     159.0
+    ]
+   }
+  },
+  "ref_colour": {
+   "mean_rgb": [
+    2.200000047683716,
+    151.8000030517578,
+    222.89999389648438
+   ],
+   "pct_rgb": {
+    "1": [
+     0.0,
+     93.0,
+     165.0
+    ],
+    "10": [
+     0.0,
+     111.0,
+     183.0
+    ],
+    "50": [
+     0.0,
+     153.0,
+     212.0
+    ],
+    "90": [
+     2.0,
+     201.0,
+     236.0
+    ],
+    "99": [
+     49.0,
+     221.0,
+     244.0
+    ]
+   }
+  },
+  "motion_lag_mean_abs_diff": {
+   "1": 3.26,
+   "5": 10.31,
+   "15": 18.2,
+   "30": 22.41
+  },
+  "ref_motion_lag_mean_abs_diff": {
+   "1": 3.34,
+   "5": 9.23,
+   "15": 12.89,
+   "30": 14.74
+  },
+  "ref_frames": 480,
+  "ref_duration_s": 16.016,
+  "checks": {
+   "h264": true,
+   "mp4_container": true,
+   "1080p": true,
+   "fps_30_exact": true,
+   "frame_count_matches_reference": true,
+   "duration_equals_frames_over_30": true,
+   "decodes_cleanly": true,
+   "no_black_frames": true,
+   "no_frozen_segments": true,
+   "no_duplicate_frames": true,
+   "no_diff_spikes": true,
+   "yuv420p": true
+  },
+  "all_pass": true
+ },
+ {
+  "file": "Composition2_V1_Reference_1080p.mp4",
+  "size_bytes": 15109632,
+  "sha256": "c7f9d40218db36b6adb38ba1f93e7e1162b249bab8c3b7eb7b1281517c702cc3",
+  "container": "mov,mp4,m4a,3gp,3g2,mj2",
+  "video_streams": 1,
+  "audio_streams": 0,
+  "codec": "h264",
+  "profile": "High",
+  "pix_fmt": "yuv420p",
+  "width": 1920,
+  "height": 1080,
+  "r_frame_rate": "30/1",
+  "avg_frame_rate": "30/1",
+  "nb_read_frames": 540,
+  "stream_duration_s": 18.0,
+  "format_duration_s": 18.0,
+  "bit_rate": 6715392,
+  "decode_errors": null,
+  "black_segments": [],
+  "frozen_segments": [],
+  "luma_mean": 177.27,
+  "luma_min_max": [
+   176.06,
+   178.71
+  ],
+  "max_luma_jump_between_frames": 0.269,
+  "ref_max_luma_jump_between_frames": 2.704,
+  "frame_diff_min_mean_max": [
+   3.616,
+   4.461,
+   5.816
+  ],
+  "duplicate_consecutive_frames": 0,
+  "diff_spikes_over_3x_median": 0,
+  "colour": {
+   "mean_rgb": [
+    167.39999389648438,
+    167.39999389648438,
+    167.39999389648438
+   ],
+   "pct_rgb": {
+    "1": [
+     141.0,
+     141.0,
+     141.0
+    ],
+    "10": [
+     154.0,
+     154.0,
+     154.0
+    ],
+    "50": [
+     174.0,
+     174.0,
+     174.0
+    ],
+    "90": [
+     205.0,
+     205.0,
+     205.0
+    ],
+    "99": [
+     242.0,
+     242.0,
+     242.0
+    ]
+   }
+  },
+  "ref_colour": {
+   "mean_rgb": [
+    169.89999389648438,
+    169.89999389648438,
+    169.89999389648438
+   ],
+   "pct_rgb": {
+    "1": [
+     139.0,
+     139.0,
+     139.0
+    ],
+    "10": [
+     159.0,
+     159.0,
+     159.0
+    ],
+    "50": [
+     178.0,
+     178.0,
+     178.0
+    ],
+    "90": [
+     205.0,
+     205.0,
+     205.0
+    ],
+    "99": [
+     247.0,
+     247.0,
+     247.0
+    ]
+   }
+  },
+  "motion_lag_mean_abs_diff": {
+   "1": 4.46,
+   "5": 17.4,
+   "15": 25.69,
+   "30": 21.25
+  },
+  "ref_motion_lag_mean_abs_diff": {
+   "1": 9.6,
+   "5": 18.59,
+   "15": 22.12,
+   "30": 17.66
+  },
+  "ref_frames": 540,
+  "ref_duration_s": 18.018,
+  "checks": {
+   "h264": true,
+   "mp4_container": true,
+   "1080p": true,
+   "fps_30_exact": true,
+   "frame_count_matches_reference": true,
+   "duration_equals_frames_over_30": true,
+   "decodes_cleanly": true,
+   "no_black_frames": true,
+   "no_frozen_segments": true,
+   "no_duplicate_frames": true,
+   "no_diff_spikes": true,
+   "yuv420p": true
+  },
+  "all_pass": true
+ },
+ {
+  "file": "Composition2_V2_LowAngleDolly_1080p.mp4",
+  "size_bytes": 18222875,
+  "sha256": "a03a3e4f7272ed258a14bce252fabcd65c96ba08572d587077b76acd7fc451ca",
+  "container": "mov,mp4,m4a,3gp,3g2,mj2",
+  "video_streams": 1,
+  "audio_streams": 0,
+  "codec": "h264",
+  "profile": "High",
+  "pix_fmt": "yuv420p",
+  "width": 1920,
+  "height": 1080,
+  "r_frame_rate": "30/1",
+  "avg_frame_rate": "30/1",
+  "nb_read_frames": 540,
+  "stream_duration_s": 18.0,
+  "format_duration_s": 18.0,
+  "bit_rate": 8099055,
+  "decode_errors": null,
+  "black_segments": [],
+  "frozen_segments": [],
+  "luma_mean": 186.72,
+  "luma_min_max": [
+   184.61,
+   189.04
+  ],
+  "max_luma_jump_between_frames": 0.616,
+  "ref_max_luma_jump_between_frames": 2.704,
+  "frame_diff_min_mean_max": [
+   2.656,
+   3.272,
+   4.002
+  ],
+  "duplicate_consecutive_frames": 0,
+  "diff_spikes_over_3x_median": 0,
+  "colour": {
+   "mean_rgb": [
+    184.5,
+    184.5,
+    184.5
+   ],
+   "pct_rgb": {
+    "1": [
+     146.0,
+     146.0,
+     146.0
+    ],
+    "10": [
+     162.0,
+     162.0,
+     162.0
+    ],
+    "50": [
+     187.0,
+     187.0,
+     187.0
+    ],
+    "90": [
+     210.0,
+     210.0,
+     210.0
+    ],
+    "99": [
+     245.0,
+     245.0,
+     245.0
+    ]
+   }
+  },
+  "ref_colour": {
+   "mean_rgb": [
+    169.89999389648438,
+    169.89999389648438,
+    169.89999389648438
+   ],
+   "pct_rgb": {
+    "1": [
+     139.0,
+     139.0,
+     139.0
+    ],
+    "10": [
+     159.0,
+     159.0,
+     159.0
+    ],
+    "50": [
+     178.0,
+     178.0,
+     178.0
+    ],
+    "90": [
+     205.0,
+     205.0,
+     205.0
+    ],
+    "99": [
+     247.0,
+     247.0,
+     247.0
+    ]
+   }
+  },
+  "motion_lag_mean_abs_diff": {
+   "1": 3.27,
+   "5": 10.78,
+   "15": 17.61,
+   "30": 17.92
+  },
+  "ref_motion_lag_mean_abs_diff": {
+   "1": 9.6,
+   "5": 18.59,
+   "15": 22.12,
+   "30": 17.66
+  },
+  "ref_frames": 540,
+  "ref_duration_s": 18.018,
+  "checks": {
+   "h264": true,
+   "mp4_container": true,
+   "1080p": true,
+   "fps_30_exact": true,
+   "frame_count_matches_reference": true,
+   "duration_equals_frames_over_30": true,
+   "decodes_cleanly": true,
+   "no_black_frames": true,
+   "no_frozen_segments": true,
+   "no_duplicate_frames": true,
+   "no_diff_spikes": true,
+   "yuv420p": true
+  },
+  "all_pass": true
+ }
+]
