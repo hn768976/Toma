@@ -1,0 +1,52 @@
+{
+  "name": "downtrend-charts",
+  "version": "1.0.0",
+  "description": "Two 3D downtrend bar-chart compositions (4K UHD, 30 fps) built with Remotion + Three.js (@remotion/three)",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@react-three/fiber": "9.2.0",
+    "@remotion/cli": "4.0.539",
+    "@remotion/media": "4.0.539",
+    "@remotion/three": "4.0.539",
+    "@remotion/zod-types": "4.0.539",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.539",
+    "three": "0.178.0",
+    "zod": "4.5.4",
+    "mediabunny": "1.62.0"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.539",
+    "@types/react": "19.2.7",
+    "@types/three": "0.170.0",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "render:comp1-v1": "remotion render Comp1-V1-Ember out/Comp1-V1-Ember_1080p.mp4 --scale=0.5",
+    "render:comp1-v2": "remotion render Comp1-V2-Glacier out/Comp1-V2-Glacier_1080p.mp4 --scale=0.5",
+    "render:comp2-v1": "remotion render Comp2-V1-Static out/Comp2-V1-Static_1080p.mp4 --scale=0.5",
+    "render:comp2-v2": "remotion render Comp2-V2-Orbit out/Comp2-V2-Orbit_1080p.mp4 --scale=0.5",
+    "render:all": "npm run render:comp1-v1 && npm run render:comp1-v2 && npm run render:comp2-v1 && npm run render:comp2-v2",
+    "render:4k:comp1-v1": "remotion render Comp1-V1-Ember out/Comp1-V1-Ember_4k.mp4",
+    "render:4k:comp1-v2": "remotion render Comp1-V2-Glacier out/Comp1-V2-Glacier_4k.mp4",
+    "render:4k:comp2-v1": "remotion render Comp2-V1-Static out/Comp2-V1-Static_4k.mp4",
+    "render:4k:comp2-v2": "remotion render Comp2-V2-Orbit out/Comp2-V2-Orbit_4k.mp4",
+    "still:4k": "remotion still Comp1-V1-Ember out/Comp1-V1-Ember_4k.png --frame=449 && remotion still Comp1-V2-Glacier out/Comp1-V2-Glacier_4k.png --frame=449 && remotion still Comp2-V1-Static out/Comp2-V1-Static_4k.png --frame=209 && remotion still Comp2-V2-Orbit out/Comp2-V2-Orbit_4k.png --frame=209"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}
