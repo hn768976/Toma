@@ -52,7 +52,7 @@ Date: 2026-10-31 · Branch: `ccr-19d8b33c-e9l4y4`
 | Clean extract → `npm ci` | ✅ | ✅ |
 | `npm run lint` (ESLint + `tsc`) | ✅ | ✅ |
 | `npx remotion compositions` | ✅ lists both | ✅ lists both |
-| Documented render (`npm run master:v1` / `master:v2`) | ✅ __EMBER_CLEAN__ | ✅ V1 4K + 1080p; V2 4K segment |
+| Documented render (`npm run master:v1` / `master:v2`) | ✅ V2 4K + 1080p from the final ZIP (V1 verified the same way in the previous round) | ✅ V1 4K + 1080p; V2 4K segment |
 | Clean-room output equals delivered file | ✅ byte-identical (MD5) | ✅ byte-identical (MD5) |
 
 node_modules is excluded from the ZIPs; `npm ci` restores the exact locked versions (Remotion 4.0.539, three 0.178.0). Rendering is deterministic: nothing depends on wall-clock time and all randomness is seeded.
@@ -66,7 +66,7 @@ An independent agent compared every deliverable against its reference at matchin
 | Ember: ring and explosion lasted too long | Fixed: luma at 4.8 s matches the reference |
 | Ember: small flash instead of a soft fireball at 3.2 s | Fixed |
 | Ember: too little smoke, small trail heads | Improved: smoke visible from 1.2 to 3.0 s, larger blooming heads |
-| Ember: too bright from 3.0 to 4.0 s | Fixed in the final round (__EMBER_LUMA__) |
+| Ember: too bright from 3.0 to 4.0 s | Fixed in the final round (mean luma at 3.0 / 4.0 / 4.5 / 4.8 s: 36 / 69 / 33 / 21, reference 30 / 65 / 35 / 27) |
 | Ember: symmetric starburst instead of a one-sided dust spray | Fixed in the final round: dust cloud thrown to the left / lower-left |
 | Ember V2: vignette banding | Fixed with error-diffusion-dithered downscale; only visible with a 6× contrast boost |
 | Tile: dark, hard shading | Fixed: luma range 146–167 (reference 153–167), background RGB within ±2 of the reference |
