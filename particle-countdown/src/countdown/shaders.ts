@@ -51,9 +51,9 @@ void main() {
   // dissolve: staggered burst after the peak
   float dStart = s.z * 3.0;
   float dLen = uDissolveFrames * (0.5 + 0.5 * s.w);
-  float d = clamp((t - dStart) / dLen, 0.0, 1.0);
+  float d = clamp((t + 2.5 - dStart) / dLen, 0.0, 1.0);
   // starts gently (the number stays legible for a few frames), then accelerates
-  float e = 0.35 * (1.0 - pow(1.0 - d, 3.0)) + 0.65 * d * d * (3.0 - 2.0 * d);
+  float e = 0.55 * (1.0 - pow(1.0 - d, 3.0)) + 0.45 * d * d * (3.0 - 2.0 * d);
   vec2 lift = vec2(0.0, (130.0 + 300.0 * s.z) * e);
   // the burst tears the number apart sideways in ragged horizontal bands
   // irregular: two incommensurate bands + per-grain noise + a per-number side bias
@@ -82,7 +82,7 @@ void main() {
     // 0: glitter body, 1: edge glitter (slightly brighter)
     float edge = step(0.5, aKind);
     vec2 condense = (1.0 - form) * rnd * (25.0 + 110.0 * s.z);
-    vec2 burst = e * (flow * 340.0 * (0.75 + 0.5 * s.z) + rnd * (40.0 + 170.0 * s.x) + tear * (40.0 + 200.0 * s.y * s.y) + radial * (40.0 + 150.0 * s.x) + swirl * (40.0 + 90.0 * s.x)) + lift * 1.05;
+    vec2 burst = e * (flow * 340.0 * (0.75 + 0.5 * s.z) + rnd * (70.0 + 260.0 * s.x) + tear * (40.0 + 200.0 * s.y * s.y) + radial * (40.0 + 150.0 * s.x) + swirl * (40.0 + 90.0 * s.x)) + lift * 1.05;
     pos += condense + burst;
     float twinkle = 0.45 + 0.55 * pow(0.5 + 0.5 * sin(uFrame * (0.12 + 0.3 * s.w) + s.x * 47.0), 2.0);
     vec3 base = mix(uGlitterA, uGlitterB, s.y);
@@ -107,7 +107,7 @@ void main() {
     // 3: soft coloured haze inside the cloud
     vec2 burst = e * (flow * 380.0 + radial * 90.0 + swirl * 80.0) + lift * 0.7;
     pos += burst;
-    float env = 0.25 * form * smoothstep(-6.0, 0.0, t) + smoothstep(0.0, 0.15, d) * (1.0 - smoothstep(0.35, 1.0, d));
+    float env = 0.25 * form * smoothstep(-6.0, 0.0, t) * (1.0 - smoothstep(0.0, 0.3, d)) + smoothstep(0.0, 0.15, d) * (1.0 - smoothstep(0.35, 1.0, d));
     col = mix(uHaze[0], uHaze[1], s.x);
     alpha = env * 0.04;
     size = 170.0 + 250.0 * s.z;
