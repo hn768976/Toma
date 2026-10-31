@@ -46,18 +46,28 @@ void main() {
   float form = clamp((t + uFormFrames - delay) / (uFormFrames - 8.0), 0.0, 1.0);
   form = form * form * (3.0 - 2.0 * form);
   // brightness ramps from a dim silver to full at the peak, then a short flash
-  float ramp = mix(0.5, 1.0, smoothstep(-14.0, -1.0, t));
+  float ramp = mix(0.7, 1.15, smoothstep(-14.0, -1.0, t));
   float flash = exp(-pow((t - 1.5) / 4.2, 2.0));
   // dissolve: staggered burst after the peak
   float dStart = s.z * 3.0;
   float dLen = uDissolveFrames * (0.5 + 0.5 * s.w);
   float d = clamp((t - dStart) / dLen, 0.0, 1.0);
-  float e = 1.0 - pow(1.0 - d, 3.0);
+  // starts gently (the number stays legible for a few frames), then accelerates
+  float e = 0.35 * (1.0 - pow(1.0 - d, 3.0)) + 0.65 * d * d * (3.0 - 2.0 * d);
   vec2 lift = vec2(0.0, (130.0 + 300.0 * s.z) * e);
   // the burst tears the number apart sideways in ragged horizontal bands
-  float band = sin(aHome.y * 0.011 + s.w * 1.2 + uPeak * 0.37) + 0.35 * sin(aHome.y * 0.037 + uPeak);
-  float tearDir = band >= 0.0 ? 1.0 : -1.0;
-  vec2 tear = vec2(tearDir * (0.35 + 0.65 * min(1.0, abs(band))), 0.12 * (s.x - 0.5));
+  // irregular: two incommensurate bands + per-grain noise + a per-number side bias
+  float side = sin(uPeak * 1.73 + 0.4) >= 0.0 ? 1.0 : -1.0;
+  float band = 0.55 * sin(aHome.y * 0.0063 + uPeak * 0.91)
+             + 0.35 * sin(aHome.y * 0.0191 + aHome.x * 0.004 + uPeak * 2.3)
+             + 0.9 * (s.x - 0.5) + 0.45 * side;
+  vec2 tear = vec2(band, 0.25 * (s.w - 0.5)) * (0.6 + 0.8 * s.z);
+  // spatially coherent flow: neighbouring grains travel together, so the
+  // number rips into clumps and streaks with dark gaps instead of a uniform smear
+  vec2 flow = vec2(
+    sin(aHome.y * 0.0071 + uPeak * 0.9) + 0.6 * sin(aHome.y * 0.019 + aHome.x * 0.006 + uPeak * 2.1) + 0.2 * side,
+    0.55 * sin(aHome.x * 0.0083 + uPeak * 1.3) + 0.4 * cos(aHome.y * 0.011 + aHome.x * 0.003 + uPeak)
+  );
   float burstGlow = smoothstep(0.0, 0.08, d) * (1.0 - smoothstep(0.12, 0.55, d));
 
   vec2 rel = aHome - uCentroid;
@@ -72,7 +82,7 @@ void main() {
     // 0: glitter body, 1: edge glitter (slightly brighter)
     float edge = step(0.5, aKind);
     vec2 condense = (1.0 - form) * rnd * (25.0 + 110.0 * s.z);
-    vec2 burst = e * (tear * (90.0 + 560.0 * s.y * s.y) + radial * (30.0 + 140.0 * s.x) + swirl * (50.0 + 150.0 * s.x)) + lift;
+    vec2 burst = e * (flow * 340.0 * (0.75 + 0.5 * s.z) + rnd * (40.0 + 170.0 * s.x) + tear * (40.0 + 200.0 * s.y * s.y) + radial * (40.0 + 150.0 * s.x) + swirl * (40.0 + 90.0 * s.x)) + lift * 1.05;
     pos += condense + burst;
     float twinkle = 0.45 + 0.55 * pow(0.5 + 0.5 * sin(uFrame * (0.12 + 0.3 * s.w) + s.x * 47.0), 2.0);
     vec3 base = mix(uGlitterA, uGlitterB, s.y);
@@ -81,12 +91,12 @@ void main() {
     col = mix(base, uFlash, flash * 0.65);
     float fade = 1.0 - smoothstep(0.38, 1.0, d);
     float star = step(0.955, fract(s.z * 17.0 + s.w * 3.0));
-    alpha = form * ramp * fade * twinkle * (0.72 + 1.0 * star) * (1.0 + 1.6 * flash + 0.9 * burstGlow);
+    alpha = form * ramp * fade * twinkle * (0.85 + 1.0 * star) * (1.0 + 1.6 * flash + 0.9 * burstGlow);
     size = (3.2 + 4.2 * s.w) * (1.0 + 0.9 * star) * (1.0 + 0.35 * flash) * (1.0 + e * (s.x - 0.4));
     shape = 0.0;
   } else if (aKind < 2.5) {
     // 2: coloured bokeh dots around the number
-    vec2 burst = e * (tear * (140.0 + 520.0 * s.y) + radial * (80.0 + 220.0 * s.x) + swirl * (90.0 + 200.0 * s.x)) + lift * 1.15;
+    vec2 burst = e * (flow * 420.0 * (0.6 + 0.8 * s.z) + tear * (80.0 + 300.0 * s.y) + radial * (90.0 + 220.0 * s.x) + swirl * (80.0 + 160.0 * s.x)) + lift * 0.85;
     pos += rnd * (40.0 + 120.0 * s.z) + burst;
     float env = 0.12 * form * (1.0 - smoothstep(0.0, 0.2, d)) + smoothstep(0.0, 0.12, d) * (1.0 - smoothstep(0.4, 1.0, d));
     col = accent(s.w);
@@ -95,11 +105,11 @@ void main() {
     shape = 1.0;
   } else if (aKind < 3.5) {
     // 3: soft coloured haze inside the cloud
-    vec2 burst = e * (tear * (80.0 + 260.0 * s.y) + radial * 90.0 + swirl * 110.0) + lift;
+    vec2 burst = e * (flow * 380.0 + radial * 90.0 + swirl * 80.0) + lift * 0.7;
     pos += burst;
     float env = 0.25 * form * smoothstep(-6.0, 0.0, t) + smoothstep(0.0, 0.15, d) * (1.0 - smoothstep(0.35, 1.0, d));
     col = mix(uHaze[0], uHaze[1], s.x);
-    alpha = env * 0.028;
+    alpha = env * 0.04;
     size = 170.0 + 250.0 * s.z;
     shape = 2.0;
   } else {

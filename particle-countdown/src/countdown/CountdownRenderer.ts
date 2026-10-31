@@ -12,7 +12,7 @@ import {
 
 // Particle budget per number (scaled with the glyph's ink area so "1" is as dense as "8").
 const GLITTER_PER_100K_PX = 6500;
-const EDGE_GLITTER = 1200;
+const EDGE_GLITTER = 300;
 const BOKEH = 520;
 const HAZE = 46;
 const AMBIENT = 160;

@@ -42,8 +42,8 @@ export const COOL: CountdownPalette = {
     [0.3, 0.55, 0.85],
     [0.45, 0.42, 0.85],
   ],
-  bloom: [0.6, 1.1],
-  halo: [0.42, 0.56, 1.0],
+  bloom: [0.55, 1.5],
+  halo: [0.36, 0.5, 1.0],
 };
 
 /** V2: alternative palette – molten gold glitter with ember/rose/amber bokeh on warm black. */
@@ -64,6 +64,6 @@ export const EMBER: CountdownPalette = {
     [0.75, 0.28, 0.06],
     [0.6, 0.12, 0.18],
   ],
-  bloom: [0.6, 1.1],
-  halo: [1.0, 0.56, 0.22],
+  bloom: [0.55, 1.5],
+  halo: [1.0, 0.52, 0.2],
 };
