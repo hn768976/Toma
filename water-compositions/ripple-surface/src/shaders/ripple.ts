@@ -110,16 +110,20 @@ void addRing(inout Surface s, vec2 q, vec2 c, float k, float chirp, float w,
   env = (0.12 + 0.88 * env * env * env) * amp * bl / sqrt(1.0 + 1.2 * r);
   // Zig-zag kinks along bold crests (arc-length modulated phase).
   float arc = r * atan(dv.y, dv.x);
-  float kink = boldness * 0.55 * sin(arc * 70.0 + 2.5 * t + ph)
-             * smoothstep(0.6, 0.95, sin(arc * 7.0 - 0.7 * t + ph) * 0.5 + 0.5);
+  // Short-lived: gated by a fast-evolving noise so kinks appear, morph and
+  // vanish within a fraction of a second, mostly on the boldest crests.
+  float kinkGate = smoothstep(0.08, 0.32,
+    gnoise(vec2(arc * 6.0, r * 4.0) + vec2(2.7 * t, -2.1 * t) + ph));
+  float kink = boldness * boldness * 0.7 * kinkGate
+             * sin(arc * (45.0 + 12.0 * sin(0.9 * t + ph)) + 6.0 * t + ph);
   float phase = k * r + chirp * r * r - w * t + 1.7 * ph + 2.0 * s.h + kink;
   float sn = sin(phase);
   float cs = cos(phase);
   s.h += env * sn;
   s.grad += env * kLocal * cs * dv / max(r, 1e-4);
   float crest = 0.5 + 0.5 * sn;
-  float sharp = mix(5.0, 46.0, boldness);
-  s.line += lineGain * env * mix(0.30, 1.25, boldness) * pow(crest, sharp);
+  float sharp = mix(5.0, 30.0, boldness);
+  s.line += lineGain * env * mix(0.30, 1.45, boldness * boldness) * pow(crest, sharp);
   s.glow += env * pow(crest, 3.0);
   s.trough += env * pow(1.0 - crest, 5.0);
 }
@@ -128,6 +132,17 @@ Surface surface(vec2 p, float t, float fp) {
   Surface s = Surface(0.0, vec2(0.0), 0.0, 0.0, 0.0);
   // Large-scale warp makes the arcs wobble and bend.
   vec2 q = p + 0.09 * warpField(p, t);
+  // Fast, small-amplitude surface jitter (period ~0.1-0.3 s, a few pixels):
+  // makes the crest shapes evolve every frame like real water, while the
+  // slow drift above carries the large-scale motion.
+  q += 0.011 * vec2(
+    gnoise(p * 11.0 + vec2(7.0 * t, -5.5 * t)),
+    gnoise(p * 11.0 + vec2(13.1, 4.2) + vec2(-6.2 * t, 6.8 * t))
+  );
+  q += 0.0055 * vec2(
+    gnoise(p * 23.0 + vec2(-9.0 * t, 8.0 * t) + 31.0),
+    gnoise(p * 23.0 + vec2(8.5 * t, 9.5 * t) + 57.0)
+  );
 
   // Fast-changing field that decides which crests flare up bold & crisp.
   float boldness = smoothstep(-0.18, 0.32,
@@ -142,9 +157,9 @@ Surface surface(vec2 p, float t, float fp) {
   vec2 c1 = vec2(0.95, -0.95) + 0.22 * vec2(cos(0.17 * t + 1.0), sin(0.21 * t));
   vec2 c2 = vec2(1.30, 1.05) + 0.22 * vec2(sin(0.15 * t), cos(0.18 * t + 2.0));
 
-  addRing(s, q, c0, 34.0, 8.0, 5.6, 0.0, 1.00, 1.00, boldness, t, fp);
-  addRing(s, q, c1, 32.0, 6.0, 5.0, 1.3, 0.45, 0.20, boldness, t, fp);
-  addRing(s, q, c2, 42.0, 9.0, 6.2, 2.1, 0.45, 0.45, boldness, t, fp);
+  addRing(s, q, c0, 34.0, 8.0, 8.2, 0.0, 1.00, 1.00, boldness, t, fp);
+  addRing(s, q, c1, 32.0, 6.0, 7.4, 1.3, 0.45, 0.20, boldness, t, fp);
+  addRing(s, q, c2, 42.0, 9.0, 9.0, 2.1, 0.40, 0.28, boldness, t, fp);
   return s;
 }
 
@@ -156,11 +171,11 @@ float glints(vec2 p, float t, float fp) {
     for (int i = 0; i <= 1; i++) {
       vec2 id = cell + vec2(float(i), float(j));
       vec2 h = hash22(id + 3.7);
-      float isOn = step(0.93, hash12(id + 11.3));
+      float isOn = step(0.955, hash12(id + 11.3));
       vec2 pos = (id + h) / 14.0;
       float life = fract(0.23 * t + h.x * 7.0 + h.y);
       float flare = exp(-pow((life - 0.5) * 14.0, 2.0));
-      float rad = max(0.008, 1.5 * fp);
+      float rad = max(0.014, 1.5 * fp);
       float d = length(p - pos) / rad;
       g += isOn * flare * exp(-d * d);
     }
@@ -182,7 +197,7 @@ float shade(Surface s, vec3 v, float lineFade) {
   float L = 0.665;
   L += 0.10 * slope;
   // Crest lines: a few bold crisp caustics among many soft faint ones.
-  L += lineFade * 0.50 * (1.0 - exp(-1.7 * s.line));
+  L += lineFade * 0.56 * (1.0 - exp(-2.1 * s.line));
   L += lineFade * 0.15 * (1.0 - exp(-1.4 * s.glow));
   // Slightly darker troughs between the bright lines.
   L -= lineFade * 0.12 * (1.0 - exp(-1.5 * s.trough));
@@ -235,7 +250,7 @@ void main() {
   // Mottled soft light/dark patches in the water.
   L += 0.075 * fbm3(p * 1.5 + vec2(0.12 * t, -0.09 * t) + 21.0);
   // Specular glints riding on the crests.
-  L += 0.55 * lineFade * glints(p, t, fp) * (0.35 + s.line);
+  L += 0.75 * lineFade * glints(p, t, fp) * smoothstep(0.05, 0.6, s.line);
   // Gentle vignette, darker toward the top-right corner as in the reference.
   L -= 0.06 * smoothstep(0.25, 0.95, dot(uv, normalize(vec2(1.0, 0.8))));
   L -= 0.04 * smoothstep(0.55, 1.05, length(uv * vec2(0.9, 1.3)));
