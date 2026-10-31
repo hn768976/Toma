@@ -5,6 +5,7 @@ import {
   HalfFloatType,
   InstancedMesh,
   Material,
+  Matrix4,
   Mesh,
   MeshBasicMaterial,
   Object3D,
@@ -56,6 +57,7 @@ const makeSeries = (
   rand: () => number,
   vol: number,
   drift: number,
+  accel = 0,
 ) => {
   const ys: number[] = [];
   let v = 0;
@@ -67,7 +69,16 @@ const makeSeries = (
   }
   const lo = Math.min(...ys);
   const hi = Math.max(...ys);
-  return ys.map((y, i) => [i / (n - 1), (y - lo) / (hi - lo)] as const);
+  // Optional "bull run" curve: blend the walk with an accelerating climb so
+  // the chart ends steep, like the reference.
+  return ys.map((y, i) => {
+    const x = i / (n - 1);
+    const walk = (y - lo) / (hi - lo);
+    return [
+      x,
+      accel > 0 ? walk * (1 - accel) + Math.pow(x, 2.2) * accel : walk,
+    ] as const;
+  });
 };
 
 export const createMarketScene =
@@ -80,7 +91,6 @@ export const createMarketScene =
     const colMain = new Color(palette.main);
     const colHot = new Color(palette.hot);
     const colGlow = new Color(palette.glow);
-    const colLine = colHot.clone().lerp(colMain, 0.55);
 
     const scene = new Scene();
     scene.background = new Color(palette.background);
@@ -158,7 +168,7 @@ export const createMarketScene =
       );
     };
 
-    const fadeC = window_(-1, 0.1, 10.3, 1.6);
+    const fadeC = window_(-1, 0.1, 11.0, 1.3);
 
     // Cluster A - opening.
     addTable({ rows: 6, columns: 5, rowPx: 64 }, [-4.4, 2.9, -3.5], 1.5, 0.55);
@@ -174,8 +184,8 @@ export const createMarketScene =
       0.85,
     );
     addTable({ rows: 9, columns: 5, rowPx: 64 }, [11.5, 1.2, -3.0], 2.4, 0.5);
-    const candA = makeCandleTexture(46, rand);
-    addPanel(candA.texture, candA.aspect, [2.6, -1.9, -1.6], 2.1, 1);
+    const candA = makeCandleTexture(26, rand);
+    addPanel(candA.texture, candA.aspect, [2.4, -1.7, -1.6], 2.4, 1);
 
     // Cluster B - behind the big table.
     addTable({ rows: 6, columns: 5, rowPx: 64 }, [6.8, 1.9, -7.8], 1.6, 0.5);
@@ -211,8 +221,8 @@ export const createMarketScene =
       0.35,
       fadeC,
     );
-    const candC = makeCandleTexture(40, rand);
-    addPanel(candC.texture, candC.aspect, [0.9, -1.6, -15.4], 2.1, 1, fadeC);
+    const candC = makeCandleTexture(24, rand);
+    addPanel(candC.texture, candC.aspect, [1.6, -1.4, -15.2], 2.4, 1, fadeC);
 
     // Faint ticker "walls" high in the background, as in the reference.
     for (let i = 0; i < 7; i++) {
@@ -253,16 +263,98 @@ export const createMarketScene =
       vol?: number;
     };
     const charts: {
-      lines: Line2[];
-      segs: number;
+      setProgress: (p: number) => void;
       progress: (t: number) => number;
     }[] = [];
     const lineMats: LineMaterial[] = [];
+    const ledColor = colMain.clone().lerp(colHot, 0.38);
     const addChart = (def: ChartDef) => {
-      const series = makeSeries(def.n, rand, def.vol ?? 0.06, 0.02);
+      const series = makeSeries(
+        def.n,
+        rand,
+        def.vol ?? 0.06,
+        0.02,
+        def.led ? 0.5 : 0,
+      );
       const o = new Vector3(...def.origin);
       const u = new Vector3(...def.u);
       const v = new Vector3(...def.v);
+
+      if (def.led) {
+        // Dot-matrix "LED" chart: every sample is an upright column of small
+        // square cells on a fixed grid (the reference's block chart). Steep
+        // moves fill the whole span between neighbouring samples.
+        const uLen = u.length();
+        const vLen = v.length();
+        const cols = Math.round(uLen / def.width);
+        const pitch = uLen / cols;
+        const uDir = u.clone().normalize();
+        const nrm = new Vector3().crossVectors(uDir, v).normalize();
+        const vDir = new Vector3().crossVectors(nrm, uDir).normalize();
+        const basis = new Matrix4().makeBasis(uDir, vDir, nrm);
+        const yAt = (x: number) => {
+          const f = x * (series.length - 1);
+          const i = Math.min(series.length - 2, Math.floor(f));
+          return series[i][1] + (series[i + 1][1] - series[i][1]) * (f - i);
+        };
+        const thick = 3;
+        const cells: Vector3[] = [];
+        const cum: number[] = [];
+        let prev: number | null = null;
+        for (let c = 0; c < cols; c++) {
+          const row = Math.round((yAt(c / (cols - 1)) * vLen) / pitch);
+          let lo = row - 1;
+          let hi = row + thick - 2;
+          if (prev !== null) {
+            lo = Math.min(lo, prev);
+            hi = Math.max(hi, prev);
+          }
+          prev = row;
+          for (let r = lo; r <= hi; r++) {
+            cells.push(
+              o
+                .clone()
+                .addScaledVector(uDir, c * pitch)
+                .addScaledVector(vDir, r * pitch),
+            );
+          }
+          cum.push(cells.length);
+        }
+        const mat = new MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: def.opacity,
+          blending: AdditiveBlending,
+          depthWrite: false,
+          depthTest: false,
+          fog: true,
+        });
+        register(mat, def.fade ?? always);
+        const mesh = new InstancedMesh(plane, mat, cells.length);
+        const m = new Matrix4();
+        const cellW = pitch * 0.74;
+        const cellH = pitch * 0.62;
+        cells.forEach((p, i) => {
+          m.copy(basis)
+            .scale(new Vector3(cellW, cellH, 1))
+            .setPosition(p);
+          mesh.setMatrixAt(i, m);
+          mesh.setColorAt(
+            i,
+            ledColor.clone().multiplyScalar(0.72 + rand() * 0.28),
+          );
+        });
+        mesh.frustumCulled = false;
+        scene.add(mesh);
+        charts.push({
+          progress: def.progress,
+          setProgress: (p) => {
+            mesh.count = cum[Math.max(0, Math.round(p * (cols - 1)))];
+          },
+        });
+        return;
+      }
+
       const pts: number[] = [];
       series.forEach(([x, y]) => {
         const p = o.clone().addScaledVector(u, x).addScaledVector(v, y);
@@ -270,37 +362,30 @@ export const createMarketScene =
       });
       const geo = new LineGeometry();
       geo.setPositions(pts);
-      const mk = (
-        lw: number,
-        dashed: boolean,
-        color: Color,
-        opacity: number,
-      ) => {
-        const mat = new LineMaterial({
-          color,
-          linewidth: lw,
-          worldUnits: true,
-          dashed,
-          dashSize: lw * 0.75,
-          gapSize: lw * 0.35,
-          transparent: true,
-          opacity,
-          blending: AdditiveBlending,
-          depthWrite: false,
-          depthTest: false,
-        });
-        mat.fog = true;
-        mat.resolution.set(bufW, bufH);
-        lineMats.push(mat);
-        register(mat, def.fade ?? always);
-        const line = new Line2(geo, mat);
-        line.computeLineDistances();
-        line.frustumCulled = false;
-        scene.add(line);
-        return line;
-      };
-      const lines = [mk(def.width, def.led, colLine, def.opacity)];
-      charts.push({ lines, segs: def.n - 1, progress: def.progress });
+      const mat = new LineMaterial({
+        color: ledColor,
+        linewidth: def.width,
+        worldUnits: true,
+        transparent: true,
+        opacity: def.opacity,
+        blending: AdditiveBlending,
+        depthWrite: false,
+        depthTest: false,
+      });
+      mat.fog = true;
+      mat.resolution.set(bufW, bufH);
+      lineMats.push(mat);
+      register(mat, def.fade ?? always);
+      const line = new Line2(geo, mat);
+      line.frustumCulled = false;
+      scene.add(line);
+      const segs = def.n - 1;
+      charts.push({
+        progress: def.progress,
+        setProgress: (p) => {
+          geo.instanceCount = Math.max(1, Math.round(segs * p));
+        },
+      });
     };
 
     const grow =
@@ -309,14 +394,14 @@ export const createMarketScene =
         from + (1 - from) * smoothstep(a, b, t);
 
     addChart({
-      origin: [-5.6, -2.7, 0],
-      u: [9.4, 0, 0],
-      v: [0, 5.0, 0],
+      origin: [-5.4, -3.3, 0],
+      u: [9.0, 0, 0],
+      v: [0, 6.2, 0],
       n: 420,
       width: 0.07,
       led: true,
       opacity: 1,
-      progress: grow(-0.2, 4.6, 0.3),
+      progress: grow(-0.2, 3.6, 0.35),
     });
     addChart({
       origin: [-5.2, -2.2, -0.9],
@@ -450,6 +535,38 @@ export const createMarketScene =
       flares.push({ s, base, phase: rand() * Math.PI * 2, node: i });
     });
 
+    // Two hero "hub" starbursts at fixed spots (top-left and right of the
+    // opening cluster), as in the reference's first shot.
+    (
+      [
+        [-3.0, 2.3, -2.2, 4.4],
+        [2.9, 1.5, -3.4, 3.4],
+        [-1.2, 0.4, -14.5, 3.6],
+      ] as const
+    ).forEach(([x, y, z, sc]) => {
+      const mat = new SpriteMaterial({
+        map: flareTex,
+        color: colMain.clone().lerp(colHot, 0.5),
+        transparent: true,
+        blending: AdditiveBlending,
+        depthWrite: false,
+        depthTest: false,
+        fog: true,
+        opacity: 1,
+      });
+      const sp = new Sprite(mat);
+      sp.position.set(x, y, z);
+      sp.scale.set(sc, sc, 1);
+      scene.add(sp);
+      nodes.push(sp.position.clone());
+      flares.push({
+        s: sp,
+        base: sc,
+        phase: rand() * Math.PI * 2,
+        node: nodes.length - 1,
+      });
+    });
+
     /* ------------------------------------------------------------- */
     /* Floating data bits                                             */
     /* ------------------------------------------------------------- */
@@ -501,7 +618,7 @@ export const createMarketScene =
     });
     const glow = new Sprite(glowMat);
     glow.position.set(0, -0.15, -5);
-    glow.scale.set(13, 7.6, 1);
+    glow.scale.set(10.5, 6.2, 1);
     glow.renderOrder = -1;
     camera.add(glow);
     const glowLevel = track([
@@ -546,13 +663,7 @@ export const createMarketScene =
       faders.forEach(({ mat, base, fade }) => {
         mat.opacity = base * fade(t) * master;
       });
-      charts.forEach((c) => {
-        const p = clamp(c.progress(t));
-        const count = Math.max(1, Math.round(c.segs * p));
-        c.lines.forEach((l) => {
-          l.geometry.instanceCount = count;
-        });
-      });
+      charts.forEach((c) => c.setProgress(clamp(c.progress(t))));
       glowMat.opacity = Math.min(1, glowLevel(t) * master);
 
       // Network: fade with distance (fog) and very close to the lens.

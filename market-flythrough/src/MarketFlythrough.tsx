@@ -25,7 +25,7 @@ export const MarketFlythrough: React.FC<MarketFlythroughProps> = ({
         <AbsoluteFill
           style={{
             background:
-              "radial-gradient(ellipse 70% 68% at 50% 50%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.6) 78%, rgba(0,0,0,0.92) 100%)",
+              "radial-gradient(ellipse 66% 64% at 50% 50%, rgba(0,0,0,0) 34%, rgba(0,0,0,0.68) 74%, rgba(0,0,0,0.97) 100%)",
           }}
         />
       }

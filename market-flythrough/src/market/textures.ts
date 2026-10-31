@@ -187,6 +187,12 @@ export const makeFlareTexture = () => {
     ctx.fillRect(-len, -width / 2, len * 2, width);
     ctx.restore();
   };
+  // Starburst: many fine rays of varying length around the core.
+  for (let i = 0; i < 18; i++) {
+    const ang = (i / 18) * Math.PI + Math.sin(i * 12.9898) * 0.08;
+    const len = c * (0.35 + 0.45 * Math.abs(Math.sin(i * 78.233)));
+    ray(ang, len, 1.2, 0.28);
+  }
   ray(0, c, 3, 0.8);
   ray(Math.PI / 2, c * 0.7, 2.5, 0.55);
   ray(Math.PI / 4, c * 0.45, 2, 0.35);
