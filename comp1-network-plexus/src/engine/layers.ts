@@ -44,6 +44,16 @@ uniform float uResScale;
 uniform float uNear;
 uniform float uFogDist;
 uniform float uGain;
+// Well-defined smoothstep for either edge order (GLSL leaves smoothstep
+// undefined when edge0 >= edge1, and some drivers return garbage there).
+float sstep(float a, float b, float x) {
+  float d = b - a; d = abs(d) < 1e-6 ? 1e-6 : d;
+  float t = clamp((x - a) / d, 0.0, 1.0); return t * t * (3.0 - 2.0 * t);
+}
+vec2 sstep(vec2 a, vec2 b, vec2 x) {
+  vec2 d = b - a; d = vec2(abs(d.x) < 1e-6 ? 1e-6 : d.x, abs(d.y) < 1e-6 ? 1e-6 : d.y);
+  vec2 t = clamp((x - a) / d, 0.0, 1.0); return t * t * (3.0 - 2.0 * t);
+}
 float cocPx(float d) {
   return min(uAperture * uResScale * abs(d - uFocus) / max(d, 0.001), 700.0 * uResScale);
 }
@@ -105,7 +115,7 @@ void main() {
   vSizePx = sizePx;
   vCoc = coc;
   // fade out smoothly before crossing the near plane (no popping)
-  vEnergy = areaE * fogF(d) * smoothstep(uNear, uNear + 1.6, d);
+  vEnergy = areaE * fogF(d) * sstep(uNear, uNear + 1.6, d);
   vColor = iColor;
   vParams = iParams;
   vTiming = iTiming;
@@ -131,14 +141,14 @@ float hash21(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yz
 // Defocus helper: blur = CoC relative to the sharp shape size.
 float blurRel() { return vCoc / max(min(vSizePx.x, vSizePx.y), 1.0); }
 // Soft disk occupying the whole (blurred) quad: the bokeh of a point.
-float bokeh(vec2 q) { float r = length(q); return smoothstep(1.0, 0.82, r) * (0.75 + 0.25 * r); }
+float bokeh(vec2 q) { float r = length(q); return sstep(1.0, 0.82, r) * (0.75 + 0.25 * r); }
 ${shapes}
 void main() {
   float appear = clamp((uTime - vTiming.x) / max(vTiming.y, 0.0001), 0.0, 1.0);
   if (appear <= 0.0) discard;
   vec2 p = vQ * vScale; // shape coordinates: -1..1 covers the sharp element
   vec3 col = shade(p, vQ, appear);
-  col *= vEnergy * uGain;
+  col = max(col, vec3(0.0)) * vEnergy * uGain;
   if (max(col.r, max(col.g, col.b)) < 0.00025) discard;
   gl_FragColor = vec4(col, 1.0);
 }
@@ -255,7 +265,7 @@ void main() {
   gl_Position = vec4(s / (0.5 * uViewport) * c.w, c.z, c.w);
   vAcross = position.y;
   vT = atB ? tb : ta;
-  vCol = (atB ? iColB : iColA) * fogF(d) * smoothstep(uNear, uNear + 1.6, d);
+  vCol = (atB ? iColB : iColA) * fogF(d) * sstep(uNear, uNear + 1.6, d);
   vSharp = (core * 3.0) / w;
   vTiming = iTiming;
   vWidthPx = w;
@@ -287,8 +297,8 @@ void main() {
     pulse = exp(-ph * ph * 900.0) * 3.0 + exp(-ph * 30.0) * 0.4;
   }
   // fade towards growing tip
-  float tip = smoothstep(grow, grow - 0.03, vT);
-  vec3 col = vCol.rgb * vCol.a * prof * energy * (1.0 + pulse) * tip * uGain;
+  float tip = sstep(grow, grow - 0.03, vT);
+  vec3 col = max(vCol.rgb * vCol.a * prof * energy * (1.0 + pulse) * tip * uGain, vec3(0.0));
   if (max(col.r, max(col.g, col.b)) < 0.00025) discard;
   gl_FragColor = vec4(col, 1.0);
 }

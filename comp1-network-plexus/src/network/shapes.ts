@@ -17,17 +17,17 @@ const float PI = 3.14159265;
 
 vec3 shadeDot(vec2 p, vec2 q, float twinkle) {
   float b = blurRel();
-  float t = smoothstep(0.0, 1.4, b);
+  float t = sstep(0.0, 1.4, b);
   float r2 = dot(p, p);
   float sharp = exp(-r2 * 3.0) * 1.15 + exp(-r2 * 0.8) * 0.12;
   float sc = max(vScale.x, 1.0);
-  float soft = smoothstep(1.0, 0.55, length(q)) * 0.2 / (sc * sc);
+  float soft = sstep(1.0, 0.55, length(q)) * 0.2 / (sc * sc);
   return vColor.rgb * vColor.a * mix(sharp, soft, t) * twinkle;
 }
 
 vec3 shadeFlare(vec2 p, vec2 q, float appear) {
   float b = blurRel();
-  float t = smoothstep(0.0, 0.9, b);
+  float t = sstep(0.0, 0.9, b);
   float r = length(p);
   float pulse = 0.85 + 0.15 * sin(uTime * vParams.x + vParams.y);
   float core = exp(-r * r * 260.0) * 2.6;
@@ -45,15 +45,27 @@ vec3 shadeFlare(vec2 p, vec2 q, float appear) {
   return mix(sharpCol, softCol, t) * vColor.a * pulse * appear;
 }
 
-float arcMask(float r, float ang, float radius, float thick, float start, float span, float soft) {
-  float sigma = 0.5 * thick + soft;
-  float dr = r - radius;
-  float radial = (0.5 * thick / sigma) * exp(-(dr * dr) / (sigma * sigma) * 1.6);
-  if (span >= 0.999) return radial;
-  float angSoft = soft / max(radius, 0.01) / (2.0 * PI) + 0.002;
-  float x = fract(ang - start);
-  float m = smoothstep(0.0, angSoft, x) * smoothstep(span, span - angSoft, x);
-  return radial * m;
+// Distance to an arc (with round caps). Using a true distance field means the
+// glow follows the arc and wraps round its ends – no straight angular cut.
+float arcDist(vec2 p, float radius, float start, float span) {
+  float r = length(p);
+  if (span >= 0.999) return abs(r - radius);
+  float ang = fract(atan(p.y, p.x) / (2.0 * PI) - start);
+  if (ang <= span) return abs(r - radius);
+  float a0 = start * 2.0 * PI;
+  float a1 = (start + span) * 2.0 * PI;
+  vec2 e0 = radius * vec2(cos(a0), sin(a0));
+  vec2 e1 = radius * vec2(cos(a1), sin(a1));
+  return min(length(p - e0), length(p - e1));
+}
+
+float arcShape(vec2 p, float radius, float thick, float start, float span, float soft) {
+  if (span <= 0.0005) return 0.0;
+  float d = arcDist(p, radius, start, span);
+  float h = 0.5 * thick;
+  float core = sstep(h + soft, max(h - soft, 0.0), d) * (h / (h + soft));
+  float glow = exp(-d / (0.035 + soft)) * 0.1;
+  return core + glow;
 }
 
 vec3 shadeRing(vec2 p, vec2 q, float appear) {
@@ -62,13 +74,13 @@ vec3 shadeRing(vec2 p, vec2 q, float appear) {
   float soft = px * 0.75 + b * 0.42;
   float r = length(p);
   float ang = atan(p.y, p.x) / (2.0 * PI);
-  float e = smoothstep(0.0, 1.0, appear);
+  float e = sstep(0.0, 1.0, appear);
   float rot1 = uTime * vParams.x + vParams.y;
   float rot2 = -uTime * vParams.x * 0.6 + vParams.z;
   float v = 0.0;
-  v += arcMask(r, ang, 0.56, 0.11, rot1, 0.74 * e, soft) * 1.25;
-  v += arcMask(r, ang, 0.76, 0.055, rot2, 0.46 * e, soft) * 1.1;
-  v += arcMask(r, ang, 0.9, 0.014, 0.0, 1.0, soft) * 0.35 * e;
+  v += arcShape(p, 0.56, 0.1, rot1, 0.74 * e, soft) * 1.05;
+  v += arcShape(p, 0.76, 0.05, rot2, 0.46 * e, soft) * 0.95;
+  v += arcShape(p, 0.9, 0.014, 0.0, 1.0, soft) * 0.4 * e;
   // small tick dots on the outer circle
   for (int i = 0; i < 3; i++) {
     float ta = vParams.w + float(i) * 0.31 + uTime * 0.03;
@@ -76,13 +88,12 @@ vec3 shadeRing(vec2 p, vec2 q, float appear) {
     float s = 0.035 + soft;
     v += exp(-dot(p - c, p - c) / (s * s)) * (0.035 / s) * e;
   }
-  float glow = exp(-abs(r - 0.6) * 9.0) * 0.06 * e;
-  return vColor.rgb * vColor.a * (v + glow);
+  return vColor.rgb * vColor.a * v;
 }
 
 float boxMask(vec2 p, vec2 hsz, vec2 soft) {
   vec2 d = abs(p) - hsz;
-  vec2 m = smoothstep(soft, -soft, d);
+  vec2 m = sstep(soft, -soft, d);
   return m.x * m.y;
 }
 
@@ -90,8 +101,8 @@ vec3 shadePanel(vec2 p, vec2 q, float appear) {
   vec2 pxu = 2.0 / max(vSizePx, vec2(1.0));
   vec2 soft = pxu * 0.6 + vec2(vCoc) / max(vSizePx, vec2(1.0)) * 0.9;
   float b = blurRel();
-  float t = smoothstep(0.0, 0.5, b);
-  float wipe = smoothstep(-1.0 + 2.2 * appear, -1.0 + 2.2 * appear - 0.15, p.x);
+  float t = sstep(0.0, 0.5, b);
+  float wipe = sstep(-1.0 + 2.2 * appear, -1.0 + 2.2 * appear - 0.15, p.x);
   float box = boxMask(p, vec2(1.0), soft);
   float seed = vParams.y;
   float rows = vParams.x;
@@ -104,8 +115,8 @@ vec3 shadePanel(vec2 p, vec2 q, float appear) {
     float len = 0.35 + 0.6 * hash11(seed * 13.1 + float(i) * 7.7);
     len *= 0.75 + 0.25 * sin(uTime * 1.3 + seed + float(i));
     float x0 = -0.82;
-    float lx = smoothstep(x0 - soft.x, x0 + soft.x, p.x) * smoothstep(x0 + 1.64 * len + soft.x, x0 + 1.64 * len - soft.x, p.x);
-    float ly = smoothstep(th + soft.y, th - soft.y, abs(p.y - fy));
+    float lx = sstep(x0 - soft.x, x0 + soft.x, p.x) * sstep(x0 + 1.64 * len + soft.x, x0 + 1.64 * len - soft.x, p.x);
+    float ly = sstep(th + soft.y, th - soft.y, abs(p.y - fy));
     lines += lx * ly * (i == 0 ? 1.0 : 0.75);
   }
   float avgLines = 0.22;
@@ -125,11 +136,11 @@ vec3 shadeBars(vec2 p, vec2 q, float appear) {
     float h = 0.25 + 0.75 * hash11(vParams.y * 3.3 + float(i) * 1.7);
     h *= (0.7 + 0.3 * sin(uTime * 2.2 + float(i) * 1.1 + vParams.y)) * appear;
     float top = -1.0 + 2.0 * h;
-    float bx = smoothstep(0.075 + soft.x, 0.075 - soft.x, abs(p.x - cx));
-    float by = smoothstep(-1.0 - soft.y, -1.0 + soft.y, p.y) * smoothstep(top + soft.y, top - soft.y, p.y);
+    float bx = sstep(0.075 + soft.x, 0.075 - soft.x, abs(p.x - cx));
+    float by = sstep(-1.0 - soft.y, -1.0 + soft.y, p.y) * sstep(top + soft.y, top - soft.y, p.y);
     v += bx * by;
   }
-  float base = smoothstep(0.03 + soft.y, 0.03 - soft.y, abs(p.y + 1.0)) * boxMask(p, vec2(1.0, 1.2), soft);
+  float base = sstep(0.03 + soft.y, 0.03 - soft.y, abs(p.y + 1.0)) * boxMask(p, vec2(1.0, 1.2), soft);
   float sc = max(vScale.x * vScale.y, 1.0);
   return vColor.rgb * vColor.a * (v * 0.9 + base * 0.6) / pow(sc, 0.4);
 }

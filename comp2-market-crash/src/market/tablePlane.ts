@@ -33,6 +33,10 @@ uniform float uSeed;
 uniform float uNearFade;
 varying vec2 vUv;
 varying float vD;
+float sstep(float a, float b, float x) {
+  float d = b - a; d = abs(d) < 1e-6 ? 1e-6 : d;
+  float t = clamp((x - a) / d, 0.0, 1.0); return t * t * (3.0 - 2.0 * t);
+}
 void main() {
   float appear = clamp((uTime - uTiming.x) / max(uTiming.y, 0.001), 0.0, 1.0);
   if (uTiming.w > 0.0) appear *= 1.0 - clamp((uTime - uTiming.z) / uTiming.w, 0.0, 1.0);
@@ -47,12 +51,12 @@ void main() {
   c += texture2D(uTex, uv - vec2(o.x, o.y * 0.3), bias).rgb * 0.18;
   c += texture2D(uTex, uv + vec2(-o.x * 0.3, o.y), bias).rgb * 0.18;
   c += texture2D(uTex, uv - vec2(-o.x * 0.3, o.y), bias).rgb * 0.18;
-  float edge = smoothstep(0.0, 0.04, vUv.x) * smoothstep(1.0, 0.96, vUv.x)
-             * smoothstep(0.0, 0.05, vUv.y) * smoothstep(1.0, 0.95, vUv.y);
-  float fog = exp(-vD / uFogDist) * smoothstep(uNearFade * 0.45, uNearFade, vD);
+  float edge = sstep(0.0, 0.04, vUv.x) * sstep(1.0, 0.96, vUv.x)
+             * sstep(0.0, 0.05, vUv.y) * sstep(1.0, 0.95, vUv.y);
+  float fog = exp(-vD / uFogDist) * sstep(uNearFade * 0.45, uNearFade, vD);
   float flick = 0.94 + 0.06 * sin(uTime * 13.0 + uSeed * 10.0);
   vec3 col = c.r * uTint * uIntensity * edge * fog * appear * flick * uGain;
-  gl_FragColor = vec4(col, 1.0);
+  gl_FragColor = vec4(max(col, vec3(0.0)), 1.0);
 }
 `;
 

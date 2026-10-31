@@ -70,8 +70,8 @@ const SceneContent: React.FC<{ palette: NetworkPalette }> = ({ palette }) => {
         uniform float uFade;
         vec3 grade(vec3 c, vec2 uv) {
           vec2 d = (uv - 0.5) * vec2(1.25, 1.0);
-          float vig = 1.0 - smoothstep(0.35, 0.95, length(d)) * 0.6;
-          return c * vig * uFade * 1.32;
+          float vig = 1.0 - smoothstep(0.35, 0.95, length(d)) * 0.42;
+          return c * vig * uFade * 1.4;
         }`,
     });
     return { data, uniforms, group, bgUniforms, fade, post };

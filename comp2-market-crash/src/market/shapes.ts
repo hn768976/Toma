@@ -19,13 +19,13 @@ float fadeOut() {
 
 float boxM(vec2 p, vec2 hs, vec2 soft) {
   vec2 d = abs(p) - hs;
-  vec2 m = smoothstep(soft, -soft, d);
+  vec2 m = sstep(soft, -soft, d);
   return m.x * m.y;
 }
 
 vec3 shadeDot(vec2 p, vec2 q) {
   float b = blurRel();
-  float t = smoothstep(0.0, 1.4, b);
+  float t = sstep(0.0, 1.4, b);
   float r2 = dot(p, p);
   float sharp = exp(-r2 * 3.0) * 1.15 + exp(-r2 * 0.8) * 0.12;
   float sc = max(vScale.x, 1.0);
@@ -39,7 +39,7 @@ vec3 shadeFlare(vec2 p, vec2 q) {
   vec2 c = vec2(p.x * aspect, p.y);
   float r = length(c);
   float b = blurRel();
-  float t = smoothstep(0.0, 1.0, b);
+  float t = sstep(0.0, 1.0, b);
   float flick = 0.88 + 0.12 * sin(uTime * vParams.x + vParams.y) * sin(uTime * vParams.x * 0.37 + 1.7);
   float core = exp(-r * r * 90.0) * 2.6;
   float glow = exp(-r * r * 10.0) * 0.8;
@@ -51,7 +51,7 @@ vec3 shadeFlare(vec2 p, vec2 q) {
   float streak = exp(-p.y * p.y * 900.0) * exp(-abs(p.x) * 2.2) * 0.55 * vParams.w;
   vec3 hot = mix(vColor.rgb, vec3(1.0, 0.92, 0.8), 0.75);
   // window so the halo/streak never get clipped by the quad edges
-  float win = smoothstep(1.0, 0.72, abs(p.y)) * smoothstep(1.0, 0.6, abs(p.x));
+  float win = sstep(1.0, 0.72, abs(p.y)) * sstep(1.0, 0.6, abs(p.x));
   vec3 sharpCol = (hot * core + vColor.rgb * (glow + halo + rays + streak)) * win;
   float sc = max(vScale.y, 1.0);
   vec3 softCol = (hot * 0.5 + vColor.rgb) * bokeh(q) * 0.35 / (sc * sc);
@@ -96,11 +96,11 @@ vec3 shadeBurst(vec2 p, vec2 q, float appear) {
     float k = 11.0 + fi * 6.0;
     n += pow(abs(cos(a * k + vParams.y + fi * 1.3)), 120.0 + fi * 80.0);
   }
-  float expand = smoothstep(0.0, 1.0, appear);
+  float expand = sstep(0.0, 1.0, appear);
   float len = 0.25 + 0.75 * expand;
-  float rays = n * smoothstep(len, len * 0.3, r) * smoothstep(0.02, 0.1, r);
+  float rays = n * sstep(len, len * 0.3, r) * sstep(0.02, 0.1, r);
   float core = exp(-r * r * 60.0) * 1.5;
-  float v = (rays * 0.9 + core) * (1.0 - smoothstep(0.0, 1.0, b));
+  float v = (rays * 0.9 + core) * (1.0 - sstep(0.0, 1.0, b));
   return vColor.rgb * vColor.a * v * uFlareGain;
 }
 

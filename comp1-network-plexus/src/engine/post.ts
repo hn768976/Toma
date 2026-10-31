@@ -59,7 +59,7 @@ void main() {
   c += texture2D(tBloomA, vUv).rgb * uBloomA + texture2D(tBloomB, vUv).rgb * uBloomB;
   c = grade(c, vUv);
   float d = ign(gl_FragCoord.xy + floor(fract(uTime * 3.7) * 64.0)) - 0.5;
-  c += d / 255.0;
+  c += d * 1.5 / 255.0; // ~1.5 LSB triangular-ish dither: survives H.264 better
   gl_FragColor = vec4(c, 1.0);
 }
 `;

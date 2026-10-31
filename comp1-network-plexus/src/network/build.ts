@@ -198,11 +198,13 @@ export const buildNetworkScene = (
     if (s < 1) s = 1 - Math.pow(1 - s, 1.15);
     const pos = camAtIndex(s);
     // camera index k corresponds to hub k-1; look ~0.7 hub ahead
-    const target = hubAtIndex(s - 1 + 0.72).add(
+    // look slightly past the next hub and off to the side so hubs sit
+    // off-centre and drift across frame (often two hubs in view)
+    const target = hubAtIndex(s - 1 + 0.9).add(
       new THREE.Vector3(
-        Math.sin(t * 0.7) * 1.2,
-        Math.cos(t * 0.53) * 0.8,
-        Math.sin(t * 0.41) * 1.0,
+        Math.sin(t * 0.45 + 0.8) * 3.2,
+        Math.cos(t * 0.37) * 1.8,
+        Math.sin(t * 0.29 + 2.0) * 2.4,
       ),
     );
     rawPos.push(pos);
@@ -268,7 +270,7 @@ export const buildNetworkScene = (
       minPx: 6,
     });
     // sparkle cluster
-    const nSpark = rng.int(110, 160);
+    const nSpark = rng.int(170, 230);
     for (let k = 0; k < nSpark; k++) {
       const o = new THREE.Vector3(
         rng.gauss(),
@@ -375,7 +377,7 @@ export const buildNetworkScene = (
     }
     // HUD ring
     if (i === 0 || rng.chance(0.85)) {
-      const sz = rng.range(4.3, 5.4);
+      const sz = rng.range(3.7, 4.7);
       billboards.push({
         pos: v(h),
         size: [sz, sz],
@@ -398,13 +400,13 @@ export const buildNetworkScene = (
       const off = new THREE.Vector3(u[0], u[1] * 0.6, u[2])
         .normalize()
         .multiplyScalar(rng.range(2.5, 4.4));
-      const big = rng.chance(0.5);
+      const big = rng.chance(0.62);
       const w = big ? rng.range(2.6, 3.6) : rng.range(1.2, 1.8);
       const hh = big ? rng.range(0.9, 1.3) : rng.range(0.28, 0.45);
       billboards.push({
         pos: v(h.clone().add(off)),
         size: [w, hh],
-        color: col(P.panel, big ? 1.0 : 1.2),
+        color: col(P.panel, big ? 1.35 : 1.5),
         kind: KIND.panel,
         params: [big ? rng.int(3, 6) : rng.int(1, 3), rng.range(0, 50), 0, 0],
         timing: [ap + 0.6 + rng.range(0, 0.5), 0.5, 0, 0],

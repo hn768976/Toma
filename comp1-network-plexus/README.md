@@ -46,7 +46,7 @@ Equivalent raw CLI calls:
 ```bash
 npx remotion render NetworkPlexus-V1 out/NetworkPlexus-V1-4K.mp4
 npx remotion ffmpeg -i out/NetworkPlexus-V1-4K.mp4 -vf scale=1920:1080:flags=lanczos \
-  -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r 30 -movflags +faststart -an \
+  -c:v libx264 -preset slow -crf 16 -x264-params aq-mode=3 -pix_fmt yuv420p -r 30 -movflags +faststart -an \
   out/NetworkPlexus-V1-1080p.mp4
 ```
 
