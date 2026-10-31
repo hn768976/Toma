@@ -172,6 +172,10 @@ void main() {
     col += GC.rgb * m * G.w * uSunPow;
   }
 
+  // measured light curve applied in linear light *before* the shoulder, so the
+  // blown-out sun stays clipped white (as in the reference) while the rest dims
+  col *= pow(uExposure, 2.2);
+
   // ---------- tone: soft shoulder, highlights roll off to white ----------
   float mx = max(max(col.r, col.g), col.b);
   col = mix(col, vec3(mx), smoothstep(0.9, 3.0, mx) * 0.85);
@@ -181,7 +185,7 @@ void main() {
   float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
   col = max(mix(vec3(lum), col, 1.18), 0.0);
 
-  vec3 srgb = toSRGB(col) * uExposure;
+  vec3 srgb = toSRGB(col);
   float g = hash12(gl_FragCoord.xy + fract(uFrame * 0.6180339) * 917.0) - 0.5;
   srgb += g * (2.4 / 255.0);
   outColor = vec4(clamp(srgb, 0.0, 1.0), 1.0);
