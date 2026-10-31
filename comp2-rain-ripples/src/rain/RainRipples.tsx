@@ -23,8 +23,8 @@ export type RainProps = z.infer<typeof rainSchema>;
 const SIGMA = 0.3;
 // Relative strength of background chop vs. rain-drop rings (tuned against
 // the reference's regional colour/contrast statistics).
-const WAVE_GAIN = 0.022;
-const RIPPLE_GAIN = 2.0;
+const WAVE_GAIN = 0.024;
+const RIPPLE_GAIN = 2.1;
 
 type GLState = {
   gl: WebGL2RenderingContext;

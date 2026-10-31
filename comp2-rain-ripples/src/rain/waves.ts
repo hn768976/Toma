@@ -12,7 +12,7 @@ const mulberry32 = (seed: number) => {
   };
 };
 
-export const WAVE_COUNT = 18;
+export const WAVE_COUNT = 24;
 
 export const buildWaves = (seed: number) => {
   const rnd = mulberry32(seed * 7919 + 17);
@@ -22,19 +22,31 @@ export const buildWaves = (seed: number) => {
     const r1 = rnd();
     const r2 = rnd();
     const r3 = rnd();
-    // Band A (12 trains): short chop 0.0125…0.0375 frame widths travelling
-    // mostly along world-y, so the glints stretch across the frame.
-    // Band B (6 trains): longer swell 0.04…0.09, any direction, softer.
-    const bandA = i < 12;
-    const lambda = bandA
-      ? 0.0125 * Math.pow(3.0, i / 11) * (0.85 + 0.3 * r1)
-      : 0.04 * Math.pow(2.2, (i - 12) / 5) * (0.85 + 0.3 * r1);
-    const ang = bandA ? Math.PI / 2 + (r2 - 0.5) * 2.5 : r2 * Math.PI * 2;
-    const weight = bandA ? 1 : 0.45;
+    // Three bands:
+    //  0– 7 broad swell      0.035…0.10 W   strongest
+    //  8–15 medium chop      0.014…0.030 W  softened
+    // 16–23 fine capillaries 0.0065…0.013 W → sharp, fast glitter
+    const band = Math.floor(i / 8);
+    const j = (i % 8) / 7;
+    const lambda =
+      (band === 0
+        ? 0.035 * Math.pow(0.1 / 0.035, j)
+        : band === 1
+          ? 0.014 * Math.pow(0.03 / 0.014, j)
+          : 0.0065 * Math.pow(0.013 / 0.0065, j)) *
+      (0.9 + 0.2 * r1);
+    const weight = band === 0 ? 1.0 : band === 1 ? 0.9 : 0.1;
+    // swell: isotropic golden-angle fan; chop & capillaries: symmetric fan
+    // around world-y (crests run across frame → horizontally elongated
+    // glints, as in the reference) with no net diagonal bias.
+    const ang =
+      band === 0
+        ? i * 2.39996 + (r2 - 0.5) * 0.3
+        : Math.PI / 2 + (((i * 5) % 8) / 7 - 0.5) * 2.2 + (r2 - 0.5) * 0.15;
     const k = (Math.PI * 2) / lambda;
-    // deep-water-like dispersion, capped < ~0.8 rad/frame at 30 fps
-    // so wave crests never strobe (temporal aliasing).
-    const omega = 0.75 * Math.sqrt(k);
+    // dispersion; fine waves move fastest (glitter decorrelates quickly)
+    // but stay < 1.4 rad/frame at 30 fps so crests never strobe.
+    const omega = Math.min(1.1 * Math.sqrt(k), 42);
     a.set([Math.cos(ang), Math.sin(ang), k, omega], i * 4);
     b.set([weight * lambda, r3 * Math.PI * 2], i * 2);
   }

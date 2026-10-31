@@ -59,10 +59,10 @@ ${COMMON}
 in vec2 vUv;
 out vec4 outColor;
 
-const float CELL = 0.15;     // ripple spawn cell (frame widths)
-const float SLOT = 1.7;       // seconds per spawn slot
-const float LIFE = 1.15;      // ripple lifetime (s)
-const float PROB = 0.85;      // spawn probability per slot
+const float CELL = 0.17;     // ripple spawn cell (frame widths) ≥ max ring radius
+const float SLOT = 2.0;       // seconds per spawn slot
+const float LIFE = 1.6;       // ripple lifetime (s)
+const float PROB = 0.62;      // spawn probability per slot
 
 float vnoise3(vec3 p) {
   vec3 i = floor(p);
@@ -84,7 +84,7 @@ float vnoise3(vec3 p) {
 // parameters are precomputed on the CPU (see waves.ts), domain-warped so
 // they never look periodic, and band-limited by the pixel footprint so
 // sub-pixel detail fades instead of aliasing.
-const int NW = 18;
+const int NW = 24;
 uniform vec4 uWave[NW];   // dir.xy, k, omega
 uniform vec2 uWave2[NW];  // amplitude, phase
 
@@ -102,9 +102,10 @@ float waves(vec2 q, float fp) {
 }
 
 // Expanding rain-drop rings (several concentric crests) + impact crater.
-vec2 ripples(vec2 p, float fp) {
+vec3 ripples(vec2 p, float fp) {
   float h = 0.0;
   float crater = 0.0;
+  float sparkle = 0.0;
   vec2 cell = floor(p / CELL);
   for (int L = 0; L < 2; L++) {
     for (int oy = -1; oy <= 1; oy++) {
@@ -123,28 +124,34 @@ vec2 ripples(vec2 p, float fp) {
         float age = uTime - t0;
         if (age < 0.0 || age >= LIFE) continue;
         vec2 ctr = (vec2(c) + vec2(u01(h2), u01(h3))) * CELL;
-        float s = 0.62 + 0.38 * u01(h5); // drop size
-        float rMax = 0.125 * s;
+        float s = 0.6 + 0.4 * u01(h5); // drop size
+        float rMax = 0.15 * s;
         float d = length(p - ctr);
-        if (d > rMax + 0.025) continue;
-        float r = rMax * (1.0 - exp(-age / 0.33));
-        float lam = 0.016 * (0.8 + 0.4 * s) * (1.0 + 0.45 * age);
+        if (d > rMax + 0.02) continue;
+        // ring radius: fast launch (~0.19 W/s) decelerating (~0.05 W/s at 1 s)
+        float r = rMax * (1.0 - exp(-age / 0.8));
+        float lam = 0.0125 * (0.85 + 0.3 * s) * (1.0 + 0.35 * age);
         float x = d - r;
-        float env = x > 0.0 ? exp(-(x * x) / (0.16 * lam * lam)) : exp(x / (3.4 * lam));
-        float fade = smoothstep(LIFE, LIFE * 0.55, age) * smoothstep(0.0, 0.02, age);
-        float amp = 0.0075 * s * exp(-age / 0.55) * fade
-                    * mix(0.45, 1.0, smoothstep(0.0, 0.04, r)) / (1.0 + r / 0.08);
+        // thin packet: 1–3 visible crests around the expanding front
+        float env = exp(-(x * x) / (0.55 * lam * lam));
+        float born = smoothstep(0.04, 0.16, age);      // ring forms after the splash
+        float fade = smoothstep(LIFE, LIFE * 0.5, age);
+        float amp = 0.006 * s * born * fade * exp(-age / 0.9) / (1.0 + r / 0.1);
         float lod = smoothstep(2.0 * fp, 4.0 * fp, lam);
         h += amp * lod * env * cos(6.2831853 * x / lam);
-        // impact crater
-        float cw = 0.0085 * (0.6 + 0.6 * s);
-        float cr = exp(-age / 0.11) * exp(-(d * d) / (cw * cw));
-        h -= 0.012 * s * cr;
+        // impact: dark crater for ~0.15 s with a bright splash rim
+        float cw = 0.011 * (0.6 + 0.6 * s);
+        float q = d / cw;
+        float life = exp(-age / 0.13);
+        float cr = life * exp(-q * q);
+        h -= 0.006 * s * cr;
         crater += cr * s;
+        float rim = exp(-age / 0.07) * exp(-pow((q - 1.15) / 0.3, 2.0));
+        sparkle += rim * s;
       }
     }
   }
-  return vec2(h, crater);
+  return vec3(h, crater, sparkle);
 }
 
 void main() {
@@ -160,9 +167,12 @@ void main() {
   vec2 warp2 = vec2(vnoise3(vec3(p * 32.0, uTime * 0.6 + 4.0)),
                     vnoise3(vec3(p * 32.0 + 13.1, uTime * 0.6 + 9.0)));
   vec2 q = p + warp * 0.02 + warp2 * 0.0045;
-  vec2 rp = ripples(p + warp2 * 0.004, fp);
+  // rings use the un-warped position so they stay perfectly round
+  vec3 rp = ripples(p, fp);
   float h = uWaveGain * waves(q, fp) + uRippleGain * rp.x;
-  outColor = vec4(h, uRippleGain > 0.0 ? rp.y : 0.0, fp, 1.0);
+  float on = uRippleGain > 0.0 ? 1.0 : 0.0;
+  // r: height, g: crater mask, b: world units per pixel, a: splash sparkle
+  outColor = vec4(h, rp.y * on, fp, rp.z * on);
 }
 `;
 
@@ -219,11 +229,16 @@ void main() {
   }
   // impact craters read as dark pits
   float cr = clamp(c.g, 0.0, 1.0);
-  col = mix(col, vec3(0.02, 0.05, 0.16), 0.7 * cr);
+  col = mix(col, vec3(0.01, 0.03, 0.12), 0.85 * cr);
+  // splash sparkle on the crater rim
+  col = mix(col, vec3(0.97, 0.98, 1.0), clamp(c.a, 0.0, 1.0) * 0.9);
+  // sharp sun-glint lobe on the steepest light-facing facets
+  float glint = smoothstep(2.0, 3.2, sl / uSigma);
+  col = mix(col, vec3(1.0), glint * 0.85);
 
   // far-field sky reflection for low camera angles
   if (uFresnel > 0.0) {
-    float far = smoothstep(0.35, 1.0, vUv.y);
+    float far = smoothstep(0.35, 1.0, vUv.y) * (1.0 - 0.8 * smoothstep(0.35, 0.95, vUv.x));
     col = mix(col, max(col, vec3(0.72, 0.74, 0.86)), uFresnel * far * s);
   }
 

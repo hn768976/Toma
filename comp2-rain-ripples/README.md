@@ -23,12 +23,16 @@ the ~30 s reference clip.
 ## How it works
 
 * **Pass 1 (height field, RGBA32F):** each pixel is ray-cast onto the water
-  plane. Height = 18 dispersive wave trains (domain-warped, band-limited by
-  pixel footprint to prevent aliasing) + rain-drop ripples spawned
-  deterministically on a world-space grid (ring packet with decaying,
-  dispersing crests + impact crater).
+  plane. Height = 24 dispersive wave trains in three bands — broad isotropic
+  swell, medium chop fanned symmetrically about the view direction (soft,
+  horizontally elongated glints) and fine fast capillaries (glitter) —
+  domain-warped and band-limited by the pixel footprint to prevent
+  aliasing; plus rain-drop ripples spawned deterministically on a
+  world-space grid. Each drop: a dark impact crater with a bright splash
+  rim for ~0.15 s, then a perfectly round packet of 1–3 thin crests that
+  launches at ~0.19 W/s, decelerates, grows to ~0.15 W and fades over 1.6 s.
 * **Pass 2 (shading):** slope toward the sky light is normalised to an
-  ≈uniform value and mapped through `src/rain/colorField.json` — a
+  ≈uniform value (plus a narrow specular lobe for sharp sun glints) and mapped through `src/rain/colorField.json` — a
   luminance-quantile colour field measured from the reference (7 quantiles ×
   24×14 regions; the stock watermark area was replaced with a smooth fit).
   This reproduces the reference's regional colours and contrast.
