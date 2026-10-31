@@ -690,12 +690,13 @@ export const createGlobeScene =
       u.uExposure.value = exposure;
       // Tiny far-away glyphs lose ink to mip-mapping; compensate so the
       // continents read as solid bright dot fields like the reference.
-      u.uGain.value = 1 + 3.2 * smoothstep(1.15, 2.8, cam.distance);
+      u.uGain.value =
+        1 + 3.2 * smoothstep(config.exposureTuning.gainFrom, 2.8, cam.distance);
       // The reference's "glow burst" (~1.8-2.8 s): floating data panels flare
       // up while the camera is mid-way out of the dive.
       u.uPanelBoost.value =
         1 +
-        2.2 *
+        config.exposureTuning.panelBoost *
           smoothstep(1.45, 1.85, cam.distance) *
           (1 - smoothstep(2.5, 3.3, cam.distance));
       // Back hemisphere fades out entirely when we're skimming the surface.

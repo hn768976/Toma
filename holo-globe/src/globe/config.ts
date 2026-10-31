@@ -40,6 +40,12 @@ export type GlobeConfig = {
    * surface, like the reference; version 2 flies between them.
    */
   ringsCloseFrom?: number;
+  /**
+   * Brightness compensation for the dot field: surface gain ramps in
+   * between `gainFrom` and 2.8 radii; `panelBoost` scales the data-panel
+   * flare mid-way out of the dive.
+   */
+  exposureTuning: { gainFrom: number; panelBoost: number };
 };
 
 // Saturated electric blue / cyan on a navy-to-black field, sampled from the
@@ -143,6 +149,8 @@ const introExposure = track([
 export const GLOBE_V1: GlobeConfig = {
   palette: BLUE_PALETTE,
   spin: spinV1,
+  // Calibrated against the reference's luma curve (peak ~97 at 2 s).
+  exposureTuning: { gainFrom: 2.0, panelBoost: 0.6 },
   camera: (t) => ({
     distance: 1 + Math.exp(v1Distance(t)),
     azimuth: 0,
@@ -228,6 +236,7 @@ export const GLOBE_V2: GlobeConfig = {
   palette: BLUE_PALETTE,
   spin: (t) => 10 + rampedTurns(t),
   ringsCloseFrom: 3.0,
+  exposureTuning: { gainFrom: 1.15, panelBoost: 2.2 },
   camera: (t) => ({
     distance: 1 + Math.exp(v2Distance(t)),
     azimuth: v2Azimuth(t),
