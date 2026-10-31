@@ -57,9 +57,9 @@ export const PERIOD = 2.15;
 // the right and softer shells at the back.
 const SLOTS: Slot[] = [
   // top-left red
-  { x: 140, y: 146, radius: 66, color: "red", alt: "orange", phase: 0.02, intensity: 1, trail: 0.59, gravity: 14, decay: 0.75, life: 2.5 },
+  { x: 140, y: 146, radius: 66, color: "red", alt: "orange", phase: -0.14, intensity: 1, trail: 0.59, gravity: 14, decay: 0.75, life: 2.5 },
   // centre big orange (first shown as a golden flash)
-  { x: 384, y: 228, radius: 92, color: "orange", alt: "orange", phase: 0.05, intensity: 1.1, trail: 0.62, gravity: 12, decay: 0.7, life: 2.6 },
+  { x: 384, y: 228, radius: 92, color: "orange", alt: "orange", phase: -0.1, intensity: 1.1, trail: 0.62, gravity: 12, decay: 0.7, life: 2.6 },
   // top-right gold
   { x: 536, y: 146, radius: 62, color: "gold", alt: "amber", phase: 0.3, intensity: 1, trail: 0.59, gravity: 14, decay: 0.75, life: 2.5 },
   // left-mid gold
