@@ -18,12 +18,12 @@ export type Palette = {
 /** V1 — matches the reference: monochrome electric blue relief map on navy. */
 export const BLUE: Palette = {
   name: "blue",
-  oceanDeep: "#040d1c",
-  ocean: "#0e2a52",
-  landLow: "#0f4fae",
-  landHigh: "#2b86ec",
+  oceanDeep: "#0b1a2b",
+  ocean: "#1a3653",
+  landLow: "#0b66a6",
+  landHigh: "#33b0ee",
   landSpec: "#bfe2ff",
-  fog: "#123a72",
+  fog: "#173e62",
   background: "#061227",
   cityDot: "#e8f6ff",
   arcCore: "#f2fbff",
@@ -34,8 +34,8 @@ export const BLUE: Palette = {
 /** V2 — alternative palette: warm amber / gold relief on a deep umber ocean. */
 export const AMBER: Palette = {
   name: "amber",
-  oceanDeep: "#0b0503",
-  ocean: "#2a1409",
+  oceanDeep: "#150a05",
+  ocean: "#3a1d0e",
   landLow: "#74340c",
   landHigh: "#c27324",
   landSpec: "#ffe2b0",

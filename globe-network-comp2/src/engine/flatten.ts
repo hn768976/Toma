@@ -21,7 +21,7 @@ vec3 flattenPos(vec3 p) {
   float dl = length(d);
   float th = atan(dl, c);              // precise even for tiny angles
   vec3 dir = dl > 1e-7 ? d / dl : vec3(0.0);
-  return uCenter * (r - uCurv * th * th) + dir * th * r;
+  return uCenter * (r - uCurv * th * th) + dir * th;
 }
 float flatAngle(vec3 p) {
   if (uFlat < 0.5) return 0.0;

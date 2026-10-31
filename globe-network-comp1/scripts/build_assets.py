@@ -43,19 +43,46 @@ big = Image.new("L", (W * SS, H * SS), 0)
 dr = ImageDraw.Draw(big)
 def proj(c):
     return ((c[0] + 180.0) / 360.0 * W * SS, (90.0 - c[1]) / 180.0 * H * SS)
+def unwrap(ring):
+    # Rings that cross the antimeridian (e.g. Fiji, Chukotka) jump by ~360 deg in
+    # longitude; drawn naively they become full-width slivers. Unwrap them into
+    # continuous longitudes and draw at -360/0/+360 offsets (the canvas clips).
+    # Antarctica legitimately spans -180..180 via the pole and is left as-is.
+    if min(c[1] for c in ring) < -85:
+        return [ring]
+    out, off, prev = [], 0.0, ring[0][0]
+    for lo, la in ring:
+        if lo - prev > 180:
+            off -= 360
+        elif prev - lo > 180:
+            off += 360
+        out.append((lo + off, la))
+        prev = lo
+    if off == 0 and max(c[0] for c in out) - min(c[0] for c in out) < 180:
+        return [out]
+    return [[(lo + k, la) for lo, la in out] for k in (-360.0, 0.0, 360.0)]
+
 for f in gj["features"]:
     g = f["geometry"]
     polys = g["coordinates"] if g["type"] == "MultiPolygon" else [g["coordinates"]]
     for poly in polys:
-        dr.polygon([proj(c) for c in poly[0]], fill=255)
+        for r in unwrap(poly[0]):
+            dr.polygon([proj(c) for c in r], fill=255)
         for hole in poly[1:]:
-            dr.polygon([proj(c) for c in hole], fill=0)
+            for r in unwrap(hole):
+                dr.polygon([proj(c) for c in r], fill=0)
 land = np.asarray(big.resize((W, H), Image.LANCZOS), dtype=np.float32) / 255.0
 
 # Inland lakes (Great Lakes, Caspian, Victoria...) from the raster water mask
 water = Image.open(a.water).convert("L").resize((W, H), Image.BILINEAR)
 water = np.asarray(water.filter(ImageFilter.GaussianBlur(1.2)), dtype=np.float32) / 255.0
-land = np.clip(land * (1.0 - np.clip((water - 0.35) * 2.5, 0, 1) * (land > 0.99)), 0, 1)
+lakes = np.clip((water - 0.35) * 2.5, 0, 1) * (land > 0.99)
+# keep only large lakes (Great Lakes, Caspian, Victoria...): a morphological
+# opening removes the small ones that would read as dark specks on the map
+lk = Image.fromarray((lakes * 255).astype(np.uint8))
+lk = lk.filter(ImageFilter.MinFilter(11)).filter(ImageFilter.MaxFilter(11))
+lakes = np.minimum(lakes, np.asarray(lk.filter(ImageFilter.GaussianBlur(1.0)), dtype=np.float32) / 255.0)
+land = np.clip(land * (1.0 - lakes), 0, 1)
 # Bake shading helpers so the real-time shader needs a single fetch:
 #   R = land mask, G/B = coastline bevel gradient (east, north; 0.5 = flat),
 #   A = soft shadow the "raised" land casts onto the ocean (offset south-east)

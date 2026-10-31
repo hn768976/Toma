@@ -1,42 +1,33 @@
 import * as THREE from "three";
 import { DEG, Key, latLonToVec3, sampleTrack } from "./math";
 
-const DIST = 1.22;
-const TILT = 43;
-
-/** Camera keyframes (one per second, timed against the reference): [lat, lon, distance (earth radii), tilt (deg from nadir), heading (deg, 0 = north up)] */
+/**
+ * Camera keyframes, timed against the reference (eases in from rest over the US,
+ * pulls back while crossing the Atlantic, eases out over Australia):
+ * [lat, lon, distance (earth radii), tilt (deg from nadir), heading (deg, 0 = north up)]
+ */
 export const CAMERA_KEYS: Key[] = [
-  { t: 0.0, v: [33, -95, DIST, TILT, 0] },
-  { t: 1.0, v: [31, -92, DIST, TILT, 0] },
-  { t: 2.0, v: [28, -88, DIST, TILT, 2] },
-  { t: 3.0, v: [21, -80, DIST, TILT, 4] },
-  { t: 4.0, v: [17, -74, DIST, TILT, 6] },
-  { t: 5.0, v: [14, -68, DIST, TILT, 8] },
-  { t: 6.0, v: [12, -62, DIST, TILT, 10] },
-  { t: 7.0, v: [10, -55, DIST, TILT, 12] },
-  { t: 8.0, v: [8, -48, DIST, TILT, 14] },
-  { t: 9.0, v: [8, -40, DIST, TILT, 14] },
-  { t: 10.0, v: [9, -33, DIST, TILT, 12] },
-  { t: 11.0, v: [12, -23, DIST, TILT, 10] },
-  { t: 12.0, v: [20, -6, DIST, TILT, 6] },
-  { t: 13.0, v: [25, 10, DIST, TILT, 4] },
-  { t: 14.0, v: [26, 24, DIST, TILT, 2] },
-  { t: 15.0, v: [26, 36, DIST, TILT, 0] },
-  { t: 16.0, v: [27, 49, DIST, TILT, 0] },
-  { t: 17.0, v: [28, 62, DIST, TILT, 0] },
-  { t: 18.0, v: [28, 76, DIST, TILT, 0] },
-  { t: 19.0, v: [30, 87, DIST, TILT, 0] },
-  { t: 20.0, v: [30, 96, DIST, TILT, 0] },
-  { t: 21.0, v: [30, 105, DIST, TILT, 2] },
-  { t: 22.0, v: [28, 112, DIST, TILT, 4] },
-  { t: 23.0, v: [24, 117, DIST, TILT, 6] },
-  { t: 24.0, v: [19, 120, DIST, TILT, 6] },
-  { t: 25.0, v: [11, 118, DIST, TILT, 6] },
-  { t: 26.0, v: [5, 118, DIST, TILT, 6] },
-  { t: 27.0, v: [-3, 121, DIST, TILT, 6] },
-  { t: 28.0, v: [-10, 126, DIST, TILT, 4] },
-  { t: 29.0, v: [-14, 129, DIST, TILT, 2] },
-  { t: 30.0, v: [-17, 131, DIST, TILT, 0] },
+  { t: 0, v: [35, -95, 1.08, 40, -4] },
+  { t: 1.5, v: [34.4, -93.8, 1.1, 40, -4] },
+  { t: 3, v: [27.5, -86.5, 1.12, 41, -2] },
+  { t: 4.5, v: [19.5, -77.5, 1.28, 42, 2] },
+  { t: 6, v: [13, -66, 1.45, 43, 6] },
+  { t: 7.5, v: [8.5, -55, 1.6, 44, 10] },
+  { t: 9, v: [6.5, -44, 1.7, 44, 12] },
+  { t: 10.5, v: [8.5, -31, 1.75, 44, 12] },
+  { t: 12, v: [17, -13, 1.75, 44, 8] },
+  { t: 13.5, v: [27, 7, 1.75, 44, 4] },
+  { t: 15, v: [31, 27, 1.75, 44, 2] },
+  { t: 16.5, v: [32, 46, 1.75, 44, 0] },
+  { t: 18, v: [33, 65, 1.75, 44, 0] },
+  { t: 19.5, v: [35, 85, 1.75, 44, 0] },
+  { t: 21, v: [35, 99, 1.75, 44, 0] },
+  { t: 22.5, v: [30.5, 109, 1.75, 44, 2] },
+  { t: 24, v: [20.5, 115, 1.8, 44, 4] },
+  { t: 25.5, v: [10, 118, 1.85, 45, 6] },
+  { t: 27, v: [-2, 122, 1.92, 45, 5] },
+  { t: 28.5, v: [-12, 128, 1.98, 45, 4] },
+  { t: 30, v: [-14.5, 130.5, 2.0, 45, 4] },
 ];
 
 export type CameraState = {

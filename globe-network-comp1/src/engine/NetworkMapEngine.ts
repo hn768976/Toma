@@ -48,11 +48,11 @@ void main() {
   vec4 lm = texture2D(tLand, vUv);
   float land = lm.r;
   vec3 rel = texture2D(tRelief, vUv).rgb;
-  vec2 tn = (rel.gb * 2.0 - 1.0) * 0.9;
+  vec2 tn = (rel.gb * 2.0 - 1.0) * 1.6;
   // "extruded" coastline bevel
   tn -= (lm.gb * 2.0 - 1.0) * 0.9;
   // fine terrain grain so flat plains are not plastic-smooth
-  float g = vnoise(vUv * vec2(3000.0, 1500.0));
+  float g = vnoise(vUv * vec2(3000.0, 1500.0)) * 0.6 + vnoise(vUv * vec2(9000.0, 4500.0)) * 0.4;
 
   vec3 P = toFlatFrame(normalize(N + E * tn.x + Nn * tn.y), N);
   vec3 Nf = toFlatFrame(N, N);
@@ -66,8 +66,8 @@ void main() {
 
   float h = smoothstep(0.0, 0.55, rel.r);
   vec3 landCol = mix(cLandLow, cLandHigh, 0.35 + 0.65 * h);
-  landCol *= (0.5 + 0.55 * diff) * (0.6 + 0.4 * pool) * (0.94 + 0.06 * g);
-  landCol += cLandSpec * spec * 0.12 * pool;
+  landCol *= (0.46 + 0.72 * diff) * (0.62 + 0.42 * pool) * (0.88 + 0.16 * g);
+  landCol += cLandSpec * spec * 0.22 * pool;
 
   // ocean: dark, slightly lighter near the hotspot; land casts a soft shadow southwards
   vec3 oceanCol = mix(cOceanDeep, cOcean, 0.25 + 0.75 * pool * wrap);
@@ -213,8 +213,10 @@ export class NetworkMapEngine {
     L.forEach(([la, lo, b], i) => {
       latLonToVec3(la, lo, 1.0012, v);
       dp.set([v.x, v.y, v.z], i * 3);
-      ds[i] = 18 + 30 * b + rnd() * 6;
-      db[i] = 0.32 + 0.55 * b;
+      // reference look: fewer, larger, brighter lights that bloom
+      const keep = b > 0.42 || rnd() < 0.18;
+      ds[i] = keep ? 30 + 46 * b + rnd() * 8 : 0;
+      db[i] = keep ? 0.55 + 0.75 * b : 0;
       dseed[i] = rnd();
     });
     const dg = new THREE.BufferGeometry();
@@ -249,7 +251,7 @@ export class NetworkMapEngine {
       uniforms: {
         time: { value: 0 },
         resolution: { value: new THREE.Vector2(width, height) },
-        width: { value: 7.5 },
+        width: { value: 8.5 },
         pxScale: { value: this.pxScale },
         coreColor: { value: col(palette.arcCore) },
         glowColor: { value: col(palette.arcGlow) },
@@ -295,7 +297,7 @@ export class NetworkMapEngine {
       bloomA: 0.7,
       bloomB: 0.8,
       vignette: 0.32,
-      grain: 0.018,
+      grain: 0.022,
       exposure: 1.0,
       saturation: 1.0,
       lift: [0, 0, 0],
@@ -341,11 +343,12 @@ export class NetworkMapEngine {
       }
       const arrive = arc.start + this.arrivalTime(arc);
       const since = time - arrive;
-      if (since >= 0 && since < 1.4) {
+      if (since >= 0 && since < 3.5) {
         arcPoint(arc, 1, p);
-        const f = Math.exp(-since * 3.2);
+        // flash on arrival, then a glowing endpoint that slowly fades
+        const f = Math.exp(-since * 3.2) * 0.75 + 0.35 * (1 - since / 3.5);
         this.headPos.set([p.x, p.y, p.z], k * 3);
-        this.headSize[k] = 30 + 60 * f;
+        this.headSize[k] = 34 + 60 * f;
         this.headBright[k] = 0.9 * f * arc.intensity;
         k++;
       }
