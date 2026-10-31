@@ -52,9 +52,11 @@ to the render command for much faster renders.
      measured from the reference with an FFT of the grout lines. Grout lines
      are anti-aliased with `fwidth`, with a subtle per-tile tint variation.
   2. **Refraction.** The floor lookup is displaced by three octaves of
-     animated 3-D gradient noise, so grid lines wobble like in the reference.
-  3. **Caustics.** A net of thin bright lines (ridged 3-D noise), gathered into
-     drifting blotches by a low-frequency mask.
+     animated 3-D gradient noise. Most of the energy sits at the 0.4–1 tile
+     scale, so grid lines kink tile by tile like in the reference (about 12% of
+     a tile of displacement).
+  3. **Caustics.** A net of bright lines (ridged 3-D noise) plus fine granular
+     glints, gathered into drifting blotches by a low-frequency mask.
 - Version 2 ray-casts a perspective camera (52° FOV, pitched 52° → 46°)
   onto the floor plane. It adds distance-based depth tint and a Fresnel sky
   reflection that grows toward the top of frame.

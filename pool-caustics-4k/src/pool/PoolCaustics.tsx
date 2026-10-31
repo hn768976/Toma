@@ -71,9 +71,9 @@ export const PoolCaustics: React.FC<PoolCausticsProps> = (props) => {
 };
 
 const PALETTE = {
-  tileColor: srgb(24, 197, 253),
-  groutColor: srgb(100, 229, 255),
-  causticColor: srgb(185, 250, 255),
+  tileColor: srgb(17, 192, 252),
+  groutColor: srgb(88, 234, 255),
+  causticColor: srgb(140, 248, 255),
   skyColor: srgb(214, 240, 255),
 };
 

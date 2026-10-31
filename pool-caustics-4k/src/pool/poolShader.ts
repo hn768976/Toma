@@ -67,21 +67,26 @@ float gnoise(vec3 p) {
 // ------------------------------------------------------------ water ------
 // Refraction offset of the floor seen through the moving surface.
 vec2 refractOffset(vec2 w, float t) {
-  vec3 a = vec3(w * 0.42, t * 0.75);
-  vec3 b = vec3(w * 1.10 + 13.7, t * 1.10);
+  // Tile-scale wobble dominates (1-2 tile wavelengths), as in the reference.
+  vec3 a = vec3(w * 0.40, t * 0.84);
+  vec3 b = vec3(w * 0.85 + 13.7, t * 1.23);
+  vec3 c = vec3(w * 2.50 + 5.1, t * 1.90);
   vec2 o;
-  o.x = 0.60 * gnoise(a) + 0.26 * gnoise(b) + 0.16 * gnoise(vec3(w * 2.6, t * 1.6) + 3.1);
-  o.y = 0.60 * gnoise(a + 41.3) + 0.26 * gnoise(b + 17.9) + 0.16 * gnoise(vec3(w * 2.6, t * 1.6) + 9.4);
-  return o * 0.31;
+  o.x = 0.18 * gnoise(a) + 0.32 * gnoise(b) + 0.42 * gnoise(c);
+  o.y = 0.18 * gnoise(a + 41.3) + 0.32 * gnoise(b + 17.9) + 0.42 * gnoise(c + 9.4);
+  return o * 0.40;
 }
 
 // Net of thin bright caustic lines, gathered into drifting patches.
 float caustics(vec2 w, float t) {
   vec2 warp = vec2(gnoise(vec3(w * 0.35, t * 0.4)), gnoise(vec3(w * 0.35 + 7.0, t * 0.4)));
   vec2 cw = w + warp * 0.9;
-  float r1 = 1.0 - abs(gnoise(vec3(cw * 0.95, t * 1.05)));
-  float r2 = 1.0 - abs(gnoise(vec3(cw * 1.90 + 5.3, t * 1.35)));
-  float net = pow(r1, 9.0) * 0.85 + pow(r2, 11.0) * 0.55;
+  float r1 = 1.0 - abs(gnoise(vec3(cw * 0.75, t * 1.18)));
+  float r2 = 1.0 - abs(gnoise(vec3(cw * 1.45 + 5.3, t * 1.51)));
+  float net = pow(r1, 7.0) * 0.85 + pow(r2, 9.0) * 0.55;
+  // Granular sparkle / glints riding on the net.
+  float sp = 1.0 - abs(gnoise(vec3(cw * 3.4 + 2.7, t * 2.2)));
+  net += pow(sp, 14.0) * 0.55 * (0.4 + 0.6 * r1);
 
   // Patch mask: caustics bunch up in irregular blotches.
   float m = 0.60 * gnoise(vec3(w * 0.15, t * 0.20 + 2.0))
@@ -94,8 +99,8 @@ float caustics(vec2 w, float t) {
 // Tile mosaic: 0 inside a tile, 1 on the grout lines (anti-aliased).
 float grout(vec2 w) {
   vec2 g = abs(fract(w) - 0.5);           // 0.5 at tile edges
-  vec2 aa = fwidth(w) * 0.9;
-  float halfW = 0.055;                     // grout half-width in tiles
+  vec2 aa = fwidth(w) * 0.9 + 0.035;   // soft edges like the reference
+  float halfW = 0.070;                     // grout half-width in tiles
   vec2 line = smoothstep(0.5 - halfW - aa, 0.5 - halfW + aa, g);
   return max(line.x, line.y);
 }
@@ -108,7 +113,7 @@ vec3 floorColor(vec2 w, float t) {
   // Subtle per-tile tint variation (real mosaic tiles are never identical).
   float tileVar = hash12(floor(rw) + 0.5) - 0.5;
   vec3 tile = uTileColor * (1.0 + 0.035 * tileVar);
-  vec3 col = mix(tile, uGroutColor, gl * 0.78);
+  vec3 col = mix(tile, uGroutColor, gl * 0.85);
 
   // Slow, large-scale light variation through the water.
   float shade = gnoise(vec3(w * 0.05, t * 0.08 + 11.0));
