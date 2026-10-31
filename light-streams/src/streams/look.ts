@@ -11,8 +11,8 @@ export const LINE_SWATCHES: Swatch[] = [
   { color: [0.1, 0.45, 1.0], weight: 0.28, gain: [0.45, 0.9] }, // azure
   { color: [0.2, 0.8, 1.0], weight: 0.26, gain: [0.7, 1.3] }, // cyan
   { color: [0.55, 0.9, 1.0], weight: 0.07, gain: [0.8, 1.2] }, // ice white
-  { color: [0.38, 0.22, 1.0], weight: 0.06, gain: [0.5, 0.9] }, // violet
-  { color: [0.8, 0.25, 1.0], weight: 0.03, gain: [0.45, 0.8] }, // magenta
+  { color: [0.38, 0.22, 1.0], weight: 0.04, gain: [0.5, 0.9] }, // violet
+  { color: [0.8, 0.25, 1.0], weight: 0.02, gain: [0.45, 0.8] }, // magenta
 ];
 
 export const HOT_COLOR = new THREE.Color(0.85, 0.97, 1.0);
@@ -39,6 +39,7 @@ export type CameraState = {
   coc: number; // depth-of-field strength (1080p px)
   glow: [number, number]; // horizon glow position (uv)
   exposure: number; // tone-mapping exposure
+  dash?: number; // streak density multiplier along each line (default 1)
 };
 
 const v3 = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
@@ -65,18 +66,19 @@ export const cameraFor = (
         focus: 6.5,
         coc: 6,
         glow: [0.62, 0.8],
-        exposure: 2.0,
+        exposure: 2.5,
       };
     }
     return {
-      pos: mix3(v3(1.0, 5.6, 6.6), v3(0.85, 5.45, 6.3), k),
-      target: mix3(v3(1.9, 0.6, -2.4), v3(1.8, 0.6, -2.5), k),
+      pos: mix3(v3(0.6, 6.4, 6.8), v3(0.45, 6.25, 6.5), k),
+      target: mix3(v3(1.6, 0.4, -2.6), v3(1.5, 0.4, -2.7), k),
       fov: 50,
       roll: lerp(0.0, -0.01, k),
-      focus: 8.0,
-      coc: 9,
+      focus: 8.5,
+      coc: 6,
       glow: [0.3, 0.95],
-      exposure: 1.35,
+      exposure: 1.4,
+      dash: 2.2,
     };
   }
   // ---- Version 2: alternative camera movement --------------------------
@@ -86,13 +88,13 @@ export const cameraFor = (
     const e = ease(k);
     return {
       pos: v3(lerp(7.5, -6.0, e), lerp(-0.5, 0.4, e), lerp(9.5, 10.5, e)),
-      target: v3(lerp(-1.0, 3.5, e), lerp(3.4, 2.6, e), -3),
+      target: v3(lerp(-1.0, 3.5, e), lerp(2.4, 2.0, e), -3),
       fov: lerp(36, 44, e),
       roll: lerp(0.2, 0.1, e),
-      focus: lerp(9.5, 12.0, e),
-      coc: 9,
+      focus: lerp(8.0, 9.0, e),
+      coc: 6,
       glow: [lerp(0.35, 0.7, e), 0.8],
-      exposure: 1.9,
+      exposure: 2.3,
     };
   }
   // Overhead crane that orbits around the hairpin, staying high above it.
@@ -110,8 +112,9 @@ export const cameraFor = (
     fov: lerp(46, 52, e),
     roll: lerp(-0.25, 0.1, e),
     focus: lerp(12.0, 8.5, e),
-    coc: 9,
+    coc: 6,
     glow: [lerp(0.7, 0.4, e), 0.95],
-    exposure: 1.2,
+    exposure: 1.3,
+    dash: 2.2,
   };
 };

@@ -81,6 +81,7 @@ export class StreamRenderer {
         ...common,
         uCore: { value: 0.85 },
         uFlow: { value: FLOW_SPEED },
+        uDash: { value: 1 },
         uHot: { value: HOT_COLOR },
       },
       blending: THREE.AdditiveBlending,
@@ -324,6 +325,7 @@ export class StreamRenderer {
     this.lineMat.uniforms.uFocus.value = cam.focus;
     this.lineMat.uniforms.uCoc.value = cam.coc;
     this.lineMat.uniforms.uTime.value = t;
+    this.lineMat.uniforms.uDash.value = cam.dash ?? 1;
 
     this.renderer.setClearColor(0x000000, 1);
     this.renderer.setRenderTarget(this.rtScene);

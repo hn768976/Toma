@@ -31,7 +31,7 @@ const makeAcross = (lines: number, seed: number) => {
 /* bends over a crest, sweeping away to the right into the distance.        */
 /* ------------------------------------------------------------------------ */
 export const makeCrestShot = (): Shot => {
-  const lines = 440;
+  const lines = 560;
   const points = 220;
   const across = makeAcross(lines, 11);
   const length = 34;
@@ -115,13 +115,13 @@ export const makeCrestShot = (): Shot => {
 /* branch curls up into a rising wall on the right.                          */
 /* ------------------------------------------------------------------------ */
 export const makeFoldShot = (): Shot => {
-  const lines = 420;
-  const points = 300;
+  const lines = 520;
+  const points = 440;
   const across = makeAcross(lines, 23);
-  const R = 5.6; // centre-line radius of the hairpin
-  const W = 10.8; // ribbon width (inner radius = R - W/2)
+  const R = 8.3; // centre-line radius of the hairpin
+  const W = 15; // ribbon width (inner radius = R - W/2)
   const nearLen = 18;
-  const farLen = 12;
+  const farLen = 22;
   const arcLen = Math.PI * R;
   const total = nearLen + arcLen + farLen;
   const wallStart = 3.0; // x where the far branch starts to curl up
@@ -160,10 +160,10 @@ export const makeFoldShot = (): Shot => {
       const maxA = Math.PI * 0.47;
       const alpha = Math.min(d / wallR, maxA);
       const rest = Math.max(0, d - wallR * maxA);
-      x = wallStart + wallR * Math.sin(alpha) + rest * Math.sin(maxA);
-      y = wallR * (1 - Math.cos(alpha)) + rest * Math.cos(maxA);
+      x = wallStart + wallR * Math.sin(alpha) + rest * Math.cos(maxA);
+      y = wallR * (1 - Math.cos(alpha)) + rest * Math.sin(maxA);
       // the wall leans back a little and ripples
-      z -= y * 0.25;
+      z -= Math.min(y, 2.0) * 0.25;
       x += 0.25 * Math.sin(y * 0.8 + t * 0.8 + w * 0.6) * smoothstep(0, 1.5, y);
     }
     // gentle undulation of the whole sheet

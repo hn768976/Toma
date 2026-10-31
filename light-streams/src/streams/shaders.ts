@@ -75,6 +75,7 @@ void main() {
 export const LINE_FRAGMENT = /* glsl */ `
 uniform float uTime;
 uniform float uFlow;        // streak travel speed (u per second)
+uniform float uDash;        // streak density multiplier
 uniform vec3 uHot;          // colour streak heads blend towards
 
 varying float vSide;
@@ -95,7 +96,7 @@ void main() {
   float gain = vInfo.z;
 
   // travelling light streaks along the line
-  float x = u * (2.0 + 3.0 * fract(seed * 7.13)) - uTime * uFlow * (0.6 + 0.8 * fract(seed * 3.7)) + seed * 17.0;
+  float x = uDash * (u * (2.0 + 3.0 * fract(seed * 7.13)) - uTime * uFlow * (0.6 + 0.8 * fract(seed * 3.7))) + seed * 17.0;
   float s1 = 0.5 + 0.5 * sin(6.2831853 * x);
   float s2 = 0.5 + 0.5 * sin(6.2831853 * (x * 0.37 + seed * 3.1));
   float streak = 0.28 + 1.6 * pow(s1, 6.0) * (0.4 + 0.6 * s2) + 0.25 * s2;
