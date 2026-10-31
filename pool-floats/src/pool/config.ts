@@ -45,14 +45,14 @@ export const HEIGHT = 2160;
 export const RING_R = 1.0;
 export const RING_r = 0.44;
 /** Inflatables are slightly squashed: vertical scale of the tube. */
-export const RING_FLATTEN = 0.92;
+export const RING_FLATTEN = 0.88;
 /** Depth of the pool floor below the water surface. */
 export const POOL_DEPTH = 2.3;
 
 export const POOL_PALETTE: Omit<Palette, "floatA" | "floatB" | "floatC" | "seeds"> = {
   floorLit: [138, 203, 244],
   floorDark: [62, 160, 226],
-  shadow: [0, 132, 204],
+  shadow: [0, 118, 204],
   caustic: [236, 248, 255],
   waterTint: [70, 170, 225],
   sky: [205, 230, 255],
@@ -63,7 +63,7 @@ export const STRIPES_V1: SceneConfig = {
   camera: "static",
   palette: {
     ...POOL_PALETTE,
-    floatA: [245, 22, 52], // red
+    floatA: [246, 44, 74], // red
     floatB: [246, 244, 242], // white
     floatC: [0, 0, 0],
     seeds: [0, 0, 0],
@@ -80,7 +80,7 @@ export const STRIPES_V2: SceneConfig = {
   palette: {
     floorLit: [48, 196, 186],
     floorDark: [16, 140, 150],
-    shadow: [4, 82, 112],
+    shadow: [6, 100, 120],
     caustic: [255, 226, 160],
     waterTint: [20, 130, 140],
     sky: [255, 214, 170],
@@ -96,9 +96,9 @@ export const WATERMELON_V1: SceneConfig = {
   camera: "static",
   palette: {
     ...POOL_PALETTE,
-    floorLit: [168, 216, 243],
-    floorDark: [118, 190, 232],
-    shadow: [14, 152, 210],
+    floorLit: [180, 224, 248],
+    floorDark: [124, 198, 238],
+    shadow: [0, 138, 210],
     floatA: [252, 34, 52], // flesh
     floatB: [222, 236, 44], // rind (yellow-green)
     floatC: [18, 104, 66], // skin (green)

@@ -13,10 +13,6 @@ const easeInOut = (x: number) => {
   return c * c * (3 - 2 * c);
 };
 
-const easeInOutSine = (x: number) => {
-  const c = Math.min(1, Math.max(0, x));
-  return -(Math.cos(Math.PI * c) - 1) / 2;
-};
 
 export type RingPose = {
   position: THREE.Vector3;
@@ -24,22 +20,87 @@ export type RingPose = {
 };
 
 /**
- * Gentle floating motion measured from the references: a slow drift to the
- * right (~0.15 units over the clip), a ~3.6 s bob/pitch cycle, a slower roll
- * and a very slow spin.
+ * Smooth interpolation through [time, value] keyframes (cubic Hermite with
+ * Catmull-Rom style tangents, zero slope at both ends).
+ */
+const keyframes = (t: number, keys: [number, number][]): number => {
+  const n = keys.length;
+  if (t <= keys[0][0]) return keys[0][1];
+  if (t >= keys[n - 1][0]) return keys[n - 1][1];
+  const slope = (i: number) =>
+    i === 0 || i === n - 1 ? 0 : (keys[i + 1][1] - keys[i - 1][1]) / (keys[i + 1][0] - keys[i - 1][0]);
+  for (let i = 0; i < n - 1; i++) {
+    const [t0, v0] = keys[i];
+    const [t1, v1] = keys[i + 1];
+    if (t <= t1) {
+      const h = t1 - t0;
+      const u = (t - t0) / h;
+      const u2 = u * u;
+      const u3 = u2 * u;
+      return (
+        (2 * u3 - 3 * u2 + 1) * v0 +
+        (u3 - 2 * u2 + u) * h * slope(i) +
+        (-2 * u3 + 3 * u2) * v1 +
+        (u3 - u2) * h * slope(i + 1)
+      );
+    }
+  }
+  return keys[n - 1][1];
+};
+
+/** Vertical bob measured from the references (screen px at 432p, every 0.5 s). */
+const BOB_PX = [-5, -6, -4, 1, 3, 2, -1, -3, -3, 2, 6, 6, 3, 0, 0, 3, 3, 0, -3, -6, -6];
+const BOB_KEYS: [number, number][] = BOB_PX.map((px, i) => [i * 0.5, -px / 68]);
+
+/**
+ * Floating motion measured from the references (both clips share it):
+ * - drift: ~0.11 units to the right, mostly in the first 2.5 s, a plateau,
+ *   then a second small step around 5-6 s;
+ * - bob: irregular, ~3.5-4 s main cycle plus a faster component;
+ * - roll: level for the first 5 s, then the float rocks so its left side dips
+ *   (peak around 6.5-7 s) and slowly recovers towards the end.
  */
 export const ringPose = (t: number): RingPose => {
-  const drift = 0.17 * easeInOutSine(t / 7.5) - 0.085;
-  const bob = 0.018 * Math.sin((TAU * t) / 3.6 + 0.4);
-  const pitch = 0.05 * Math.sin((TAU * t) / 3.6 + 1.3);
-  const roll = 0.035 * Math.sin((TAU * t) / 5.2 + 0.2);
-  const yaw = 0.09 * (t / 10) + 0.02 * Math.sin((TAU * t) / 6.5);
+  const drift = keyframes(t, [
+    [0, -0.06],
+    [1.0, -0.05],
+    [2.5, -0.01],
+    [4.5, 0.0],
+    [5.5, 0.015],
+    [6.4, 0.002],
+    [7.3, -0.004],
+    [9.5, 0.018],
+    [10, 0.02],
+  ]);
+  const bob = keyframes(t, BOB_KEYS);
+  const r = (k: number) => ROLL_BASE + ROLL_PEAK * k;
+  const roll =
+    keyframes(t, [
+      [0, r(0)],
+      [4.8, r(0.02)],
+      [5.5, r(0.3)],
+      [6.1, r(0.72)],
+      [6.7, r(1.0)],
+      [7.1, r(0.98)],
+      [8.0, r(0.76)],
+      [9.0, r(0.53)],
+      [9.6, r(0.3)],
+      [10, r(0.22)],
+    ]) +
+    0.008 * Math.sin((TAU * t) / 2.3);
+  const pitch = 0.02 * Math.sin((TAU * t) / 3.7 + 0.8);
+  const yaw = 0.07 * (t / 10) + 0.015 * Math.sin((TAU * t) / 6.5);
 
-  const position = new THREE.Vector3(drift, 0.3 + bob, 0.02 * Math.sin((TAU * t) / 7));
+  const position = new THREE.Vector3(drift, RING_CENTER_Y + bob, 0.015 * Math.sin((TAU * t) / 7));
   const euler = new THREE.Euler(pitch, yaw, roll, "YXZ");
   const quaternion = new THREE.Quaternion().setFromEuler(euler);
   return { position, quaternion };
 };
+
+/** Resting height of the float's centre above the water surface. */
+const RING_CENTER_Y = 0.15;
+const ROLL_BASE = 0.045;
+const ROLL_PEAK = 0.27;
 
 export type CameraPose = {
   position: THREE.Vector3;
@@ -63,11 +124,11 @@ const sphericalCamera = (
 };
 
 /** Static camera matching the reference framing. */
-const STATIC_TARGET = new THREE.Vector3(-1.246, -0.45, -0.303);
-const STATIC_ELEVATION = 45.78;
+const STATIC_TARGET = new THREE.Vector3(-1.246, -0.45, -0.224);
+const STATIC_ELEVATION = 45.7;
 const STATIC_AZIMUTH = 0;
-const STATIC_DISTANCE = 8.546;
-const STATIC_FOV = 32;
+const STATIC_DISTANCE = 14.66;
+const STATIC_FOV = 18;
 
 export const cameraPose = (kind: CameraKind, t: number): CameraPose => {
   if (kind === "static") {
@@ -82,9 +143,9 @@ export const cameraPose = (kind: CameraKind, t: number): CameraPose => {
   // sweeps ~60 degrees around the float while descending to a low
   // three-quarter angle and pushing in.
   const p = easeInOut(t / 10);
-  const elevation = THREE.MathUtils.lerp(78, 36, p);
+  const elevation = THREE.MathUtils.lerp(78, 41, p);
   const azimuth = THREE.MathUtils.lerp(-38, 26, p);
-  const distance = THREE.MathUtils.lerp(10.4, 7.6, p);
+  const distance = THREE.MathUtils.lerp(10.4, 8.2, p);
   const target = new THREE.Vector3(
     THREE.MathUtils.lerp(0.0, -0.15, p),
     -0.35,

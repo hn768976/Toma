@@ -53,13 +53,13 @@ float aaStep(float edge, float x, float w) {
 }
 
 vec3 stripesAlbedo(float phi, float th, float wPhi, float wTh) {
-  const float N = 18.0;           // stripe pairs around the ring
+  const float N = 22.0;           // stripe pairs around the ring
   // Stripes are straight across the outer wall and sweep sideways by exactly
   // one stripe period over the top of the tube towards the hole (S-curve).
   // A whole period keeps the pattern seamless where th wraps at +-PI.
-  float g = smoothstep(0.0, 2.3, th);
-  float gx = clamp(th / 2.3, 0.0, 1.0);
-  float dg = 6.0 * gx * (1.0 - gx) / 2.3;
+  float g = smoothstep(-0.6, 2.9, th);
+  float gx = clamp((th + 0.6) / 3.5, 0.0, 1.0);
+  float dg = 6.0 * gx * (1.0 - gx) / 3.5;
   float s = phi / TAU * N - g;
   float w = (wPhi / TAU * N + wTh * dg) * 0.7 + 1e-4;
   w = min(w, 0.2);
@@ -91,8 +91,10 @@ vec3 watermelonAlbedo(float phi, float th, float wPhi, float wTh) {
   // wavy boundary between flesh and rind, above the outer equator so it reads from above
   float wave = 0.012 * sin(phi * 19.0 + 0.6);
   float zig = abs(fract(phi / TAU * 64.0) - 0.5) * 2.0;          // 0..1 triangle
-  float b1 = 0.42 + wave;                                         // flesh / rind
-  float b2 = b1 - 0.27 + 0.07 * zig + 0.02 * sin(phi * 7.0);       // rind / skin (zig-zag)
+  // outer wall: wide rind band; inner wall (hole): only a thin dark crescent low down
+  float outerness = smoothstep(-0.6, 0.4, cos(th));
+  float b1 = mix(-0.22, 0.45 + wave, outerness);                  // flesh / rind
+  float b2 = b1 - mix(0.1, 0.26, outerness) + 0.07 * zig * outerness + 0.02 * sin(phi * 7.0); // rind / skin
   float hw = aa * abs(cos(th)) + 0.004;
 
   // dark green skin with soft stripes
@@ -142,7 +144,7 @@ vec3 skyRadiance(vec3 dir) {
   vec3 below = uWaterTint * 0.9;
   vec3 c = up > 0.0 ? mix(horizon, zenith, pow(up, 0.6)) : mix(horizon, below, pow(-up, 0.5));
   float s = max(dot(dir, uSunDir), 0.0);
-  c += vec3(1.0, 0.97, 0.92) * (pow(s, 12.0) * 0.9 + pow(s, 90.0) * 2.5);
+  c += vec3(1.0, 0.97, 0.92) * (pow(s, 8.0) * 0.8 + pow(s, 40.0) * 0.9);
   return c;
 }
 
@@ -156,8 +158,8 @@ vec3 shadeFloat(vec3 albedo, vec3 N, vec3 V, float occl) {
   float fres = 0.05 + 0.95 * pow(1.0 - ndv, 5.0);
   vec3 env = skyRadiance(R);
   vec3 H = normalize(uSunDir + V);
-  float spec = pow(max(dot(N, H), 0.0), 220.0) * 1.6 * occl;
-  return diffuse + env * mix(0.018, 0.5, fres) + vec3(spec);
+  float spec = (pow(max(dot(N, H), 0.0), 50.0) * 0.3 + pow(max(dot(N, H), 0.0), 14.0) * 0.12) * occl;
+  return diffuse + env * mix(0.035, 0.55, fres) + vec3(spec);
 }
 
 vec3 toSRGB(vec3 c) {
@@ -251,7 +253,7 @@ vec3 waterNormal(vec2 p, float t) {
   for (int i = 0; i < NW; i++) {
     vec3 da = waveDirAmp(i);
     vec2 kw = waveKW(i);
-    float ph = dot(da.xy, p) * kw.x - kw.y * t * 2.2 + float(i) * 1.7;
+    float ph = dot(da.xy, p) * kw.x - kw.y * t * 3.2 + float(i) * 1.7;
     g += da.xy * da.z * kw.x * cos(ph);
   }
   return normalize(vec3(-g.x, 1.0, -g.y));
@@ -300,34 +302,39 @@ vec3 voronoi(vec2 x, float t) {
 
 // returns (line brightness, cell darkness)
 vec2 caustics(vec2 p, float t) {
-  vec2 warp = vec2(vnoise(p * 0.55 + vec2(t * 0.33, 3.1)), vnoise(p * 0.55 + vec2(7.3, -t * 0.27))) - 0.5;
+  vec2 warp = vec2(vnoise(p * 0.55 + vec2(t * 0.5, 3.1)), vnoise(p * 0.55 + vec2(7.3, -t * 0.42))) - 0.5;
   vec2 q = p * 1.9 + warp * 1.5;
-  vec3 a = voronoi(q, t * 2.9);
+  vec3 a = voronoi(q, t * 4.6);
   mat2 rot = mat2(0.8, -0.6, 0.6, 0.8);
-  vec3 b = voronoi(rot * q * 1.63 + vec2(4.2, 1.3), t * 3.7 + 2.0);
-  float wa = 0.075 + 0.06 * vnoise(q * 1.3 + t * 0.75);
-  float brk = smoothstep(0.25, 0.75, vnoise(q * 1.6 - t * 0.6));
+  vec3 b = voronoi(rot * q * 1.63 + vec2(4.2, 1.3), t * 5.9 + 2.0);
+  float wa = 0.09 + 0.07 * vnoise(q * 1.3 + t * 1.1);
+  float brk = smoothstep(0.25, 0.75, vnoise(q * 1.6 - t * 0.9));
   float la = exp(-pow(a.x / wa, 2.0)) * (0.35 + 0.65 * brk);
   float lb = exp(-pow(b.x / (wa * 0.8), 2.0)) * smoothstep(0.3, 0.8, vnoise(q * 2.3 + 5.0));
-  float glow = exp(-a.x / 0.2) * 0.22;
+  float glow = exp(-a.x / 0.22) * 0.3;
   float lines = max(la, lb * 0.45) + glow;
   float dark = smoothstep(0.06, 0.3, a.x) * smoothstep(0.25, 0.9, a.y) + 0.35 * smoothstep(0.1, 0.35, b.x) * step(0.6, b.y);
+  float blot = smoothstep(0.55, 0.85, vnoise(p * 0.8 + vec2(-t * 0.15, t * 0.1)));
+  dark = max(dark, blot * 0.9);
   return vec2(lines, dark);
 }
 
 /* ---------- float shadow on the floor ---------- */
-float ringShadow(vec3 start, vec3 dir) {
-  float res = 1.0;
+float ringShadow(vec3 start, vec3 dir, float maxT) {
+  // Penumbra centred on the true silhouette: march against a tube shrunk by W
+  // and fade over +-W, so the shadow (and its hole) keep their real size.
+  const float W = 0.045;
+  float dmin = 1e3;
   float t = 0.0;
-  for (int i = 0; i < 40; i++) {
+  for (int i = 0; i < 48; i++) {
     vec3 pl = (uRingInv * vec4(start + dir * t, 1.0)).xyz;
-    float d = sdTorus(pl);
-    res = min(res, 9.0 * d / max(t, 0.05) + 0.0);
-    if (d < 0.002) return 0.0;
-    t += clamp(d, 0.02, 0.35);
-    if (t > 4.0) break;
+    float d = sdTorus(pl) + W;
+    dmin = min(dmin, d);
+    if (d < 0.001) return 0.0;
+    t += clamp(d, 0.012, 0.3);
+    if (t > maxT) break;
   }
-  return clamp(res, 0.0, 1.0);
+  return smoothstep(0.0, 2.0 * W, dmin);
 }
 
 vec3 floorColor(vec3 F, float t) {
@@ -352,8 +359,8 @@ vec3 floorColor(vec3 F, float t) {
   if (length(S.xz - ringC.xz) < RING_R + RING_r + 0.6) {
     // underwater part of the ray first, then the air part
     vec3 up = -Lw;
-    float sUnder = ringShadow(S - up * 0.5, up);
-    float sAir = ringShadow(S, Ld);
+    float sUnder = ringShadow(S - up * 0.5, up, 0.5);
+    float sAir = ringShadow(S, Ld, 4.0);
     sh = min(sUnder, sAir);
   }
   return mix(uShadow, lit, sh);
