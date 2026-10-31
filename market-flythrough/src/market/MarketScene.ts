@@ -505,13 +505,13 @@ export const createMarketScene =
     glow.renderOrder = -1;
     camera.add(glow);
     const glowLevel = track([
-      [0, 0.6],
-      [3, 0.54],
-      [6, 0.5],
-      [8.5, 0.53],
-      [10.7, 0.68],
-      [12, 0.78],
-      [13.34, 0.74],
+      [0, 0.46],
+      [3, 0.39],
+      [6, 0.35],
+      [8.5, 0.38],
+      [10.7, 0.53],
+      [12, 0.64],
+      [13.34, 0.6],
     ]);
 
     const target = new WebGLRenderTarget(bufW, bufH, {
@@ -523,7 +523,7 @@ export const createMarketScene =
     composer.setSize(width, height);
     composer.addPass(new RenderPass(scene, camera));
     composer.addPass(
-      new UnrealBloomPass(new Vector2(bufW, bufH), 0.75, 0.6, 0.2),
+      new UnrealBloomPass(new Vector2(bufW, bufH), 0.62, 0.6, 0.22),
     );
     composer.addPass(new OutputPass());
 
