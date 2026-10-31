@@ -106,7 +106,7 @@ export const MoonlitSky: React.FC<MoonlitSkyProps> = ({ shotId, palette }) => {
     const pose = shot.pose(t, durationInFrames / fps);
 
     const cam = s.camera;
-    cam.fov = shot.fovY;
+    cam.fov = pose.fovY;
     cam.aspect = width / height;
     cam.rotation.set(pose.pitch, -pose.yaw, -pose.roll);
     cam.updateProjectionMatrix();
@@ -125,7 +125,7 @@ export const MoonlitSky: React.FC<MoonlitSkyProps> = ({ shotId, palette }) => {
     su.uCamWorld.value.copy(cam.matrixWorld);
     su.uMoonDir.value.copy(moonDir);
     su.uMoonRadius.value = palette.moonRadiusDeg * deg;
-    su.uPixelAngle.value = (2 * Math.tan((shot.fovY * deg) / 2)) / height;
+    su.uPixelAngle.value = (2 * Math.tan((pose.fovY * deg) / 2)) / height;
     su.uTime.value = t;
     su.uZenith.value.set(palette.zenith);
     su.uHorizon.value.set(palette.horizon);

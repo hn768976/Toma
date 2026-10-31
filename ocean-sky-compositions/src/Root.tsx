@@ -41,7 +41,7 @@ export const RemotionRoot: React.FC = () => {
         fps={FPS}
         width={WIDTH}
         height={HEIGHT}
-        defaultProps={{ shotId: "locked" as const, palette: MOONLIGHT }}
+        defaultProps={{ shotId: "push-in" as const, palette: MOONLIGHT }}
       />
       <Composition
         id="MoonSky-V2"
@@ -50,7 +50,7 @@ export const RemotionRoot: React.FC = () => {
         fps={FPS}
         width={WIDTH}
         height={HEIGHT}
-        defaultProps={{ shotId: "banking-turn" as const, palette: MOONLIGHT }}
+        defaultProps={{ shotId: "pull-out" as const, palette: MOONLIGHT }}
       />
     </>
   );

@@ -6,8 +6,8 @@ Two procedural compositions, each in two versions. All four are authored at **38
 |------------------|---------|---------|----------|------------|
 | `Underwater-V1`  | Sun rays under the ocean surface | Matches the reference (clear ocean blue) | 300 frames / 10.000 s | WebGL 2 fragment shader |
 | `Underwater-V2`  | Same scene | Alternative **colour palette**: emerald lagoon, warm golden light shafts | 300 frames / 10.000 s | WebGL 2 fragment shader |
-| `MoonSky-V1`     | Full moon in a starry night sky | Reference framing (near-locked view, moon low right); clouds removed on request | 240 frames / 8.000 s | Three.js (custom sky/moon shader) |
-| `MoonSky-V2`     | Same scene | Alternative **camera move**: a banking turn to the right while tilting down, so the moon swings from the right edge toward centre and the horizon rolls | 240 frames / 8.000 s | Three.js (custom sky/moon shader) |
+| `MoonSky-V1`     | Full moon in a starry night sky | Reference framing (moon low right) with a **slow push in** towards the moon; clouds removed on request | 240 frames / 8.000 s | Three.js (custom sky/moon shader) |
+| `MoonSky-V2`     | Same scene | Alternative **camera move**: a **slow pull out** combined with a banking turn to the right, so the moon shrinks and swings from the right edge toward centre while the horizon rolls | 240 frames / 8.000 s | Three.js (custom sky/moon shader) |
 
 Everything is generated procedurally, so there are no external image or video assets.
 
@@ -49,5 +49,5 @@ src/
   lib/constants.ts         size, fps, durations
   underwater/              WebGL 2 shader scene + palettes (V1 ocean, V2 lagoon)
   sky/                     Three.js scene: night-sky/moon shader, palette,
-                           camera paths (V1 locked, V2 banking turn)
+                           camera paths (V1 push in, V2 pull out)
 ```
