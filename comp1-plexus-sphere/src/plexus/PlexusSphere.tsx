@@ -11,33 +11,46 @@ export const plexusSchema = z.object({
 
 export type PlexusProps = z.infer<typeof plexusSchema>;
 
-// Layout and motion measured from the reference by tracking ~380 vertex
-// dots across frames and least-squares fitting a rigid rotation:
-// centre ≈ (0.898 W, 0.486 H), vertex radius ≈ 0.345 W, one full turn per
-// clip about an axis tilted strongly toward the camera.
-const CENTER_X = 0.905;
-const CENTER_Y = 0.458;
-const RADIUS = 0.345; // of width
-const AXIS: Vec3 = (() => {
-  const a: Vec3 = [0.5, -0.12, -0.86];
-  const l = Math.hypot(a[0], a[1], a[2]);
-  return [a[0] / l, a[1] / l, a[2] / l];
-})();
+// Layout and motion measured from the reference by tracking vertex dots
+// and least-squares fitting rigid rotations over sliding 2 s windows:
+// the instantaneous spin axis precesses once per clip at a constant rate
+// |ω| ≈ 0.0149 rad/frame. That is exactly a composite of two full turns per
+// clip: a clockwise roll about the view axis × a spin about an in-plane axis
+// (|ω| = √2·2π/600 = 0.0148). Both are whole revolutions → seamless loop.
+const CENTER_X = 0.89;
+const CENTER_Y = 0.447;
+const RADIUS = 0.33; // of width
+const SPIN_AXIS: Vec3 = [-0.987, 0.163, 0]; // in-plane axis at t = 0
 const CAMERA_DIST = 4; // in sphere radii — gentle perspective
 
 type Projected = { x: number; y: number; z: number; s: number };
 
-const makeProjector = (angle: number, w: number, h: number) => {
-  // Rodrigues rotation matrix about AXIS.
-  const [kx, ky, kz] = AXIS;
+type Mat3 = number[];
+
+const rodrigues = (k: Vec3, angle: number): Mat3 => {
+  const [kx, ky, kz] = k;
   const c = Math.cos(angle);
   const s = Math.sin(angle);
   const t = 1 - c;
-  const m = [
+  return [
     t * kx * kx + c, t * kx * ky - s * kz, t * kx * kz + s * ky,
     t * kx * ky + s * kz, t * ky * ky + c, t * ky * kz - s * kx,
     t * kx * kz - s * ky, t * ky * kz + s * kx, t * kz * kz + c,
   ];
+};
+
+const mul = (a: Mat3, b: Mat3): Mat3 => {
+  const r: Mat3 = new Array(9).fill(0);
+  for (let i = 0; i < 3; i++)
+    for (let j = 0; j < 3; j++)
+      for (let k = 0; k < 3; k++) r[i * 3 + j] += a[i * 3 + k] * b[k * 3 + j];
+  return r;
+};
+
+const makeProjector = (angle: number, w: number, h: number) => {
+  // Clockwise roll about the view axis (+z toward camera) ∘ spin about the
+  // in-plane axis.
+  const m = mul(rodrigues([0, 0, 1], -angle), rodrigues(SPIN_AXIS, angle));
   const cx = w * CENTER_X;
   const cy = h * CENTER_Y;
   const r = w * RADIUS;

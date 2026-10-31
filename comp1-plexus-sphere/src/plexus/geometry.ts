@@ -113,7 +113,7 @@ const hullEdges = (pts: Vec3[]) => {
 const makeWobble = (rnd: () => number, amp: number): Wobble => ({
   amp: [(rnd() * 2 - 1) * amp, (rnd() * 2 - 1) * amp, (rnd() * 2 - 1) * amp],
   phase: [rnd() * Math.PI * 2, rnd() * Math.PI * 2, rnd() * Math.PI * 2],
-  k: [1 + Math.floor(rnd() * 3), 1 + Math.floor(rnd() * 3), 1 + Math.floor(rnd() * 3)],
+  k: [1 + Math.floor(rnd() * 4), 1 + Math.floor(rnd() * 4), 1 + Math.floor(rnd() * 4)],
 });
 
 // Displace a point by its wobble at loop phase t (0..1).
@@ -134,7 +134,7 @@ export const buildGeometry = (seed: number): PlexusGeometry => {
     const size = r < 0.2 ? 1.7 + rnd() * 0.45 : r < 0.75 ? 1.15 + rnd() * 0.5 : 0.8 + rnd() * 0.3;
     // Slight radial jitter so the hull is not a perfect geodesic.
     const s = 1 + (rnd() - 0.5) * 0.04;
-    return { p: [p[0] * s, p[1] * s, p[2] * s], size, wob: makeWobble(wrnd, 0.045) };
+    return { p: [p[0] * s, p[1] * s, p[2] * s], size, wob: makeWobble(wrnd, 0.02) };
   });
 
   const edges: PlexusEdge[] = hullEdges(verts).map(([a, b]) => ({
