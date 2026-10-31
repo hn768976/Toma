@@ -190,7 +190,7 @@ void main() {
   vec2 gT = vec2(dFdx(texI), dFdy(texI)) * (uResolution.y / 1080.0) * 40.0;
   float lobeShade = clamp(0.85 + 0.35 * dot(gT, normalize(vec2(-0.5, 0.8))) / (1.0 + length(gT)), 0.55, 1.2);
   float rN = length(pNear);
-  vec3 innerCol = uInner * (0.75 + 0.45 * exp(-rN / 0.2)) * (0.7 + 0.5 * texI) * lobeShade;
+  vec3 innerCol = uInner * (0.6 + 0.45 * exp(-rN / 0.2)) * (0.5 + 0.7 * texI) * lobeShade;
   innerCol = mix(innerCol, mix(uInner, uCore, 0.45), hot * 0.4);
   // white-hot heart and lighter swirls inside the plume
   innerCol = mix(innerCol, mix(uInner, uCore, 0.55), clamp(exp(-rN / 0.17) * 0.55, 0.0, 0.55));
