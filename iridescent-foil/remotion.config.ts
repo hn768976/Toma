@@ -18,6 +18,8 @@ Config.setDefaultPremountInSeconds(2);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(14);
+// Standard broadcast colour: limited-range yuv420p tagged BT.709.
+Config.setColorSpace("bt709");
 
 // The compositions are WebGL 2 shaders. "angle" uses the GPU when one is
 // present; on GPU-less machines/servers pass `--gl=swangle` (SwiftShader).

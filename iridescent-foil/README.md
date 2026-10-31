@@ -32,7 +32,7 @@ npm run render:v1:4k   # V1 at full 3840x2160
 npm run render:v2:4k   # V2 at full 3840x2160
 ```
 
-Output is H.264 MP4 (yuv420p, CRF 14), set in `remotion.config.ts`. The 1080p deliverables are the 4K compositions rendered with `--scale=0.5`: the shader still runs at 3840 × 2160 and is downsampled, which gives 2×2 supersampled anti-aliasing.
+Output is H.264 MP4 (yuv420p, BT.709, CRF 14), set in `remotion.config.ts`. The 1080p deliverables are the 4K compositions rendered with `--scale=0.5`: the shader still runs at 3840 × 2160 and is downsampled, which gives 2×2 supersampled anti-aliasing.
 
 **GPU-less machines / servers:** add `-- --gl=swangle` to use SwiftShader, e.g. `npm run render:v1 -- --gl=swangle`. The deliverables were rendered this way.
 
