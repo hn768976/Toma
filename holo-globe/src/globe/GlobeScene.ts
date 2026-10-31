@@ -60,17 +60,43 @@ const makeDigitAtlas = () => {
   const ctx = canvas.getContext("2d")!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "#fff";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.font = `${Math.round(ch * 0.86)}px ${FONT}`;
-  ["0", "1", "0", "1"].forEach((g, i) => {
+  ctx.strokeStyle = "#fff";
+  // Squared "digital readout" glyphs, drawn as geometry so they stay crisp.
+  const drawGlyph = (g: number, x0: number) => {
+    const gw = cw * 0.56;
+    const gh = ch * 0.74;
+    const x = x0 + (cw - gw) / 2;
+    const y = (ch - gh) / 2;
+    const stroke = gw * 0.26;
+    if (g === 0) {
+      ctx.lineWidth = stroke;
+      const r = stroke * 0.5;
+      const ix = x + stroke / 2;
+      const iy = y + stroke / 2;
+      const iw = gw - stroke;
+      const ih = gh - stroke;
+      ctx.beginPath();
+      ctx.moveTo(ix + r, iy);
+      ctx.arcTo(ix + iw, iy, ix + iw, iy + ih, r);
+      ctx.arcTo(ix + iw, iy + ih, ix, iy + ih, r);
+      ctx.arcTo(ix, iy + ih, ix, iy, r);
+      ctx.arcTo(ix, iy, ix + iw, iy, r);
+      ctx.closePath();
+      ctx.stroke();
+    } else {
+      const bx = x + gw * 0.5 - stroke * 0.3;
+      ctx.fillRect(bx, y, stroke * 1.05, gh);
+      ctx.fillRect(bx - gw * 0.28, y, gw * 0.3, stroke * 0.85);
+    }
+  };
+  [0, 1, 0, 1].forEach((g, i) => {
     ctx.save();
     if (i >= 2) ctx.filter = "blur(14px)";
-    ctx.fillText(g, cw * i + cw / 2, ch * 0.54);
+    drawGlyph(g, cw * i);
     if (i >= 2) {
       // Blurred glyphs keep their energy: draw twice for a bokeh-like core.
       ctx.globalAlpha = 0.6;
-      ctx.fillText(g, cw * i + cw / 2, ch * 0.54);
+      drawGlyph(g, cw * i);
     }
     ctx.restore();
   });
@@ -198,6 +224,12 @@ export const createGlobeScene =
       [40, 30, 5, 2],
       [-40, -75, 7, 2],
       [18, 75, 6, 2],
+      // Tall bands on the flanks of Africa (visible at 2.7-4 s).
+      [8, -52, 14, 2],
+      [-14, -58, 12, 2],
+      [6, 92, 14, 2],
+      [-16, 86, 12, 2],
+      [-30, 28, 6, 3],
     ];
     panelDefs.forEach(([lat0, lon0, rows, groups], pi) => {
       const r = 1.09 + (pi % 3) * 0.025;
@@ -287,7 +319,7 @@ export const createGlobeScene =
         uRim: { value: colRim },
         uFill: { value: colDeep.clone().multiplyScalar(0.22) },
         uExposure: { value: 1 },
-        uRimStrength: { value: 0.45 },
+        uRimStrength: { value: 0.32 },
       },
       transparent: true,
       depthWrite: false,
@@ -306,14 +338,14 @@ export const createGlobeScene =
         blending: AdditiveBlending,
       }),
     );
-    halo.scale.set(3.8, 3.8, 1);
+    halo.scale.set(3.0, 3.0, 1);
     scene.add(halo);
 
     /* ---------------------------------------------------------------- */
     /* Network ("plexus") on and around the globe                        */
     /* ---------------------------------------------------------------- */
     const nodes: Vector3[] = [];
-    for (let i = 0; i < 110; i++) {
+    for (let i = 0; i < 300; i++) {
       const u = rand() * 2 - 1;
       const th = rand() * Math.PI * 2;
       const s = Math.sqrt(1 - u * u);
@@ -340,9 +372,9 @@ export const createGlobeScene =
         .map((b, j) => ({ j, d: a.distanceTo(b) }))
         .filter((e) => e.j !== i)
         .sort((x, y) => x.d - y.d)
-        .slice(0, i >= 110 ? 2 : 3);
+        .slice(0, i >= 300 ? 2 : 3);
       near.forEach(({ j, d }) => {
-        if (d > 0.75) return;
+        if (d > (i >= 300 || j >= 300 ? 0.6 : 0.3)) return;
         const key = i < j ? `${i}-${j}` : `${j}-${i}`;
         if (seen.has(key)) return;
         seen.add(key);
@@ -507,15 +539,15 @@ export const createGlobeScene =
     /* ---------------------------------------------------------------- */
     const labelAnchors: number[] = [];
     const labelChars: number[] = [];
-    const LABELS = 22;
+    const LABELS = 34;
     for (let l = 0; l < LABELS; l++) {
       const a = rand() * Math.PI * 2;
-      const r = 1.08 + rand() * 0.55;
-      const y = (rand() - 0.5) * 0.9 * (r < 1.25 ? 1 : 0.35);
+      const r = l < 24 ? 1.03 + rand() * 0.22 : 1.3 + rand() * 0.35;
+      const y = (rand() - 0.5) * (r < 1.3 ? 1.5 : 0.3);
       const anchor = new Vector3(r * Math.cos(a), y, r * Math.sin(a));
       const len = 7 + Math.floor(rand() * 2);
       const labelSeed = rand();
-      const bright = 0.75 + rand() * 0.25;
+      const bright = 0.9 + rand() * 0.1;
       for (let c = 0; c < len; c++) {
         labelAnchors.push(anchor.x, anchor.y, anchor.z);
         labelChars.push(c - len / 2, rand(), labelSeed, bright);
@@ -540,7 +572,7 @@ export const createGlobeScene =
       uniforms: {
         uAtlas: { value: atlas },
         uTime: { value: 0 },
-        uCharH: { value: 0.034 },
+        uCharH: { value: 0.062 },
         uExposure: { value: 1 },
         uHot: { value: colHot },
       },
@@ -611,9 +643,9 @@ export const createGlobeScene =
     composer.addPass(new RenderPass(scene, camera));
     const bloom = new UnrealBloomPass(
       new Vector2(width * pixelRatio, height * pixelRatio),
-      0.7,
-      0.5,
-      0.18,
+      0.48,
+      0.4,
+      0.22,
     );
     composer.addPass(bloom);
     composer.addPass(new OutputPass());
@@ -664,7 +696,8 @@ export const createGlobeScene =
         exposure * smoothstep(1.6, 2.6, cam.distance);
       atmoMat.uniforms.uExposure.value =
         exposure * (0.35 + 0.65 * smoothstep(1.2, 2.5, cam.distance));
-      halo.material.opacity = exposure * smoothstep(2.2, 4.0, cam.distance);
+      halo.material.opacity =
+        0.45 * exposure * smoothstep(2.2, 4.0, cam.distance);
       for (const m of [ringMat, nodeMat, dustMat]) {
         m.uniforms.uTime.value = t;
         m.uniforms.uExposure.value = exposure;

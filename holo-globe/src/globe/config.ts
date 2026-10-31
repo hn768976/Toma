@@ -37,18 +37,18 @@ export type GlobeConfig = {
 };
 
 export const BLUE_PALETTE: GlobePalette = {
-  bgCenter: "#0c2a4a",
-  bgEdge: "#01050b",
-  deep: "#1b5fae",
-  main: "#3d9cff",
-  hot: "#bfe6ff",
-  rim: "#4aa8ff",
+  bgCenter: "#082440",
+  bgEdge: "#010409",
+  deep: "#0f5a9e",
+  main: "#1f8fe0",
+  hot: "#a8e4ff",
+  rim: "#2a9ff0",
 };
 
 // Earth spins west-to-east: from the camera's side the surface drifts to
-// the right, revealing the Americas after Africa, about 15.6 deg/s, with
+// the right, revealing the Americas after Africa, about 14.7 deg/s, with
 // Africa (lon ~18E) facing the lens at t = 2.8 s - as in the reference.
-const SPIN_RATE = 15.6;
+const SPIN_RATE = 14.7;
 const spinV1 = (t: number) => -18 + SPIN_RATE * (t - 2.8);
 
 /** Logarithmic zoom keys: values are log(distance - 1) so the dive feels even. */
@@ -66,37 +66,41 @@ const v1Distance = track(
     [1.0, 1.17],
     [1.5, 1.5],
     [2.0, 1.85],
-    [2.5, 2.15],
-    [3.0, 2.55],
-    [3.5, 3.05],
-    [4.0, 3.65],
-    [4.5, 4.25],
-    [5.0, 4.7],
-    [5.6, 4.95],
-    [6.5, 5.05],
-    [30, 5.1],
+    [2.5, 2.12],
+    [3.0, 2.42],
+    [3.5, 2.78],
+    [4.0, 3.2],
+    [4.5, 3.75],
+    [5.0, 4.2],
+    [5.6, 4.5],
+    [6.5, 4.65],
+    [30, 4.72],
   ]),
 );
+// The globe's axis is tilted 10 deg; counter-roll during the dive so the
+// close-up digits read upright like the reference, then level out.
 const v1Roll = track([
-  [0, 14],
-  [1.5, 9],
-  [3.0, 3],
-  [5.0, 0],
+  [0, -10],
+  [1.2, -9],
+  [2.6, -3],
+  [4.0, 1],
+  [5.5, 0],
   [30, 0],
 ]);
 const v1LookY = track([
   [0, 0],
   [2.0, 0],
-  [3.0, 0.42],
-  [4.0, 0.38],
-  [5.2, 0.05],
+  [3.0, 0.14],
+  [4.0, 0.12],
+  [5.2, 0.04],
   [6.0, 0.02],
   [30, 0.02],
 ]);
 const v1Defocus = track([
   [0, 1],
-  [0.6, 0.85],
-  [1.0, 0.05],
+  [0.35, 0.7],
+  [0.6, 0.05],
+  [1.0, 0.0],
   [1.8, 0],
   [2.3, 0.35],
   [2.8, 0.15],
@@ -124,10 +128,11 @@ export const GLOBE_V1: GlobeConfig = {
 };
 
 // Version 2 - alternative CAMERA ANGLE + MOVEMENT (same palette and
-// content). The dive starts top-down over the Arctic, cranes down past the
-// ring plane while orbiting ~140 deg around the planet, and finishes on a
-// low "hero" angle looking up at the globe from below its rings, with a
-// slow push-in for the last third.
+// content). The dive starts top-down over the Arctic, then the camera
+// sweeps a ~265 deg orbit around the planet while craning down through the
+// ring plane to a low angle looking up from beneath the rings (~16 s),
+// pushing in close, and finally cranes back up above the rings as it pulls
+// out - a continuously travelling shot instead of the locked-off hold.
 const v2Distance = track(
   logKeys([
     [0, 1.06],
@@ -136,34 +141,36 @@ const v2Distance = track(
     [2.6, 2.1],
     [3.8, 3.2],
     [5.2, 4.6],
-    [7.0, 5.6],
-    [14, 5.8],
-    [22, 4.9],
-    [30, 4.3],
+    [7.0, 5.3],
+    [11, 4.6],
+    [16, 3.95],
+    [22, 4.3],
+    [30, 5.4],
   ]),
 );
 const v2Elevation = track([
   [0, 72],
-  [3, 58],
-  [7, 34],
-  [13, 18],
-  [19, 4],
-  [24, -9],
-  [30, -13],
+  [3, 55],
+  [7, 28],
+  [11, 6],
+  [16, -20],
+  [22, -6],
+  [30, 32],
 ]);
 const v2Azimuth = track([
   [0, -30],
-  [6, 5],
-  [15, 50],
-  [24, 90],
-  [30, 108],
+  [6, 25],
+  [15, 120],
+  [24, 195],
+  [30, 235],
 ]);
 const v2Roll = track([
   [0, -18],
   [4, -8],
-  [10, -3],
-  [20, 4],
-  [30, 6],
+  [11, 4],
+  [16, 12],
+  [22, 6],
+  [30, -6],
 ]);
 const v2LookY = track([
   [0, 0],
