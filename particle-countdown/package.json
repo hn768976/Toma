@@ -1,0 +1,39 @@
+{
+  "name": "particle-countdown",
+  "version": "1.0.0",
+  "description": "4K glitter particle countdown 10-1 (raw WebGL 2 shaders) - Remotion",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.539",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.539"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.539",
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "render:v1": "remotion render Countdown-V1-Match out/Particle_Countdown_V1_Match_1080p.mp4 --scale=0.5",
+    "render:v1:4k": "remotion render Countdown-V1-Match out/Particle_Countdown_V1_Match_4K.mp4",
+    "render:v2": "remotion render Countdown-V2-Ember out/Particle_Countdown_V2_Ember_1080p.mp4 --scale=0.5",
+    "render:v2:4k": "remotion render Countdown-V2-Ember out/Particle_Countdown_V2_Ember_4K.mp4",
+    "render:all": "npm run render:v1 && npm run render:v2"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}
