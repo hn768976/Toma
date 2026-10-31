@@ -5,11 +5,12 @@ spots sweep their beams while their colour wheels rotate through the spectrum
 (with the two-colour "split beam" look while the wheel is between filters).
 The scene is real 3D (Three.js via `@remotion/three`):
 
-* volumetric beams — each beam is a capped cone hull; the fragment shader
-  intersects the view ray with the cone analytically and integrates the
-  in-scattered light along the inside segment (soft profile, distance falloff,
-  drifting 3D haze noise), so beams stay correct from any camera position;
-* a lit back haze layer, lens glows with a faint four-point star;
+* volumetric beams — each beam is a full-screen pass whose fragment shader
+  intersects the view ray with the beam cone analytically and integrates the
+  in-scattered light along the inside segment (soft profile with a hot core,
+  distance falloff, streaks and drifting 3D haze), so beams stay correct from
+  any camera position, including when the camera passes through a beam;
+* a lit back haze layer, colour-tinted lens halos with a faint four-point star;
 * an HDR (half-float) render target with exponential tone mapping, vignette and
   dither in a final pass.
 
