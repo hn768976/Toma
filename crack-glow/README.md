@@ -1,14 +1,14 @@
 # Crack Glow — Remotion project (4K)
 
 A dark Voronoi-fractured stone surface. A light streak strikes it, and an energy
-wave races outward through the cracks (violet with amber accents), with an
-impact starburst and volumetric-style rays. The pulse plays twice, matching the
+wave races outward through the cracks (violet / magenta / hot orange), with a
+compact impact burst and faint light shafts. The pulse plays twice, matching the
 reference clip.
 
 | Composition   | Resolution | FPS | Frames | Duration | Notes |
 |---------------|-----------:|----:|-------:|---------:|-------|
-| `CrackGlowV1` | 3840×2160  | 30  | 182    | 6.067 s  | Matches the reference (violet + amber cracks) |
-| `CrackGlowV2` | 3840×2160  | 30  | 182    | 6.067 s  | Alternative colour palette: electric cyan + molten gold on slate-blue stone |
+| `CrackGlowV1` | 3840×2160  | 30  | 182    | 6.067 s  | Matches the reference: violet → magenta → hot-orange cracks on near-black stone, static camera |
+| `CrackGlowV2` | 3840×2160  | 30  | 182    | 6.067 s  | Alternative colour palette: a fully cool "ice" scheme of deep blue → electric cyan → mint green |
 
 **Technology:** Remotion 4 + a raw **WebGL 2 fragment shader** (`src/crackShader.ts`),
 drawn by `src/ShaderCanvas.tsx`. Every pixel is a pure function of the frame
