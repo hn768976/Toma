@@ -110,9 +110,16 @@ const SceneContent: React.FC<{ variant: Variant }> = ({ variant }) => {
           float vig = 1.0 - smoothstep(0.28, 0.82, length(d)) * 0.93;
           c *= vig * 0.86;
           c.r *= 1.12;
-          // keep the red/orange monochrome look, let highlights burn to warm white
-          float l = max(c.r, max(c.g, c.b));
-          c = mix(c, vec3(l, l * 0.55, l * 0.32), smoothstep(1.0, 2.5, l) * 0.6);
+          // Filmic highlight handling: red saturates softly and its excess
+          // bleeds into green/blue, so hot areas burn orange -> warm white
+          // instead of clipping to a flat red block.
+          float ex = max(c.r - 0.7, 0.0);
+          c.g += ex * 0.42;
+          c.b += ex * 0.12;
+          c.r = c.r < 0.7 ? c.r : 0.7 + 0.3 * (1.0 - exp(-ex / 0.3));
+          vec3 k = vec3(0.8);
+          vec3 over = max(c - k, 0.0);
+          c = min(c, k) + 0.2 * (1.0 - exp(-over / 0.2));
           return c;
         }`,
     });
