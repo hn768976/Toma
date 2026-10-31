@@ -87,7 +87,7 @@ void addSwell(inout Surface s, vec2 q, vec2 dir, float k, float w, float ph,
   s.h += a * sin(phase);
   s.grad += a * k * cos(phase) * d;
   // Broad soft bright bands on the swell crests.
-  s.glow += 0.8 * a * pow(0.5 + 0.5 * sin(phase), 4.0);
+  s.glow += 1.3 * a * pow(0.5 + 0.5 * sin(phase), 3.0);
 }
 
 // Adds one circular ripple train radiating from centre c.
@@ -116,7 +116,9 @@ void addRing(inout Surface s, vec2 q, vec2 c, float k, float chirp, float w,
     gnoise(vec2(arc * 6.0, r * 4.0) + vec2(2.7 * t, -2.1 * t) + ph));
   float kink = boldness * boldness * 0.7 * kinkGate
              * sin(arc * (45.0 + 12.0 * sin(0.9 * t + ph)) + 6.0 * t + ph);
-  float phase = k * r + chirp * r * r - w * t + 1.7 * ph + 2.0 * s.h + kink;
+  // Irregular crest spacing and occasional S-bends.
+  float jitter = 2.4 * fbm3(dv * 1.6 + vec2(0.08 * t, -0.06 * t) + ph * 3.1);
+  float phase = k * r + chirp * r * r - w * t + 1.7 * ph + 2.0 * s.h + kink + jitter;
   float sn = sin(phase);
   float cs = cos(phase);
   s.h += env * sn;
@@ -153,13 +155,17 @@ Surface surface(vec2 p, float t, float fp) {
 
   // Wandering ripple centres just below / beside the frame, so we see wide,
   // clearly curved arcs sweeping up across the picture (frame height = 1).
-  vec2 c0 = vec2(-0.18, -0.80) + vec2(0.30 * sin(0.23 * t + 0.5), 0.10 * cos(0.19 * t));
+  vec2 c0 = vec2(-0.42, -1.18) + vec2(0.30 * sin(0.23 * t + 0.5), 0.12 * cos(0.19 * t));
   vec2 c1 = vec2(0.95, -0.95) + 0.22 * vec2(cos(0.17 * t + 1.0), sin(0.21 * t));
   vec2 c2 = vec2(1.30, 1.05) + 0.22 * vec2(sin(0.15 * t), cos(0.18 * t + 2.0));
 
-  addRing(s, q, c0, 34.0, 8.0, 8.2, 0.0, 1.00, 1.00, boldness, t, fp);
-  addRing(s, q, c1, 32.0, 6.0, 7.4, 1.3, 0.45, 0.20, boldness, t, fp);
-  addRing(s, q, c2, 42.0, 9.0, 9.0, 2.1, 0.40, 0.28, boldness, t, fp);
+  addRing(s, q, c0, 30.0, 7.0, 8.2, 0.0, 1.00, 1.00, boldness, t, fp);
+  addRing(s, q, c1, 32.0, 6.0, 7.4, 1.3, 0.40, 0.10, boldness, t, fp);
+  addRing(s, q, c2, 42.0, 9.0, 9.0, 2.1, 0.35, 0.16, boldness, t, fp);
+  // Fine, busy, thin wiggly crests along the top edge of the frame.
+  vec2 c3 = vec2(0.25, 1.55) + 0.20 * vec2(sin(0.2 * t + 1.0), cos(0.14 * t));
+  float topMask = smoothstep(0.05, 0.42, p.y);
+  addRing(s, q, c3, 78.0, 10.0, 12.0, 0.9, 0.30 * topMask, 0.55, boldness * 0.5, t, fp);
   return s;
 }
 
@@ -194,11 +200,11 @@ float shade(Surface s, vec3 v, float lineFade) {
   float spec = pow(max(dot(reflect(-v, n), lDir), 0.0), 400.0);
   float fres = pow(1.0 - max(dot(n, v), 0.0), 5.0);
 
-  float L = 0.665;
+  float L = 0.64;
   L += 0.10 * slope;
   // Crest lines: a few bold crisp caustics among many soft faint ones.
   L += lineFade * 0.56 * (1.0 - exp(-2.1 * s.line));
-  L += lineFade * 0.15 * (1.0 - exp(-1.4 * s.glow));
+  L += lineFade * 0.20 * (1.0 - exp(-1.3 * s.glow));
   // Slightly darker troughs between the bright lines.
   L -= lineFade * 0.12 * (1.0 - exp(-1.5 * s.trough));
   L += 0.45 * spec + 0.18 * fres;
