@@ -317,13 +317,13 @@ export type RibbonCameraMode = "static" | "orbit";
 
 const STATIC_CAM = {
   pos: [8.0, 3.3, 9.0] as Vec3,
-  target: [3.4, 1.95, 0] as Vec3,
-  fov: 27,
+  target: [3.45, 1.68, 0] as Vec3,
+  fov: 29.5,
 };
 
 /** Version 2: a crane/arc move sweeping from low front-left to high front-right. */
 const ORBIT_PATH = new THREE.CatmullRomCurve3([
-  new THREE.Vector3(-4.6, 1.1, 7.6),
+  new THREE.Vector3(-4.6, 1.9, 7.6),
   new THREE.Vector3(0.6, 1.9, 10.4),
   new THREE.Vector3(6.2, 3.4, 10.2),
   new THREE.Vector3(9.2, 4.4, 9.6),

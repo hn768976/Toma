@@ -43,7 +43,7 @@ const CAMERA_KEYS: CamKey[] = [
   { t: 4.5, pos: [1.3, 3.6, 12.0], target: [1.0, 2.9, 0], fov: 31, roll: 0, shift: 0.5 },
   { t: 7, pos: [1.9, 4.1, 10.6], target: [1.9, 2.45, 0], fov: 38, roll: 0.02, shift: 0.56 },
   { t: 10, pos: [3.4, 5.4, 8.8], target: [3.0, 2.55, 0], fov: 46, roll: 0.07, shift: 0.62 },
-  { t: 15, pos: [4.4, 7.0, 7.2], target: [3.6, 2.7, 0.4], fov: 52, roll: 0.12, shift: 0.68 },
+  { t: 15, pos: [4.4, 7.0, 7.2], target: [3.2, 3.15, 0.4], fov: 52, roll: 0.12, shift: 0.68 },
 ];
 
 const sampleCamera = (t: number) => {
@@ -113,7 +113,7 @@ void main() {
   // stage reads brighter toward its far rim, dark under the camera
   float rim = smoothstep(uRadius * 0.15, uRadius * 0.98, d);
   float back = smoothstep(2.5, -9.0, vWorld.z);
-  vec3 col = uFloor * (0.042 + 0.15 * rim * (0.45 + 0.55 * back));
+  vec3 col = uFloor * (0.075 + 0.15 * rim * (0.45 + 0.55 * back));
   // light pooling at each bar's base
   for (int i = 0; i < 7; i++) {
     vec2 q = p - uBars[i].xy;
