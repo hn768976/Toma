@@ -23,10 +23,10 @@ export type SmokePortalProps = z.infer<typeof smokePortalSchema>;
 
 /** Version 1 - matches the reference: locked-off camera, magenta / violet smoke. */
 export const smokePortalV1: SmokePortalProps = {
-  inner: [1.6, 0.06, 0.78],
-  outer: [0.09, 0.06, 0.64],
+  inner: [1.6, 0.025, 0.5],
+  outer: [0.11, 0.065, 0.85],
   core: [2.4, 1.5, 2.3],
-  hole: [0.06, 0.012, 0.03],
+  hole: [0.07, 0.006, 0.035],
   flareL: [0.55, 0.22, 0.04],
   flareR: [0.45, 0.55, 0.62],
   camera: "static",
@@ -48,7 +48,7 @@ const useCamera = (camera: SmokePortalProps["camera"], frame: number) => {
     return { zoom: 1, roll: 0, pan: [0, 0] as [number, number], parallax: 0 };
   }
   const ease = Easing.bezier(0.45, 0, 0.25, 1);
-  const zoom = interpolate(frame, [0, 300], [0.62, 1.75], {
+  const zoom = interpolate(frame, [0, 300], [0.6, 1.35], {
     easing: ease,
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",

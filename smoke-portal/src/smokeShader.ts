@@ -116,23 +116,28 @@ vec2 swirl(vec2 p, float t, float k) {
   return rot(ang) * p;
 }
 
-// smoke layer density: ragged radial envelope x billowy, flowing texture
-float smoke(vec2 p, float t, float radius, float seed, float lobes, float flow, float warpAmt, float contrast) {
-  vec2 q = swirl(p, t, flow);
+// Smoke layer density: a ragged radial envelope (lobes / arms) filled with a
+// mix of puffy billows and streaky radial fibres, all domain-warped.
+float smoke(vec2 p, float t, float radius, vec2 stretch, float seed, float lobes,
+            float flow, float warpAmt, float edgeAmt, float fiber, out float fibOut) {
+  vec2 q = swirl(p, t, flow) / stretch;
   float r = length(q);
-  float a = atan(q.y, q.x);
-  vec2 dir = vec2(cos(a), sin(a));
-  // ragged, slowly morphing outline (lobes / arms)
-  float edgeN = fbm(dir * lobes + vec2(seed, t * 0.22 + seed), 4);
-  float R = radius * (1.0 + 0.6 * edgeN);
-  // domain warp makes billows and tendrils
-  vec2 w = vec2(fbm(q * 2.4 + vec2(seed, t * 0.21), 4), fbm(q * 2.4 + vec2(-t * 0.18, seed + 3.1), 4));
+  vec2 dir = q / max(r, 1e-4);
+  float edgeN = fbm(dir * lobes + vec2(seed, t * 0.2 + seed), 4);
+  float R = radius * (1.0 + edgeAmt * edgeN);
+  vec2 w = vec2(fbm(q * 2.2 + vec2(seed, t * 0.2), 4), fbm(q * 2.2 + vec2(-t * 0.17, seed + 3.1), 4));
   vec2 qw = q + warpAmt * w;
   float rw = length(qw);
-  float env = smoothstep(R, R * 0.45, rw + 0.08 * w.x);
-  float tex = 0.5 + 0.55 * fbm(qw * 3.6 + vec2(seed * 1.7, t * 0.15), 5);
-  float dens = env * mix(0.25 + 1.1 * tex, smoothstep(0.30, 0.72, tex) * 1.25, contrast);
-  return clamp(dens, 0.0, 1.5);
+  float env = smoothstep(R, R * 0.5, rw + 0.08 * w.x);
+  float puff = 0.5 + 0.55 * fbm(qw * 3.4 + vec2(seed * 1.7, t * 0.15), 5);
+  vec2 dw = qw / max(rw, 1e-4);
+  float fib = 0.5 + 0.6 * fbm(dw * 7.0 + vec2(rw * 2.5 - t * 0.12, seed), 4);
+  float tex = mix(puff, fib, fiber);
+  // fine billowing detail (crisp smoke edges and creases)
+  float det = billow(qw * 13.0 + vec2(t * 0.25, seed * 2.3), 3);
+  tex *= 0.72 + 0.62 * det;
+  fibOut = mix(fib, fib * (0.7 + 0.6 * det), 0.7);
+  return env * smoothstep(0.15, 0.70, tex) * 1.4;
 }
 
 void main() {
@@ -147,68 +152,72 @@ void main() {
   vec2 pFar = cuv / mix(uZoom, 1.0 + (uZoom - 1.0) * 0.55, uParallax); // outer cloud (further back)
 
   // ---- timeline --------------------------------------------------------------
-  float ignite = smoothstep(1.0, 3.5, f);                        // ring appears
-  float burst = smoothstep(9.0, 22.0, f);                        // plume erupts
-  float plumeR = 0.05 + 0.36 * (1.0 - exp(-max(f - 8.0, 0.0) / 17.0)) + 0.08 * smoothstep(60.0, 300.0, f);
-  float outerR = plumeR * 1.12 + 0.62 * (1.0 - exp(-max(f - 16.0, 0.0) / 34.0)) + 0.10 * smoothstep(90.0, 300.0, f);
-  float outerOn = smoothstep(18.0, 36.0, f);
-  float hot = exp(-max(f - 12.0, 0.0) / 22.0);                  // early smoke is white-hot
+  float ignite = smoothstep(1.0, 3.5, f);                     // ring appears
+  float grow = 1.0 - exp(-max(f - 3.0, 0.0) / 14.0);           // explosive expansion
+  float burst = smoothstep(4.0, 14.0, f);
+  float plumeR = 0.06 + 0.38 * grow + 0.08 * smoothstep(60.0, 300.0, f);
+  float outerR = plumeR * 1.15 + 0.05 + 0.55 * (1.0 - exp(-max(f - 12.0, 0.0) / 30.0));
+  float outerOn = smoothstep(9.0, 22.0, f);
+  float hot = exp(-max(f - 8.0, 0.0) / 24.0);                 // early smoke is white-hot
+  float settle = smoothstep(30.0, 100.0, f);                  // plume turns streaky & elongated
+  vec2 stretch = mix(vec2(1.0), vec2(1.5, 0.85), settle);
 
   // ---- background --------------------------------------------------------------
   float vgn = length(uv * vec2(0.9, 1.2));
   vec3 col = vec3(0.012, 0.010, 0.014) * (1.0 - smoothstep(0.0, 0.9, vgn)) + vec3(0.002);
 
   // ---- outer blue-violet cloud ---------------------------------------------------
-  float dOut = smoke(pFar, t, outerR, 4.0, 1.2, 0.5, 0.16, 0.75) * outerOn;
+  float fibO;
+  float dOut = smoke(pFar, t, outerR, vec2(1.15, 0.95), 4.0, 1.2, 0.5, 0.16, 0.5, 0.0, fibO) * outerOn;
   float rFar = length(pFar);
-  float outerShade = 0.30 + 0.95 * smoothstep(-0.45, 0.55, fbm(pFar * 2.8 + vec2(t * 0.05, 2.0), 5));
-  vec3 outerCol = uOuter * outerShade * (0.55 + 0.6 * exp(-rFar / 0.45));
-  float aOut = clamp(dOut * 0.9, 0.0, 1.0);
-  col = mix(col, outerCol, aOut);
+  float outerShade = (0.18 + 1.0 * smoothstep(-0.35, 0.55, fbm(pFar * 2.6 + vec2(t * 0.05, 2.0), 5))) * (0.7 + 0.6 * billow(pFar * 11.0 + vec2(3.0, t * 0.2), 3));
+  vec3 outerCol = uOuter * outerShade * (0.45 + 0.6 * exp(-rFar / 0.45));
+  outerCol = mix(outerCol, mix(uOuter, uInner, 0.35), 0.35 * hot);
+  col = mix(col, outerCol, clamp(dOut * 0.9, 0.0, 1.0));
 
   // ---- inner magenta plume ------------------------------------------------------
-  float dIn = smoke(pNear, t, plumeR, 1.0, 1.4, 0.8, 0.20, 0.35) * burst;
+  float fibI;
+  float dIn = smoke(pNear, t, plumeR, stretch, 1.0, 1.1, 0.8, mix(0.18, 0.30, settle), mix(0.3, 0.75, settle), 0.28 * settle, fibI) * burst;
   float rN = length(pNear);
-  vec3 innerCol = uInner * (0.5 + 0.25 * exp(-rN / 0.12)) * (0.6 + 0.7 * smoothstep(-0.4, 0.5, fbm(pNear * 5.0 + vec2(1.0, t * 0.2), 4)));
-  innerCol = mix(innerCol, mix(uInner, uCore, 0.75), hot * 0.85);
-  // soft pink/blue fringe where the plume meets the outer cloud
-  innerCol = mix(innerCol, mix(uInner, uOuter, 0.45), smoothstep(0.35, 0.05, dIn) * 0.5);
-  float aIn = clamp(dIn * 1.05, 0.0, 1.0);
-  col = mix(col, innerCol, aIn);
+  vec3 innerCol = uInner * (0.75 + 0.45 * exp(-rN / 0.2)) * (0.75 + 0.5 * fibI);
+  innerCol = mix(innerCol, mix(uInner, uCore, 0.6), hot * 0.35);
+  // white-hot heart and lighter swirls inside the plume
+  innerCol = mix(innerCol, mix(uInner, uCore, 0.55), clamp(exp(-rN / 0.14) * 0.4 + smoothstep(0.66, 0.98, fibI) * 0.3, 0.0, 0.55));
+  innerCol *= 0.8 + 0.4 * smoothstep(0.2, 0.8, dIn);
+  innerCol = mix(innerCol, mix(uInner, uOuter, 0.5), smoothstep(0.5, 0.05, dIn) * 0.45);
+  col = mix(col, innerCol, clamp(dIn * 1.5, 0.0, 1.0));
 
-  // ---- white energy filaments swirling around the core --------------------------
-  vec2 qs = swirl(pNear, t, 1.4);
-  vec2 fw = vec2(fbm(qs * 2.5 + vec2(t * 0.3, 1.0), 3), fbm(qs * 2.5 + vec2(7.0, -t * 0.3), 3));
-  vec2 qf = qs + 0.12 * fw;
-  float rf = length(qf);
-  float af = atan(qf.y, qf.x);
-  float ridge = 1.0 - abs(gnoiseP(vec2((af / (2.0 * PI) + 0.5) * 6.0, rf * 9.0 - t * 0.6) + fw * 2.0, 6));
-  float ridge2 = 1.0 - abs(gnoise(qf * 7.0 + vec2(t * 0.4, 3.0)));
-  float fil = pow(ridge, 14.0) + 0.5 * pow(ridge2, 18.0);
-  float filMask = smoothstep(0.06, 0.1, rN) * (1.0 - smoothstep(0.10, max(plumeR * 0.85, 0.13), rN)) * burst;
-  col += uCore * fil * filMask * (0.24 + 0.5 * hot);
+  // ---- white energy ribbons looping around the core -------------------------------
+  vec2 pr = pNear / mix(vec2(1.0), vec2(1.22, 0.9), settle);
+  vec2 prs = swirl(pr, t, 0.6);
+  float rr = length(prs);
+  float ar = atan(prs.y, prs.x);
+  float rib = 0.0;
+  for (int i = 0; i < 2; i++) {
+    float fi = float(i);
+    float Ri = (0.13 + 0.06 * fi) * (1.0 + (0.26 + 0.2 * fi) * angNoise(ar, t * 0.35 + fi * 7.0, 2 + i));
+    float wi = 0.010 + 0.008 * fi;
+    float fade = smoothstep(-0.35, 0.5, angNoise(ar, t * 0.5 + fi * 3.0 + 11.0, 2 + i));
+    rib += exp(-pow((rr - Ri) / wi, 2.0)) * (1.0 - 0.35 * fi) * mix(0.55 + 0.45 * fade, fade, fi);
+  }
+  float ribGlow = exp(-pow((rr - 0.135) / 0.06, 2.0));
+  // fine wisps riding the plume fibres
+  float wisp = pow(max(fibI - 0.55, 0.0) * 2.2, 3.0) * (1.0 - smoothstep(0.12, max(plumeR * 0.9, 0.13), rN));
+  col += uCore * (rib * 0.5 + ribGlow * 0.25 + wisp * 0.3) * burst * (0.7 + 0.6 * hot);
 
-  // ---- the igniting ring --------------------------------------------------------
-  float ringR = 0.095 + 0.03 * burst;
+  // ---- the igniting ring (first frames) ------------------------------------------
+  float ringR = 0.10 + 0.07 * grow;
   float ringN = angNoise(atan(pNear.y, pNear.x), t * 2.0, 9);
-  float ringD = rN - ringR - 0.012 * ringN;
-  float ringW = 0.022 + 0.012 * burst;
-  float ring = exp(-pow(ringD / ringW, 2.0));
-  float ringFuzz = billow(pNear * 18.0 + vec2(t * 0.8, 0.0), 3);
-  float ringLevel = ignite * (1.0 - 0.8 * burst) * (0.85 + 0.3 * ringFuzz);
-  col += mix(uInner, uCore, 0.7) * ring * ringLevel * 1.4;
-  col += uInner * exp(-pow(ringD / 0.09, 2.0)) * ignite * 0.25 * (1.0 - 0.85 * burst);
+  float ringD = rN - ringR - 0.02 * ringN;
+  float ring = exp(-pow(ringD / (0.03 + 0.03 * grow), 2.0));
+  float ringFuzz = billow(pNear * 16.0 + vec2(t * 0.8, 0.0), 3);
+  col += mix(uInner, uCore, 0.75) * ring * ignite * (1.0 - smoothstep(10.0, 30.0, f)) * (0.9 + 0.4 * ringFuzz) * 0.95;
+  col += uInner * exp(-pow(ringD / 0.12, 2.0)) * ignite * 0.25 * (1.0 - smoothstep(8.0, 30.0, f));
 
   // bright rim right around the core (persists)
   float rimN = angNoise(atan(pNear.y, pNear.x), t * 0.8 + 3.0, 6);
-  float rim = exp(-pow((rN - 0.083 - 0.01 * rimN) / 0.022, 2.0));
-  col += mix(uCore, uInner, 0.3) * rim * burst * 0.55;
-
-  // ---- dark core ---------------------------------------------------------------------
-  float holeR = 0.072 + 0.004 * sin(t * 1.3);
-  float hole = 1.0 - smoothstep(holeR - 0.012, holeR + 0.008, rN + 0.006 * rimN);
-  vec3 holeCol = uHole * (0.6 + 0.5 * smoothstep(0.0, holeR, rN));
-  col = mix(col, holeCol, hole * ignite);
+  float rim = exp(-pow((rN - 0.085 - 0.01 * rimN) / 0.02, 2.0));
+  col += mix(uCore, uInner, 0.4) * rim * burst * 0.35;
 
   // ---- anamorphic lens flare ---------------------------------------------------------
   float flareEnv = ignite * (1.0 - smoothstep(20.0, 50.0, f)) * 1.0
@@ -218,7 +227,7 @@ void main() {
   float bands = 0.0;
   for (int i = 0; i < 6; i++) {
     float fi = float(i);
-    float y0 = (h1(ivec2(i, 7)) - 0.5) * 0.16;
+    float y0 = (h1(ivec2(i, 7)) - 0.5) * 0.36;
     float w = 0.012 + 0.05 * h1(ivec2(i, 9));
     bands += exp(-pow((fuv.y - y0) / w, 2.0)) * (0.4 + 0.6 * h1(ivec2(i, 3)));
   }
@@ -226,6 +235,12 @@ void main() {
   float flareBody = exp(-pow(fuv.y / 0.16, 2.0)) * 0.55 + bands * 0.35;
   vec3 flareCol = mix(uFlareL, uFlareR, smoothstep(-0.35, 0.35, fuv.x));
   col += flareCol * flareBody * hfall * flareEnv * 0.55;
+
+  // ---- dark core ---------------------------------------------------------------------
+  float holeR = 0.072 + 0.004 * sin(t * 1.3);
+  float hole = 1.0 - smoothstep(holeR - 0.012, holeR + 0.008, rN + 0.006 * rimN);
+  vec3 holeCol = uHole * (0.6 + 0.5 * smoothstep(0.0, holeR, rN));
+  col = mix(col, holeCol, hole * ignite);
 
   // ---- grade ------------------------------------------------------------------------------
   col *= mix(0.55, 1.0, smoothstep(1.15, 0.3, vgn));
