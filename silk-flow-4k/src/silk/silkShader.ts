@@ -5,7 +5,7 @@
  * (running from upper-left to lower-right, like the reference) whose
  * positions, widths and curvature evolve smoothly over time. Normals are
  * taken from the height-field gradient and shaded with a soft diffuse
- * term plus an anisotropic, satin-style sheen. A faint brushed-fibre
+ * term plus an anisotropic, satin-style sheen. A very faint fibre
  * texture runs along the folds, and a low-frequency vignette keeps the
  * corners dark.
  *
@@ -24,6 +24,9 @@ uniform vec3  uMidTint;
 uniform vec3  uHighTint;
 uniform float uSheen;       // strength of the specular sheen
 uniform float uContrast;
+uniform float uFlowTime;    // time-warped animation clock (seconds, from JS)
+uniform float uZoom;        // camera push-in (1 = none)
+uniform float uRoll;        // camera roll, radians
 
 out vec4 outColor;
 
@@ -59,7 +62,7 @@ float fbm(vec2 p) {
 // Fold orientation (y-up space): folds run down and to the right at
 // roughly 36 degrees, slowly swaying a few degrees over time.
 vec2 foldDir(float t) {
-  float a = radians(-39.0 + 4.0 * sin(0.21 * t + 0.4));
+  float a = radians(-41.5 + 1.5 * sin(0.21 * t + 0.4));
   return vec2(cos(a), sin(a));
 }
 
@@ -84,24 +87,29 @@ float height(vec2 p, float t) {
 
   float h = 0.0;
   // Primary wide folds drifting slowly across the frame.
-  h += 0.60 * foldProfile(3.9 * uu + 0.42 * t + 0.4);
+  h += 0.60 * foldProfile(5.0 * uu + 0.42 * t + 0.4);
   // Secondary folds travelling the other way -> folds merge and split.
-  h += 0.34 * foldProfile(6.8 * uu - 0.33 * t + 1.9 + 0.45 * sin(0.7 * v + 0.18 * t));
+  h += 0.34 * foldProfile(8.7 * uu - 0.33 * t + 1.9 + 0.45 * sin(0.7 * v + 0.18 * t));
   // Narrower creases.
-  h += 0.16 * foldProfile(12.0 * uu + 0.66 * t + 4.0 + 0.8 * sin(1.3 * v - 0.25 * t));
-  h += 0.06 * foldProfile(21.0 * uu - 0.52 * t + 0.7 + 0.8 * sin(2.1 * v + 0.35 * t));
+  h += 0.09 * foldProfile(15.0 * uu + 0.66 * t + 4.0 + 0.8 * sin(1.3 * v - 0.25 * t));
+  h += 0.03 * foldProfile(26.0 * uu - 0.52 * t + 0.7 + 0.8 * sin(2.1 * v + 0.35 * t));
   return h * 0.30;
 }
 
 void main() {
   vec2 frag = gl_FragCoord.xy;
   vec2 p = (frag - 0.5 * uResolution) / uResolution.y;
+  // Optional camera move (used by the alternate version): roll + push-in.
+  float cr = cos(uRoll), sr = sin(uRoll);
+  p = mat2(cr, sr, -sr, cr) * p / uZoom;
   // Motion speed calibrated against the reference (mean frame-to-frame
   // difference).
-  float t = uTime * 1.1;
+  float t = uFlowTime;
 
   // Gradient by central differences (resolution-independent epsilon).
-  float e = 0.0015;
+  // A wide difference step low-passes the normals: soft, slightly
+  // defocused folds like the reference.
+  float e = 0.009;
   float hx = height(p + vec2(e, 0.0), t) - height(p - vec2(e, 0.0), t);
   float hy = height(p + vec2(0.0, e), t) - height(p - vec2(0.0, e), t);
   vec3 N = normalize(vec3(-hx / (2.0 * e), -hy / (2.0 * e), 1.0));
@@ -115,8 +123,8 @@ void main() {
   float ndl = dot(N, L);
   // Contrast curve: faces turned away go fully black, lit faces form broad
   // soft bands like the reference.
-  float diff = smoothstep(0.10, 0.98, ndl);
-  diff = diff * diff;
+  float diff = clamp((ndl + 0.05) / 1.0, 0.0, 1.0);
+  diff = diff * diff * diff;
 
   // Anisotropic satin sheen: highlight stretched along the fold direction.
   vec2 d2 = foldDir(t);
@@ -126,18 +134,21 @@ void main() {
   float aniso = pow(sinTH, 30.0) * smoothstep(0.55, 0.95, ndl);
   float spec = pow(max(dot(N, H), 0.0), 24.0);
 
-  float lum = 0.23 * diff + uSheen * (0.07 * aniso + 0.06 * spec);
+  // Soft ambient fill keeps the shadow side of the folds a dim grey
+  // rather than pure black, like the reference.
+  float fill = 0.07 * smoothstep(-0.7, 0.8, ndl);
+  float lum = fill + 0.19 * diff + uSheen * (0.06 * aniso + 0.05 * spec);
 
   // Brushed fibre texture running along the folds.
   float u = dot(p, vec2(-d2.y, d2.x));
   float v = dot(p, d2);
   float fibre = fbm(vec2(v * 9.0, u * 900.0));
-  lum *= 0.95 + 0.10 * fibre;
+  lum *= 0.985 + 0.03 * fibre;
 
   // Light falloff: brightest on the left / upper-left, fading towards
   // the right and the corners like the reference.
   vec2 q = frag / uResolution;
-  float fall = 1.0 - smoothstep(0.15, 1.05, length((q - vec2(0.18, 0.62)) * vec2(1.0, 1.15)));
+  float fall = 1.0 - smoothstep(0.15, 1.05, length((q - vec2(0.18, 0.55)) * vec2(1.0, 0.55)));
   lum *= mix(0.22, 1.25, fall);
 
   lum *= uGain * uExposure;

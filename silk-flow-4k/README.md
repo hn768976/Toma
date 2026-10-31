@@ -8,7 +8,7 @@ pure function of the frame number, so renders are deterministic.
 | Composition  | Size        | FPS | Frames | Duration | Description |
 |--------------|-------------|-----|--------|----------|-------------|
 | `SilkFlowV1` | 3840 × 2160 | 30  | 360    | 12.000 s | Version 1: neutral black satin matching the reference |
-| `SilkFlowV2` | 3840 × 2160 | 30  | 360    | 12.000 s | Version 2: alternate **champagne-gold palette**, same cloth and motion |
+| `SilkFlowV2` | 3840 × 2160 | 30  | 360    | 12.000 s | Version 2: alternate **champagne-gold palette** on warm black, plus a slow camera push-in (×1.18) with 6° of roll |
 
 The reference is 360 frames at 29.97 fps (12.012 s). At exactly 30 fps the
 compositions keep the same 360 frames (12.000 s). The 12 ms gap is the NTSC
@@ -48,11 +48,19 @@ to the render command for much faster renders.
   driven by `useCurrentFrame()`. Its canvas backing store is always the
   composition size (4K).
 - `src/silk/silkShader.ts` builds the cloth from a height field of several
-  diagonal folds (about 39°, slowly swaying) that drift, merge and bend.
-  Normals come from the gradient. Shading combines a contrast-curved diffuse
-  term, an anisotropic satin sheen, a faint brushed-fibre texture and an
-  upper-left light falloff.
-- `src/silk/SilkFlow.tsx` holds the colour ramp (shadow / mid / highlight tints)
-  and an exposure envelope measured from the reference's average luma every 0.5 s.
-  The envelope reproduces the light "breathing" and the gentle darkening at the end.
-  All look parameters are a zod schema, so they can be edited live in Studio.
+  diagonal folds (about 41.5°, swaying ±1.5°) that drift, merge and bend.
+  Normals come from a wide-step gradient, which gives the soft, slightly
+  defocused look of the reference. Shading combines a soft ambient fill, a
+  cubic diffuse term, an anisotropic satin sheen and a left-to-right light
+  falloff.
+- `src/silk/SilkFlow.tsx` holds the colour ramp (shadow / mid / highlight tints),
+  the optional camera move (`pushIn`, `rollDegrees`) and two curves calibrated
+  against the reference:
+  - `GAIN`: an exposure envelope sampled every 0.5 s. It was calibrated in a closed loop:
+    the shader was rendered with a flat gain, its mean luma was compared with the
+    reference's at the same timestamps (watermark masked out), and the ratio was stored.
+    The per-checkpoint mean luma correlates 0.99 with the reference: a peak
+    around 1–2 s, then a slow fade into near-black.
+  - `SPEED_WINDOWS`: relative animation speed per 2 s window, integrated into
+    a smooth, monotonic animation clock.
+- All look parameters are a zod schema, so they can be edited live in Studio.
