@@ -203,6 +203,12 @@ void main() {
   float cellVar = 0.5 + h1(cid + ivec2(91, 17));
   vec3 tile = uTile * 0.006 * (0.10 + diff * diff) * (0.25 + 0.75 * rimZone) * cellVar;
   tile += uSpec * 0.09 * spec * bev * rimZone * cellVar;
+  // shard faces turned towards the key light catch a cool sheen near the frame borders
+  tile += uTile * 0.035 * pow(diff, 4.0) * rimZone * rimZone * cellVar;
+  tile += uSpec * 0.12 * pow(max(dot(N, H), 0.0), 12.0) * bev * rimZone * rimZone;
+  // crisp specular glints along bevelled shard edges (strongest on the left)
+  float glintSide = 0.35 + 0.65 * smoothstep(0.3, -0.7, uv.x);
+  tile += uSpec * 1.2 * pow(max(dot(N, H), 0.0), 90.0) * bevT * (1.0 - bevT) * 4.0 * rimZone * glintSide;
   tile += uBg * 0.15;
   tile *= 1.0 - gap;
 
