@@ -59,6 +59,26 @@ float gnoise(vec2 p) {
   float d = dot(grad(i + ivec2(1, 1)), f - vec2(1.0, 1.0));
   return 1.6 * mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
 }
+// gradient noise whose x axis repeats every \`period\` units: used for angular
+// coordinates so there is no seam at the atan() branch cut (angle = +-PI).
+float gnoiseP(vec2 p, int period) {
+  ivec2 i = ivec2(floor(p));
+  vec2 f = fract(p);
+  vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+  int x0 = ((i.x % period) + period) % period;
+  int x1 = (x0 + 1) % period;
+  float a = dot(grad(ivec2(x0, i.y)), f);
+  float b = dot(grad(ivec2(x1, i.y)), f - vec2(1.0, 0.0));
+  float c = dot(grad(ivec2(x0, i.y + 1)), f - vec2(0.0, 1.0));
+  float d = dot(grad(ivec2(x1, i.y + 1)), f - vec2(1.0, 1.0));
+  return 1.6 * mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+// two-octave seamless angular noise; a = angle in radians
+float angNoise(float a, float y, int baseCycles) {
+  float x = a / (2.0 * PI) + 0.5;
+  return 0.65 * gnoiseP(vec2(x * float(baseCycles), y), baseCycles)
+       + 0.35 * gnoiseP(vec2(x * float(2 * baseCycles), y * 2.0 + 5.3), 2 * baseCycles);
+}
 const mat2 ROT = mat2(0.8, 0.6, -0.6, 0.8);
 float fbm(vec2 p, int oct) {
   float s = 0.0, a = 0.5;
@@ -162,7 +182,7 @@ void main() {
   vec2 qf = qs + 0.12 * fw;
   float rf = length(qf);
   float af = atan(qf.y, qf.x);
-  float ridge = 1.0 - abs(gnoise(vec2(af * 3.0 / PI * 2.0, rf * 9.0 - t * 0.6) + fw * 2.0));
+  float ridge = 1.0 - abs(gnoiseP(vec2((af / (2.0 * PI) + 0.5) * 6.0, rf * 9.0 - t * 0.6) + fw * 2.0, 6));
   float ridge2 = 1.0 - abs(gnoise(qf * 7.0 + vec2(t * 0.4, 3.0)));
   float fil = pow(ridge, 14.0) + 0.5 * pow(ridge2, 18.0);
   float filMask = smoothstep(0.06, 0.1, rN) * (1.0 - smoothstep(0.10, max(plumeR * 0.85, 0.13), rN)) * burst;
@@ -170,7 +190,7 @@ void main() {
 
   // ---- the igniting ring --------------------------------------------------------
   float ringR = 0.095 + 0.03 * burst;
-  float ringN = fbm(vec2(atan(pNear.y, pNear.x) * 3.0, t * 2.0), 3);
+  float ringN = angNoise(atan(pNear.y, pNear.x), t * 2.0, 9);
   float ringD = rN - ringR - 0.012 * ringN;
   float ringW = 0.022 + 0.012 * burst;
   float ring = exp(-pow(ringD / ringW, 2.0));
@@ -180,7 +200,7 @@ void main() {
   col += uInner * exp(-pow(ringD / 0.09, 2.0)) * ignite * 0.25 * (1.0 - 0.85 * burst);
 
   // bright rim right around the core (persists)
-  float rimN = fbm(vec2(atan(pNear.y, pNear.x) * 2.0, t * 0.8 + 3.0), 3);
+  float rimN = angNoise(atan(pNear.y, pNear.x), t * 0.8 + 3.0, 6);
   float rim = exp(-pow((rN - 0.083 - 0.01 * rimN) / 0.022, 2.0));
   col += mix(uCore, uInner, 0.3) * rim * burst * 0.55;
 

@@ -74,6 +74,20 @@ float noise1(float x, float seed) {
   return mix(a, b, f * f * (3.0 - 2.0 * f));
 }
 
+// 1D value noise repeating every \`period\` cells (seamless around a circle)
+float noise1p(float x, int period, float seed) {
+  float i = floor(x); float f = fract(x);
+  int i0 = ((int(i) % period) + period) % period;
+  int i1 = (i0 + 1) % period;
+  float a = h1(ivec2(i0, int(seed)));
+  float b = h1(ivec2(i1, int(seed)));
+  return mix(a, b, f * f * (3.0 - 2.0 * f));
+}
+// angle (radians) -> seamless noise with \`cycles\` cells around the circle
+float angNoise(float ang, int cycles, float seed) {
+  return noise1p((ang / (2.0 * PI) + 0.5) * float(cycles), cycles, seed);
+}
+
 // Voronoi with exact border distance (after I. Quilez).
 // Returns: x = distance to nearest border, yz = border normal (towards neighbour)
 // Outputs: cell id, neighbour id across the nearest border, offset to cell centre.
@@ -239,13 +253,13 @@ void main() {
   // impact starburst
   float ang = atan(d.y, d.x);
   float burstEnv = smoothstep(3.0, 6.0, tc) * exp(-max(tc - 8.0, 0.0) / 9.0);
-  float spikes = pow(noise1(ang * 9.0 / PI * 4.0, 1.0), 4.0) + 0.6 * pow(noise1(ang * 3.0 / PI * 4.0, 2.0), 6.0);
+  float spikes = pow(angNoise(ang, 72, 1.0), 4.0) + 0.6 * pow(angNoise(ang, 24, 2.0), 6.0);
   float burst = exp(-dl / 0.02) * 1.4 + exp(-dl / 0.10) * 0.18 + spikes * exp(-dl / 0.24) * 0.3;
   col += uFlare * burst * burstEnv;
 
   // volumetric-style rays radiating from the lit region
   float rayEnv = smoothstep(4.0, 10.0, tc) * (1.0 - smoothstep(18.0, 44.0, tc));
-  float rays = pow(noise1(ang * 22.0 / PI, 5.0), 3.0) * 0.8 + pow(noise1(ang * 7.0 / PI, 9.0), 3.0) * 0.6;
+  float rays = pow(angNoise(ang, 44, 5.0), 3.0) * 0.8 + pow(angNoise(ang, 14, 9.0), 3.0) * 0.6;
   col += mix(uCrackA, uFlare, 0.5) * rays * exp(-dl / 0.55) * smoothstep(0.03, 0.25, dl) * rayEnv * 0.05;
 
   // ambient haze lit by the energy
