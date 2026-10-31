@@ -36,7 +36,9 @@ float fbm(vec3 p) {
 // Drifting stage haze density, shared by every shader so beams and background agree.
 float haze(vec3 p, float t) {
   vec3 q = p * 0.42 + vec3(t * 0.045, t * 0.03, -t * 0.02);
-  float n = fbm(q + 0.6 * vec3(fbm(q * 0.7 + 4.0), fbm(q * 0.7 + 8.0), 0.0));
+  // single cheap warp octave keeps the swirl without two extra fbm evaluations
+  vec3 w = vec3(vnoise(q * 0.7 + 4.0), vnoise(q * 0.7 + 8.0), 0.0);
+  float n = fbm(q + 0.6 * w);
   return n;
 }
 `;
@@ -71,7 +73,7 @@ uniform float uIntensity;
 uniform float uTime;
 varying vec3 vWorld;
 ${NOISE}
-const int STEPS = 32;
+const int STEPS = 22;
 const float INT_TAN_FACTOR = 1.75; // integration cone: where the gaussian profile is non-negligible
 
 float hash12(vec2 p) {

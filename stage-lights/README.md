@@ -56,7 +56,7 @@ npx remotion render StageLights-V2-4K out/StageLights-V2-1080p.mp4 --scale=0.5
 ### Machines without a GPU
 
 WebGL 2 is required. On a GPU-less machine / container add `--gl=swangle`
-(SwiftShader software rendering; expect a few seconds per 4K frame):
+(SwiftShader software rendering; expect ~5 s per 4K frame on 4 CPU cores):
 
 ```console
 npx remotion render StageLights-V1-4K out/StageLights-V1-1080p.mp4 --scale=0.5 --gl=swangle --concurrency=2
