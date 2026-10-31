@@ -33,7 +33,7 @@ const barProgress = (i: number, t: number) =>
 const PATH_POINTS: [number, number][] = [
   [-0.42, 3.88],
   [1.0, 2.8],
-  [2.25, 3.78],
+  [2.25, 3.6],
   [3.05, 2.28],
   [3.95, 3.0],
   [5.0, 1.18],
