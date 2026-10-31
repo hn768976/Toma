@@ -44,7 +44,7 @@ export const flyThroughRig = (
   const hubs = layout.tour;
   const n = hubs.length;
   const t0 = 2.55;
-  const step = (duration + 0.35 - t0) / (n - 1);
+  const step = (duration - 1.05 - t0) / (n - 1);
   const times = hubs.map((_, i) => t0 + i * step);
 
   const dir = (i: number) => {
@@ -62,6 +62,7 @@ export const flyThroughRig = (
       .sub(startDir.clone().multiplyScalar(4))
       .add(v3(1.5, 1.0, 17)),
   });
+  const offs: THREE.Vector3[] = [];
   hubs.forEach((h, i) => {
     const d = dir(i).add(dir(i - 1)).normalize();
     const side = new THREE.Vector3().crossVectors(d, UP).normalize();
@@ -69,16 +70,17 @@ export const flyThroughRig = (
     const off = side
       .multiplyScalar(s * range(rng, 4.2, 6.4))
       .add(UP.clone().multiplyScalar(range(rng, -2.2, 2.2)));
+    offs.push(off.clone());
     camKeys.push({ t: times[i], v: h.clone().add(off).sub(d.multiplyScalar(1.5)) });
   });
   const lastDir = dir(n - 1);
   const endPos = camKeys[camKeys.length - 1].v
     .clone()
-    .add(lastDir.clone().multiplyScalar(4))
-    .add(v3(0, 1.0, 0));
-  // The last hub is passed just after the clip ends, so the closing frames
-  // hold a close-up of it (as in the reference).
-  camKeys.push({ t: times[n - 1] + step, v: endPos });
+    .add(lastDir.clone().multiplyScalar(10))
+    .add(v3(0, 2.0, 0));
+  // After the last hub (~20.6 s) the camera flies on into empty darkness,
+  // as in the reference.
+  camKeys.push({ t: duration, v: endPos });
 
   const tgtKeys: { t: number; v: THREE.Vector3 }[] = [
     { t: 0, v: hubs[0].clone() },
@@ -86,11 +88,16 @@ export const flyThroughRig = (
   ];
   for (let i = 1; i < n; i++) {
     const next = hubs[Math.min(n - 1, i + 1)];
-    tgtKeys.push({ t: times[i - 1] + 0.15, v: hubs[i].clone().lerp(next, 0.38) });
+    // Shift the aim parallel to the camera's pass offset so the coming hub
+    // sits off-centre (on a third) rather than dead centre.
+    tgtKeys.push({
+      t: times[i - 1] + 0.15,
+      v: hubs[i].clone().lerp(next, 0.38).add(offs[i].clone().multiplyScalar(0.85)),
+    });
   }
   tgtKeys.push({
-    t: times[n - 1] + step,
-    v: hubs[n - 1].clone().add(lastDir.clone().multiplyScalar(12)),
+    t: duration,
+    v: endPos.clone().add(lastDir.clone().multiplyScalar(30)).add(v3(5, -3, 0)),
   });
 
   const camSpline = new TimedSpline(camKeys);
@@ -135,13 +142,13 @@ export const orbitRig = (layout: NetworkLayout, duration: number): CameraRig => 
     revealDistance: R * 2.2,
     firstHubBirth: 0.0,
     staggeredReveal: true,
-    aperture: 18,
+    aperture: 13,
     fog: 0.004,
     sample: (t) => {
       const u = t / duration;
       const e = u * u * (3 - 2 * u);
       const theta = 0.6 - 2.3 * (0.65 * u + 0.35 * e);
-      const r = lerp(R * 1.5, R * 0.72, e);
+      const r = lerp(R * 1.5, R * 0.85, e);
       const y = C.y + lerp(R * 0.95, -R * 0.12, Math.pow(e, 0.85));
       const pos = v3(C.x + Math.cos(theta) * r, y, C.z + Math.sin(theta) * r);
       const target = C.clone().add(
@@ -199,8 +206,8 @@ export const computeStates = (
       focus = bestDist;
     } else {
       // smooth, rate-limited focus pull (no pops)
-      const step = (bestDist - focus) * 0.07;
-      const maxStep = focus * 0.035;
+      const step = (bestDist - focus) * 0.05;
+      const maxStep = focus * 0.02;
       focus += Math.max(-maxStep, Math.min(maxStep, step));
     }
     out.push({ ...s, focus: Math.max(3, focus) });

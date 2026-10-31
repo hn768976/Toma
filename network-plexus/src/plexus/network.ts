@@ -186,7 +186,7 @@ export const buildScene = (
           .clone()
           .add(v3(gauss(rng), gauss(rng), gauss(rng)).multiplyScalar(0.7 * sc)),
         color: rng() < 0.55 ? palette.sparkle : rng() < 0.8 ? palette.sparkleB : palette.satB,
-        alpha: range(rng, 0.45, 1),
+        alpha: range(rng, 0.6, 1),
         size: range(rng, 0.035, 0.07),
         minPx: 2.6,
         birth: b + range(rng, 0, 0.8),
@@ -361,16 +361,16 @@ export const buildScene = (
       .clone()
       .add(randomUnit(rng).multiplyScalar(range(rng, 1.0, 5)));
     const d = randomUnit(rng).multiplyScalar(range(rng, 30, 60));
-    const orange = rng() < 0.2;
-    const c = orange ? palette.lineWarm : palette.line;
+    const orange = rng() < 0.15;
+    const c = orange ? palette.lineWarm : rng() < 0.5 ? palette.line : palette.beam;
     lines.push({
       a: p.clone().sub(d),
       b: p.clone().add(d),
       colorA: c,
       colorB: c,
-      alphaA: 0.45,
-      alphaB: 0.45,
-      width: 2.4,
+      alphaA: 0.55,
+      alphaB: 0.55,
+      width: 3.4,
       birth: streakBirth,
       grow: 1.6,
     });

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { TimedSpline } from "../engine/spline";
+import { TimedSpline, lerp, smoothstep } from "../engine/spline";
 
 export type CrashCameraState = {
   pos: THREE.Vector3;
@@ -7,6 +7,8 @@ export type CrashCameraState = {
   roll: number;
   fov: number;
   focus: number;
+  /** defocus strength (px at 1080 for objects at infinity) */
+  aperture: number;
 };
 
 const v3 = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
@@ -20,7 +22,8 @@ type Key = { t: number; pos: THREE.Vector3; target: THREE.Vector3; roll: number;
  *  5.3–8.0  banked perspective view down the receding chart / candle rows
  *  8.0–10.7 descend along the falling line towards the ticker boards
  * 10.7–12.4 push into an extreme close-up of the ticker board
- * 12.4–13.0 fast whip pull-back to the opening wide view (seamless loop)
+ * 12.4–13.3 gentle pull-back while focus racks to the foreground, so the
+ *            boards and flares dissolve into orange bokeh (as in the reference)
  */
 const KEYS: Key[] = [
   { t: 0.0, pos: v3(-2, 3, 62), target: v3(-2, 1, 0), roll: 0, fov: 45 },
@@ -31,9 +34,10 @@ const KEYS: Key[] = [
   { t: 9.3, pos: v3(17, -2, 24), target: v3(23, -15, -3), roll: 0.05, fov: 46 },
   { t: 10.8, pos: v3(27, -9, 19), target: v3(26, -21, -2), roll: 0.08, fov: 45 },
   { t: 12.4, pos: v3(21, -20, 6.5), target: v3(21, -22.3, -2), roll: 0.03, fov: 42 },
-  { t: 13.0, pos: v3(-2, 3, 60), target: v3(-2, 1, 0), roll: 0, fov: 45 },
-  { t: 13.34, pos: v3(-2, 3, 59), target: v3(-2, 1, 0), roll: 0, fov: 45 },
+  { t: 13.34, pos: v3(18, -15, 16), target: v3(16, -17, -2), roll: -0.03, fov: 44 },
 ];
+
+const rack = (t: number) => smoothstep(12.5, 13.2, t);
 
 export const computeCrashCamera = (fps: number, frames: number) => {
   const pos = new TimedSpline(KEYS.map((k) => ({ t: k.t, v: k.pos })));
@@ -52,8 +56,9 @@ export const computeCrashCamera = (fps: number, frames: number) => {
       target,
       roll: m.x,
       fov: m.y,
-      // focus on the look-at point (the subject the shot is framing)
-      focus: Math.max(4, p.distanceTo(target)),
+      // focus on the look-at point, then rack to the foreground at the end
+      focus: lerp(Math.max(4, p.distanceTo(target)), 1.5, rack(t)),
+      aperture: lerp(9, 30, rack(t)),
     });
   }
   return out;

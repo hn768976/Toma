@@ -118,7 +118,7 @@ const createEngine = (
     uniforms,
   );
   // Soft, wide lens vignette + exposure, rendered in WebGL with dither.
-  const vignette = createVignette({ inner: 0.35, outer: 1.45, strength: 0.6 }, uniforms);
+  const vignette = createVignette({ inner: 0.35, outer: 1.4, strength: 0.75 }, uniforms);
   const vignetteMat = vignette.material as THREE.ShaderMaterial;
   scene.add(lineBatch.mesh, bbBatch.mesh, spriteBatch.mesh, pulseBatch.mesh, vignette);
 

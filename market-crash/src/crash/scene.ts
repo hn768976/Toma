@@ -172,7 +172,7 @@ export const buildCrashScene = (pal: CrashPalette, seed: number): CrashScene => 
   });
 
   /* ---------------- LED dot-matrix chart ---------------- */
-  const ledPath = chartPath(77, -8, 36, 9, -31, 10, 0.9, 0.75);
+  const ledPath = chartPath(77, -4, 17, 9, -31, 3, 0.6, 0.75);
   const dots = resample(ledPath, 0.36);
   dots.forEach((d) => {
     const nrm = v3(-d.dir.y, d.dir.x, 0);
@@ -189,7 +189,7 @@ export const buildCrashScene = (pal: CrashPalette, seed: number): CrashScene => 
         birth: 2.6 + d.u * 7.0,
       };
       billboards.push(item);
-      if (k === 0) billboards.push({ ...item, alpha: 0.35, extraBlur: 9 });
+      if (k === 0) billboards.push({ ...item, alpha: 0.3, extraBlur: 5 });
     }
   });
 
@@ -296,7 +296,7 @@ export const buildCrashScene = (pal: CrashPalette, seed: number): CrashScene => 
     sprites.push({
       pos: p,
       color: pal.haze,
-      alpha: i < 5 ? 0.42 : 0.2,
+      alpha: i < 5 ? 0.55 : 0.28,
       size: range(rng, 14, 22),
       minPx: 90,
       kind: SPRITE_GLOW,
@@ -306,7 +306,7 @@ export const buildCrashScene = (pal: CrashPalette, seed: number): CrashScene => 
   sprites.push({
     pos: v3(-4, 0, -6),
     color: pal.haze,
-    alpha: 0.38,
+    alpha: 0.5,
     size: 60,
     minPx: 260,
     kind: SPRITE_GLOW,
@@ -362,8 +362,8 @@ export const buildCrashScene = (pal: CrashPalette, seed: number): CrashScene => 
   }
 
   const bursts: SparkBurst[] = [
-    { origin: v3(-19, -5, 13), t0: 2.2, count: 260, speed: [8, 30], life: 1.7, seed: 5 },
-    { origin: v3(-2, 4, 4), t0: 5.9, count: 160, speed: [6, 22], life: 1.4, seed: 6 },
+    { origin: v3(-19, -5, 13), t0: 2.2, count: 340, speed: [10, 36], life: 1.8, seed: 5 },
+    { origin: v3(-2, 4, 4), t0: 5.9, count: 220, speed: [8, 28], life: 1.5, seed: 6 },
   ];
 
   return { sprites, lines, billboards, tickers, bursts };

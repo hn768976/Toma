@@ -124,12 +124,12 @@ const createEngine = (
     pos: new THREE.Vector3(),
     color: palette.flareCore,
     alpha: 0,
-    size: 0.12,
-    minPx: 3,
+    size: 0.2,
+    minPx: 4,
     kind: SPRITE_GLOW,
   }));
   data.bursts.forEach((b) => {
-    sparkSprites.push({ pos: b.origin, color: palette.flare, alpha: 0, size: 26, minPx: 300, kind: SPRITE_FLARE });
+    sparkSprites.push({ pos: b.origin, color: palette.flare, alpha: 0, size: 40, minPx: 700, kind: SPRITE_FLARE });
     sparkSprites.push({ pos: b.origin, color: palette.flareCore, alpha: 0, size: 3, minPx: 40, kind: SPRITE_GLOW });
   });
   const sparkBatch = new SpriteBatch(sparkSprites, uniforms);
@@ -140,13 +140,13 @@ const createEngine = (
     colorB: palette.flareCore,
     alphaA: 0,
     alphaB: 0,
-    width: 2,
+    width: 3,
   }));
   const trailBatch = new LineBatch(trailLines, uniforms);
   scene.add(trailBatch.mesh, sparkBatch.mesh);
   // Heavy lens vignette (as in the reference), rendered in WebGL with dither
   // so the dark falloff never bands.
-  scene.add(createVignette({ inner: 0.3, outer: 1.3, strength: 0.93 }, uniforms));
+  scene.add(createVignette({ inner: 0.36, outer: 1.32, strength: 0.88 }, uniforms));
 
   const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
   const pa = new THREE.Vector3();
@@ -165,6 +165,7 @@ const createEngine = (
       camera.updateMatrixWorld();
       uniforms.uTime.value = t;
       uniforms.uFocus.value = s.focus;
+      uniforms.uAperture.value = s.aperture;
 
       sparks.forEach((sp, i) => {
         const age = t - sp.burst.t0 - sp.delay;
