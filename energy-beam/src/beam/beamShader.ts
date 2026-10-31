@@ -67,11 +67,12 @@ void main() {
 
   // ---------- envelopes ----------
   float flare = ph < 0.05 ? 1.0 : exp(-(ph - 0.05) / 0.07);
-  float preflash = smoothstep(uPeriod - 0.08, uPeriod - 0.045, ph);
-  float beamOn = smoothstep(0.0, 0.07, ph) * (1.0 - smoothstep(0.9, 0.96, ph));
+  float preflash = smoothstep(uPeriod - 0.065, uPeriod - 0.035, ph);
+  float beamOn = smoothstep(0.0, 0.07, ph) * (1.0 - smoothstep(0.95, 1.01, ph));
   float fill = smoothstep(0.02, 0.1, ph) * (1.0 - 0.6 * smoothstep(0.46, 0.58, ph) - 0.4 * smoothstep(0.6, 0.78, ph));
-  float deep = smoothstep(0.5, 0.85, ph);
-  float halfW = mix(0.1, 0.05, smoothstep(0.6, 0.88, ph));
+  float deep = smoothstep(0.5, 0.88, ph);
+  // the beam keeps most of its width while the filaments fade (as in the reference)
+  float halfW = mix(0.1, 0.075, smoothstep(0.55, 0.9, ph));
 
   float ax = abs(p.x);
   vec3 energy = vec3(0.0);
@@ -91,15 +92,17 @@ void main() {
       if (i == 1) s = 0.9;
       float xi = sign(s) * pow(abs(s), 1.15) * halfW;
       xi += 0.003 * sin(t * 6.3 + h2 * 40.0) + 0.0015 * sin(t * 17.0 + h3 * 13.0);
-      float death = mix(0.62, 0.93, h2);
+      // slight waviness along the height so the filaments are not ruler-straight
+      xi += 0.0022 * sin(p.y * (7.0 + 6.0 * h1) + h4 * 30.0 + t * 2.3) + 0.0012 * sin(p.y * 23.0 + h2 * 17.0 - t * 3.1);
+      float death = mix(0.7, 0.99, h2);
       float life = 1.0 - smoothstep(death - 0.06, death, ph);
-      float w = mix(0.0012, 0.005, h3 * h3) * mix(1.0, 0.65, deep);
+      float w = mix(0.0012, 0.005, h3 * h3) * mix(1.0, 0.8, deep);
       float amp = mix(0.6, 1.6, h4);
       if (i < 2) { w = 0.0018; amp = i == 0 ? 2.6 : 1.4; life *= 1.0 - smoothstep(0.42, 0.58, ph); }
       float dx = (p.x - xi) / w;
       float prof = exp(-dx * dx);
       // vertical streak texture + per-frame shimmer
-      float streak = 0.6 + 0.4 * noise(vec2(h4 * 91.0, p.y * 2.2 - t * 0.9 * (0.5 + h1)));
+      float streak = 0.45 + 0.55 * noise(vec2(h4 * 91.0, p.y * 4.5 - t * 0.9 * (0.5 + h1)));
       float flick = 0.8 + 0.2 * sin(t * 29.0 + h4 * 60.0);
       lines += prof * life * streak * flick * amp * (1.0 + 1.3 * smoothstep(0.4, 0.7, ph));
     }
@@ -119,7 +122,7 @@ void main() {
   energy += beamI * beamTint + uTintCore * max(beamI - 0.9, 0.0) * 0.6 * (1.0 - deep);
 
   // ---------- hot white core (flare + pre-flash) ----------
-  float coreW = mix(0.028, 0.05, flare);
+  float coreW = mix(0.028, 0.065, flare);
   float core = exp(-pow(ax / coreW, 2.6));
   float coreTex = 0.85 + 0.15 * noise(vec2(p.x * 220.0, p.y * 2.0 - t * 1.5));
   float coreI = core * coreTex * (flare * 5.0 + preflash * 4.0);
@@ -136,22 +139,24 @@ void main() {
     float sz = mix(0.45, 1.0, flare);
     // soft rays, re-seeded each burst so no two bursts look identical
     float rot = cycle * 0.37;
-    float nFine = angularNoise(ang + rot, 7.0, 3.0 + cycle * 2.1);
+    float nFine = angularNoise(ang + rot, 9.0, 3.0 + cycle * 2.1);
+    float nMid = angularNoise(ang * 1.37 - rot, 5.0, 21.0 + cycle * 0.7);
     float nCoarse = angularNoise(ang - rot * 0.5, 2.5, 11.0 + cycle * 1.3);
-    float rays = pow(nFine, 3.0) * 1.4 + pow(nCoarse, 2.0) * 0.8;
+    float rays = pow(nFine, 4.0) * 1.6 * (0.4 + nMid) + pow(nCoarse, 2.5) * 0.7;
+    rays *= 1.0 + 0.25 * smoothstep(0.0, -0.4, ang); // reference rays are a touch stronger on the left
     // fan of rays strongest 30-70 degrees off vertical, fading towards the top
     rays *= smoothstep(0.1, 0.6, abs(ang)) * smoothstep(1.6, 1.0, abs(ang)) * 0.85 + 0.15;
-    float rayFall = exp(-r / (0.4 * sz)) * smoothstep(0.75, 0.1, d.y);
-    float glow = exp(-length(d * vec2(0.5, 1.2)) / (0.18 * sz));
-    float wide = exp(-length(d * vec2(0.55, 1.6)) / (0.3 * sz));
+    float rayFall = exp(-r / (0.5 * sz)) * smoothstep(0.8, 0.1, d.y);
+    float glow = exp(-length(d * vec2(0.75, 1.2)) / (0.15 * sz));
+    float wide = exp(-length(d * vec2(0.9, 1.4)) / (0.26 * sz));
     float hot = exp(-r / (0.035 * sz));
-    float flareI = (rays * rayFall * 1.1 + glow * 1.3 + wide * 0.5) * flare;
+    float flareI = (rays * rayFall * 1.2 + glow * 2.3 + wide * 0.4) * flare;
     energy += flareI * uTintFlare + hot * flare * 3.0 * uTintCore;
   }
 
   vec3 col = 1.0 - exp(-energy);
   // ordered-free dither to prevent banding after H.264 compression
-  float dither = (hash21(gl_FragCoord.xy + fract(t) * 91.0) - 0.5) / 255.0;
+  float dither = (hash21(gl_FragCoord.xy + fract(t) * 91.0) - 0.5) * (4.0 / 255.0);
   col = clamp(col + dither, 0.0, 1.0);
   outColor = vec4(col, 1.0);
 }

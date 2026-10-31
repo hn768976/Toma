@@ -14,5 +14,5 @@ Config.setChromiumOpenGlRenderer("angle");
 Config.setVideoImageFormat("png");
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
-Config.setCrf(16);
+Config.setCrf(12);
 Config.setOverwriteOutput(true);

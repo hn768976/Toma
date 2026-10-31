@@ -22,7 +22,7 @@ src/gl/ShaderCanvas.tsx   minimal WebGL 2 full-screen shader renderer (determini
 src/beam/beamShader.ts    the beam / flare fragment shader
 src/beam/palettes.ts      V1 and V2 colour palettes (tone-map tints)
 src/beam/EnergyBeam.tsx   composition component
-remotion.config.ts        H.264, yuv420p, CRF 16, PNG frames, ANGLE GL
+remotion.config.ts        H.264, yuv420p, CRF 12, PNG frames, ANGLE GL
 ```
 
 No external assets are needed — everything is procedural.
