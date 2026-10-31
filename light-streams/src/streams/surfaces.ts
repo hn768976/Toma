@@ -118,13 +118,13 @@ export const makeFoldShot = (): Shot => {
   const lines = 520;
   const points = 440;
   const across = makeAcross(lines, 23);
-  const R = 8.3; // centre-line radius of the hairpin
+  const R = 8.0; // centre-line radius of the hairpin
   const W = 15; // ribbon width (inner radius = R - W/2)
   const nearLen = 18;
   const farLen = 22;
   const arcLen = Math.PI * R;
   const total = nearLen + arcLen + farLen;
-  const wallStart = 3.0; // x where the far branch starts to curl up
+  const wallStart = 7.0; // x where the far branch starts to curl up
   const wallR = 5.0;
 
   const sparkles = 1400;

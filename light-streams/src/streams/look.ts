@@ -70,14 +70,14 @@ export const cameraFor = (
       };
     }
     return {
-      pos: mix3(v3(0.6, 6.4, 6.8), v3(0.45, 6.25, 6.5), k),
-      target: mix3(v3(1.6, 0.4, -2.6), v3(1.5, 0.4, -2.7), k),
+      pos: mix3(v3(-1.6, 3.8, 4.8), v3(-1.75, 3.7, 4.5), k),
+      target: mix3(v3(2.8, -1.2, -2.0), v3(2.7, -1.2, -2.1), k),
       fov: 50,
       roll: lerp(0.0, -0.01, k),
-      focus: 8.5,
+      focus: 5.5,
       coc: 6,
       glow: [0.3, 0.95],
-      exposure: 1.4,
+      exposure: 1.3,
       dash: 2.2,
     };
   }
