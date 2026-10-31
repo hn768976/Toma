@@ -71,7 +71,16 @@ Final review results:
   - There are no external assets: everything is procedural, so no asset files are needed.
 - **Excluded:** `node_modules/` and `out/`, which are restored by `npm ci` and the render scripts.
 
-CLEAN_ROOM_RESULTS
+**Clean-room test:** both ZIPs were extracted into an empty folder, outside the repository and without `node_modules`. Each project was installed and rendered only with its documented commands:
+
+| Step | Composition 1 (fireworks-loop) | Composition 2 (neon-arc-streaks) |
+|---|---|---|
+| `npm ci` | OK | OK |
+| `npm run lint` (ESLint + TypeScript) | OK | OK |
+| Documented 1080p render | `npm run render:all`: OK. Both MP4s are **byte-identical** to the deliverables. | `npm run render:v1`: OK. The MP4 is **byte-identical** to the deliverable. |
+| Native 4K render (3840×2160) | `Fireworks-V1-4K`, frames 140–169: OK (H.264, 3840×2160, 30 fps) | `NeonArcStreaks-V2-4K`, frames 170–189: OK (H.264, 3840×2160, 30 fps) |
+
+Renders are deterministic, using seeded randomness and pure functions of the frame. Anyone rebuilding from the ZIPs gets exactly the delivered videos.
 
 ## How to reproduce
 
@@ -86,4 +95,11 @@ The same steps apply to `Composition2_NeonArcStreaks_4K_RemotionProject.zip` / `
 
 ## SHA-256 of the delivered files
 
-SHA_LIST
+```
+15469dd769d2f98b48d64190a98a8170bb9b041545907963e38e7a1ba3e91e3d  Composition1_FireworksLoop_4K_RemotionProject.zip
+bc3ea31a49bb6aaa6e29ce4698a4a95b38178434ff3ad7fb58bdca98f0ec1284  Composition1_Version1_1080p.mp4
+59b5e57a2367ef78263783b99878df586e9c61df1836ead375dd785e0a52b2c5  Composition1_Version2_1080p.mp4
+135695ecfea989c3232f6cfd2e46ce396ebacff1452190841d17920220eb1786  Composition2_NeonArcStreaks_4K_RemotionProject.zip
+8962711feefd3a8d00771be6cbff85cd83c7ce8d76b47f86c7486e253202a76c  Composition2_Version1_1080p.mp4
+25a69b15dae144fac61b328b4bc801b58c67edd1acedad3ddfa60ac3434fcbc8  Composition2_Version2_1080p.mp4
+```
