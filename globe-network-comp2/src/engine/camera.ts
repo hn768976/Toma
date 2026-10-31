@@ -2,22 +2,15 @@ import * as THREE from "three";
 import { DEG, Key, latLonToVec3, sampleTrack } from "./math";
 
 /**
- * V1 — timed against the reference: a steady eastward drift from the
- * Caribbean across the Atlantic to Europe / North Africa, tilted ~40 deg.
+ * V1 — matches the reference: a wide, constant-speed linear drift (no easing)
+ * from the Caribbean / Pacific across the Atlantic to the Mediterranean,
+ * tilted ~40 deg. Two keys -> the Hermite spline degenerates to a straight,
+ * constant-velocity move.
  * [lat, lon, distance (earth radii), tilt (deg from nadir), heading (deg)]
  */
 export const KEYS_V1: Key[] = [
-  { t: 0, v: [16.5, -78, 1.55, 40, 0] },
-  { t: 3, v: [17.5, -72, 1.55, 40, 0] },
-  { t: 6, v: [19, -64, 1.55, 40, 0] },
-  { t: 9, v: [21, -53, 1.55, 40, 0] },
-  { t: 12, v: [22.5, -42, 1.55, 40, 0] },
-  { t: 15, v: [24, -31, 1.55, 40, 0] },
-  { t: 18, v: [25, -20, 1.55, 40, 0] },
-  { t: 21, v: [25.5, -10, 1.55, 40, 0] },
-  { t: 24, v: [25, -1, 1.55, 40, 0] },
-  { t: 27, v: [24, 8, 1.55, 40, 0] },
-  { t: 30, v: [23, 16, 1.55, 40, 0] },
+  { t: 0, v: [12, -76, 1.75, 40, 0] },
+  { t: 30, v: [27, 31, 1.75, 40, 0] },
 ];
 
 /**

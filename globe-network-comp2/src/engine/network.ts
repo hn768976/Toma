@@ -24,26 +24,34 @@ export const linkPoint = (l: Link, t: number, out = new THREE.Vector3()) => {
 };
 
 /**
- * Grows a mesh network over time. Nodes "switch on" as the camera brings their
- * region into view; each new node links to a few of its nearest active
- * neighbours (plus the odd long-haul link), so the web densifies the way the
- * reference does. Fully deterministic.
+ * Grows the network like the reference: it starts at ~1.5 s with a burst of
+ * spokes from one central-US hub, then spreads outward (each newcomer must be
+ * near the existing network and inside / just ahead of the camera view) and
+ * links to its nearest active neighbours, with the occasional long-haul link.
+ * Junctions are cities plus evenly spaced points on land. Fully deterministic.
  */
 export const scheduleNetwork = (
   keys: Key[],
   seed: number,
   duration: number,
   viewRadius: (dist: number) => number,
+  isLand: (lat: number, lon: number) => boolean,
 ) => {
   const rnd = mulberry32(seed);
-  const pool: THREE.Vector3[] = CITIES.filter(([, la, lo]) => lo > -130 && lo < 75 && la > -45 && la < 68).map(
-    ([, la, lo]) => latLonToVec3(la, lo),
+  const hubCity = CITIES.find(([n]) => n === "Kansas City")!;
+  const pool: THREE.Vector3[] = [latLonToVec3(hubCity[1], hubCity[2])];
+  CITIES.filter(([n, la, lo]) => n !== "Kansas City" && lo > -130 && lo < 75 && la > -45 && la < 68).forEach(
+    ([, la, lo]) => pool.push(latLonToVec3(la, lo)),
   );
-  // extra junctions scattered over land and sea, like the reference mesh
-  for (let i = 0; i < 170; i++) {
-    const la = -35 + rnd() * 100;
-    const lo = -125 + rnd() * 195;
-    pool.push(latLonToVec3(la, lo));
+  // evenly spaced land junctions (deserts, interiors) - never in open ocean
+  for (let tries = 0, extra = 0; extra < 110 && tries < 40000; tries++) {
+    const la = -38 + rnd() * 103;
+    const lo = -128 + rnd() * 200;
+    if (!isLand(la, lo)) continue;
+    const v = latLonToVec3(la, lo);
+    if (pool.some((p) => p.angleTo(v) < 0.095)) continue;
+    pool.push(v);
+    extra++;
   }
   const nodes: NetNode[] = [];
   const links: Link[] = [];
@@ -55,48 +63,55 @@ export const scheduleNetwork = (
       a: a.clone(),
       b: b.clone(),
       angle,
-      height: 0.002 + angle * 0.06,
+      height: 0.003 + angle * 0.07,
       start,
-      duration: 0.7 + angle * 2.2,
+      duration: 0.7 + angle * 2.4,
       seed: rnd(),
-      pulse: rnd() < 0.45 ? 0.25 + rnd() * 0.35 : 0,
+      pulse: rnd() < 0.4 ? 0.25 + rnd() * 0.35 : 0,
     };
   };
-  for (let t = 1.2; t < duration - 1.5; t += 0.1) {
-    const v = sampleTrack(keys, Math.min(duration, t + 0.6));
+  const activate = (i: number, start: number) => {
+    used.add(i);
+    const p = pool[i];
+    nodes.push({ p, start, size: 0.8 + rnd() * 0.5 });
+    const byDist = active.map((q) => ({ q, d: q.angleTo(p) })).sort((x, y) => x.d - y.d);
+    const near = byDist.filter((o) => o.d > 0.04 && o.d < 0.42);
+    const nLinks = Math.min(near.length, 2 + Math.floor(rnd() * 2));
+    for (let j = 0; j < nLinks; j++) links.push(mkLink(near[j].q, p, start + j * 0.1));
+    // no close neighbour (e.g. first node across an ocean): bridge with long hauls
+    if (!near.length) {
+      const bridge = byDist.filter((o) => o.d >= 0.42 && o.d < 1.0).slice(0, 2);
+      bridge.forEach((o, j) => links.push(mkLink(o.q, p, start + j * 0.15)));
+    }
+    if (start > 6 && rnd() < 0.18) {
+      const far = active.filter((q) => {
+        const d = q.angleTo(p);
+        return d > 0.42 && d < 0.95;
+      });
+      if (far.length) links.push(mkLink(far[Math.floor(rnd() * far.length)], p, start + 0.15));
+    }
+    active.push(p);
+  };
+
+  activate(0, 1.5); // the hub
+  for (let t = 1.6; t < duration - 1.2; t += 0.1) {
+    const v = sampleTrack(keys, Math.min(duration, t + 0.5));
     const center = latLonToVec3(v[0], v[1]);
     const R = viewRadius(v[2]);
-    const cand: number[] = [];
+    const cand: { i: number; d: number }[] = [];
     pool.forEach((p, i) => {
-      if (!used.has(i) && p.angleTo(center) < R) cand.push(i);
+      if (used.has(i) || p.angleTo(center) > R) return;
+      let d = 9;
+      for (const q of active) d = Math.min(d, q.angleTo(p));
+      if (d < 1.0) cand.push({ i, d: d + rnd() * 0.08 });
     });
-    // ramp: few nodes at first, more as the network builds
-    const rate = Math.min(1, 0.1 + t / 18);
-    if (!cand.length || rnd() > rate) continue;
-    const take = 1 + Math.floor(rnd() * 2);
+    if (!cand.length) continue;
+    if (t > 6 && rnd() > Math.min(1, 0.4 + t / 12)) continue;
+    cand.sort((x, y) => x.d - y.d);
+    const take = 1 + (rnd() < 0.5 ? 1 : 0) + (t < 4 ? 1 : 0);
     for (let k = 0; k < take && cand.length; k++) {
-      const ci = cand.splice(Math.floor(rnd() * cand.length), 1)[0];
-      used.add(ci);
-      const p = pool[ci];
-      const start = t + rnd() * 0.1;
-      nodes.push({ p, start, size: 0.8 + rnd() * 0.5 });
-      const near = active
-        .map((q) => ({ q, d: q.angleTo(p) }))
-        .filter((o) => o.d > 0.05 && o.d < 0.5)
-        .sort((x, y) => x.d - y.d);
-      const nLinks = Math.min(near.length, 2 + Math.floor(rnd() * 3));
-      for (let j = 0; j < nLinks; j++) {
-        // links draw outwards from the existing node to the newcomer
-        links.push(mkLink(near[j].q, p, start + j * 0.12));
-      }
-      if (rnd() < 0.14) {
-        const far = active.filter((q) => {
-          const d = q.angleTo(p);
-          return d > 0.5 && d < 0.9;
-        });
-        if (far.length) links.push(mkLink(far[Math.floor(rnd() * far.length)], p, start + 0.2));
-      }
-      active.push(p);
+      const pick = cand.splice(Math.floor(rnd() * Math.min(4, cand.length)), 1)[0];
+      activate(pick.i, t + rnd() * 0.1);
     }
   }
   return { nodes, links };
@@ -190,10 +205,12 @@ void main() {
     float ph = fract((time - start - dur) * pulse + seed);
     pp = exp(-pow((vT - ph) * 22.0, 2.0)) * 1.2;
   }
-  float a = (base + lead * 1.6 + pp) * intensity;
+  float a = (base + pp) * intensity;
   a *= smoothstep(0.0, 0.015, vT) * smoothstep(1.0, 0.985, vT) * 0.5 + 0.5;
   float edge = 1.0 - abs(vSide);
-  vec3 col = coreColor * smoothstep(0.3, 0.9, edge) + glowColor * edge * 0.45;
-  gl_FragColor = vec4(col * a * vFade, 1.0);
+  // cyan-tinted line with a soft glow; bright cyan head while the link grows
+  vec3 col = (coreColor * smoothstep(0.3, 0.9, edge) + glowColor * edge * 0.6) * a;
+  col += (glowColor * edge + coreColor * smoothstep(0.5, 1.0, edge)) * lead * 2.2 * intensity;
+  gl_FragColor = vec4(col * vFade, 1.0);
 }
 `;

@@ -22,7 +22,7 @@ export const LOOKS: Record<EarthNetworkProps["variant"], Look> = {
     curvature: 0.12,
     fov: 26,
     post: {},
-    viewRadius: () => 0.5,
+    viewRadius: () => 0.75,
   },
   // V2: true globe, rising orbital pull-back
   orbital: {
@@ -30,7 +30,7 @@ export const LOOKS: Record<EarthNetworkProps["variant"], Look> = {
     flat: false,
     curvature: 0.5,
     fov: 28,
-    post: { blurTop: 0.3, blurBottom: 0.15, focusHalf: 0.24, vignette: 0.42 },
+    post: { blurTop: 0.2, blurBottom: 0.1, focusHalf: 0.24, vignette: 0.42 },
     viewRadius: (dist) => Math.min(1.05, 0.32 + dist * 0.2),
   },
 };

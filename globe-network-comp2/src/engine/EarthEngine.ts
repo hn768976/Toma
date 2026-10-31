@@ -34,6 +34,23 @@ export type EngineOptions = {
 
 const col = (hex: string) => new THREE.Color(hex);
 
+/** CPU-side land test (downsampled land mask) so network junctions sit on land. */
+const landSampler = (tex: THREE.Texture) => {
+  const W = 1024;
+  const H = 512;
+  const c = document.createElement("canvas");
+  c.width = W;
+  c.height = H;
+  const ctx = c.getContext("2d", { willReadFrequently: true })!;
+  ctx.drawImage(tex.image as CanvasImageSource, 0, 0, W, H);
+  const data = ctx.getImageData(0, 0, W, H).data;
+  return (lat: number, lon: number) => {
+    const x = Math.min(W - 1, Math.max(0, Math.floor(((lon + 180) / 360) * W)));
+    const y = Math.min(H - 1, Math.max(0, Math.floor(((90 - lat) / 180) * H)));
+    return data[(y * W + x) * 4] > 128;
+  };
+};
+
 const EARTH_VERT = /* glsl */ `
 ${FLATTEN_GLSL}
 varying vec2 vUv; varying vec3 vN; varying vec3 vW;
@@ -50,7 +67,7 @@ ${FLATTEN_GLSL}
 uniform sampler2D tDay, tNight, tClouds, tLand;
 uniform vec3 camPos, sunDir, focus;
 uniform float time, fogNear, fogFar;
-uniform vec3 cOceanDeep, cOceanLight, cLand, cLightWarm, cLightHot, cCloud, cCloudShade, cHaze;
+uniform vec3 cOceanDeep, cOceanLight, cLand, cLandLight, cIce, cGlint, cLightWarm, cLightHot, cCloud, cCloudShade, cHaze;
 varying vec2 vUv; varying vec3 vN; varying vec3 vW;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -70,31 +87,33 @@ void main() {
   // clouds drift slowly eastwards; extra octave adds crisp detail when magnified
   vec2 cuv = vUv + vec2(time * 0.00018, 0.0);
   float c0 = texture2D(tClouds, cuv).r;
-  float det = vnoise(cuv * vec2(16000.0, 8000.0)) * 0.6 + vnoise(cuv * vec2(5000.0, 2500.0)) * 0.4;
-  float cl = clamp(c0 * (0.8 + 0.45 * det), 0.0, 1.0);
-  // thin veil everywhere the source has any cloud, solid where it is thick
-  float cloudA = smoothstep(0.04, 0.7, cl) * 0.95;
+  float det = vnoise(cuv * vec2(5000.0, 2500.0));
+  float cl = clamp(c0 * (0.85 + 0.3 * det), 0.0, 1.0);
+  // thin, see-through satellite cloud plus a faint veil (opaque only where thick)
+  // (values below ~0.12 in this cloud map carry ghost land/bathymetry patterns)
+  float cloudA = max(smoothstep(0.11, 0.85, cl) * 0.88, smoothstep(0.11, 0.35, cl) * 0.25);
   float shadow = smoothstep(0.1, 0.8, texture2D(tClouds, cuv + vec2(0.0006, 0.0009)).r);
 
   float pool = exp(-pow(distance(vW, focus) / 1.4, 2.0));
   float sunL = max(dot(Nf, sunDir), 0.0);
 
-  // ocean: teal blue, lifted by bathymetry hints in the day map + sun sheen
-  float dl = dot(day, vec3(0.2, 0.4, 0.4));
-  vec3 ocean = mix(cOceanDeep, cOceanLight, clamp(dl * 2.2, 0.0, 1.0));
-  ocean *= 0.8 + 0.25 * sunL + 0.08 * pool;
+  // Reference look: the whole planet is a blue-teal monochrome of the day
+  // albedo (deserts lighter than ocean, forests dark), lit by city lights.
+  float lum = dot(day, vec3(0.3, 0.59, 0.11));
+  // open water stays a smooth teal (the day map's bathymetry would read as terrain)
+  vec3 ocean = mix(cOceanDeep, cOceanLight, 0.35 + 0.3 * vnoise(vUv * vec2(60.0, 30.0)) + 0.25 * smoothstep(0.12, 0.3, lum));
+  vec3 landCol = mix(cLand, cLandLight, smoothstep(0.1, 0.55, lum));
+  landCol = mix(landCol, cIce, smoothstep(0.86, 0.98, lum));
+  vec3 surf = mix(ocean, landCol, land) * (0.85 + 0.25 * sunL);
+  // broad sun glint / haze towards the top-right of frame
   vec3 R = reflect(-V, Nf);
-  ocean += vec3(0.55, 0.75, 0.85) * pow(max(dot(R, sunDir), 0.0), 18.0) * 0.08;
-
-  // land at night: dark slate with a hint of the day texture
-  vec3 landCol = mix(cLand, day * vec3(0.3, 0.42, 0.55), 0.35) * (0.75 + 0.4 * sunL);
-  vec3 surf = mix(ocean, landCol, land);
+  surf += cGlint * pow(max(dot(R, sunDir), 0.0), 16.0) * (0.22 - 0.12 * land);
   surf *= 1.0 - 0.18 * shadow;
 
   // city lights: sodium orange, white-hot cores, sparkle so they read as points
   float sp = vnoise(vUv * vec2(26000.0, 13000.0));
   float L = pow(lights, 1.35) * (0.55 + 0.9 * sp);
-  vec3 lightCol = cLightWarm * L * 2.3 + cLightHot * pow(lights, 2.4) * 1.8;
+  vec3 lightCol = cLightWarm * L * 3.8 + cLightHot * pow(lights, 2.6) * 1.3;
   surf += lightCol * (1.0 - 0.75 * cloudA) * land;
 
   // clouds lit from the sun side, bluish in their shadows
@@ -136,7 +155,7 @@ void main() {
 const POINT_VERT = /* glsl */ `
 ${FLATTEN_GLSL}
 attribute float aSize; attribute float aBright; attribute float aSeed;
-uniform float pxScale; uniform vec3 camPos; uniform float time; uniform float fogNear, fogFar;
+uniform float pxScale; uniform vec3 camPos; uniform float time; uniform float fogNear, fogFar; uniform float maxSize;
 varying float vB;
 void main() {
   vec3 fp = flattenPos(position);
@@ -146,7 +165,7 @@ void main() {
   float facing = uFlat > 0.5 ? 1.0 : smoothstep(-0.02, 0.15, dot(N, normalize(camPos - fp)));
   float tw = 0.85 + 0.15 * sin(time * (1.1 + aSeed * 2.3) + aSeed * 50.0);
   vB = aBright * tw * facing * (1.0 - 0.6 * smoothstep(fogNear, fogFar, length(camPos - fp)));
-  gl_PointSize = clamp(aSize * pxScale / -mv.z, 1.5, 160.0);
+  gl_PointSize = clamp(aSize * pxScale / -mv.z, 1.5, maxSize * pxScale);
 }
 `;
 const POINT_FRAG = /* glsl */ `
@@ -250,13 +269,16 @@ export class EarthEngine {
         tLand: { value: assets.land },
         sunDir: { value: new THREE.Vector3() },
         focus: { value: new THREE.Vector3() },
-        cOceanDeep: { value: col("#03222f") },
-        cOceanLight: { value: col("#145a72") },
-        cLand: { value: col("#0c1922") },
-        cLightWarm: { value: col("#ff9a3c") },
+        cOceanDeep: { value: col("#05344a") },
+        cOceanLight: { value: col("#0f5470") },
+        cLand: { value: col("#122a33") },
+        cLandLight: { value: col("#1d6580") },
+        cIce: { value: col("#9cc4d4") },
+        cGlint: { value: col("#9fd2ea") },
+        cLightWarm: { value: col("#ff8a2a") },
         cLightHot: { value: col("#fff1cf") },
-        cCloud: { value: col("#e9f1f6") },
-        cCloudShade: { value: col("#5f7b8e") },
+        cCloud: { value: col("#eef2f4") },
+        cCloudShade: { value: col("#7c8d96") },
         cHaze: { value: col("#5f93ab") },
         ...this.shared,
       },
@@ -313,8 +335,8 @@ export class EarthEngine {
     L.forEach(([la, lo, b], i) => {
       latLonToVec3(la, lo, 1.0015, v);
       lp.set([v.x, v.y, v.z], i * 3);
-      ls[i] = 10 + 16 * b;
-      lb[i] = 0.18 + 0.4 * b;
+      ls[i] = 18 + 34 * b;
+      lb[i] = 0.22 + 0.62 * b;
       lseed[i] = rnd();
     });
     const lg = new THREE.BufferGeometry();
@@ -325,7 +347,7 @@ export class EarthEngine {
     this.lightMat = new THREE.ShaderMaterial({
       vertexShader: POINT_VERT,
       fragmentShader: POINT_FRAG,
-      uniforms: { color: { value: col("#ffe2b0") }, glow: { value: col("#ff9440") }, spikes: { value: 0 }, ...this.shared },
+      uniforms: { color: { value: col("#ffe2b0") }, glow: { value: col("#ff9440") }, spikes: { value: 0 }, maxSize: { value: 30 }, ...this.shared },
       blending: THREE.AdditiveBlending,
       transparent: true,
       depthWrite: false,
@@ -335,7 +357,7 @@ export class EarthEngine {
     this.scene.add(lpts);
 
     // --- Network links ---------------------------------------------------------
-    const net = scheduleNetwork(look.keys, 1312367089, opts.duration, look.viewRadius);
+    const net = scheduleNetwork(look.keys, 1312367089, opts.duration, look.viewRadius, landSampler(assets.land));
     this.nodes = net.nodes;
     this.links = net.links;
     this.linkMat = new THREE.ShaderMaterial({
@@ -343,9 +365,9 @@ export class EarthEngine {
       fragmentShader: LINK_FRAG,
       uniforms: {
         resolution: { value: new THREE.Vector2(width, height) },
-        width: { value: 5.0 },
-        coreColor: { value: col("#f2fbff") },
-        glowColor: { value: col("#7fd0ff") },
+        width: { value: 6.0 },
+        coreColor: { value: col("#e2f7ff") },
+        glowColor: { value: col("#4cc6ff") },
         intensity: { value: 1.0 },
         ...this.shared,
       },
@@ -376,7 +398,7 @@ export class EarthEngine {
     this.nodeMat = new THREE.ShaderMaterial({
       vertexShader: POINT_VERT,
       fragmentShader: POINT_FRAG,
-      uniforms: { color: { value: col("#ffffff") }, glow: { value: col("#9ad8ff") }, spikes: { value: 1 }, ...this.shared },
+      uniforms: { color: { value: col("#ffffff") }, glow: { value: col("#9ad8ff") }, spikes: { value: 1 }, maxSize: { value: 160 }, ...this.shared },
       blending: THREE.AdditiveBlending,
       transparent: true,
       depthWrite: false,
@@ -389,8 +411,8 @@ export class EarthEngine {
       focusY: 0.42,
       focusHalf: 0.2,
       focusSoft: 0.35,
-      blurTop: 0.38,
-      blurBottom: 0.25,
+      blurTop: 0.2,
+      blurBottom: 0.12,
       dofRadius: 2.0,
       bloomThreshold: 0.62,
       bloomA: 0.55,
@@ -399,9 +421,9 @@ export class EarthEngine {
       grain: 0.016,
       exposure: 1.0,
       saturation: 1.0,
-      lift: [0.0, 0.01, 0.02],
+      lift: [0.0, 0.006, 0.012],
       gain: [1, 1, 1],
-      tint: [1, 1, 1],
+      tint: [1.04, 0.88, 0.86],
       ...look.post,
     });
   }
@@ -421,7 +443,8 @@ export class EarthEngine {
     this.shared.fogFar.value = 2.6 + cam.dist * 1.4;
     // art-directed key light: from beyond the horizon ahead of the camera
     const u = this.earthMat.uniforms;
-    u.sunDir.value.copy(n).multiplyScalar(0.55).addScaledVector(cam.up, 0.85).normalize();
+    const right = new THREE.Vector3().subVectors(cam.target, cam.position).normalize().cross(cam.up).normalize();
+    u.sunDir.value.copy(n).multiplyScalar(0.45).addScaledVector(cam.up, 0.75).addScaledVector(right, 0.55).normalize();
     u.focus.value.copy(cam.target);
 
     // nodes pop on, then settle with a gentle pulse
