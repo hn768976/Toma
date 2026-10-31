@@ -22,6 +22,7 @@ import {
   helixSpin,
   incomingPair,
   mix,
+  smoothstep,
   redGlow,
   redOffset,
   redVisibility,
@@ -157,6 +158,7 @@ export class DnaScene {
         uStreakB: { value: lin(PALETTE.streakB) },
         uGlow: { value: new THREE.Vector2(...PALETTE.glowCenter) },
         uStreakScale: { value: 1 },
+        uLeak: { value: 0 },
       },
     });
     const bgQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.bgMaterial);
@@ -182,7 +184,7 @@ export class DnaScene {
     stickGeo.rotateZ(Math.PI / 2); // along X
 
     const ballMat = new THREE.MeshPhysicalMaterial({
-      color: 0xb2d8f0,
+      color: 0xb6e8fd,
       roughness: 0.3,
       metalness: 0,
       clearcoat: 1,
@@ -218,16 +220,16 @@ export class DnaScene {
 
     // red (mutated) pair
     this.redBallMat = new THREE.MeshPhysicalMaterial({
-      color: 0xff4d6d,
+      color: 0xff5a78,
       roughness: 0.28,
       clearcoat: 1,
       clearcoatRoughness: 0.2,
-      emissive: new THREE.Color(0x5a0618),
+      emissive: new THREE.Color(0x5e0a22),
       emissiveIntensity: 0.6,
       transparent: true,
     });
     this.redStickMat = new THREE.MeshPhysicalMaterial({
-      color: 0xff6f8a,
+      color: 0xff7890,
       roughness: 0.3,
       emissive: new THREE.Color(0x4a0614),
       emissiveIntensity: 0.6,
@@ -269,7 +271,7 @@ export class DnaScene {
       const size: number[] = [];
       const col: number[] = [];
       const ph: number[] = [];
-      for (let i = 0; i < 900; i++) {
+      for (let i = 0; i < 380; i++) {
         const x = (hash(i * 3.3) - 0.5) * 2.6;
         const y = (hash(i * 4.4) - 0.5) * 0.9 * Math.exp(-Math.abs(x) * 0.5);
         const z = (hash(i * 6.6) - 0.5) * 0.9;
@@ -325,9 +327,9 @@ export class DnaScene {
       this.scene.add(g);
       this.bokehHelices.push({ layer, group: g, speed });
     };
-    addBokehHelix(5.2, 0, -12, 0.08, [0.004, 0.012, 0.045], 1.15, 0.006, 11);
+    addBokehHelix(5.2, 0, -12, 0.08, [0.0028, 0.008, 0.03], 1.15, 0.006, 11);
     addBokehHelix(12.5, 0, -22, -0.05, [0.004, 0.012, 0.045], 1.6, 0.004, 23);
-    addBokehHelix(-6, 0, -18, 0.04, [0.005, 0.016, 0.06], 1.2, 0.005, 37);
+    addBokehHelix(-6, 0, -18, 0.04, [0.0018, 0.0055, 0.022], 1.2, 0.005, 37);
 
     // free-floating bokeh
     {
@@ -489,20 +491,20 @@ export class DnaScene {
     this.redBallMat.emissiveIntensity = 0.6 + 1.6 * glow;
     this.redStickMat.emissiveIntensity = 0.6 + 1.2 * glow;
     // darken as it dissolves (as in the reference)
-    this.redBallMat.color.setHex(0xff4d6d).multiplyScalar(mix(0.25, 1, vis));
+    this.redBallMat.color.setHex(0xff5a78).multiplyScalar(mix(0.25, 1, vis));
 
     // --- incoming pair ---
     const inc = incomingPair(f);
     this.newPair.visible = !isDocked && inc.opacity > 0.002;
     this.newPair.position.set(Math.cos(redTh) * inc.offset, redY, Math.sin(redTh) * inc.offset);
     this.newPair.rotation.set(0, -redTh, 0);
-    const ghost = new THREE.Color(0x3d7fe6);
-    const solid = new THREE.Color(0xb2d8f0);
+    const ghost = new THREE.Color(0x9cc8f2);
+    const solid = new THREE.Color(0xb6e8fd);
     this.newBallMat.color.copy(ghost).lerp(solid, inc.solidity);
-    this.newBallMat.emissive.setHex(0x1a4fb8).lerp(new THREE.Color(0x0b2d66), inc.solidity);
-    this.newBallMat.emissiveIntensity = mix(1.4, 0.55, inc.solidity);
-    this.newStickMat.color.setHex(0x5b93ee).lerp(new THREE.Color(0xe4eef9), inc.solidity);
-    const op = inc.opacity * mix(0.55, 1, inc.solidity);
+    this.newBallMat.emissive.setHex(0x3b78d0).lerp(new THREE.Color(0x0b2d66), inc.solidity);
+    this.newBallMat.emissiveIntensity = mix(0.9, 0.3, inc.solidity);
+    this.newStickMat.color.setHex(0xa9cdf3).lerp(new THREE.Color(0xe4eef9), inc.solidity);
+    const op = inc.opacity * mix(0.6, 1, inc.solidity);
     for (const mat of [this.newBallMat, this.newStickMat]) {
       mat.opacity = op;
       mat.depthWrite = op > 0.98;
@@ -518,7 +520,7 @@ export class DnaScene {
     this.dust.points.position.y = scroll * 0.35 + f * -0.002;
     this.dust.points.rotation.y = spin * 0.5 + f * 0.002;
     const sp = gapSparkle(f);
-    this.sparkle.material.uniforms.uOpacity.value = sp * 1.1;
+    this.sparkle.material.uniforms.uOpacity.value = sp * 0.8;
     this.sparkle.points.visible = sp > 0.001;
     this.sparkle.points.position.set(0, redY, 0);
     this.sparkle.points.rotation.set(0, -redTh + f * 0.01, 0);
@@ -532,8 +534,9 @@ export class DnaScene {
 
     // --- background + post ---
     this.bgMaterial.uniforms.uTime.value = f;
+    this.bgMaterial.uniforms.uLeak.value = this.variant === "match" ? smoothstep(430, 485, f) : 0;
     const scale = this.height / 2160;
-    this.bloom.strength = 0.28;
+    this.bloom.strength = 0.3;
     for (const pass of [this.tiltH, this.tiltV]) {
       pass.uniforms.uFocusY.value = cam.focusY;
       pass.uniforms.uFocusWidth.value = cam.focusWidth;

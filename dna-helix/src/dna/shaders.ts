@@ -32,6 +32,7 @@ uniform vec3 uStreakA;
 uniform vec3 uStreakB;
 uniform vec2 uGlow;       // glow centre in uv
 uniform float uStreakScale;
+uniform float uLeak;       // late magenta edge light leaks (0..1)
 
 float hash11(float p) { p = fract(p * 0.1031); p *= p + 33.33; p *= p + p; return fract(p); }
 float hash21(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
@@ -63,7 +64,7 @@ void main() {
   vec3 col = mix(uCenter, uMid, smoothstep(0.0, 0.55 + breathe, r));
   col = mix(col, uEdge, smoothstep(0.45, 1.25, r));
   // darker band on the far left
-  col *= mix(0.55, 1.0, smoothstep(0.0, 0.45, uv.x));
+  col *= mix(0.38, 1.0, smoothstep(0.0, 0.5, uv.x));
 
   // --- large soft cloud variation ---
   float n = vnoise(uv * vec2(3.0, 2.0) + vec2(uTime * 0.0015, 0.0));
@@ -110,6 +111,14 @@ void main() {
     float core = exp(-pow(dx / 0.0018, 2.0)) + 0.25 * exp(-pow(dx / 0.012, 2.0));
     float yMask = smoothstep(0.1, 0.4, uv.y) * (1.0 - smoothstep(0.6, 0.95, uv.y));
     col += vis * core * yMask * mix(uStreakB, uStreakA, 0.35) * 0.16;
+  }
+
+  // --- late magenta light leaks at the left edge and bottom-right corner ---
+  if (uLeak > 0.0) {
+    float l1 = exp(-pow((uv.x - 0.0) / 0.045, 2.0)) * exp(-pow((uv.y - 0.45) / 0.35, 2.0));
+    float l2 = exp(-pow(length((uv - vec2(1.0, 0.04)) * vec2(aspect, 1.0)) / 0.22, 2.0));
+    float flick = 0.85 + 0.15 * sin(uTime * 0.21) * sin(uTime * 0.07 + 1.0);
+    col += uLeak * flick * (l1 * vec3(0.07, 0.006, 0.045) + l2 * vec3(0.045, 0.004, 0.032));
   }
 
   // --- vignette ---
