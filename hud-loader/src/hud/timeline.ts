@@ -53,9 +53,9 @@ export const flickerOn = (t: number, start: number, seed: string) => {
 
 /**
  * Regular blink of the label and bar fill: the reference dims them for 1-2 frames
- * every ~0.667 s starting at 0.96 s. Returns a 0..1 multiplier.
+ * every ~0.667 s starting at ~0.99 s. Returns a 0..1 multiplier.
  */
-export const BLINK_START = 0.96;
+export const BLINK_START = 0.99;
 export const BLINK_PERIOD = 0.667;
 export const blinkAt = (t: number) => {
   if (t < BLINK_START - 1e-6) return 0;

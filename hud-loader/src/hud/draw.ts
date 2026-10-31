@@ -219,8 +219,8 @@ export const drawHud = (
   const brackets = flickerOn(t, 0.44, "brackets"); // end brackets (ref frame 12)
   const swoosh = flickerOn(t, 0.42, "swoosh");
   const blink = blinkAt(t);
-  const label = flickerOn(t, 0.34, "label") * (1 - 0.85 * blink); // ref frame 9-12
-  const dimLeft = 1 - 0.5 * blink; // the blink also dims the left-hand line work
+  const label = flickerOn(t, 0.34, "label") * (1 - 0.6 * blink); // ref frame 9-12
+  const dimLeft = 1 - 0.22 * blink; // the blink also dims the left-hand line work
 
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
@@ -333,7 +333,7 @@ export const drawHud = (
     const f = fillAt(t);
     if (f > 0) {
       const w = (BAR_X1 - BAR_X0 - 2.4) * f;
-      ctx.globalAlpha = 1 - 0.6 * blink;
+      ctx.globalAlpha = 1 - 0.3 * blink;
       roundRect(ctx, BAR_X0 + 1.2, FILL_TOP, w, FILL_BOT - FILL_TOP, 1.5);
       ctx.fillStyle = pal.main;
       ctx.fill();
