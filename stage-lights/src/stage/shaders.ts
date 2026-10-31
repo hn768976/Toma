@@ -52,8 +52,18 @@ void main() {
 }
 `;
 
+/** Full-screen pass: passes NDC through so the fragment can rebuild its view ray. */
+export const SCREEN_VERTEX = /* glsl */ `
+varying vec2 vNdc;
+void main() {
+  vNdc = position.xy;
+  gl_Position = vec4(position.xy, 0.0, 1.0);
+}
+`;
+
 /**
- * Volumetric spotlight cone.
+ * Volumetric spotlight cone, drawn as a full-screen pass (no proxy geometry,
+ * so nothing can be clipped by the near plane when the camera is in a beam).
  * The view ray is intersected analytically with the (capped) cone volume and
  * the in-scattered light is integrated numerically along the inside segment:
  * soft gaussian profile across the cone, inverse-distance falloff along it,
@@ -71,7 +81,8 @@ uniform float uTanA;
 uniform float uLen;
 uniform float uIntensity;
 uniform float uTime;
-varying vec3 vWorld;
+uniform mat4 uInvViewProj;
+varying vec2 vNdc;
 ${NOISE}
 const int STEPS = 22;
 const float INT_TAN_FACTOR = 1.75; // integration cone: where the gaussian profile is non-negligible
@@ -82,23 +93,25 @@ float hash12(vec2 p) {
   return fract((p3.x + p3.y) * p3.z);
 }
 
-float density(vec3 p, out float sideCoord) {
+float density(vec3 p, out float sideCoord, out float sAxis) {
   vec3 v = p - uApex;
   float s = dot(v, uDir);
+  sAxis = s;
   vec3 radial = v - s * uDir;
   float R = max(s, 0.0) * uTanA + 0.02;
   float q = length(radial) / R;
   sideCoord = dot(radial, uSide) / R;
   float across = exp(-q * q * q * 1.7) + 0.5 * exp(-q * q * 14.0);
   // empirical falloff along the beam, tuned against the reference footage
-  float along = 1.0 / (0.2 + s * 0.85);
+  float along = 1.0 / (0.2 + s * 0.85) + 1.4 * exp(-s / 0.9); // hot core near the lens
   float fade = smoothstep(uLen, uLen * 0.35, s) * smoothstep(0.0, 0.25, s);
   return across * along * fade * 0.86;
 }
 
 void main() {
   vec3 ro = cameraPosition;
-  vec3 rd = normalize(vWorld - ro);
+  vec4 farPt = uInvViewProj * vec4(vNdc, 1.0, 1.0);
+  vec3 rd = normalize(farPt.xyz / farPt.w - ro);
   vec3 co = ro - uApex;
   float kTan = uTanA * INT_TAN_FACTOR + 0.02 / uLen;
   float kLen = uLen;
@@ -139,21 +152,26 @@ void main() {
   float splitSum = 0.0;
   float peak = 0.0;
   float tPeak = tIn;
+  float scPeak = 0.0;
+  float sPeak = 0.0;
   for (int i = 0; i < STEPS; i++) {
     float t = tIn + (float(i) + jitter) * dt;
     float sc;
-    float d = density(ro + rd * t, sc);
+    float sa;
+    float d = density(ro + rd * t, sc, sa);
     sum += d;
-    splitSum += d * smoothstep(uSplit - 0.12, uSplit + 0.12, sc);
-    if (d > peak) { peak = d; tPeak = t; }
+    splitSum += d * smoothstep(uSplit - 0.3, uSplit + 0.3, sc);
+    if (d > peak) { peak = d; tPeak = t; scPeak = sc; sPeak = sa; }
   }
   float I = sum * dt;
   if (I < 1e-5) discard;
   float mixB = splitSum / max(sum, 1e-6);
   float hz = haze((ro + rd * tPeak) * 2.6, uTime);
-  float smoke = mix(0.78, 1.14, smoothstep(0.25, 0.7, hz));
+  float smoke = mix(0.86, 1.1, smoothstep(0.25, 0.7, hz));
+  // fine light streaks running along the beam
+  float streak = 0.82 + 0.36 * vnoise(vec3(scPeak * 4.5, sPeak * 0.3, uTime * 0.35));
   vec3 col = mix(uColor, uColorB, mixB);
-  gl_FragColor = vec4(col * (uIntensity * I * smoke), 1.0);
+  gl_FragColor = vec4(col * (uIntensity * I * smoke * streak), 1.0);
 }
 `;
 
@@ -164,6 +182,7 @@ uniform vec3 uPos[N_LIGHTS];
 uniform vec3 uDirs[N_LIGHTS];
 uniform vec3 uCols[N_LIGHTS];
 uniform float uTans[N_LIGHTS];
+uniform float uNear[N_LIGHTS];
 uniform float uTime;
 uniform float uAmbient;
 varying vec3 vWorld;
@@ -175,17 +194,17 @@ void main() {
     vec3 v = p - uPos[i];
     // broad scatter around each fixture
     vec2 dxy = v.xy;
-    float near = exp(-dot(dxy, dxy) / 38.0);
+    float near = exp(-dot(dxy, dxy) / 55.0);
     // light spilling along the projected beam direction
     vec2 dir2 = normalize(uDirs[i].xy + vec2(0.0, -0.0001));
     float along = dot(dxy, dir2);
     float across = length(dxy - along * dir2);
     float wid = max(along, 0.0) * uTans[i] * 2.4 + 1.2;
     float spill = exp(-(across * across) / (wid * wid)) * smoothstep(-1.0, 2.0, along) * exp(-max(along, 0.0) / 9.0);
-    acc += uCols[i] * (near * 0.9 + spill * 0.35 + 0.05);
+    acc += uCols[i] * (near * uNear[i] + spill * 0.35 + 0.1);
   }
-  float hz = haze(p * vec3(3.2, 2.2, 3.2), uTime);
-  float smoke = mix(0.75, 1.15, smoothstep(0.2, 0.75, hz));
+  float hz = haze(p * vec3(2.0, 1.4, 2.0), uTime);
+  float smoke = mix(0.88, 1.08, smoothstep(0.2, 0.75, hz));
   // haze is lit most densely up in the rig, thinning towards the floor
   float vert = mix(0.5, 1.45, smoothstep(-6.0, 5.0, p.y));
   vec3 col = acc * uAmbient * smoke * vert;
@@ -213,12 +232,12 @@ varying vec2 vUv;
 void main() {
   vec2 c = vUv * 2.0 - 1.0;
   float d = length(c);
-  float core = exp(-d * d * 260.0) * 6.0;
-  float inner = exp(-d * d * 40.0) * 1.2;
-  float halo = exp(-d * 5.5) * 0.55;
+  float core = exp(-d * d * 300.0) * 5.0;
+  float inner = exp(-d * d * 30.0) * 1.3;
+  float halo = exp(-d * 3.4) * 0.8;
   // faint four-point lens star
   float star = (exp(-abs(c.y) * 90.0) + exp(-abs(c.x) * 90.0)) * exp(-d * 4.0) * 0.5;
-  vec3 col = vec3(1.0) * core + mix(vec3(1.0), uColor, 0.45) * inner + uColor * (halo + star);
+  vec3 col = vec3(1.0) * core + mix(vec3(1.0), uColor, 0.7) * inner + uColor * (halo + star);
   col *= uIntensity * mix(0.6, 1.0, uFacing) * smoothstep(1.0, 0.7, d);
   gl_FragColor = vec4(col, 1.0);
 }

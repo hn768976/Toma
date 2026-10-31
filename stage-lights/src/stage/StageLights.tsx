@@ -10,6 +10,7 @@ import {
   beamDirection,
   fixturePosition,
   wheelState,
+  shimmer,
   swingAngleDeg,
 } from "./lights";
 import {
@@ -18,6 +19,7 @@ import {
   GLOW_VERTEX,
   POST_FRAGMENT,
   POST_VERTEX,
+  SCREEN_VERTEX,
   WALL_FRAGMENT,
   WORLD_VERTEX,
 } from "./shaders";
@@ -26,12 +28,10 @@ export type StageLightsProps = {
   cameraMove: CameraMove;
 };
 
-const BEAM_RADIUS_FACTOR = 2.3; // geometry radius relative to the soft cone radius
-const GEO_LENGTH_FACTOR = 1.6;
 const WALL_Z = -6;
-const EXPOSURE = 1.15;
+const EXPOSURE = 0.95;
 
-const hslColor = (hue: number) => new THREE.Color().setHSL(hue / 360, 0.72, 0.5);
+const hslColor = (hue: number) => new THREE.Color().setHSL(hue / 360, 0.62, 0.5);
 
 type Rig = {
   scene: THREE.Scene;
@@ -56,6 +56,8 @@ const buildRig = (): Rig => {
       uDirs: { value: LIGHTS.map(() => new THREE.Vector3()) },
       uCols: { value: LIGHTS.map(() => new THREE.Vector3()) },
       uTans: { value: LIGHTS.map((l) => BEAM_PARAMS[l.kind].tanA) },
+      // haze glow around the fixtures: strongest along the top truss
+      uNear: { value: LIGHTS.map((l) => (l.kind === "top" ? 1.0 : 0.35)) },
       uTime: { value: 0 },
       uAmbient: { value: 0.13 },
     },
@@ -67,17 +69,13 @@ const buildRig = (): Rig => {
   scene.add(wall);
   disposables.push(wallGeo, wallMat);
 
-  // --- beams ---
+  // --- beams: one full-screen analytic pass per fixture ---
+  const screenGeo = new THREE.PlaneGeometry(2, 2);
+  disposables.push(screenGeo);
   const beams = LIGHTS.map((light) => {
     const p = BEAM_PARAMS[light.kind];
-    const radius = (p.length * p.tanA + 0.02) * BEAM_RADIUS_FACTOR;
-    // geometry extends past the fade length so oblique views are never clipped
-    const geoLength = p.length * GEO_LENGTH_FACTOR;
-    // closed (capped) cone: convex, so every view ray enters through exactly one front face
-    const geo = new THREE.ConeGeometry(radius * GEO_LENGTH_FACTOR, geoLength, 96, 1, false);
-    geo.translate(0, -geoLength / 2, 0); // apex at origin, opening towards -Y
     const mat = new THREE.ShaderMaterial({
-      vertexShader: WORLD_VERTEX,
+      vertexShader: SCREEN_VERTEX,
       fragmentShader: BEAM_FRAGMENT,
       uniforms: {
         uApex: { value: new THREE.Vector3() },
@@ -88,22 +86,20 @@ const buildRig = (): Rig => {
         uSplit: { value: 2 },
         uTanA: { value: p.tanA },
         uLen: { value: p.length },
-        uIntensity: { value: p.intensity },
+        uIntensity: { value: p.intensity * (light.gain ?? 1) },
         uTime: { value: 0 },
+        uInvViewProj: { value: new THREE.Matrix4() },
       },
       blending: THREE.AdditiveBlending,
       transparent: true,
       depthWrite: false,
       depthTest: false,
-      // Back faces of the closed (convex) hull cover exactly its silhouette and are
-      // never sliced by the near plane when the camera passes close to a beam.
-      side: THREE.BackSide,
     });
-    const mesh = new THREE.Mesh(geo, mat);
+    const mesh = new THREE.Mesh(screenGeo, mat);
     mesh.renderOrder = 1;
     mesh.frustumCulled = false;
     scene.add(mesh);
-    disposables.push(geo, mat);
+    disposables.push(mat);
     return { mesh, mat };
   });
 
@@ -165,7 +161,6 @@ const buildRig = (): Rig => {
   };
 };
 
-const DOWN = new THREE.Vector3(0, -1, 0);
 const FORWARD = new THREE.Vector3(0, 0, 1);
 
 const Stage: React.FC<StageLightsProps> = ({ cameraMove }) => {
@@ -202,10 +197,12 @@ const Stage: React.FC<StageLightsProps> = ({ cameraMove }) => {
       const wheel = wheelState(light.hues, t);
       const color = hslColor(wheel.hueMix);
 
-      const { mesh, mat } = rig.beams[i];
-      mesh.position.copy(apex);
-      mesh.quaternion.setFromUnitVectors(DOWN, dir);
+      const { mat } = rig.beams[i];
       mat.uniforms.uApex.value.copy(apex);
+      mat.uniforms.uInvViewProj.value
+        .multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse)
+        .invert();
+      mat.uniforms.uIntensity.value = p.intensity * (light.gain ?? 1) * shimmer(frame, i);
       mat.uniforms.uDir.value.copy(dir);
       mat.uniforms.uColor.value.copy(hslColor(wheel.hueA));
       mat.uniforms.uColorB.value.copy(hslColor(wheel.hueB));
@@ -220,7 +217,8 @@ const Stage: React.FC<StageLightsProps> = ({ cameraMove }) => {
 
       rig.wallMat.uniforms.uPos.value[i].copy(apex);
       rig.wallMat.uniforms.uDirs.value[i].copy(dir);
-      rig.wallMat.uniforms.uCols.value[i].set(color.r, color.g, color.b);
+      const g = light.gain ?? 1;
+      rig.wallMat.uniforms.uCols.value[i].set(color.r * g, color.g * g, color.b * g);
     });
     rig.wallMat.uniforms.uTime.value = t;
     rig.post.mat.uniforms.uTime.value = t;

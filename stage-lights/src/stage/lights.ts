@@ -29,6 +29,8 @@ export type LightDef = {
   hues: number[];
   /** Screen-space swing: angle(t) = base + amp * cos(2*pi*t/period + phase). */
   swing: { base: number; amp: number; phase: number; period: number };
+  /** Optional brightness multiplier (the reference's right-hand wash is the dominant light). */
+  gain?: number;
 };
 
 export const LIGHTS: LightDef[] = [
@@ -62,7 +64,8 @@ export const LIGHTS: LightDef[] = [
     px: [760, 3],
     z: 0.5,
     hues: [20.0, 40.5, 59.8, 71.0, 103.5, 155.2, 182.5, 198.8, 223.8, 246.0, 261.8, 273.5, 284.0, 293.8, 304.2, 316.2, 329.5, 342.2, 353.0, 4.8],
-    swing: { base: -16, amp: 22, phase: 0, period: 5 },
+    swing: { base: -21, amp: 11, phase: 0, period: 5 },
+    gain: 1.6,
   },
   {
     id: "M0",
@@ -102,8 +105,8 @@ export const BEAM_PARAMS: Record<
   LightKind,
   { tanA: number; length: number; intensity: number; towardCamera: number; glowSize: number; glowIntensity: number }
 > = {
-  top: { tanA: 0.28, length: 9.5, intensity: 1.9, towardCamera: 0.3, glowSize: 1.4, glowIntensity: 1.7 },
-  mid: { tanA: 0.24, length: 5, intensity: 0.75, towardCamera: 0.5, glowSize: 0.85, glowIntensity: 1.4 },
+  top: { tanA: 0.28, length: 9.5, intensity: 1.6, towardCamera: 0.3, glowSize: 1.7, glowIntensity: 1.6 },
+  mid: { tanA: 0.24, length: 5, intensity: 0.65, towardCamera: 0.5, glowSize: 1.25, glowIntensity: 1.3 },
 };
 
 /** Unproject a reference pixel position onto the plane z = depth. */
@@ -141,8 +144,8 @@ export const beamDirection = (angleDeg: number, towardCamera: number) => {
 
 /** Number of filter slots on each fixture's colour wheel. */
 export const WHEEL_SLOTS = 8;
-/** Fraction of each slot spent sweeping into the next colour. */
-const SPLIT_FRACTION = 0.7;
+/** Fraction of each slot spent sweeping into the next colour (reference holds splits ~1 s). */
+const SPLIT_FRACTION = 0.85;
 
 /**
  * Colour-wheel model: the measured continuous hue track is quantised to wheel
@@ -156,13 +159,20 @@ export const wheelState = (hues: number[], t: number) => {
   const k = Math.floor(slotPos);
   const f = slotPos - k;
   const sweep = Math.min(1, Math.max(0, (f - (1 - SPLIT_FRACTION)) / SPLIT_FRACTION));
-  const eased = sweep * sweep * (3 - 2 * sweep);
+  // gentle easing only at the ends, so the two-colour split is held through the middle
+  const eased = 0.15 * sweep * sweep * (3 - 2 * sweep) + 0.85 * sweep;
   return {
     hueA: (k * step) % 360,
     hueB: ((k + 1) * step) % 360,
-    // split coordinate across the beam: +1.6 = all A, -1.6 = all B
-    split: 1.6 - 3.2 * eased,
+    // split coordinate across the beam: +1.1 = all A, -1.1 = all B (visible core is ~|0.8|)
+    split: 1.1 - 2.2 * eased,
     // blended hue for things that cannot split (glows, wall scatter)
     hueMix: h,
   };
+};
+
+/** Small deterministic per-frame intensity shimmer (lamp / haze flicker). */
+export const shimmer = (frame: number, index: number) => {
+  const x = Math.sin(frame * 12.9898 + index * 78.233) * 43758.5453;
+  return 1 + 0.06 * (x - Math.floor(x) - 0.5);
 };

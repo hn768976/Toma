@@ -33,7 +33,7 @@ export const cameraAt = (move: CameraMove, u: number): Shot => {
   const e = easeInOutSine(THREE.MathUtils.clamp(u, 0, 1));
   const azimuth = THREE.MathUtils.degToRad(THREE.MathUtils.lerp(-30, 25, e));
   const radius = THREE.MathUtils.lerp(11.5, 9.0, e);
-  const height = THREE.MathUtils.lerp(-3.4, -0.6, e);
+  const height = THREE.MathUtils.lerp(-2.4, -0.6, e);
   const position = new THREE.Vector3(
     STAGE_CENTER.x + Math.sin(azimuth) * radius,
     height,
@@ -41,13 +41,13 @@ export const cameraAt = (move: CameraMove, u: number): Shot => {
   );
   const target = new THREE.Vector3(
     THREE.MathUtils.lerp(-0.8, 0.6, e),
-    THREE.MathUtils.lerp(1.9, 1.1, e),
+    THREE.MathUtils.lerp(1.3, 1.5, e),
     STAGE_CENTER.z,
   );
   return {
     position,
     target,
-    fov: THREE.MathUtils.lerp(58, 50, e),
+    fov: THREE.MathUtils.lerp(55, 50, e),
     roll: THREE.MathUtils.lerp(-3, 2, e),
   };
 };
