@@ -28,10 +28,10 @@ frame — rebuilt from the 20 s reference clip.
   clockwise roll about the view axis composed with a spin about an in-plane
   axis — two whole turns per 20 s, so the clip is a seamless loop like the
   reference (frame 600 ≡ frame 0).
-* Sphere centre (0.89 W, 0.447 H), vertex radius 0.33 W, small loop-safe
+* Sphere centre (0.879 W, 0.433 H), vertex radius 0.32 W, small loop-safe
   per-node drift (integer harmonics of the clip length).
 * ~58 vertices on a sphere (Poisson-disk sampled), triangulated via a 3D
-  convex hull; ~170 dust particles, mostly in a soft shell halo.
+  convex hull; ~125 dust particles, mostly in a soft shell halo.
 * Depth cueing: back edges/dots are lighter and drawn on a softly blurred
   layer (shallow depth of field); mild perspective.
 * V2 background gradient is dithered (±1.5 LSB) to prevent 8-bit banding.

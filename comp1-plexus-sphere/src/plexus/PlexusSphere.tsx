@@ -17,9 +17,9 @@ export type PlexusProps = z.infer<typeof plexusSchema>;
 // |ω| ≈ 0.0149 rad/frame. That is exactly a composite of two full turns per
 // clip: a clockwise roll about the view axis × a spin about an in-plane axis
 // (|ω| = √2·2π/600 = 0.0148). Both are whole revolutions → seamless loop.
-const CENTER_X = 0.89;
-const CENTER_Y = 0.447;
-const RADIUS = 0.33; // of width
+const CENTER_X = 0.879;
+const CENTER_Y = 0.433;
+const RADIUS = 0.32; // of width
 const SPIN_AXIS: Vec3 = [-0.987, 0.163, 0]; // in-plane axis at t = 0
 const CAMERA_DIST = 4; // in sphere radii — gentle perspective
 

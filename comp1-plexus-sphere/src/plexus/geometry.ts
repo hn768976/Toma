@@ -144,7 +144,7 @@ export const buildGeometry = (seed: number): PlexusGeometry => {
   }));
 
   const dust: Dust[] = [];
-  for (let i = 0; i < 150; i++) {
+  for (let i = 0; i < 110; i++) {
     const u = randomUnit(rnd);
     const shell = rnd();
     // ~55% hug the outer shell (forming the soft halo seen at the
