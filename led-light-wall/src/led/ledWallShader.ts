@@ -94,38 +94,38 @@ vec3 lightContrib(vec2 q, vec2 c, vec2 id, float L, vec3 col) {
   float wide = exp(-r / (12.0 + 10.0 * L)) * win;
   vec3 far = col * (glow * 0.7 * (0.25 + 0.9 * L)
                   + wide * 0.10 * (0.15 + L)
-                  + bloom * 0.42 * L * L);
+                  + bloom * 0.37 * L * L);
   if (r > 30.0) return far;
 
   float h = hash21(id + 7.3);
   float a = atan(d.y, d.x);
 
   // Soft core: unlit lamps stay a dim soft blob rather than a pin-point.
-  float coreW = 1.5 + 0.6 * L;
+  float coreW = 1.3 + 0.7 * L;
   float core = exp(-r * r / (2.0 * coreW * coreW));
 
   // 6-8 soft spikes.
   float rot = h * 6.2831 + uFrame * 0.004 * (h - 0.5);
   float nSp = (h > 0.5) ? 4.0 : 3.0;
-  float s1 = pow(abs(cos(a * nSp + rot)), 16.0);
+  float s1 = pow(abs(cos(a * nSp + rot)), 7.0);
   float spikeLen = 2.5 + 6.0 * L;
   float spikes = s1 * exp(-r / spikeLen) * smoothstep(0.5, 3.0, r);
 
   // Lumpy halo with a petal / iris ring texture.
   float wob = noise2(vec2(a * 1.6 + h * 13.0, uFrame * 0.08 + h * 7.0));
-  float R = (4.5 + 9.5 * L) * (0.82 + 0.34 * wob);
+  float R = (3.5 + 7.0 * L) * (0.82 + 0.34 * wob);
   float petals = 0.55 + 0.45 * pow(abs(cos(a * (3.0 + floor(h * 3.0)) + rot * 0.7)), 2.0);
   float tex = noise2(vec2(a * 3.0 + h * 30.0, r * 0.35 - uFrame * 0.04));
-  float body = smoothstep(R, R * 0.2, r) * (0.22 + 0.22 * tex);
-  float ring = exp(-pow((r - R * 0.72) / (R * 0.18), 2.0)) * petals * (0.12 + 0.18 * tex);
+  float body = smoothstep(R, 0.0, r) * (0.3 + 0.2 * tex);
+  float ring = exp(-pow((r - R * 0.55) / (R * 0.2), 2.0)) * petals * (0.05 + 0.08 * tex);
   float disc = (body + ring) * pow(L, 1.3);
 
   vec3 white = vec3(1.0);
   vec3 sat = col * col;
   vec3 lit = far;
   lit += mix(sat, vec3(0.8, 1.0, 1.0) * col, 0.5) * disc * 2.3;
-  lit += mix(col, vec3(1.0), 0.3) * spikes * (0.25 + 0.6 * L);
-  lit += mix(col, white, 0.6) * core * (0.3 + 1.0 * L);
+  lit += mix(col, vec3(1.0), 0.2) * spikes * (0.15 + 0.45 * L);
+  lit += mix(col, white, 0.55) * core * (0.18 + 1.25 * L);
   return lit;
 }
 
@@ -134,10 +134,10 @@ vec3 background(vec2 q) {
   vec3 bg = mix(uBgLeft, uBgMid, smoothstep(0.0, 0.35, uv.x));
   bg = mix(bg, uBgRight, smoothstep(0.4, 1.0, uv.x));
   // Navy vignette: bottom, left and bottom-right corners.
-  float deep = smoothstep(0.5, 1.05, uv.y) * 0.55
-             + smoothstep(0.45, 0.0, uv.x) * smoothstep(0.45, 1.0, uv.y) * 0.45
-             + smoothstep(0.65, 1.0, uv.x) * smoothstep(0.6, 1.0, uv.y) * 0.35
-             + smoothstep(0.18, 0.0, uv.x) * 0.25;
+  float deep = smoothstep(0.5, 1.05, uv.y) * 0.38
+             + smoothstep(0.45, 0.0, uv.x) * smoothstep(0.45, 1.0, uv.y) * 0.32
+             + smoothstep(0.65, 1.0, uv.x) * smoothstep(0.6, 1.0, uv.y) * 0.25
+             + smoothstep(0.18, 0.0, uv.x) * 0.18;
   bg = mix(bg, uBgDeep, clamp(deep, 0.0, 1.0));
   // Central hotspot.
   float hot = exp(-dot((uv - vec2(0.5, 0.45)) * vec2(1.6, 2.2), (uv - vec2(0.5, 0.45)) * vec2(1.6, 2.2)));
@@ -146,7 +146,7 @@ vec3 background(vec2 q) {
   // Moving smoky haze.
   float hz = fbm(uv * vec2(3.2, 2.4) + vec2(uTime * 0.07, -uTime * 0.035));
   float hz2 = fbm(uv * vec2(1.5, 1.2) - vec2(uTime * 0.045, uTime * 0.012) + 5.0);
-  bg *= 0.4 + 0.75 * hz + 0.3 * hz2;
+  bg *= 0.62 + 0.45 * hz + 0.18 * hz2;
   bg += uHaze * pow(hz2, 2.0) * 0.16 * (0.4 + hot);
 
   // 4-6 broad, soft beams fanning in from the top-right corner.

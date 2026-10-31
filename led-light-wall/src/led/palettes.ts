@@ -16,11 +16,11 @@ export type LedPalette = {
 /** Version 1 – matches the reference: violet (left) -> azure -> cyan (right). */
 export const PALETTE_REFERENCE: LedPalette = {
   uBgLeft: [0.4, 0.16, 0.85],
-  uBgMid: [0.26, 0.4, 0.9],
-  uBgRight: [0.24, 0.55, 0.94],
+  uBgMid: [0.27, 0.37, 0.9],
+  uBgRight: [0.3, 0.47, 0.92],
   uBgDeep: [0.14, 0.08, 0.42],
   uLightLeft: [0.35, 0.7, 1.0],
-  uLightRight: [0.18, 0.9, 1.0],
+  uLightRight: [0.24, 0.8, 1.0],
   uLightAccent: [0.8, 0.38, 1.0],
   uHaze: [0.45, 0.75, 1.0],
   uRay: [0.35, 0.9, 1.0],

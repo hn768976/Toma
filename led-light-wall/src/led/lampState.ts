@@ -68,8 +68,9 @@ const lightLevel = (i: number, j: number, f: number) => {
   const n = noise1(t + h * 517) * 0.66 + noise1(t * 1.7 + h * 91) * 0.34;
   // Weak, non-travelling neighbour correlation (a morphing patch pattern).
   const patch = noise2(i * 0.42 + j * 7.3, f / 11 + j * 3.1);
-  const g = noise1(f / 9 + 300);
-  const v = n * 0.82 + patch * 0.26 + (g - 0.5) * 0.18 + 0.02;
+  // Jittery global flicker, decorrelating within ~6 frames.
+  const g = noise1(f / 2.5 + 300);
+  const v = n * 0.82 + patch * 0.26 + (g - 0.5) * 0.14 + 0.0;
   return smoothstep(0.18, 0.82, v);
 };
 
@@ -89,7 +90,7 @@ const lightColor = (pal: LedPalette, i: number, j: number, f: number) => {
   );
   const accentRow = j % 3 === 0 ? 1 : 0; // rows 0, 3, 6, 9
   const accent =
-    accentRow * 0.95 * (1 - gx * 0.35) +
+    accentRow * 0.75 * (1 - gx * 0.35) +
     (hash21(i + 11, j + 11) >= 0.86 ? 0.45 : 0) +
     (noise1(f / 9 + h * 50) - 0.5) * 0.35;
   return mix3(base, pal.uLightAccent, clamp01(accent));
