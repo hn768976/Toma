@@ -13,6 +13,8 @@ Config.setJpegQuality(95);
 Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
+// Tag and encode as standard BT.709 limited range (yuv420p, not yuvj420p).
+Config.setColorSpace("bt709");
 Config.setCrf(16);
 // The compositions render with Three.js / WebGL2. "swangle" (ANGLE on
 // SwiftShader) works on any machine, including headless servers without a

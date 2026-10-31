@@ -126,7 +126,8 @@ void main() {
     vBlur = coc / total;
   }
   float tw = 1.0 - iB.y * (0.5 + 0.5 * sin(uTime * (2.0 + iB.x * 3.0) + iB.x * 40.0));
-  vCol = vec4(iColor.rgb, iColor.a * gain * tw * born * fogF(depth));
+  float nearFade = kind > 1.5 ? 1.0 : smoothstep(0.3, 1.5, depth);
+  vCol = vec4(iColor.rgb, iColor.a * gain * tw * born * fogF(depth) * nearFade);
   vUv = position.xy;
   vKind = kind;
   vec4 clip = projectionMatrix * mv;
@@ -387,7 +388,10 @@ void main() {
   vAspect = iSize.x / iSize.y;
   vBlur = (coc + 1.2 * k) / sPx.y;
   vPx = 1.2 * k / sPx.y;
-  vCol = vec4(iColor.rgb, iColor.a * fogF(depth));
+  // Fade out when the camera gets very close (avoids full-frame flashes
+  // when the camera flies through a panel).
+  float nearFade = smoothstep(1.5, 5.0, depth) * (1.0 - smoothstep(0.45, 0.9, max(sPx.x / uRes.x, sPx.y / uRes.y)));
+  vCol = vec4(iColor.rgb, iColor.a * fogF(depth) * nearFade);
   vAng = iA.w + iB.x * uTime + (1.0 - born) * 2.0;
   vKind = iA.x;
   vSeed = iA.y;
