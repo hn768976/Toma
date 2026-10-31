@@ -11,8 +11,8 @@ export const HEIGHT = 2160;
 // line running through the frame centre, so the grid is even-sized.
 export const COLS = 26;
 export const ROWS = 16;
-export const TILE_GAP = 0.003; // hairline seam between neighbouring tiles
-export const MAX_DEPTH = 0.5; // how far a tile can push out of the wall
+export const TILE_GAP = 0; // flush tiles merge seamlessly, as in the reference
+export const MAX_DEPTH = 0.8; // how far a tile can push out of the wall
 
 export type Palette = {
   name: string;
@@ -48,9 +48,9 @@ export const REFERENCE_PALETTE: Palette = {
   fillLight: "#f4f6ff",
   fillIntensity: 75,
   hemiSky: "#dfe8ff",
-  hemiGround: "#2c58a8",
+  hemiGround: "#2a6aa8",
   hemiIntensity: 0.55,
-  ambient: "#7f9bd6",
+  ambient: "#7eaad8",
   ambientIntensity: 0.55,
   roughness: 0.85,
   metalness: 0,

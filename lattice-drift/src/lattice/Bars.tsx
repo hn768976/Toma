@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { smoothstep } from "../random";
-import { BAR, Palette } from "./constants";
+import { BAR, LOOP_SECONDS, Palette } from "./constants";
 import { Piece } from "./pieces";
 
 const segmentMatrix = (s: Piece["segments"][number]) => {
@@ -11,8 +11,7 @@ const segmentMatrix = (s: Piece["segments"][number]) => {
   // Extend each bar by its thickness so corners close cleanly.
   // Bars along different axes get minutely different thicknesses so faces
   // that meet at a corner are never exactly coplanar (no z-fighting seams).
-  const axisBar =
-    bx !== ax ? BAR * 1.008 : bz !== az ? BAR * 1.016 : BAR;
+  const axisBar = bx !== ax ? BAR * 1.008 : bz !== az ? BAR * 1.016 : BAR;
   const scale = new THREE.Vector3(
     Math.abs(bx - ax) + axisBar,
     Math.abs(by - ay) + axisBar,
@@ -23,11 +22,13 @@ const segmentMatrix = (s: Piece["segments"][number]) => {
   return new THREE.Matrix4().compose(mid, new THREE.Quaternion(), scale);
 };
 
-// Fold cycle: rest -> fold over -> hold -> fold back -> rest.
-const hingeAngle = (hinge: NonNullable<Piece["hinge"]>, t: number) => {
-  const u = (((t / hinge.period + hinge.phase) % 1) + 1) % 1;
-  const k = smoothstep(0.08, 0.42, u) * (1 - smoothstep(0.58, 0.92, u));
-  return hinge.maxAngle * k;
+// Pulse cycle: full size -> shrink away -> grow back. Whole cycles per loop,
+// so the animation is seamless. Pieces scale about their own base point, so
+// they never cut through neighbouring frames.
+const pulseScale = (pulse: NonNullable<Piece["pulse"]>, t: number) => {
+  const u = ((((pulse.cycles * t) / LOOP_SECONDS + pulse.phase) % 1) + 1) % 1;
+  const k = smoothstep(0.1, 0.42, u) * (1 - smoothstep(0.58, 0.9, u));
+  return Math.max(1 - k, 0.002);
 };
 
 export const Bars: React.FC<{
@@ -55,19 +56,18 @@ export const Bars: React.FC<{
     const mesh = ref.current;
     if (!mesh) return;
     const pieceM = new THREE.Matrix4();
-    const rot = new THREE.Matrix4();
+    const scaleM = new THREE.Matrix4();
     const out = new THREE.Matrix4();
-    const axis = new THREE.Vector3();
     let last = -1;
     for (let i = 0; i < layout.local.length; i++) {
       const pi = layout.owner[i];
       if (pi !== last) {
         const p = pieces[pi];
         pieceM.makeTranslation(p.origin[0], p.origin[1], p.origin[2]);
-        if (p.hinge) {
-          axis.set(...p.hinge.axis);
-          rot.makeRotationAxis(axis, hingeAngle(p.hinge, time));
-          pieceM.multiply(rot);
+        if (p.pulse) {
+          const k = pulseScale(p.pulse, time);
+          scaleM.makeScale(k, k, k);
+          pieceM.multiply(scaleM);
         }
         last = pi;
       }

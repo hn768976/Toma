@@ -7,7 +7,7 @@ cool-white with blue-grey side faces and shadows. The motion is a seamless
 
 | Composition ID             | Size        | FPS | Frames | Duration | Notes |
 |----------------------------|-------------|-----|--------|----------|-------|
-| `CubeWall-V1-Reference`    | 3840 x 2160 | 30  | 420    | 14.0 s   | Matches the reference: cool white tiles, blue shading, bright centre, centred perspective camera, about 18 x 10 tiles in frame. |
+| `CubeWall-V1-Reference`    | 3840 x 2160 | 30  | 420    | 14.0 s   | Matches the reference: cool white tiles, blue shading, bright centre, centred perspective camera, about 18 x 10 tiles in frame, and flush tiles merge with no seams. |
 | `CubeWall-V2-IndigoEmber`  | 3840 x 2160 | 30  | 420    | 14.0 s   | Alternative colour palette: deep indigo faces under a cool key light, with tile side walls glowing ember-coral so every depth step is drawn as a light line. Geometry, camera and motion are identical. |
 
 Everything is procedural (seeded PRNG): there are no external assets, and every render produces the same frames.

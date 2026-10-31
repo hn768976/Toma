@@ -32,7 +32,10 @@ const Camera: React.FC = () => {
 
 const Lights: React.FC<{ palette: Palette }> = ({ palette }) => {
   const key = useMemo(() => {
-    const l = new THREE.DirectionalLight(palette.keyLight, palette.keyIntensity);
+    const l = new THREE.DirectionalLight(
+      palette.keyLight,
+      palette.keyIntensity,
+    );
     // Mostly frontal, slightly from the upper left: soft blue shadows fall
     // to the right of / below raised tiles, as in the reference.
     l.position.set(-4.5, 4.5, 20);
@@ -58,7 +61,7 @@ const Lights: React.FC<{ palette: Palette }> = ({ palette }) => {
       <primitive object={key.target} />
       {/* Broad light near the camera: bright centre, natural fall-off. */}
       <pointLight
-        position={[0.8, 1.2, 9]}
+        position={[0.4, -1.6, 9]}
         color={palette.fillLight}
         intensity={palette.fillIntensity}
         decay={2}
@@ -67,7 +70,10 @@ const Lights: React.FC<{ palette: Palette }> = ({ palette }) => {
       <hemisphereLight
         args={[palette.hemiSky, palette.hemiGround, palette.hemiIntensity]}
       />
-      <ambientLight color={palette.ambient} intensity={palette.ambientIntensity} />
+      <ambientLight
+        color={palette.ambient}
+        intensity={palette.ambientIntensity}
+      />
     </>
   );
 };
@@ -158,7 +164,7 @@ export const CubeWall: React.FC<CubeWallProps> = ({ palette, seed }) => {
       <AbsoluteFill
         style={{
           pointerEvents: "none",
-          background: `radial-gradient(ellipse 75% 75% at 50% 45%, transparent 45%, ${palette.vignetteColor} 140%)`,
+          background: `radial-gradient(ellipse 75% 75% at 50% 58%, transparent 45%, ${palette.vignetteColor} 140%)`,
           opacity: palette.vignette,
         }}
       />

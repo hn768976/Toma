@@ -1,12 +1,15 @@
 # Lattice Drift (Remotion + Three.js, 4K)
 
-An isometric field of white square-section bars (gates, frames, corner
-brackets) on a cool grey pinstriped floor, with soft shadows. The camera
-drifts steadily across the field while a few pieces fold over on their hinges.
+An isometric field of upright white "Π" frames (two posts and a top beam, with
+occasional top or floor rails and turned frames), laid out in rows on a cool
+grey pinstriped floor under soft overcast light. The camera drifts steadily
+across the field while a few frames shrink away and grow back. Like the
+reference, the clip is a seamless loop: the field repeats every 5.5 units
+along Z, and the camera travels exactly that far in 270 frames.
 
 | Composition ID              | Size        | FPS | Frames | Duration | Notes |
 |-----------------------------|-------------|-----|--------|----------|-------|
-| `LatticeDrift-V1-Reference` | 3840 x 2160 | 30  | 270    | 9.0 s    | Matches the reference: orthographic near-isometric view (45° azimuth, 57° elevation), drift measured from the reference (0.8 px/frame right, 0.7 px/frame up at 768 px). |
+| `LatticeDrift-V1-Reference` | 3840 x 2160 | 30  | 270    | 9.0 s    | Matches the reference: orthographic near-isometric view (45° azimuth, 57° elevation), drift speed and heading measured from the reference with phase correlation (1.04 px/frame at 768 px, heading 40° up-right). Seamless loop. |
 | `LatticeDrift-V2-Crane`     | 3840 x 2160 | 30  | 270    | 9.0 s    | Alternative camera: a perspective crane/orbit move that starts high, swings ~70° around the lattice and descends to a low angle. Same palette and scene. |
 
 Everything is procedural (seeded PRNG), so there are no external assets and
@@ -59,8 +62,8 @@ src/
   random.ts                seeded PRNG + easing helpers
   lattice/
     constants.ts           timing, size, geometry, reference palette
-    pieces.ts              procedural generation of bar pieces
-    Bars.tsx               one InstancedMesh for every bar, hinge animation
+    pieces.ts              procedural, Z-periodic frame field
+    Bars.tsx               one InstancedMesh for every bar, pulse animation
     StripeGround.tsx       procedural pinstripe floor texture
     CameraRig.tsx          applies per-frame camera poses
     LatticeDrift.tsx       scene, lights, the two camera moves
