@@ -41,19 +41,35 @@ const noise1 = (x: number) => {
   return mix(hash11(i), hash11(i + 1), u);
 };
 
+const noise2 = (x: number, y: number) => {
+  const ix = Math.floor(x);
+  const iy = Math.floor(y);
+  const fx = x - ix;
+  const fy = y - iy;
+  const ux = fx * fx * (3 - 2 * fx);
+  const uy = fy * fy * (3 - 2 * fy);
+  return mix(
+    mix(hash21(ix, iy), hash21(ix + 1, iy), ux),
+    mix(hash21(ix, iy + 1), hash21(ix + 1, iy + 1), ux),
+    uy,
+  );
+};
+
 export const COLS = 19; // i = -1 .. 17
 export const ROWS = 10; // j = 0 .. 9
 
 const colX = (i: number) => (i <= -1 ? 14 : i >= 17 ? 749 : 41 + 42.625 * i);
 
-/** Flicker level in [0,1]. ~5-frame correlation time (measured on the reference). */
+/** Flicker level in [0,1]. */
 const lightLevel = (i: number, j: number, f: number) => {
   const h = hash21(i * 1.37 + 0.5, j * 1.37 + 0.5);
-  const t = f / 5.5;
-  const n = noise1(t + h * 517) * 0.62 + noise1(t * 1.9 + h * 91) * 0.38;
-  const chase = noise1(f / 7 + i * 0.3 + j * 11.7);
-  const g = noise1(f / 4 + 300);
-  const v = n * 0.72 + chase * 0.42 + (g - 0.5) * 0.3 - 0.07;
+  // ~25-frame on/off period, random per lamp (no travelling chase).
+  const t = f / 8;
+  const n = noise1(t + h * 517) * 0.66 + noise1(t * 1.7 + h * 91) * 0.34;
+  // Weak, non-travelling neighbour correlation (a morphing patch pattern).
+  const patch = noise2(i * 0.42 + j * 7.3, f / 11 + j * 3.1);
+  const g = noise1(f / 9 + 300);
+  const v = n * 0.82 + patch * 0.26 + (g - 0.5) * 0.18 + 0.02;
   return smoothstep(0.18, 0.82, v);
 };
 
