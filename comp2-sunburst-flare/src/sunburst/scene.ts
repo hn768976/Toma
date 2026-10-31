@@ -40,8 +40,8 @@ const REF_AXIS_LEN = Math.hypot(CENTER[0] - SUN_WORLD[0], CENTER[1] - SUN_WORLD[
 const WHITE: V3 = [1.05, 1.0, 0.97];
 const LILAC: V3 = [0.8, 0.68, 0.86];
 const GREY: V3 = [0.32, 0.3, 0.31];
-const OLIVE: V3 = [0.3, 0.27, 0.05];
-const DIM_OLIVE: V3 = [0.16, 0.15, 0.04];
+const OLIVE: V3 = [0.36, 0.32, 0.05];
+const DIM_OLIVE: V3 = [0.2, 0.19, 0.04];
 
 export const buildDiscs = (seed = 2024): DiscSpec[] => {
   const R = rng(seed);
@@ -68,18 +68,18 @@ export const buildDiscs = (seed = 2024): DiscSpec[] => {
   add(1.09, 0.03, 0.05, 0.9, WHITE);
   add(0.637, 0.093, 0.042, 0.35, WHITE);
   add(0.78, 0.04, 0.035, 0.3, WHITE);
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 7; i++) {
     const a = R() * Math.PI * 2;
-    const d = 0.1 + R() * 0.16;
-    add(SUN_WORLD[0] + Math.cos(a) * d * 1.15, SUN_WORLD[1] + Math.sin(a) * d * 0.9, 0.04 + R() * 0.05, 0.5 + R() * 0.5, WHITE, {
+    const d = 0.14 + R() * 0.12;
+    add(SUN_WORLD[0] + Math.cos(a) * d * 1.15, SUN_WORLD[1] + Math.sin(a) * d * 0.9, 0.035 + R() * 0.04, 0.35 + R() * 0.4, WHITE, {
       twDepth: 0.3 + R() * 0.4,
     });
   }
   // pale lilac leaf highlights down the right edge
-  add(1.62, 0.13, 0.11, 0.75, LILAC);
-  add(1.66, 0.3, 0.1, 0.45, LILAC);
-  add(1.58, 0.21, 0.08, 0.5, WHITE);
-  add(1.56, 0.06, 0.06, 0.6, WHITE);
+  add(1.62, 0.13, 0.11, 1.0, LILAC, { soft: 0.3 });
+  add(1.66, 0.3, 0.1, 0.7, LILAC, { soft: 0.32 });
+  add(1.58, 0.21, 0.08, 0.8, WHITE, { soft: 0.3 });
+  add(1.56, 0.06, 0.06, 0.9, WHITE, { soft: 0.3 });
   add(1.6, 0.28, 0.07, 0.6, LILAC);
   add(1.7, 0.2, 0.06, 0.5, LILAC);
   add(1.67, 0.44, 0.06, 0.45, LILAC);
@@ -143,7 +143,7 @@ export const GHOSTS: GhostSpec[] = [
   // lavender disc just left of centre
   { k: 0.363, off: [0, -0.027], r: 0.094, intensity: 1, col: [0.3, 0.2, 0.55], type: 0, shape: [1, 1, 0, 0.42] },
   // red-orange arc fragment beside it
-  { k: 0.5, off: [0.0, 0.04], r: 0.05, intensity: 1.0, col: [0.36, 0.06, 0.05], type: 2, shape: [0.6, 1.9, 0.3, 0] },
+  { k: 0.5, off: [-0.03, -0.05], r: 0.05, intensity: 1.0, col: [0.36, 0.06, 0.05], type: 2, shape: [0.6, 1.9, 0.55, 0] },
   // small bright hexagonal ghost
   { k: 1.31, off: [0, -0.072], r: 0.04, intensity: 1, col: [0.3, 0.42, 0.34], type: 1, shape: [0.75, 1.25, 0.2, 0.6] },
   // large violet ghost lower left

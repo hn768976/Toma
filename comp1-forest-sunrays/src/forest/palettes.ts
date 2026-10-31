@@ -36,20 +36,20 @@ export type ForestPalette = {
 /** Version 1 — matched to the reference: cool teal/cyan morning forest. */
 export const REFERENCE_PALETTE: ForestPalette = {
   name: "reference-teal",
-  bgTop: lin(80, 110, 122),
-  bgLow: lin(40, 78, 80),
-  bgSide: lin(36, 82, 66),
-  foliage: lin(78, 156, 104),
+  bgTop: lin(76, 106, 128),
+  bgLow: lin(38, 72, 86),
+  bgSide: lin(34, 80, 78),
+  foliage: lin(70, 150, 112),
   foliage2: lin(92, 118, 62),
   lift: [0, 0, 0],
   haze: [0.23, 0.25, 0.27],
   rayCol: [0.3, 0.32, 0.4],
   sunCol: [0.95, 0.93, 0.72],
   discBright: [0.6, 0.67, 0.7],
-  discCool: [0.36, 0.46, 0.56],
+  discCool: [0.34, 0.45, 0.6],
   discGreen: [0.3, 0.45, 0.3],
   discWarm: [0.6, 0.62, 0.42],
-  saturation: 1.0,
+  saturation: 1.12,
 };
 
 /**

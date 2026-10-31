@@ -80,7 +80,7 @@ float streak(vec2 p, vec4 R, float w, float chromaShift) {
   float s = q.x * d.y - q.y * d.x + chromaShift;
   float ww = w * (1.0 + 0.55 * clamp(t + 0.1, 0.0, 1.4));
   float core = exp(-(s * s) / (ww * ww));
-  float glow = exp(-abs(s) / (ww * 5.0)) * 0.22;
+  float glow = exp(-abs(s) / (ww * 4.0)) * 0.3;
   // fade in from the haze at the top, decay towards the bottom of frame
   float along = smoothstep(-0.25, 0.05, t) * exp(-max(t, 0.0) * 0.55);
   return (core + glow) * along * R.w;
@@ -107,7 +107,7 @@ void main() {
   float n1 = fbm(p * 1.7 + drift + 3.1);
   float n2 = fbm(p * 2.6 - drift * 1.3 + 11.7);
   float edgeW = 0.35 + 0.65 * smoothstep(0.25, 0.75, abs(p.x / aspect - 0.5) * 2.0 + p.y * 0.3);
-  col = mix(col, uFoliage, smoothstep(0.48, 0.72, n1) * 0.42 * edgeW);
+  col = mix(col, uFoliage, smoothstep(0.48, 0.72, n1) * 0.3 * edgeW);
   col = mix(col, col * 0.52, smoothstep(0.42, 0.7, n2) * 0.7);
   float n3 = fbm(p * 3.4 + vec2(-t * 0.02, t * 0.01) + 23.0);
   col = mix(col, col * vec3(0.7, 0.85, 1.05), smoothstep(0.5, 0.7, n3) * 0.5);
@@ -126,7 +126,7 @@ void main() {
   // ---------- sun haze ----------
   vec2 sq = (p - uSun) * vec2(0.85, 1.0);
   float r2 = dot(sq, sq);
-  float haze = exp(-r2 / 0.15) * 0.85 + exp(-r2 / 0.04) * 0.8 + exp(-r2 / 0.6) * 0.16;
+  float haze = exp(-r2 / 0.24) * 0.85 + exp(-r2 / 0.07) * 0.8 + exp(-r2 / 0.8) * 0.16;
   col += uHaze * haze * uSunPow;
 
   // ---------- bokeh discs ----------
@@ -144,7 +144,7 @@ void main() {
     float rim = smoothstep(r - e * 2.2, r - e * 0.4, d);
     // faint onion-ring texture of real bokeh
     float tex = 0.94 + 0.06 * sin(d / r * 9.0 + float(i));
-    bokeh += C.rgb * D.w * m * (0.9 + 0.16 * rim) * tex;
+    bokeh += C.rgb * D.w * m * (0.96 + 0.06 * rim) * tex;
   }
   col += bokeh * uSunPow;
 

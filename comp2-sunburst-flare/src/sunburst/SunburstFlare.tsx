@@ -18,10 +18,10 @@ const srgb = (r: number, g: number, b: number) =>
 
 // Palette (shared by both versions — V2 changes the camera, not the colours)
 const PALETTE = {
-  uBgDark: srgb(62, 54, 46),
+  uBgDark: srgb(48, 42, 32),
   uBgLight: srgb(124, 108, 92),
   uBgLow: srgb(96, 80, 120),
-  uLeaf: srgb(104, 98, 42),
+  uLeaf: srgb(112, 106, 34),
   uGlare: [0.43, 0.37, 0.38],
   uSunCol: [1.0, 0.96, 0.9],
   uRayCol: [0.55, 0.45, 0.3],

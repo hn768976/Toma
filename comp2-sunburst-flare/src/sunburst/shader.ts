@@ -92,7 +92,8 @@ void main() {
   col = mix(col, uBgLow, smoothstep(0.45, 1.05, q.y) * (1.0 - gx * 0.6) * 0.8);
   float n1 = fbm(q * 2.2 + vec2(t * 0.01, -t * 0.007));
   float n2 = fbm(q * 3.6 - vec2(t * 0.012, t * 0.004) + 9.0);
-  col = mix(col, uLeaf, smoothstep(0.5, 0.75, n1) * 0.55 * (1.0 - smoothstep(0.9, 1.5, q.x)));
+  col = mix(col, uLeaf, smoothstep(0.46, 0.72, n1) * 0.7 * (1.0 - smoothstep(0.9, 1.5, q.x)));
+  col = mix(col, uLeaf * 1.3, blob(q, vec2(1.55, 0.85), vec2(0.35, 0.2)) * 0.35);
   col *= 0.8 + 0.35 * smoothstep(0.3, 0.7, n2);
 
   // ---------- veiling glare around the sun ----------
@@ -122,7 +123,7 @@ void main() {
   float occl = smoothstep(0.32, 0.6, leaf);
   vec2 sdE = sd * vec2(0.85, 1.0);
   float rE = dot(sdE, sdE);
-  float core = exp(-rE / 0.007) * 5.0 + exp(-rE / 0.03) * 2.2 * occl + exp(-rE / 0.06) * 0.8 * occl + exp(-r2 / 0.0015) * 6.0;
+  float core = exp(-r2 / 0.008) * 5.0 + exp(-rE / 0.028) * 1.8 * occl + exp(-rE / 0.06) * 0.25 * occl + exp(-r2 / 0.0015) * 6.0;
   col += uSunCol * core * uSunPow;
 
   // ---------- starburst ----------
@@ -132,8 +133,8 @@ void main() {
   float s1 = vnoise(cs * 9.0 + vec2(t * 0.12, 0.0));
   float s2 = vnoise(cs * 19.0 + vec2(0.0, t * 0.18) + 17.0);
   float s3 = vnoise(cs * 31.0 + vec2(t * 0.2, 3.0));
-  float spikes = pow(s1, 5.0) * 0.9 + pow(s2, 6.0) * 0.8 + pow(s3, 6.0) * 0.5;
-  float radial = smoothstep(0.03, 0.14, dist) * exp(-dist / 0.17);
+  float spikes = pow(s1, 5.0) * 1.1 + pow(s2, 6.0) * 0.9 + pow(s3, 6.0) * 0.55;
+  float radial = smoothstep(0.03, 0.12, dist) * exp(-dist / 0.22);
   // the lower half of the burst reads more strongly (sky above is blown out)
   float lowerBias = 0.6 + 0.4 * smoothstep(-0.2, 0.6, sd.y / max(dist, 1e-4));
   col += uRayCol * spikes * radial * lowerBias * uSunPow;
@@ -177,6 +178,8 @@ void main() {
   vec3 hi = max(col - 0.72, 0.0);
   col = min(col, 0.72) + hi / (1.0 + hi * 1.25);
   col = min(col, vec3(1.0));
+  float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
+  col = max(mix(vec3(lum), col, 1.18), 0.0);
 
   vec3 srgb = toSRGB(col) * uExposure;
   float g = hash12(gl_FragCoord.xy + fract(uFrame * 0.6180339) * 917.0) - 0.5;

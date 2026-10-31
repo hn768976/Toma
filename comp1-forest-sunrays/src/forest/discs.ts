@@ -51,7 +51,7 @@ export const buildDiscs = (seed = 1337): DiscSpec[] => {
     [0.08, 0.68],
     [0.04, 0.8],
   ];
-  for (let i = 0; i < 56; i++) {
+  for (let i = 0; i < 62; i++) {
     const u = R() * (path.length - 1);
     const k = Math.floor(u);
     const f = u - k;
@@ -65,7 +65,7 @@ export const buildDiscs = (seed = 1337): DiscSpec[] => {
         x: clamp(x, -0.03, 0.5),
         y,
         r: 0.038 + R() * 0.038,
-        alpha: bright ? 0.4 + R() * 0.5 : 0.16 + R() * 0.26,
+        alpha: bright ? 0.55 + R() * 0.45 : 0.2 + R() * 0.28,
         tint: bright ? "bright" : "cool",
         cluster: 1,
         twinkleDepth: 0.35 + R() * 0.55,
@@ -96,7 +96,7 @@ export const buildDiscs = (seed = 1337): DiscSpec[] => {
   }
 
   // --- faint background field ---
-  while (discs.length < 146) {
+  while (discs.length < 118) {
     const x = 0.25 + R() * (ASPECT - 0.2);
     const y = R() * 1.05;
     const t = R();
@@ -105,8 +105,8 @@ export const buildDiscs = (seed = 1337): DiscSpec[] => {
       base({
         x,
         y,
-        r: 0.026 + R() * 0.04,
-        alpha: 0.05 + R() * 0.17,
+        r: 0.04 + R() * 0.04,
+        alpha: 0.05 + R() * 0.15,
         tint,
         soft: 0.3 + R() * 0.2,
       }),
@@ -123,7 +123,7 @@ export const discUniforms = (discs: DiscSpec[], palette: ForestPalette, time: nu
   const pos = new Float32Array(discs.length * 4);
   const col = new Float32Array(discs.length * 4);
   // shared wind for the branch that carries the left cluster
-  const windX = fbm1(time * 0.45, 21) * 0.024 + fbm1(time * 1.4, 22) * 0.008;
+  const windX = fbm1(time * 0.5, 21) * 0.03 + fbm1(time * 1.6, 22) * 0.011;
   const windY = fbm1(time * 0.4, 23) * 0.014 + fbm1(time * 1.2, 24) * 0.004;
   discs.forEach((d, i) => {
     const ox = fbm1(time * d.speed + d.seed, 1) * d.sway;
