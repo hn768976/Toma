@@ -25,10 +25,10 @@ export const CRAYON = {
   irisDiameter: 1.3, // fraction of eye height
   pupil: 0.31, // fraction of iris radius
   white: "#FCFBF8",
-  glowPx: 11, // glow blur radius at 4K
+  glowPx: 6, // glow blur radius at 4K
   glowAlpha: 1,
-  haloPx: 30, // a second, fainter halo (fades out within ~10px at 720p)
-  haloAlpha: 0.7,
+  haloPx: 13, // a second, fainter halo (gone within ~8px at 720p)
+  haloAlpha: 0.6,
   boilHold: 3,
   boilVariants: 4,
 };
@@ -58,6 +58,13 @@ export const makeCrayonEyes = (cfg: CrayonCfg): DrawFn => {
     closeAt: 0.68,
     upperFrac: 0.62,
   };
+
+  // The two eyes are drawn separately by hand: never quite the same shape.
+  const specs: AlmondSpec[] = [
+    { ...spec, w: spec.w * 1.03, h: spec.h * 0.96, upperSkew: spec.upperSkew - 0.1 },
+    { ...spec, w: spec.w * 0.96, h: spec.h * 1.05, upperSkew: spec.upperSkew + 0.12, lowerSkew: spec.lowerSkew - 0.08 },
+  ];
+
   const pad = 70;
   const texW = ew + pad * 2;
   const texH = eh + pad * 2;
@@ -80,7 +87,7 @@ export const makeCrayonEyes = (cfg: CrayonCfg): DrawFn => {
     if (hit) return hit;
     const seed = (part: string) => seedFor(cfg.id, part, e, v);
     const toTex = ([x, y]: Pt): Pt => [x + texW / 2, y + texH / 2];
-    const poly = lidPolygon(lids(spec, jit[e][v], 1)).map(toTex);
+    const poly = lidPolygon(lids(specs[e], jit[e][v], 1)).map(toTex);
     const rng = makeRng(cfg.id, "tex", e, v);
 
     // Whites: crayon hatching in two directions + a ragged crayon contour.
@@ -103,29 +110,51 @@ export const makeCrayonEyes = (cfg: CrayonCfg): DrawFn => {
     // Iris: concentric crayon rings, a darker rim, a black pupil.
     const isz = Math.ceil(R * 2 + 40);
     const ic = isz / 2;
+    const wobbly = (r: number, n = 22): [number, number][] =>
+      Array.from({ length: n }, (_, i) => {
+        const t = (i / n) * Math.PI * 2;
+        const rr = r * (1 + 0.05 * Math.sin(t * 3 + rng.range(0, 6)) + rng.gauss() * 0.015);
+        return [ic + Math.cos(t) * rr, ic + Math.sin(t) * rr];
+      });
+    // Iris: crayon scribbled back and forth in two directions, a few loose
+    // rings, radial fibres.
     const ringMask = paintMask(isz, isz, seed("iris"), (b) => {
       b.noFill();
-      b.set("crayon", "#000000", 6);
-      for (let r = 8; r <= R; r += 9) b.circle(ic + rng.gauss() * 3, ic + rng.gauss() * 3, r + rng.gauss() * 2);
-      // Radial crayon strokes from the pupil outwards (iris fibres).
+      b.noStroke();
+      b.hatchStyle("crayon", "#000000", 5);
+      b.hatch(7, rng.range(20, 70), { rand: 0.25 });
+      b.polygon(wobbly(R));
+      b.hatch(9, rng.range(-70, -20), { rand: 0.25 });
+      b.polygon(wobbly(R * 0.96));
+      b.noHatch();
+      b.set("crayon", "#000000", 5);
+      for (let k = 0; k < 3; k++) b.circle(ic + rng.gauss() * 4, ic + rng.gauss() * 4, R * rng.range(0.55, 0.95));
       b.set("crayon", "#000000", 4);
-      for (let i = 0; i < 70; i++) {
-        const a = (i / 70) * 360 + rng.gauss() * 3;
+      for (let i = 0; i < 46; i++) {
+        const a = rng.range(0, Math.PI * 2);
         const r0 = R * rng.range(0.3, 0.45);
-        const r1 = R * rng.range(0.85, 1);
-        const rad = (a * Math.PI) / 180;
-        b.line(ic + Math.cos(rad) * r0, ic + Math.sin(rad) * r0, ic + Math.cos(rad) * r1, ic + Math.sin(rad) * r1);
+        const r1 = R * rng.range(0.75, 1);
+        b.line(ic + Math.cos(a) * r0, ic + Math.sin(a) * r0, ic + Math.cos(a) * r1, ic + Math.sin(a) * r1);
       }
     });
     const rimMask = paintMask(isz, isz, seed("rim"), (b) => {
       b.noFill();
       b.set("crayon", "#000000", 6);
-      for (let r = R * 0.8; r <= R + 2; r += 7) b.circle(ic + rng.gauss() * 2, ic + rng.gauss() * 2, r);
+      for (let r = R * 0.82; r <= R + 2; r += 9) b.circle(ic + rng.gauss() * 3, ic + rng.gauss() * 3, r);
     });
     const pupilMask = paintMask(isz, isz, seed("pupil"), (b) => {
       b.noFill();
-      b.set("crayon", "#000000", 7);
-      for (let r = 4; r <= R * CRAYON.pupil; r += 5) b.circle(ic + rng.gauss(), ic + rng.gauss(), r);
+      b.noStroke();
+      b.hatchStyle("crayon", "#000000", 6);
+      b.hatch(4, rng.range(0, 180), { rand: 0.2 });
+      b.polygon(wobbly(R * CRAYON.pupil, 14));
+      b.hatch(5, rng.range(0, 180), { rand: 0.2 });
+      b.polygon(wobbly(R * CRAYON.pupil * 0.97, 14));
+      b.noHatch();
+      b.set("crayon", "#000000", 6);
+      b.beginShape(0.6);
+      for (const p of wobbly(R * CRAYON.pupil, 14)) b.vertex(p[0], p[1]);
+      b.endShape(true);
     });
     const { c: iris, ctx: ictx } = makeCanvas(isz, isz);
     ictx.drawImage(
@@ -146,14 +175,22 @@ export const makeCrayonEyes = (cfg: CrayonCfg): DrawFn => {
     // Catchlight: a small white crayon blob.
     const csz = Math.ceil(R * 0.5);
     const catchMask = paintMask(csz, csz, seed("catch"), (b) => {
+      const pts: [number, number][] = Array.from({ length: 9 }, (_, i) => {
+        const t = (i / 9) * Math.PI * 2;
+        const rr = csz * 0.3 * (1 + rng.gauss() * 0.12);
+        return [csz / 2 + Math.cos(t) * rr * 1.1, csz / 2 + Math.sin(t) * rr * 0.9];
+      });
       b.noFill();
-      b.set("crayon", "#000000", 6);
-      for (let r = 3; r <= csz * 0.4; r += 4) b.circle(csz / 2, csz / 2, r);
+      b.noStroke();
+      b.hatchStyle("crayon", "#000000", 5);
+      b.hatch(3, rng.range(0, 180), { rand: 0.2 });
+      b.polygon(pts);
+      b.noHatch();
     });
     const catchTex = colorize(catchMask, "#FFFFFF");
 
     // Closed-lid line.
-    const closed = lids(spec, jit[e][v], 0).closed.map(toTex);
+    const closed = lids(specs[e], jit[e][v], 0).closed.map(toTex);
     const lidMask = paintMask(texW, texH, seed("lid"), (b) => {
       b.noFill();
       b.set("crayon", "#000000", 9);
@@ -211,7 +248,7 @@ export const makeCrayonEyes = (cfg: CrayonCfg): DrawFn => {
       if (open < 0.999) {
         // Lid cut: the lid shape at this openness, with a crayon-ragged edge.
         // Near full open it grows past the texture so the painted edge shows.
-        const lidsNow = lids(spec, jit[e][v], open);
+        const lidsNow = lids(specs[e], jit[e][v], open);
         const grow = smoothstep((open - 0.6) / 0.4) * 40;
         const poly = lidPolygon(lidsNow).map(([x, y], i): Pt => {
           const up = i < lidsNow.upper.length;

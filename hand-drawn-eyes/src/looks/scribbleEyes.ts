@@ -66,6 +66,13 @@ export const makeScribbleEyes = (cfg: ScribbleCfg): DrawFn => {
     closeAt: 0.7,
   };
 
+
+  // The two eyes are drawn separately by hand: never quite the same shape.
+  const specs: AlmondSpec[] = [
+    { ...spec, w: spec.w * 1.03, h: spec.h * 0.96, upperSkew: spec.upperSkew - 0.1 },
+    { ...spec, w: spec.w * 0.96, h: spec.h * 1.05, upperSkew: spec.upperSkew + 0.12, lowerSkew: spec.lowerSkew - 0.08 },
+  ];
+
   let built: null | {
     strokes: Stroke[];
     jit: AlmondJitter[][]; // [eye][variant]
@@ -105,8 +112,8 @@ export const makeScribbleEyes = (cfg: ScribbleCfg): DrawFn => {
         life: rng.range(0.55, 0.85),
         omega: 0.0026 / Math.sqrt(rho),
         width,
-        alpha: rng.next() < 0.7 ? 1 : rng.range(0.55, 0.85),
-        soft: rng.next() < 0.35,
+        alpha: 1,
+        soft: false, // all flecks are opaque pen marks
         paths: [],
         jit: [],
       };
@@ -228,7 +235,7 @@ export const makeScribbleEyes = (cfg: ScribbleCfg): DrawFn => {
       const tilt = 0.015;
       ctx.setTransform(dpr * mirror, 0, 0, dpr, ex * dpr, cy * dpr);
       ctx.rotate(tilt);
-      const L = frayLids(lids(spec, B.jit[e][v], pose.open), B.jit[e][v], spec.w * 0.004);
+      const L = frayLids(lids(specs[e], B.jit[e][v], pose.open), B.jit[e][v], spec.w * 0.004);
       const path = lidPath(L);
       ctx.fillStyle = cfg.eyeFill;
       ctx.fill(path);

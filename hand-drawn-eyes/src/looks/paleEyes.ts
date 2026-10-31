@@ -7,7 +7,7 @@ import { buildActing, type Pose } from "../lib/acting";
 import { lidPath, lids, makeJitter, type AlmondJitter, type AlmondSpec } from "../lib/eye";
 import { freehand } from "../lib/freehand";
 import { clamp, easeInOut, lerp, mod } from "../lib/math";
-import { makeRng } from "../lib/rng";
+import { makeRng, mulberry32 } from "../lib/rng";
 
 // ---- data ------------------------------------------------------------------
 export const PALE = {
@@ -45,6 +45,18 @@ export const paleSpec = (w: number): AlmondSpec => ({
   closeAt: 0.6,
 });
 
+// Seeded chalk-grain flecks per jitter set (cached): [x 0..1, y 0..1, length].
+const grainCache = new WeakMap<AlmondJitter, [number, number, number][]>();
+const grainFor = (j: AlmondJitter) => {
+  let g = grainCache.get(j);
+  if (!g) {
+    const r = mulberry32(Math.floor(j.up[0].phase * 1e6));
+    g = Array.from({ length: 160 }, () => [r(), r(), 0.004 + r() * 0.02] as [number, number, number]);
+    grainCache.set(j, g);
+  }
+  return g;
+};
+
 // Draws one eye in eye-local coordinates (centre 0,0) onto ctx.
 const drawPaleEye = (
   ctx: CanvasRenderingContext2D,
@@ -78,6 +90,9 @@ const drawPaleEye = (
     ctx.fill(path);
     ctx.save();
     ctx.clip(path);
+    // Chalky grain: small seeded dark flecks dragged across the white.
+    ctx.fillStyle = "rgba(20,10,10,0.28)";
+    for (const [gx, gy, gl] of grainFor(jit)) ctx.fillRect(gx * w - w / 2, gy * h - h / 2, gl * w, h * 0.012);
     // Shadow under the upper lid.
     const sh = ctx.createLinearGradient(0, -h / 2, 0, h * 0.15);
     sh.addColorStop(0, "rgba(40,14,12,0.18)");
@@ -120,8 +135,8 @@ const drawPaleEye = (
   // Deep blood-red glow outside the lids, then the dull maroon line.
   ctx.save();
   ctx.strokeStyle = "rgba(140,0,0,0.4)";
-  ctx.lineWidth = (w / 960) * 60;
-  ctx.filter = `blur(${(w / 960) * 16 * Math.hypot(ctx.getTransform().a, ctx.getTransform().b)}px)`;
+  ctx.lineWidth = (w / 960) * 44;
+  ctx.filter = `blur(${(w / 960) * 7 * Math.hypot(ctx.getTransform().a, ctx.getTransform().b)}px)`;
   ctx.stroke(path);
   ctx.restore();
   ctx.save();
@@ -162,6 +177,7 @@ const drawPair = (
   jit: [AlmondJitter, AlmondJitter],
   pose: Pose,
   brightness: number,
+  tilt = 0,
 ) => {
   const spec = paleSpec(eyeW);
   const pw = spacing + eyeW * 1.3;
@@ -174,7 +190,9 @@ const drawPair = (
     const mirror = e === 1 ? -1 : 1;
     const ex = pw / 2 + (e === 0 ? -spacing / 2 : spacing / 2);
     lc.setTransform(dpr * mirror, 0, 0, dpr, ex * dpr, (ph / 2) * dpr);
-    drawPaleEye(lc, spec, jit[e], pose, mirror);
+    lc.rotate(tilt * mirror);
+    const es = { ...spec, w: spec.w * (e ? 0.97 : 1.02), h: spec.h * (e ? 1.05 : 0.97), upperSkew: e ? 0.1 : -0.08 };
+    drawPaleEye(lc, es, jit[e], pose, mirror);
   }
   ctx.save();
   ctx.globalAlpha = brightness;
@@ -201,7 +219,7 @@ export const makePaleEyes = (id: string): DrawFn => {
   });
   return (ctx, frame, { dpr }) => {
     const v = mod(Math.floor(frame / PALE.boilHold), PALE.boilVariants);
-    drawPair(ctx, dpr, id, W / 2, H * PALE.eyeY, ew, W * PALE.spacing, jit[v], acting.poseAt(frame), 1);
+    drawPair(ctx, dpr, id, W / 2, H * PALE.eyeY, ew, W * PALE.spacing, jit[v], acting.poseAt(frame), 1, 0.02);
   };
 };
 
@@ -214,6 +232,8 @@ type CrowdPair = {
   period: number;
   phase: number;
   openLen: number;
+  tilt: number; // each pair sits at its own slight angle
+  spread: number; // eye spacing, in eye widths
   rest: [number, number]; // gaze while "staring" (camera or a neighbour)
   glance: [number, number];
   glanceAt: number;
@@ -253,7 +273,9 @@ export const makeEyesCrowd = (id: string): DrawFn => {
         period,
         phase: rng.int(0, period - 1),
         openLen,
-        rest: [rng.range(-0.15, 0.15), rng.range(-0.1, 0.15)],
+        tilt: rng.range(-0.1, 0.1),
+        spread: rng.range(1.35, 1.6),
+        rest: [rng.range(-0.4, 0.4), rng.range(-0.3, 0.3)],
         glance: [rng.pick([-1, 1]) * rng.range(0.6, 1), rng.range(-0.5, 0.5)],
         glanceAt: Math.round(openLen * rng.range(0.3, 0.45)),
         blinkAt: Math.round(openLen * rng.range(0.6, 0.72)),
@@ -313,7 +335,7 @@ export const makeEyesCrowd = (id: string): DrawFn => {
       if (!pose) return;
       // Opening out of the darkness: brightness follows the lids up.
       const b = p.brightness * clamp(0.25 + pose.open * 0.75);
-      drawPair(ctx, dpr, `${id}:${i}`, p.x, p.y, p.eyeW, p.eyeW * 1.45, p.jit[v], pose, b);
+      drawPair(ctx, dpr, `${id}:${i}`, p.x, p.y, p.eyeW, p.eyeW * p.spread, p.jit[v], pose, b, p.tilt);
     });
   };
 };

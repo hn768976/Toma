@@ -251,8 +251,8 @@ export const drawFigureScribble = (
       bowing: 16,
       seed: seedFor(...seedParts, "fill", pass),
     });
-    ctx.lineWidth = 8 * k;
-    ctx.globalAlpha = 0.4;
+    ctx.lineWidth = 5 * k;
+    ctx.globalAlpha = 0.9;
     ctx.stroke(path);
   }
   ctx.globalAlpha = 1;
@@ -293,7 +293,7 @@ export const drawFigureScribble = (
     if (guide.length < 3) continue;
     const loops = loopsAlong(guide, rng.range(60, 110) * k * (1 + wild * 1.5), 110 * k, rng);
     for (const st of penStrokes(loops, rng)) {
-      ctx.fill(freehand(st, { size: rng.range(20, 32) * k, thinning: 0.2, smoothing: 0.4, streamline: 0.2 }));
+      ctx.fill(freehand(st, { size: rng.range(24, 40) * k, thinning: 0.35, smoothing: 0.4, streamline: 0.2 }));
     }
   }
   ctx.restore();
@@ -308,7 +308,7 @@ export const drawFigureScribble = (
     });
     const loops = loopsAlong(shifted, (pass === 0 ? 46 : 66) * k * (1 + wild * 2), 58 * k, rng, 0.05 + wild * 0.4, outward);
     for (const st of penStrokes(loops, rng, 30, 120)) {
-      ctx.fill(freehand(st, { size: rng.range(18, 28) * k, thinning: 0.2, smoothing: 0.45, streamline: 0.25 }));
+      ctx.fill(freehand(st, { size: rng.range(22, 36) * k, thinning: 0.35, smoothing: 0.45, streamline: 0.25 }));
     }
   }
 
@@ -377,15 +377,18 @@ export const drawFigureScribble = (
   if (wild < 0.6) {
     const qa = 1 - smoothstep((wild - 0.3) / 0.3);
     const q = R * 1.1;
-    const j = () => rng.gauss() * 0.025 * q;
+    const j = () => rng.gauss() * 0.05 * q;
+    const qrot = rng.gauss() * 0.12; // each "?" is written anew
+    const qc = Math.cos(qrot);
+    const qs = Math.sin(qrot);
     const hook: Pt[] = [
       [-0.55, -0.42], [-0.45, -0.75], [-0.1, -0.95], [0.32, -0.88], [0.55, -0.6], [0.48, -0.3],
       [0.18, -0.08], [0.02, 0.12], [0.0, 0.38],
-    ].map(([x, y]): Pt => [fx + x * q + j(), fy + y * q + j()]);
+    ].map(([x, y]): Pt => [fx + (x * qc - y * qs) * q + j(), fy + (x * qs + y * qc) * q + j()]);
     ctx.save();
     ctx.globalAlpha = qa;
     ctx.globalCompositeOperation = "destination-out";
-    ctx.fill(freehand(hook, { size: q * 0.48, thinning: 0.45, smoothing: 0.6, streamline: 0.3, start: { taper: q * 0.4 }, end: { taper: 0 } }));
+    ctx.fill(freehand(hook, { size: q * rng.range(0.42, 0.54), thinning: 0.45, smoothing: 0.6, streamline: 0.3, start: { taper: q * 0.4 }, end: { taper: 0 } }));
     ctx.beginPath();
     ctx.ellipse(fx + j(), fy + q * 0.74 + j(), q * 0.18, q * 0.17, rng.range(0, 1), 0, TAU);
     ctx.fill();
