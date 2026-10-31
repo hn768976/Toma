@@ -575,6 +575,7 @@ export const createGlobeScene =
         uAtlas: { value: atlas },
         uTime: { value: 0 },
         uCharH: { value: 0.054 },
+        uLabelFade: { value: config.labelFade ?? 0 },
         uExposure: { value: 1 },
         uHot: { value: colHot },
       },

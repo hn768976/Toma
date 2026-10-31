@@ -46,6 +46,11 @@ export type GlobeConfig = {
    * flare mid-way out of the dive.
    */
   exposureTuning: { gainFrom: number; panelBoost: number };
+  /**
+   * Fraction of the read-out blink cycle used to fade labels out (0 = hard
+   * blink-off). V2 flies past labels at close range, where a hard cut pops.
+   */
+  labelFade?: number;
 };
 
 // Saturated electric blue / cyan on a navy-to-black field, sampled from the
@@ -237,6 +242,7 @@ export const GLOBE_V2: GlobeConfig = {
   spin: (t) => 10 + rampedTurns(t),
   ringsCloseFrom: 3.0,
   exposureTuning: { gainFrom: 1.15, panelBoost: 2.2 },
+  labelFade: 0.06,
   camera: (t) => ({
     distance: 1 + Math.exp(v2Distance(t)),
     azimuth: v2Azimuth(t),

@@ -119,6 +119,7 @@ export const labelVertex = /* glsl */ `
   uniform float uTime;
   uniform float uCharH;
   uniform float uExposure;
+  uniform float uLabelFade;
   varying vec2 vUv;
   varying float vGlyph;
   varying float vAlpha;
@@ -139,7 +140,11 @@ export const labelVertex = /* glsl */ `
     float cycle = uTime * 0.22 + iChar.z * 9.0;
     float ph = fract(cycle);
     float on = hash11(floor(cycle) * 3.1 + iChar.z * 17.0) > 0.25 ? 1.0 : 0.0;
-    float reveal = step(iChar.x + 4.5, ph * 60.0) * step(ph, 0.92);
+    // uLabelFade = 0: hard blink-off (reference read-outs); > 0: short fade.
+    float off = uLabelFade > 0.0
+      ? 1.0 - smoothstep(0.92 - uLabelFade, 0.92, ph)
+      : step(ph, 0.92);
+    float reveal = step(iChar.x + 4.5, ph * 60.0) * off;
     float occl = mix(1.0, 0.12, behindGlobe(world.xyz));
     vAlpha = on * reveal * occl * iChar.w * uExposure;
   }
