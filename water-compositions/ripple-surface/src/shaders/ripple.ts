@@ -72,7 +72,7 @@ vec2 warpField(vec2 p, float t) {
 struct Surface {
   float h;      // height (arbitrary units)
   vec2 grad;    // d(height)/d(world)
-  float line;   // accumulated thin crest-line intensity
+  float line;   // accumulated crest-line intensity
   float glow;   // accumulated broad crest sheen
   float trough; // accumulated trough darkening
 };
@@ -86,69 +86,106 @@ void addSwell(inout Surface s, vec2 q, vec2 dir, float k, float w, float ph,
   float phase = k * dot(q, d) - w * t + ph;
   s.h += a * sin(phase);
   s.grad += a * k * cos(phase) * d;
+  // Broad soft bright bands on the swell crests.
+  s.glow += 0.8 * a * pow(0.5 + 0.5 * sin(phase), 4.0);
 }
 
-// Adds one circular ripple train made of expanding wave packets (groups of
-// crests separated by calm water). Its phase is displaced by the height
-// accumulated so far, so crossings kink the lines instead of producing a
-// beaded interference grid.
-void addRing(inout Surface s, vec2 q, vec2 c, float k, float w, float ke,
-             float we, float ph, float amp, float t, float fp) {
+// Adds one circular ripple train radiating from centre c.
+//  k, chirp : wavenumber at the centre and its growth with distance, so the
+//             crest spacing varies across the frame (as in the reference)
+//  w        : angular speed -> crests travel outward at ~w/k units/s
+//  boldness : 0..1 field that decides, per place, whether a crest is a
+//             crisp bold caustic or a soft faint line
+// The phase is displaced by the height accumulated so far, so where trains
+// cross the crests kink / zig-zag instead of forming a woven grid.
+void addRing(inout Surface s, vec2 q, vec2 c, float k, float chirp, float w,
+             float ph, float amp, float lineGain, float boldness, float t,
+             float fp) {
   vec2 dv = q - c;
   float r = length(dv);
-  float env = 0.5 + 0.5 * sin(ke * r - we * t + ph);
-  env = env * env * env * amp * bandLimit(k, fp) / sqrt(1.0 + 1.5 * r);
-  float phase = k * r - w * t + 1.7 * ph + 1.6 * s.h;
+  float kLocal = k + 2.0 * chirp * r;
+  float bl = bandLimit(kLocal, fp);
+  // Slow packet envelope: busy everywhere, but with varying strength.
+  float env = 0.5 + 0.5 * sin(4.5 * r - 0.8 * t + ph);
+  env = (0.12 + 0.88 * env * env * env) * amp * bl / sqrt(1.0 + 1.2 * r);
+  // Zig-zag kinks along bold crests (arc-length modulated phase).
+  float arc = r * atan(dv.y, dv.x);
+  float kink = boldness * 0.55 * sin(arc * 70.0 + 2.5 * t + ph)
+             * smoothstep(0.6, 0.95, sin(arc * 7.0 - 0.7 * t + ph) * 0.5 + 0.5);
+  float phase = k * r + chirp * r * r - w * t + 1.7 * ph + 2.0 * s.h + kink;
   float sn = sin(phase);
   float cs = cos(phase);
   s.h += env * sn;
-  s.grad += env * k * cs * dv / max(r, 1e-4);
+  s.grad += env * kLocal * cs * dv / max(r, 1e-4);
   float crest = 0.5 + 0.5 * sn;
-  s.line += env * pow(crest, 34.0);
-  s.glow += env * pow(crest, 5.0);
-  s.trough += env * pow(1.0 - crest, 6.0);
+  float sharp = mix(5.0, 46.0, boldness);
+  s.line += lineGain * env * mix(0.30, 1.25, boldness) * pow(crest, sharp);
+  s.glow += env * pow(crest, 3.0);
+  s.trough += env * pow(1.0 - crest, 5.0);
 }
 
 Surface surface(vec2 p, float t, float fp) {
   Surface s = Surface(0.0, vec2(0.0), 0.0, 0.0, 0.0);
-  // Gentle large-scale warp makes the arcs wobble and bend.
-  vec2 q = p + 0.10 * warpField(p, t);
+  // Large-scale warp makes the arcs wobble and bend.
+  vec2 q = p + 0.09 * warpField(p, t);
 
-  addSwell(s, q, vec2(0.3, 1.0), 26.0, 2.2, 0.0, 0.35, t, fp);
-  addSwell(s, q, vec2(-1.0, 0.5), 19.0, 1.7, 1.7, 0.30, t, fp);
+  // Fast-changing field that decides which crests flare up bold & crisp.
+  float boldness = smoothstep(-0.18, 0.32,
+    fbm3(q * 2.3 + vec2(0.45 * t, -0.55 * t) + 9.0));
 
-  // Slowly wandering ripple centres, mostly outside the frame so we see
-  // large concentric arcs (frame height = 1 unit).
-  vec2 c0 = vec2(-0.10, -1.05) + vec2(0.30 * sin(0.21 * t + 0.5), 0.15 * cos(0.17 * t));
-  vec2 c1 = vec2(1.35, -1.15) + 0.25 * vec2(cos(0.15 * t + 1.0), sin(0.19 * t));
-  vec2 c2 = vec2(1.45, 1.35) + 0.25 * vec2(sin(0.13 * t), cos(0.16 * t + 2.0));
-  vec2 c3 = vec2(-1.8, 0.85) + 0.20 * vec2(cos(0.12 * t + 3.0), sin(0.2 * t));
+  addSwell(s, q, vec2(0.3, 1.0), 15.0, 2.0, 0.0, 0.40, t, fp);
+  addSwell(s, q, vec2(-1.0, 0.45), 11.0, 1.6, 1.7, 0.32, t, fp);
 
-  addRing(s, q, c0, 100.0, 9.0, 5.5, 0.9, 0.0, 1.15, t, fp);
-  addRing(s, q, c2, 112.0, 9.5, 6.0, 1.0, 2.1, 0.55, t, fp);
-  addRing(s, q, c1, 88.0, 8.0, 5.0, 0.8, 1.3, 0.45, t, fp);
-  addRing(s, q, c3, 76.0, 7.0, 4.5, 0.7, 0.7, 0.30, t, fp);
+  // Wandering ripple centres just below / beside the frame, so we see wide,
+  // clearly curved arcs sweeping up across the picture (frame height = 1).
+  vec2 c0 = vec2(-0.18, -0.80) + vec2(0.30 * sin(0.23 * t + 0.5), 0.10 * cos(0.19 * t));
+  vec2 c1 = vec2(0.95, -0.95) + 0.22 * vec2(cos(0.17 * t + 1.0), sin(0.21 * t));
+  vec2 c2 = vec2(1.30, 1.05) + 0.22 * vec2(sin(0.15 * t), cos(0.18 * t + 2.0));
+
+  addRing(s, q, c0, 34.0, 8.0, 5.6, 0.0, 1.00, 1.00, boldness, t, fp);
+  addRing(s, q, c1, 32.0, 6.0, 5.0, 1.3, 0.45, 0.20, boldness, t, fp);
+  addRing(s, q, c2, 42.0, 9.0, 6.2, 2.1, 0.45, 0.45, boldness, t, fp);
   return s;
+}
+
+// Occasional specular glints that flare for a fraction of a second.
+float glints(vec2 p, float t, float fp) {
+  vec2 cell = floor(p * 14.0);
+  float g = 0.0;
+  for (int j = 0; j <= 1; j++) {
+    for (int i = 0; i <= 1; i++) {
+      vec2 id = cell + vec2(float(i), float(j));
+      vec2 h = hash22(id + 3.7);
+      float isOn = step(0.93, hash12(id + 11.3));
+      vec2 pos = (id + h) / 14.0;
+      float life = fract(0.23 * t + h.x * 7.0 + h.y);
+      float flare = exp(-pow((life - 0.5) * 14.0, 2.0));
+      float rad = max(0.008, 1.5 * fp);
+      float d = length(p - pos) / rad;
+      g += isOn * flare * exp(-d * d);
+    }
+  }
+  return g;
 }
 
 // Shading shared by both cameras. v = direction from surface to eye.
 float shade(Surface s, vec3 v, float lineFade) {
-  vec3 n = normalize(vec3(-s.grad * 0.0035, 1.0));
+  vec3 n = normalize(vec3(-s.grad * 0.006, 1.0));
   // Broad, soft slope shading from a key light at upper-left.
-  float slope = dot(s.grad, normalize(vec2(-0.6, 0.8))) / 100.0;
+  float slope = dot(s.grad, normalize(vec2(-0.6, 0.8))) / 45.0;
   // Specular reflection of a large overcast light (dominant at grazing
   // angles, i.e. for the perspective camera).
   vec3 lDir = normalize(vec3(0.0, 1.0, 0.18));
   float spec = pow(max(dot(reflect(-v, n), lDir), 0.0), 400.0);
   float fres = pow(1.0 - max(dot(n, v), 0.0), 5.0);
 
-  float L = 0.68;
-  L += 0.09 * slope;
-  // Thin bright crest lines - the signature look of the reference.
-  L += lineFade * 0.56 * (1.0 - exp(-1.8 * s.line));
-  L += lineFade * 0.14 * (1.0 - exp(-1.5 * s.glow));
+  float L = 0.665;
+  L += 0.10 * slope;
+  // Crest lines: a few bold crisp caustics among many soft faint ones.
+  L += lineFade * 0.50 * (1.0 - exp(-1.7 * s.line));
+  L += lineFade * 0.15 * (1.0 - exp(-1.4 * s.glow));
   // Slightly darker troughs between the bright lines.
-  L -= lineFade * 0.17 * (1.0 - exp(-1.5 * s.trough));
+  L -= lineFade * 0.12 * (1.0 - exp(-1.5 * s.trough));
   L += 0.45 * spec + 0.18 * fres;
   return L;
 }
@@ -195,6 +232,13 @@ void main() {
   Surface s = surface(p, t, fp);
   float lineFade = 1.0 - 0.6 * haze;
   float L = shade(s, v, lineFade);
+  // Mottled soft light/dark patches in the water.
+  L += 0.075 * fbm3(p * 1.5 + vec2(0.12 * t, -0.09 * t) + 21.0);
+  // Specular glints riding on the crests.
+  L += 0.55 * lineFade * glints(p, t, fp) * (0.35 + s.line);
+  // Gentle vignette, darker toward the top-right corner as in the reference.
+  L -= 0.06 * smoothstep(0.25, 0.95, dot(uv, normalize(vec2(1.0, 0.8))));
+  L -= 0.04 * smoothstep(0.55, 1.05, length(uv * vec2(0.9, 1.3)));
   // Distant water fades to a bright, soft grey.
   L = mix(L, 0.80, 0.55 * haze);
 
