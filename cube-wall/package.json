@@ -1,0 +1,46 @@
+{
+  "name": "cube-wall",
+  "version": "1.0.0",
+  "description": "Animated white cube wall with tiles pushing in and out (Three.js / Remotion, 4K)",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@react-three/fiber": "9.2.0",
+    "@remotion/cli": "4.0.539",
+    "@remotion/three": "4.0.539",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.539",
+    "three": "0.178.0",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.539",
+    "@types/react": "19.2.7",
+    "@types/three": "0.170.0",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "eslint src && tsc",
+    "render:v1:4k": "remotion render CubeWall-V1-Reference out/CubeWall_V1_Reference_4K.mp4 --crf=12",
+    "render:v2:4k": "remotion render CubeWall-V2-IndigoEmber out/CubeWall_V2_IndigoEmber_4K.mp4 --crf=12",
+    "deliver:v1:1080p": "remotion ffmpeg -y -i out/CubeWall_V1_Reference_4K.mp4 -vf scale=1920:1080:flags=lanczos -r 30 -c:v libx264 -profile:v high -preset slow -crf 16 -pix_fmt yuv420p -movflags +faststart -an out/CubeWall_V1_Reference_1080p.mp4",
+    "deliver:v2:1080p": "remotion ffmpeg -y -i out/CubeWall_V2_IndigoEmber_4K.mp4 -vf scale=1920:1080:flags=lanczos -r 30 -c:v libx264 -profile:v high -preset slow -crf 16 -pix_fmt yuv420p -movflags +faststart -an out/CubeWall_V2_IndigoEmber_1080p.mp4",
+    "render:all": "npm run render:v1:4k && npm run deliver:v1:1080p && npm run render:v2:4k && npm run deliver:v2:1080p",
+    "preview:v1:1080p": "remotion render CubeWall-V1-Reference out/CubeWall_V1_Reference_quick_1080p.mp4 --scale=0.5",
+    "preview:v2:1080p": "remotion render CubeWall-V2-IndigoEmber out/CubeWall_V2_IndigoEmber_quick_1080p.mp4 --scale=0.5",
+    "upgrade": "remotion upgrade"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}
