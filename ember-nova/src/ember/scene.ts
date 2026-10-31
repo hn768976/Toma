@@ -168,7 +168,7 @@ export const createEmberStage =
     const sparks = new SpriteLayer(5000, SpriteMode.Gauss);
     const halos = new SpriteLayer(96, SpriteMode.Gauss);
     const cores = new SpriteLayer(32, SpriteMode.Core);
-    const burst = new SpriteLayer(9000, SpriteMode.Gauss);
+    const burst = new SpriteLayer(12000, SpriteMode.Gauss);
     const shell = new SpriteLayer(14000, SpriteMode.Gauss);
     const SAMPLES = 120;
     const glowRibbons = COMETS.map(() => new Ribbon(SAMPLES, 0));
@@ -257,6 +257,20 @@ export const createEmberStage =
         delay: rnd() * 0.12,
       };
     });
+    // Dust cloud thrown towards the left / lower-left (the reference blast is
+    // strongly one-sided): slower, dimmer, reaching the left frame edge.
+    for (let i = 0; i < 3500; i++) {
+      const ang = Math.PI - 0.35 + (rnd() - 0.5) * 1.7;
+      burstData.push({
+        dx: Math.cos(ang),
+        dy: Math.sin(ang),
+        rmax: 0.3 + 0.8 * Math.pow(rnd(), 0.6),
+        size: 0.0016 + rnd() * 0.0022,
+        bright: 0.18 + rnd() * 0.4,
+        hot: rnd() * 0.6,
+        delay: 0.05 + rnd() * 0.25,
+      });
+    }
     const shellData = Array.from({ length: 12000 }, () => {
       const [dx, dy] = unitSphere(rnd);
       // Debris spray is lopsided towards the left / lower-left, as in the
@@ -292,10 +306,10 @@ export const createEmberStage =
           [0.7, 0.9],
           [1.6, 1.05],
           [2.6, 1.0],
-          [3.05, 0.75],
-          [3.35, 1.9],
-          [3.9, 2.25],
-          [4.5, 1.15],
+          [3.05, 0.55],
+          [3.35, 1.45],
+          [3.9, 1.65],
+          [4.5, 1.0],
           [5.3, 1.0],
           [9, 0.95],
         ],
@@ -419,7 +433,7 @@ export const createEmberStage =
             const px = bx * A + (h1 - 0.5) * 0.05 + (h2 - 0.5) * 0.07 * age;
             const py = by + (h3 - 0.5) * 0.05 - 0.012 * age;
             const size = (0.06 + 0.14 * age + 0.05 * h2) * persp(by);
-            const a = 0.9 * Math.pow(Math.sin(Math.PI * clamp(age / life)), 1.3) * (1 - smoothstep(MERGE_T, MERGE_T + 0.6, t));
+            const a = 0.9 * (1 - 0.5 * smoothstep(2.6, 3.1, t)) * Math.pow(Math.sin(Math.PI * clamp(age / life)), 1.3) * (1 - smoothstep(MERGE_T, MERGE_T + 0.6, t));
             const sm = palette.smoke;
             smoke.push(px, py, size, size, h1 * 6.283 + (h3 - 0.5) * age * 0.8, sm[0], sm[1], sm[2], a);
           }
@@ -466,8 +480,8 @@ export const createEmberStage =
         const { hot, mid, core } = palette;
         const pulse = 1 + 0.05 * Math.sin(t * 50);
         const shrink = 1 - 0.65 * smoothstep(3.85, 4.3, t);
-        halos.push(sx, sy, 1.7, 1.7, 0, mid[0], mid[1], mid[2], 0.6 * sunI);
-        halos.push(sx, sy, 0.75 * shrink, 0.75 * shrink, 0, mid[0], mid[1], mid[2], 0.7 * sunI);
+        halos.push(sx, sy, 1.7, 1.7, 0, mid[0], mid[1], mid[2], 0.42 * sunI);
+        halos.push(sx, sy, 0.75 * shrink, 0.75 * shrink, 0, mid[0], mid[1], mid[2], 0.55 * sunI);
         halos.push(sx, sy, 0.32 * shrink, 0.32 * shrink, 0, hot[0], hot[1], hot[2], 1.0 * sunI * pulse);
         // Large soft fireball: additive orange saturates to yellow in the middle.
         halos.push(sx, sy, 0.48 * shrink, 0.48 * shrink, 0, hot[0], hot[1], hot[2], 1.25 * sunI * pulse);
@@ -485,8 +499,8 @@ export const createEmberStage =
       const ringI = envelope(
         [
           [BURST_T - 0.05, 0],
-          [BURST_T + 0.12, 1],
-          [3.95, 0.85],
+          [BURST_T + 0.12, 0.85],
+          [3.95, 0.68],
           [4.3, 0.55],
           [4.6, 0.28],
           [4.85, 0.1],
@@ -501,7 +515,7 @@ export const createEmberStage =
       ringUniforms.uCenter.value.set(rcx, rcy);
       ringUniforms.uRadius.value = R;
       ringUniforms.uIntensity.value = ringI;
-      ringUniforms.uOuter.value = envelope([[BURST_T, 0], [3.75, 1], [4.1, 0.6], [4.5, 0]], t);
+      ringUniforms.uOuter.value = envelope([[BURST_T, 0], [3.75, 0.6], [4.1, 0.35], [4.5, 0]], t);
       ringUniforms.uSpin.value = Math.max(0, ringAge) * 0.55;
 
       shell.begin();
