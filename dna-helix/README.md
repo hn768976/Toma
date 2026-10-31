@@ -40,7 +40,7 @@ npx remotion render DnaHelix-V1-Match out/v1.mp4 --scale=0.5
 npx remotion still  DnaHelix-V1-Match out/frame268.png --frame=268
 ```
 
-Codec (H.264, yuv420p, CRF 16), JPEG quality and timeouts are set in
+Codec (H.264 High, yuv420p, CRF 16, BT.709 TV range), PNG frame capture and timeouts are set in
 `remotion.config.ts`.
 
 ### Rendering notes

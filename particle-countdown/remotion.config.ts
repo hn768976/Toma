@@ -7,8 +7,8 @@ import { existsSync } from "node:fs";
 import { Config } from "@remotion/cli/config";
 
 Config.setRspack(true);
-Config.setVideoImageFormat("jpeg");
-Config.setJpegQuality(95);
+// Lossless PNG frames + BT.709 (TV range) give accurate colour in the H.264 output.
+Config.setVideoImageFormat("png");
 Config.setOverwriteOutput(true);
 Config.setDefaultPremountInSeconds(2);
 // Software WebGL shader compilation can be slow on CPU-only machines.
@@ -18,6 +18,7 @@ Config.setDelayRenderTimeoutInMilliseconds(300000);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
+Config.setColorSpace("bt709");
 
 // The scene is raw WebGL 2 (custom GLSL ES 3.0 shaders). "swangle" (SwiftShader via ANGLE) works on
 // every machine including GPU-less servers/CI. On a workstation with a GPU you

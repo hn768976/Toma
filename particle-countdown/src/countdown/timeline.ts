@@ -7,7 +7,7 @@
  * Each number condenses out of glitter during the ~22 frames before its peak,
  * flashes, then bursts into a drifting cloud of glitter/bokeh over ~40 frames
  * while the next number condenses in the same place. After "1" dissolves the
- * screen settles to black (≈ frame 328 → 345).
+ * screen settles to true black (≈ frame 324 → 345).
  */
 export const FPS = 30;
 export const DURATION = 345;
@@ -21,7 +21,7 @@ export const peakFrame = (i: number) => FIRST_PEAK + i * PERIOD;
 /** Frames before the peak at which a number starts to condense. */
 export const FORM_FRAMES = 24;
 /** Frames after the peak during which the number's particles are alive. */
-export const DISSOLVE_FRAMES = 46;
+export const DISSOLVE_FRAMES = 40;
 
 export const isDigitActive = (i: number, frame: number) => {
   const t = frame - peakFrame(i);
@@ -36,4 +36,4 @@ const smoothstep = (a: number, b: number, x: number) => {
 
 /** Ambient floating dust: fades in with the first number, out after the last. */
 export const ambientLevel = (frame: number) =>
-  smoothstep(6, 30, frame) * (1 - smoothstep(300, 330, frame));
+  smoothstep(6, 30, frame) * (1 - smoothstep(290, 318, frame));

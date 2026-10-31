@@ -20,15 +20,17 @@ export type CountdownPalette = {
   haze: [RGB, RGB];
   /** Overall bloom strengths [tight, wide]. */
   bloom: [number, number];
+  /** Tint of the wide halo bloom around the numbers. */
+  halo: RGB;
 };
 
 /** V1: matches the reference – cool silver-blue glitter with magenta/teal/green bokeh on black. */
 export const COOL: CountdownPalette = {
   name: "cool",
-  background: [0.0, 0.0, 0.004],
-  backgroundGlow: [0.006, 0.008, 0.02],
-  glitterA: [0.7, 0.86, 1.0],
-  glitterB: [0.3, 0.58, 1.0],
+  background: [0.0, 0.0, 0.0],
+  backgroundGlow: [0.0, 0.0, 0.0],
+  glitterA: [0.88, 0.9, 1.0],
+  glitterB: [0.6, 0.66, 1.0],
   flash: [0.95, 0.97, 1.0],
   accents: [
     [0.85, 0.22, 0.95], // magenta / violet
@@ -40,14 +42,15 @@ export const COOL: CountdownPalette = {
     [0.3, 0.55, 0.85],
     [0.45, 0.42, 0.85],
   ],
-  bloom: [0.7, 0.45],
+  bloom: [0.6, 1.1],
+  halo: [0.42, 0.56, 1.0],
 };
 
 /** V2: alternative palette – molten gold glitter with ember/rose/amber bokeh on warm black. */
 export const EMBER: CountdownPalette = {
   name: "ember",
-  background: [0.006, 0.002, 0.0],
-  backgroundGlow: [0.03, 0.01, 0.004],
+  background: [0.0, 0.0, 0.0],
+  backgroundGlow: [0.0, 0.0, 0.0],
   glitterA: [1.0, 0.86, 0.55],
   glitterB: [1.0, 0.6, 0.28],
   flash: [1.0, 0.8, 0.5],
@@ -61,5 +64,6 @@ export const EMBER: CountdownPalette = {
     [0.75, 0.28, 0.06],
     [0.6, 0.12, 0.18],
   ],
-  bloom: [0.6, 0.4],
+  bloom: [0.6, 1.1],
+  halo: [1.0, 0.56, 0.22],
 };

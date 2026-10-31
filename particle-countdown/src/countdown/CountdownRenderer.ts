@@ -12,10 +12,10 @@ import {
 
 // Particle budget per number (scaled with the glyph's ink area so "1" is as dense as "8").
 const GLITTER_PER_100K_PX = 6500;
-const EDGE_GLITTER = 4000;
-const BOKEH = 380;
+const EDGE_GLITTER = 1200;
+const BOKEH = 520;
 const HAZE = 46;
-const AMBIENT = 240;
+const AMBIENT = 160;
 
 const KIND_GLITTER = 0;
 const KIND_EDGE = 1;
@@ -247,7 +247,7 @@ export class CountdownRenderer {
     gl.uniform1f(this.u(pr, "uMaxPoint"), this.maxPoint);
     gl.uniform1f(this.u(pr, "uAmbient"), ambientLevel(frame));
     gl.uniform1f(this.u(pr, "uFormFrames"), FORM_FRAMES);
-    gl.uniform1f(this.u(pr, "uDissolveFrames"), DISSOLVE_FRAMES - 12);
+    gl.uniform1f(this.u(pr, "uDissolveFrames"), DISSOLVE_FRAMES - 10);
     gl.uniform3fv(this.u(pr, "uGlitterA"), p.glitterA);
     gl.uniform3fv(this.u(pr, "uGlitterB"), p.glitterB);
     gl.uniform3fv(this.u(pr, "uFlash"), p.flash);
@@ -272,8 +272,11 @@ export class CountdownRenderer {
     this.blur(this.bloomA, this.bloomB, 1.6, 0);
     this.blur(this.bloomB, this.bloomA, 0, 1.6);
     this.downsample(this.bloomA, this.bloomC); // 1/16
-    this.blur(this.bloomC, this.bloomD, 1.8, 0);
-    this.blur(this.bloomD, this.bloomC, 0, 1.8);
+    // two passes for a broad, soft halo
+    this.blur(this.bloomC, this.bloomD, 2.2, 0);
+    this.blur(this.bloomD, this.bloomC, 0, 2.2);
+    this.blur(this.bloomC, this.bloomD, 3.2, 0);
+    this.blur(this.bloomD, this.bloomC, 0, 3.2);
 
     // ---------- composite ----------
     this.bindTarget(null);
@@ -286,6 +289,7 @@ export class CountdownRenderer {
       gl.uniform1i(this.u(c, name), k);
     });
     gl.uniform2f(this.u(c, "uBloom"), p.bloom[0], p.bloom[1]);
+    gl.uniform3fv(this.u(c, "uHalo"), p.halo);
     gl.uniform3fv(this.u(c, "uBg"), p.background);
     gl.uniform3fv(this.u(c, "uBgGlow"), p.backgroundGlow);
     gl.uniform2f(this.u(c, "uRes"), this.width, this.height);

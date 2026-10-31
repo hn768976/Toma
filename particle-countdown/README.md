@@ -42,7 +42,8 @@ npx remotion render Countdown-V1-Match out/v1.mp4 --scale=0.5
 npx remotion still  Countdown-V1-Match out/frame26.png --frame=26
 ```
 
-Codec (H.264, yuv420p, CRF 16), GL backend and timeouts are set in `remotion.config.ts`.
+Codec (H.264 High, yuv420p, CRF 16, BT.709 TV range), PNG frame capture, GL backend and
+timeouts are set in `remotion.config.ts`.
 SwiftShader (`swangle`) is the default, so the project renders on GPU-less machines.
 Pass `--gl=angle` on a GPU workstation for speed.
 
