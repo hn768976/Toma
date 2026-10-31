@@ -23,8 +23,8 @@ export const FIGURE = {
   ] as [number, number, number][],
   boilHold: 3,
   boilVariants: 4,
-  bloomPx: 9, // tight bloom under the lines, at 4K
-  bloomAlpha: 0.45,
+  bloomPx: 5, // tight bloom under the lines, at 4K
+  bloomAlpha: 0.22,
 };
 
 const W = 3840;
@@ -162,10 +162,14 @@ const loopsAlong = (
   let phi = rng.range(0, TAU);
   let rr = r;
   let fly = 0;
+  let asp = 1; // each loop is an ellipse of its own shape and tilt
+  let tilt = 0;
   for (let i = 0; i < g.length; i++) {
     phi += TAU / 9 + rng.gauss() * 0.12;
     if (i % 9 === 0) {
-      rr = r * rng.range(0.6, 1.35);
+      rr = r * rng.range(0.45, 1.6);
+      asp = rng.range(0.45, 1);
+      tilt = rng.range(0, Math.PI);
       fly = rng.next() < flyout ? rng.range(1.6, 3.2) : 1;
     }
     const [gx, gy] = g[i];
@@ -177,7 +181,9 @@ const loopsAlong = (
       oy = ny * rr * (fly - 1);
     }
     const wob = 1 + 0.18 * Math.sin(phi * 2.3 + i * 0.7);
-    out.push([gx + Math.cos(phi) * rr * wob * (fly > 1 ? fly * 0.7 : 1) + ox, gy + Math.sin(phi) * rr * 0.85 * (fly > 1 ? 1.3 : 1) / wob + oy]);
+    const ex = Math.cos(phi) * rr * wob * (fly > 1 ? fly * 0.7 : 1);
+    const ey = Math.sin(phi) * rr * asp * (fly > 1 ? 1.3 : 1) / wob;
+    out.push([gx + ex * Math.cos(tilt) - ey * Math.sin(tilt) + ox, gy + ex * Math.sin(tilt) + ey * Math.cos(tilt) + oy]);
   }
   return out;
 };
@@ -254,7 +260,7 @@ export const drawFigureScribble = (
   // 2. Interior tangles: loopy random walks inside the silhouette.
   ctx.save();
   ctx.clip(polyPath(body));
-  const walkers = 11;
+  const walkers = 8;
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const [x, y] of body) {
     minX = Math.min(minX, x); maxX = Math.max(maxX, x);
@@ -285,9 +291,9 @@ export const drawFigureScribble = (
       guide.push([x, y]);
     }
     if (guide.length < 3) continue;
-    const loops = loopsAlong(guide, rng.range(60, 105) * k * (1 + wild * 1.5), 80 * k, rng);
+    const loops = loopsAlong(guide, rng.range(60, 110) * k * (1 + wild * 1.5), 110 * k, rng);
     for (const st of penStrokes(loops, rng)) {
-      ctx.fill(freehand(st, { size: rng.range(14, 24) * k, thinning: 0.2, smoothing: 0.4, streamline: 0.2 }));
+      ctx.fill(freehand(st, { size: rng.range(20, 32) * k, thinning: 0.2, smoothing: 0.4, streamline: 0.2 }));
     }
   }
   ctx.restore();
@@ -302,7 +308,7 @@ export const drawFigureScribble = (
     });
     const loops = loopsAlong(shifted, (pass === 0 ? 46 : 66) * k * (1 + wild * 2), 58 * k, rng, 0.05 + wild * 0.4, outward);
     for (const st of penStrokes(loops, rng, 30, 120)) {
-      ctx.fill(freehand(st, { size: rng.range(13, 22) * k, thinning: 0.2, smoothing: 0.45, streamline: 0.25 }));
+      ctx.fill(freehand(st, { size: rng.range(18, 28) * k, thinning: 0.2, smoothing: 0.45, streamline: 0.25 }));
     }
   }
 
@@ -324,7 +330,7 @@ export const drawFigureScribble = (
       const a = Math.atan2(ny, nx) + bend * t;
       pts.push([sx - nx * 12 * k + Math.cos(a) * len * t, sy - ny * 12 * k + Math.sin(a) * len * t]);
     }
-    ctx.fill(freehand(pts, { size: rng.range(def.spiky ? 16 : 10, def.spiky ? 26 : 16) * k, thinning: 0.5, smoothing: 0.5, start: { taper: 0 }, end: { taper: len * 0.6 } }));
+    ctx.fill(freehand(pts, { size: rng.range(def.spiky ? 26 : 12, def.spiky ? 40 : 18) * k, thinning: 0.35, smoothing: 0.5, start: { taper: 0 }, end: { taper: len * 0.25 } }));
   }
 
   // 5. Face: a dark gap, a dense white scribble disc, a black "?".
@@ -370,7 +376,7 @@ export const drawFigureScribble = (
   ctx.fillStyle = FIGURE.line;
   if (wild < 0.6) {
     const qa = 1 - smoothstep((wild - 0.3) / 0.3);
-    const q = R * 0.95;
+    const q = R * 1.1;
     const j = () => rng.gauss() * 0.025 * q;
     const hook: Pt[] = [
       [-0.55, -0.42], [-0.45, -0.75], [-0.1, -0.95], [0.32, -0.88], [0.55, -0.6], [0.48, -0.3],
@@ -379,7 +385,7 @@ export const drawFigureScribble = (
     ctx.save();
     ctx.globalAlpha = qa;
     ctx.globalCompositeOperation = "destination-out";
-    ctx.fill(freehand(hook, { size: q * 0.42, thinning: 0.45, smoothing: 0.6, streamline: 0.3, start: { taper: q * 0.4 }, end: { taper: 0 } }));
+    ctx.fill(freehand(hook, { size: q * 0.48, thinning: 0.45, smoothing: 0.6, streamline: 0.3, start: { taper: q * 0.4 }, end: { taper: 0 } }));
     ctx.beginPath();
     ctx.ellipse(fx + j(), fy + q * 0.74 + j(), q * 0.18, q * 0.17, rng.range(0, 1), 0, TAU);
     ctx.fill();
