@@ -265,8 +265,10 @@ void main() {
   float w = core * 3.0 + coc;
   // extend along the line by part of the blur; the extension is tapered in
   // the fragment shader so consecutive segments blend seamlessly at joints
-  float extA = cocPx(-a.z) * 0.35 + 0.5;
-  float extB = cocPx(-b.z) * 0.35 + 0.5;
+  // half the full blurred width: a defocused line then ends in a soft,
+  // round-looking falloff instead of a square step
+  float extA = 0.5 * (core * 3.0 + cocPx(-a.z)) + 0.5;
+  float extB = 0.5 * (core * 3.0 + cocPx(-b.z)) + 0.5;
   float ext = atB ? extB : extA;
   s += nrm * position.y * w * 0.5 + dir * (atB ? ext : -ext);
   gl_Position = vec4(s / (0.5 * uViewport) * c.w, c.z, c.w);
@@ -311,10 +313,22 @@ void main() {
   float pulse = 0.0;
   if (vTiming.z > 0.0) {
     float ph = fract(vT - uTime * vTiming.z + vTiming.w);
-    pulse = exp(-ph * ph * 900.0) * 3.0 + exp(-ph * 30.0) * 0.4;
+    // continuous everywhere: circular distance for the head (no jump at the
+    // fract() wrap) and a tail that ramps in from the head; both widen with
+    // the on-screen line width so defocused beams get a soft pulse
+    float px = fwidth(vT) * vWidthPx;
+    float sig = max(0.033, px * 0.6);
+    float dc = min(ph, 1.0 - ph);
+    float head = exp(-(dc * dc) / (sig * sig)) * 3.0;
+    float tail = exp(-ph * 30.0) * 0.4 * sstep(0.0, max(0.04, px * 1.2), ph);
+    pulse = head + tail;
   }
   // fade towards growing tip
-  float tip = sstep(grow, grow - 0.03, vT);
+  // growing tip fades over ~one on-screen line width (fwidth gives the
+  // parameter change per pixel), so a wide or strongly foreshortened line
+  // that is still being drawn never shows a square cut
+  float tipSoft = clamp(fwidth(vT) * vWidthPx * 1.2, 0.03, 0.6);
+  float tip = sstep(grow, grow - tipSoft, vT);
   float along = vAlongW / vW;
   tip *= sstep(-vExt.x, vExt.x, along) * sstep(vLenPx + vExt.y, vLenPx - vExt.y, along);
   vec3 col = max(vCol.rgb * vCol.a * prof * energy * (1.0 + pulse) * tip * uGain, vec3(0.0));
