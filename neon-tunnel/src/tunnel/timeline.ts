@@ -192,13 +192,29 @@ const DOLLY: Key[][] = [
 ];
 
 // Focal length (zoom). The last cycle slowly zooms in.
+// The rolled flash at the start of cycles 2-4 is seen zoomed out (the rectangle is
+// ~25-28 % of the frame width instead of ~40 %), then the camera snaps back in.
 const FOCAL: Key[][] = [
   [[0, 1.545]],
-  [[80, 1.545]],
-  [[170, 1.545]],
   [
-    [255, 1.3],
-    [260, 1.3],
+    [80, 0.98],
+    [89, 0.98],
+    [92, 1.0],
+    [101, 1.42],
+    [104, 1.545],
+  ],
+  [
+    [170, 0.98],
+    [177, 0.98],
+    [180, 1.0],
+    [189, 1.42],
+    [192, 1.545],
+  ],
+  [
+    [255, 0.78],
+    [262, 0.8],
+    [264, 0.91],
+    [273, 1.25],
     [276, 1.38],
     [280, 1.41],
     [316, 1.78],
@@ -221,9 +237,9 @@ const lightLevels = (n: number) => {
   const st = STATES[Math.max(0, Math.min(REF_FRAMES - 1, n))];
   const c = cycleOf(n);
   // per-cycle strength of the middle ring, near ring and wall spill: the light "dies" over time
-  const mid = [0.85, 0.8, 0.58, 0.26][c];
+  const mid = [0.85, 0.8, 0.58, 0.2][c];
   const near = [1.0, 0.56, 0.42, 0][c];
-  let fill = [1.25, 0.5, 0.36, 0][c];
+  let fill = [1.45, 0.5, 0.36, 0][c];
   if (c === 0 && n >= 31 && n <= 49) {
     fill *= 1 - 0.45 * ((n - 31) / 18);
   }
@@ -242,8 +258,8 @@ const lightLevels = (n: number) => {
       ring0 = 0.9;
       break;
     case "g":
-      ring0 = 0.75;
-      warp = -0.22;
+      ring0 = 0.42;
+      warp = -0.42;
       break;
     case "2":
       ring0 = 1;
@@ -255,7 +271,7 @@ const lightLevels = (n: number) => {
       ring2 = near;
       break;
     case "e": {
-      ring0 = n < 316 ? 0.5 : 0.4;
+      ring0 = n < 316 ? 0.42 : 0.34;
       const fade =
         n < 295 ? 1 : n < 316 ? 0.55 - 0.25 * ((n - 295) / 21) : 0.12;
       ring1 = mid * fade;

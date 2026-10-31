@@ -17,7 +17,7 @@ Timing taken from the reference:
 - 8.56 s: counter reaches 100 %
 - 8.56 – 12 s: holds at 100 %
 
-The marker triangles hop and the "LOADING…" label gives an occasional flicker.
+The marker triangles hop, and the "LOADING…" label and bar fill blink briefly every ~0.67 s, as in the reference.
 
 ## Requirements
 
@@ -74,7 +74,7 @@ src/
   hud/
     HudLoader.tsx       V1 (flat) and V2 (3D camera) components, glow compositing, font loading
     draw.ts             Canvas 2D drawing of every HUD element (in reference-pixel space)
-    timeline.ts         build-in, counter, marker and flicker timing
+    timeline.ts         build-in, counter, marker and blink timing
 scripts/render.mjs      4K master -> 1080p delivery pipeline
 remotion.config.ts      renderer settings
 ```

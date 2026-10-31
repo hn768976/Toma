@@ -23,7 +23,7 @@ export const percentAt = (t: number): number | null => {
   if (t < PCT_START) return null;
   return Math.min(
     100,
-    1 + Math.floor((99 * (t - PCT_START)) / (PCT_END - PCT_START) + 0.52),
+    1 + Math.floor((99 * (t - PCT_START)) / (PCT_END - PCT_START) + 0.3),
   );
 };
 
@@ -51,28 +51,20 @@ export const flickerOn = (t: number, start: number, seed: string) => {
   return k < 0.5 ? 0.25 + 0.5 * r : 0.6 + 0.4 * r;
 };
 
-/** Occasional 1-2 frame dropouts of the "LOADING..." label, as in the reference. */
-const BLINKS: { at: number; dur: number; level: number }[] = (() => {
-  const out: { at: number; dur: number; level: number }[] = [];
-  let at = 1.1;
-  let i = 0;
-  while (at < 11.8) {
-    out.push({
-      at,
-      dur: random(`blink-dur-${i}`) < 0.6 ? 1 / 30 : 2 / 30,
-      level: 0.15 + 0.3 * random(`blink-level-${i}`),
-    });
-    at += 0.5 + 0.35 * random(`blink-gap-${i}`);
-    i++;
-  }
-  return out;
-})();
-
-export const labelBlink = (t: number) => {
-  for (const b of BLINKS) {
-    if (t >= b.at && t < b.at + b.dur) return b.level;
-  }
-  return 1;
+/**
+ * Regular blink of the label and bar fill: the reference dims them for 1-2 frames
+ * every ~0.667 s starting at 0.96 s. Returns a 0..1 multiplier.
+ */
+export const BLINK_START = 0.96;
+export const BLINK_PERIOD = 0.667;
+export const blinkAt = (t: number) => {
+  if (t < BLINK_START - 1e-6) return 0;
+  const k = Math.floor((t - BLINK_START + 1e-6) / BLINK_PERIOD);
+  const local = t - (BLINK_START + k * BLINK_PERIOD);
+  // two 30 fps frames, the second one less deep (like a neon stutter)
+  if (local < 1 / 30) return 1;
+  if (local < 2 / 30) return 0.55 + 0.25 * random(`blink-${k}`);
+  return 0;
 };
 
 /**

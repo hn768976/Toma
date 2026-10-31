@@ -9,7 +9,7 @@ export type Palette = {
 
 /** Version 1 — matches the reference: warm sepia/amber neon on dark, greenish-black wood. */
 export const WARM_SEPIA: Palette = {
-  base: [4 / 255, 6 / 255, 2 / 255],
+  base: [6 / 255, 9 / 255, 3 / 255],
   wood: [0.8, 0.56, 0.3],
   glow: [0.92, 0.64, 0.38],
   core: [1.0, 0.8, 0.6],

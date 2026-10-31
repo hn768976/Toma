@@ -89,11 +89,11 @@ const HudCanvas: React.FC<{
     out.globalCompositeOperation = "lighter";
     // wide bloom
     out.filter = `blur(${(3.2 * density).toFixed(2)}px)`;
-    out.globalAlpha = 0.4;
+    out.globalAlpha = 0.32;
     out.drawImage(sharp, 0, 0);
     // tight glow
     out.filter = `blur(${(0.9 * density).toFixed(2)}px)`;
-    out.globalAlpha = 0.5;
+    out.globalAlpha = 0.4;
     out.drawImage(sharp, 0, 0);
     // crisp core
     out.filter = "none";

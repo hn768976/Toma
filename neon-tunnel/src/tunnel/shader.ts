@@ -77,11 +77,11 @@ float wood(float along, float across, float fA, float fX) {
   float a2 = along + seed * 7.0;
   float tone = 0.55 + 0.45 * hash12(vec2(pi, floor(a2 / (1.6 + seed))));
   // long weathered grain
-  float g = mix(0.47, fbm(vec2(a2 * 5.0, across * 22.0 + seed * 10.0)), lod(5.0, 22.0, fA, fX));
+  float g = mix(0.47, fbm(vec2(a2 * 8.0, across * 22.0 + seed * 10.0)), lod(8.0, 22.0, fA, fX));
   float v = tone * (0.18 + 0.95 * g * g * 1.6);
   // bright worn scratches / dry streaks
-  float d1 = lod(9.0, 40.0, fA, fX);
-  float sc = fbm(vec2(a2 * 9.0, across * 40.0 + 5.0));
+  float d1 = lod(15.0, 40.0, fA, fX);
+  float sc = fbm(vec2(a2 * 15.0, across * 40.0 + 5.0));
   v += mix(0.1, 0.85 * smoothstep(0.52, 0.76, sc), d1) * tone;
   // fine fibres and pores
   float d2 = lod(26.0, 95.0, fA, fX);
@@ -165,12 +165,15 @@ float illum(vec3 p) {
 void main() {
   vec2 frag = gl_FragCoord.xy;
   vec2 uv = (frag - 0.5 * uRes) / (0.5 * uRes.y);
+  // the reference's vanishing point sits slightly right of frame centre
+  uv.x -= 0.043;
+  // glitch lens warp (pincushion), bounded so the frame edges never fold over
   float r2 = dot(uv, uv);
-  uv *= 1.0 + uWarp * r2;
+  uv *= 1.0 + uWarp * min(r2, 0.6);
   float cr = cos(uRoll);
   float sr = sin(uRoll);
-  // positive roll rotates the image clockwise
-  uv = mat2(cr, -sr, sr, cr) * uv;
+  // positive roll rotates the image clockwise on screen
+  uv = mat2(cr, sr, -sr, cr) * uv;
 
   vec3 ro = vec3(0.0, 0.0, uCamZ);
   vec3 rd = normalize(vec3(uv, -uFocal));
@@ -221,11 +224,11 @@ void main() {
   col = 1.0 - exp(-col * uExposure);
   // gentle vignette
   vec2 vq = (frag / uRes) - 0.5;
-  float vig = 1.0 - 0.85 * pow(length(vq * vec2(1.12, 0.85)) * 1.3, 2.0);
-  col = uBase * mix(0.75, 1.0, vig) + max(col - uBase, 0.0) * clamp(vig, 0.0, 1.0);
+  float vig = 1.0 - 1.0 * pow(length(vq * vec2(1.2, 0.9)) * 1.3, 2.0);
+  col = uBase * mix(0.85, 1.0, vig) + max(col - uBase, 0.0) * clamp(vig, 0.0, 1.0);
   // fine film grain
   float gr = hash12(frag + vec2(uFrame * 17.13, uFrame * 3.71)) - 0.5;
-  col += gr * 0.012;
+  col += gr * 0.018;
 
   outColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

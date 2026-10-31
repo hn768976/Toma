@@ -2,8 +2,8 @@ import { random } from "remotion";
 import {
   fadeIn,
   fillAt,
+  blinkAt,
   flickerOn,
-  labelBlink,
   lineReveal,
   markerX,
   percentAt,
@@ -41,8 +41,8 @@ const BAR_X0 = 275.2;
 const BAR_X1 = 497.6;
 const BAR_TOP = 205.0;
 const BAR_BOT = 213.4;
-const FILL_TOP = 207.7;
-const FILL_BOT = 211.7;
+const FILL_TOP = 208.2;
+const FILL_BOT = 211.2;
 const BAR_CX = (BAR_X0 + BAR_X1) / 2;
 
 const roundRect = (
@@ -174,6 +174,35 @@ const stretchedText = (
 };
 
 /**
+ * Counter text with a fixed advance per character (the reference's digits are
+ * tabular: "68%" and "100%" both use ~21.25 px per character).
+ */
+const monoText = (
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  cap: number,
+  advance: number,
+  cell: number,
+) => {
+  const size = fontForCap(ctx, cap);
+  ctx.font = `700 ${size}px ${FONT_FAMILY}`;
+  ctx.textBaseline = "alphabetic";
+  // horizontal stretch so a "0" fills ~98 % of its cell, like the reference's wide digits
+  const sx = (cell * 0.98) / ctx.measureText("0").width;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const w = ctx.measureText(ch).width * sx;
+    ctx.save();
+    ctx.translate(x + i * advance + (advance - w) / 2, y);
+    ctx.scale(sx, 1);
+    ctx.fillText(ch, 0, 0);
+    ctx.restore();
+  }
+};
+
+/**
  * Draws the sharp (pre-glow) HUD for time t into ctx, which must already be
  * transformed into reference-px space. `layers` selects which depth layers to draw.
  */
@@ -189,7 +218,8 @@ export const drawHud = (
   const rulers = fadeIn(t, 0.2, 0.14); // tick rulers (ref frame 6)
   const brackets = flickerOn(t, 0.44, "brackets"); // end brackets (ref frame 12)
   const swoosh = flickerOn(t, 0.42, "swoosh");
-  const label = flickerOn(t, 0.34, "label") * labelBlink(t); // ref frame 9-12
+  const blink = blinkAt(t);
+  const label = flickerOn(t, 0.34, "label") * (1 - 0.7 * blink); // ref frame 9-12
 
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
@@ -275,9 +305,8 @@ export const drawHud = (
     ctx.globalAlpha = early;
     withReveal(ctx, reveal, () => {
       // bar track outline
+      // hollow outline (the reference draws the bar as a thin outline)
       roundRect(ctx, BAR_X0, BAR_TOP, BAR_X1 - BAR_X0, BAR_BOT - BAR_TOP, 2.6);
-      ctx.fillStyle = "rgba(18, 70, 80, 0.28)";
-      ctx.fill();
       ctx.strokeStyle = pal.dim;
       ctx.lineWidth = 0.5;
       ctx.stroke();
@@ -303,17 +332,17 @@ export const drawHud = (
     const f = fillAt(t);
     if (f > 0) {
       const w = (BAR_X1 - BAR_X0 - 2.4) * f;
-      ctx.globalAlpha = 1;
-      roundRect(ctx, BAR_X0 + 1.2, FILL_TOP, w, FILL_BOT - FILL_TOP, 1.9);
+      ctx.globalAlpha = 1 - 0.45 * blink;
+      roundRect(ctx, BAR_X0 + 1.2, FILL_TOP, w, FILL_BOT - FILL_TOP, 1.5);
       ctx.fillStyle = pal.main;
       ctx.fill();
       roundRect(
         ctx,
         BAR_X0 + 1.6,
-        FILL_TOP + 1.5,
+        FILL_TOP + 1.15,
         Math.max(0, w - 0.8),
-        1.0,
-        0.5,
+        0.7,
+        0.35,
       );
       ctx.fillStyle = pal.core;
       ctx.fill();
@@ -365,7 +394,7 @@ export const drawHud = (
     if (pct !== null) {
       ctx.globalAlpha = 1;
       ctx.fillStyle = pal.main;
-      stretchedText(ctx, `${pct}%`, "68%", 430.4, 232.4, 14.6, 63.6, 0);
+      monoText(ctx, `${pct}%`, 428.6, 232.4, 14.6, 21.25, 63.6 / 3);
     }
   }
   ctx.globalAlpha = 1;
