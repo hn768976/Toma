@@ -147,9 +147,10 @@ void main() {
   vec2 aspect = vec2(uRes.y / uRes.x, 1.0);
   vec3 acc = c0.rgb;
   float wsum = 1.0;
-  const int N = 56;
+  const int N = 112;
   float ga = 2.39996323;
-  float rot = hash12(gl_FragCoord.xy) * 6.2831853;
+  // fixed (not per-pixel random) spiral: smooth bokeh with no stipple noise
+  float rot = 0.0;
   for (int i = 1; i < N; i++) {
     float fi = float(i);
     float rr = sqrt(fi / float(N)) * uMaxCoC;
@@ -159,7 +160,7 @@ void main() {
     float rs = coc(cs.a);
     // a sample in front may bleed over us; one behind only up to our own CoC
     float reach = cs.a < d0 ? rs : min(rs, r0);
-    float w = smoothstep(rr - 0.0015, rr + 0.0015, reach);
+    float w = smoothstep(rr - 0.003, rr + 0.003, reach);
     acc += cs.rgb * w;
     wsum += w;
   }
