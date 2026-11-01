@@ -20,6 +20,10 @@ Config.setPixelFormat("yuv420p");
 Config.setCrf(14);
 // Standard broadcast colour: limited-range yuv420p tagged BT.709.
 Config.setColorSpace("bt709");
+// Cap peak bitrate (VBV) so dense glitter detail stays within H.264 level
+// limits for smooth playback on hardware decoders.
+Config.setEncodingMaxRate("30M");
+Config.setEncodingBufferSize("60M");
 
 // The compositions are WebGL 2 shaders. "angle" uses the GPU when one is
 // present; on GPU-less machines/servers pass `--gl=swangle` (SwiftShader).
