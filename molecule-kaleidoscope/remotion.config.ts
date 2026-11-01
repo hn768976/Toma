@@ -20,6 +20,9 @@ Config.overrideBundlerConfig(enableTailwind);
 // a working WebGL2 context on every machine, GPU or not. On a machine with a
 // GPU you can pass --gl=angle on the command line for faster renders.
 Config.setChromiumOpenGlRenderer("swangle");
+// Software WebGL (no GPU) can need well over the default 30 s for a single
+// 4K frame on a busy machine; allow up to 10 minutes per frame.
+Config.setDelayRenderTimeoutInMilliseconds(600000);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 // Standard broadcast-range BT.709, correctly tagged for every player.
