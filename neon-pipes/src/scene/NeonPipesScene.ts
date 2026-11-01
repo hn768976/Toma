@@ -15,8 +15,8 @@ const BAR = 0.62; // square bar cross-section
 const LO = 0.36; // centre height of low bars
 const HI = 1.9; // centre height of high bars
 const PERIOD = 4.8; // repeat distance of the chain pattern along +X
-const WIRE_R = 0.038; // wire tube radius
-const OUTLINE_D = 0.5; // wire outline offset from bar centre line
+const WIRE_R = 0.034; // wire tube radius
+const OUTLINE_D = 0.46; // wire outline offset from bar centre line
 
 export type CameraRig = {
   /** Distance travelled along the chain over the whole clip (world units). */
@@ -39,15 +39,20 @@ export type CameraRig = {
   roll: number;
 };
 
+/**
+ * Long-lens, near-orthographic view like the reference. The camera travels
+ * exactly one pattern period over the clip, so the last frame flows straight
+ * back into the first (seamless loop).
+ */
 export const referenceRig: CameraRig = {
-  travel: PERIOD * 3,
+  travel: PERIOD,
   startX: 0,
   elevation: 60,
-  azimuth: 38,
-  azimuthSway: 4,
-  elevationSway: 3,
-  distance: 15.5,
-  fov: 30,
+  azimuth: 39,
+  azimuthSway: 1.5,
+  elevationSway: 1.2,
+  distance: 28,
+  fov: 17,
   lateral: 0.2,
   roll: 0,
 };
@@ -67,7 +72,10 @@ const mulberry32 = (seed: number) => {
 type Bracket = { y: number; pts: V2[] };
 
 /** One repeat of the interlocking chain; `m` mirrors it across the chain axis. */
-const periodBrackets = (x: number, m: number): { brackets: Bracket[]; posts: V2[] } => {
+const periodBrackets = (
+  x: number,
+  m: number,
+): { brackets: Bracket[]; posts: V2[] } => {
   const brackets: Bracket[] = [
     // high "C" bracket opening across the chain
     {
@@ -201,7 +209,12 @@ export const createNeonPipesScene =
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(palette.clear);
 
-    const camera = new THREE.PerspectiveCamera(rig.fov, width / height, 0.5, 200);
+    const camera = new THREE.PerspectiveCamera(
+      rig.fov,
+      width / height,
+      0.5,
+      200,
+    );
 
     /* lights */
     const hemi = new THREE.HemisphereLight(
@@ -221,7 +234,8 @@ export const createNeonPipesScene =
     sun.shadow.camera.far = 60;
     sun.shadow.bias = -0.0004;
     sun.shadow.normalBias = 0.02;
-    sun.shadow.radius = 6;
+    sun.shadow.radius = 10;
+    sun.shadow.intensity = 0.42;
     scene.add(sun);
     scene.add(sun.target);
     const sunOffset = new THREE.Vector3(-6, 18, 9);
@@ -229,7 +243,7 @@ export const createNeonPipesScene =
     /* ground */
     const stripeTex = makeStripeTexture(palette);
     const groundSize = 260;
-    stripeTex.repeat.set(groundSize / 0.8, groundSize / 0.8);
+    stripeTex.repeat.set(groundSize / 1.25, groundSize / 1.25);
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(groundSize, groundSize),
       new THREE.MeshStandardMaterial({
@@ -240,7 +254,7 @@ export const createNeonPipesScene =
     );
     ground.rotation.x = -Math.PI / 2;
     // stripes run across the chain at an angle, like the reference
-    ground.rotation.z = THREE.MathUtils.degToRad(-24);
+    ground.rotation.z = THREE.MathUtils.degToRad(84);
     ground.receiveShadow = true;
     scene.add(ground);
 
@@ -253,7 +267,7 @@ export const createNeonPipesScene =
     const capMat = new THREE.MeshStandardMaterial({
       color: new THREE.Color(palette.cap),
       emissive: new THREE.Color(palette.cap),
-      emissiveIntensity: 1.6,
+      emissiveIntensity: 0.55,
       roughness: 0.4,
     });
     const capGeo = new THREE.SphereGeometry(WIRE_R * 1.9, 16, 12);
@@ -277,7 +291,10 @@ export const createNeonPipesScene =
     };
     const glowColor = new THREE.Color(palette.glow).multiplyScalar(1.45);
     const baseWire = new THREE.Color(palette.wire);
-    const rand = mulberry32(7);
+    // re-seeded for every period so all periods are identical (needed for the seamless loop)
+    let rand = mulberry32(7);
+    let periodIndex = 0;
+    const loopSeconds = durationInFrames / fps;
 
     const addWire = (
       path: THREE.Curve<THREE.Vector3>,
@@ -303,11 +320,14 @@ export const createNeonPipesScene =
       const mesh = new THREE.Mesh(geo, mat);
       mesh.castShadow = true;
       scene.add(mesh);
+      // Shift each period's pulse phase by one loop's worth of travel so that,
+      // after the camera advances one period, period k+1 at the end matches
+      // period k at the start.
       wires.push({
         mesh,
         len,
         speed: opts.speed,
-        phase: rand() * 50,
+        phase: rand() * 50 - periodIndex * opts.speed * loopSeconds,
         seg: opts.seg,
         gap: 3 + rand() * 6,
       });
@@ -335,7 +355,9 @@ export const createNeonPipesScene =
     const lastPeriod = 10;
     for (let k = firstPeriod; k <= lastPeriod; k++) {
       const x0 = k * PERIOD;
-      const m = k % 2 === 0 ? 1 : -1;
+      const m = 1;
+      rand = mulberry32(7);
+      periodIndex = k;
       const { brackets, posts } = periodBrackets(x0, m);
       for (const br of brackets) {
         for (let i = 0; i < br.pts.length - 1; i++) {
@@ -384,18 +406,27 @@ export const createNeonPipesScene =
         // little hanging drops with caps at the bracket end
         const end = br.pts[br.pts.length - 1];
         const prev = br.pts[br.pts.length - 2];
-        const dir = new THREE.Vector2(end[0] - prev[0], end[1] - prev[1]).normalize();
+        const dir = new THREE.Vector2(
+          end[0] - prev[0],
+          end[1] - prev[1],
+        ).normalize();
+        // starts exactly on the straight end segment of the outline wire
         const tip = new THREE.Vector3(
-          end[0] + dir.x * (OUTLINE_D + 0.08),
+          end[0] + dir.x * OUTLINE_D,
           br.y + 0.2,
-          end[1] + dir.y * (OUTLINE_D + 0.08),
+          end[1] + dir.y * OUTLINE_D,
         );
         const dropLen = 0.45 + rand() * 0.35;
         const dropPath = new THREE.LineCurve3(
           tip,
           tip.clone().add(new THREE.Vector3(0, -dropLen, 0)),
         );
-        addWire(dropPath, false, { speed: 1, seg: 0, lit: rand() < 0.6 ? 1 : 0 });
+        addWire(dropPath, false, {
+          speed: 1,
+          seg: 0,
+          lit: rand() < 0.6 ? 1 : 0,
+        });
+        addCap(tip);
         addCap(tip.clone().add(new THREE.Vector3(0, -dropLen, 0)));
       }
       for (const p of posts) {
@@ -445,7 +476,7 @@ export const createNeonPipesScene =
 
     const render = (frame: number) => {
       const t = frame / fps;
-      const p = frame / Math.max(1, durationInFrames - 1);
+      const p = frame / durationInFrames; // frame 270 == frame 0
       const tau = Math.PI * 2;
       const az = THREE.MathUtils.degToRad(
         rig.azimuth + rig.azimuthSway * Math.sin(tau * (t / 4.5)),
@@ -454,11 +485,13 @@ export const createNeonPipesScene =
         rig.elevation + rig.elevationSway * Math.sin(tau * (t / 3) + 1.1),
       );
       target.set(rig.startX + rig.travel * p, 0.9, rig.lateral);
-      offset.set(
-        Math.cos(el) * Math.sin(az),
-        Math.sin(el),
-        Math.cos(el) * Math.cos(az),
-      ).multiplyScalar(rig.distance);
+      offset
+        .set(
+          Math.cos(el) * Math.sin(az),
+          Math.sin(el),
+          Math.cos(el) * Math.cos(az),
+        )
+        .multiplyScalar(rig.distance);
       camera.position.copy(target).add(offset);
       camera.up.set(0, 1, 0);
       camera.lookAt(target);
@@ -467,6 +500,8 @@ export const createNeonPipesScene =
       }
       camera.updateMatrixWorld();
 
+      // the striped floor travels with the camera: stripes stay fixed on screen as in the reference
+      ground.position.set(target.x, 0, target.z);
       sun.position.copy(target).add(sunOffset);
       sun.target.position.copy(target);
       sun.target.updateMatrixWorld();

@@ -70,11 +70,7 @@ export const roundedPath = (
     const next = points[(i + 1) % n];
     const toPrev = prev.clone().sub(v);
     const toNext = next.clone().sub(v);
-    const rr = Math.min(
-      radius,
-      toPrev.length() * 0.45,
-      toNext.length() * 0.45,
-    );
+    const rr = Math.min(radius, toPrev.length() * 0.45, toNext.length() * 0.45);
     corners.push({
       a: v.clone().add(toPrev.normalize().multiplyScalar(rr)),
       v: v.clone(),
