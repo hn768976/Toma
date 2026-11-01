@@ -1,5 +1,7 @@
 # QC Report: Crack Glow and Smoke Portal
 
+All four videos render, pass every technical check, and come with tested 4K project ZIPs. On fidelity to the references, the alternative versions are strong (8/10). The two reference-matching versions are moderate (CrackGlow V1 6/10, SmokePortal V1 5/10); see *Independent visual review*.
+
 ## Deliverables
 
 | # | File | Composition (4K source) | Version |
@@ -22,17 +24,17 @@
 
 | Check | CrackGlow V1 | CrackGlow V2 | SmokePortal V1 | SmokePortal V2 |
 |---|---|---|---|---|
-| Renders without error | ✅ | ✅ | ✅ | SMOKE_V2_RENDER |
-| Codec | H.264 High, yuv420p | ✅ same | ✅ same | SMOKE_V2_CODEC |
-| Resolution | 1920×1080 | 1920×1080 | 1920×1080 | SMOKE_V2_RES |
-| Frame rate (r / avg) | 30/1 / 30/1 | 30/1 / 30/1 | 30/1 / 30/1 | SMOKE_V2_FPS |
-| Frames (reference) | 182 (182) | 182 (182) | 301 (301) | SMOKE_V2_FRAMES |
-| Duration (reference) | 6.067 s (6.073 s) | 6.067 s | 10.033 s (10.043 s) | SMOKE_V2_DUR |
-| Full decode, `-xerror` | no errors | no errors | no errors | SMOKE_V2_DEC |
-| Audio | none (reference has none) | none | none | SMOKE_V2_AUD |
-| Frames with no visible content | none (min peak luma 134) | none (143) | none (frame 0 is a dark pre-ignition frame, as in the reference) | SMOKE_V2_EMPTY |
-| Largest frame-to-frame luma jump (reference) | 1.51 (0.49) | 1.79 | 6.47 (9.22) | SMOKE_V2_JUMP |
-| Flicker (alternating luma spikes > 3) | 0 | 0 | 0 | SMOKE_V2_FLICK |
+| Renders without error | ✅ | ✅ | ✅ | ✅ |
+| Codec | H.264 High, yuv420p | ✅ same | ✅ same | ✅ same |
+| Resolution | 1920×1080 | 1920×1080 | 1920×1080 | 1920×1080 |
+| Frame rate (r / avg) | 30/1 / 30/1 | 30/1 / 30/1 | 30/1 / 30/1 | 30/1 / 30/1 |
+| Frames (reference) | 182 (182) | 182 (182) | 301 (301) | 301 (301) |
+| Duration (reference) | 6.067 s (6.073 s) | 6.067 s | 10.033 s (10.043 s) | 10.033 s |
+| Full decode, `-xerror` | no errors | no errors | no errors | no errors |
+| Audio | none (reference has none) | none | none | none |
+| Frames with no visible content | none (min peak luma 134) | none (143) | none (frame 0 is a dark pre-ignition frame, as in the reference) | none (frame 0 as V1) |
+| Largest frame-to-frame luma jump (reference) | 1.51 (0.49) | 1.79 | 6.47 (9.22) | 5.94 |
+| Flicker (alternating luma spikes > 3) | 0 | 0 | 0 | 0 |
 
 ### Duration note
 
@@ -70,7 +72,7 @@ Verified from a fresh extraction into an empty folder:
 | CrackGlow V1 | **6/10** match | Concept, two-pulse timing (91-frame cycle), static camera, violet-left / orange-right palette and luma curve all track the reference; technically clean. Remaining gap: the reference has true 3D shards with depth of field and spoke-like radial cracks; V1 is a 2.5D tile plane. |
 | CrackGlow V2 | **8/10** | Clearly distinct cool palette; same concept, timing and quality. |
 | SmokePortal V1 | **5/10** match | Mean luma matches (76.4 vs 76.5). Ignition, centred framing, flare colours and blue-violet outer smoke also match, and there are no technical defects. Remaining gap: the reference is a volumetric fluid simulation. V1's 2D-noise plume is less saturated and less puffy, and it lacks the bright white ring wrapping the core. |
-| SmokePortal V2 | SMOKE_V2_SCORE | SMOKE_V2_REVIEW |
+| SmokePortal V2 | **8/10** (concept / palette / timing kept) | Clearly different camera: a smooth eased push-in of about 2.1× (0.63× → 1.35× relative to V1), a 47° clockwise roll, drift from lower-right to centre, and measured parallax (the background scales about 10 % less than the portal). There are no jerks, edge gaps, seams or flicker. V2 shares V1's softness, which is more visible when zoomed in (frames 170–300). |
 
 **Review history.** Each composition went through 3–4 review-and-fix rounds. CrackGlow V1 rose from 4/10 to 6/10 and SmokePortal V1 from 4/10 to 5/10. Fixed along the way:
 - a seam at the `atan()` branch cut
