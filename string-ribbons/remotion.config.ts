@@ -16,6 +16,9 @@ Config.setOverwriteOutput(true);
 Config.setDefaultPremountInSeconds(2);
 Config.overrideBundlerConfig(enableTailwind);
 
+// Strands are rendered with a small WebGL2 shader. "swangle" (ANGLE on
+// SwiftShader) gives a working WebGL2 context on every machine, GPU or not.
+Config.setChromiumOpenGlRenderer("swangle");
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 

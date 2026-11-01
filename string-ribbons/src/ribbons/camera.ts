@@ -1,5 +1,5 @@
 import { V3, cross, norm, sub } from "./math";
-import { LOOP_FRAMES } from "./scene";
+import { LOOP_FRAMES, sceneCentroid } from "./scene";
 
 export type Camera = {
   eye: V3;
@@ -52,13 +52,19 @@ export const wideCraneRig: CameraRig = (frame, durationInFrames) => {
   const e = p * p * (3 - 2 * p); // smoothstep ease
   const phi = -0.9 + e * ((2 * Math.PI) / 3);
   const elevation = 1.05 - 0.75 * e; // radians above the horizon
-  const radius = 4.6 - 0.9 * e;
+  const radius = 4.1 - 0.55 * e;
   const eye: V3 = [
     radius * Math.cos(elevation) * Math.sin(phi),
     radius * Math.sin(elevation),
     radius * Math.cos(elevation) * Math.cos(phi),
   ];
-  const target: V3 = [0, 0.1 - 0.1 * e, 0];
+  // aim at the sculpture's centre of mass so the slowly morphing form stays
+  // composed; the camera orbits around that same point
+  const c = sceneCentroid(frame);
+  const target: V3 = [c[0], c[1], c[2]];
+  eye[0] += c[0];
+  eye[1] += c[1];
+  eye[2] += c[2];
   const dist = Math.hypot(eye[0] - target[0], eye[1] - target[1], eye[2] - target[2]);
   return {
     eye,

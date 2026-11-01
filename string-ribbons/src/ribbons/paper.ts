@@ -25,6 +25,9 @@ const makeCanvas = (w: number, h: number) => {
   const c = document.createElement("canvas");
   c.width = w;
   c.height = h;
+  // Keep texture generation on the CPU raster path: thousands of tiny draws
+  // and pixel read-backs are far faster there than on a (software) GPU.
+  c.getContext("2d", { willReadFrequently: true });
   return c;
 };
 
@@ -142,13 +145,13 @@ export const buildPaper = (w: number, h: number, pal: PaperPalette): PaperLayers
 
   // ---- light grunge speckles (visible on top of the dark ink too) -------
   const grunge = makeCanvas(w, h);
-  const gr = grunge.getContext("2d")!;
+  const speck = makeCanvas(w, h);
+  const gr = speck.getContext("2d")!;
   const dens = noiseCanvas(w, h, Math.max(2, H / 60), 31, 4);
   const dctx = dens.getContext("2d")!;
   const dd = dctx.getImageData(0, 0, dens.width, dens.height).data;
   gr.fillStyle = pal.speckle;
   const count = Math.round(14000 * (w * h) / (1920 * 1080));
-  gr.filter = `blur(${(H * 0.0016).toFixed(2)}px)`;
   for (let i = 0; i < count; i++) {
     const x = rnd() * w, y = rnd() * h;
     const dx = Math.min(dens.width - 1, Math.floor((x / w) * dens.width));
@@ -164,6 +167,11 @@ export const buildPaper = (w: number, h: number, pal: PaperPalette): PaperLayers
     gr.fill();
   }
   gr.globalAlpha = 1;
+  // soften all speckles with a single blur pass
+  const gctx = grunge.getContext("2d")!;
+  gctx.filter = `blur(${(H * 0.0016).toFixed(2)}px)`;
+  gctx.drawImage(speck, 0, 0);
+  gctx.filter = "none";
 
   // ---- vignette ----------------------------------------------------------
   const vignette = makeCanvas(w, h);

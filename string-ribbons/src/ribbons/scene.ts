@@ -121,3 +121,17 @@ export const buildStrands = (frame: number): V3[][] => {
   }
   return out;
 };
+
+/** Centre of mass of every strand point – used to keep wide shots framed. */
+export const sceneCentroid = (frame: number): V3 => {
+  let x = 0, y = 0, z = 0, n = 0;
+  for (const strand of buildStrands(frame)) {
+    for (const p of strand) {
+      x += p[0];
+      y += p[1];
+      z += p[2];
+      n++;
+    }
+  }
+  return [x / n, y / n, z / n];
+};
