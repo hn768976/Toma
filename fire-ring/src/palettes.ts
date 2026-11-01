@@ -20,14 +20,14 @@ export const FIRE_PALETTES: Record<"inferno" | "plasma", FirePalette> = {
   // Version 1 - matches the reference: cream-white fireball, amber/orange
   // flames, neutral grey smoke on a near-black blue-grey background.
   inferno: {
-    bg: hex("#13171c"),
-    bgGlow: hex("#3a1608"),
-    e0: hex("#5a1a06"),
-    e1: hex("#d8661c"),
-    e2: hex("#ffa236"),
+    bg: hex("#0c0f13"),
+    bgGlow: hex("#2e1006"),
+    e0: hex("#3a0d04"),
+    e1: hex("#c24c16"),
+    e2: hex("#ffaa40"),
     e3: hex("#ffecbf"),
     smokeCol: hex("#606265"),
-    smokeAmb: hex("#17191c"),
+    smokeAmb: hex("#0f1113"),
   },
   // Version 2 - alternative palette: cold plasma. White-cyan core, electric
   // blue and violet flames, indigo smoke on deep navy.

@@ -101,15 +101,24 @@ mat2 rot(float a){ float c=cos(a), s=sin(a); return mat2(c,-s,s,c); }
 
 // Ring (torus) geometry for this frame.
 float gRm, gA, gAmp, gLobe;
+vec2 gWarp;   // per-pixel fluid swirl offset shared along the ray
 
 // Signed, normalised distance to the billowing torus surface (<0 inside)
 // and the billow value at that point.
 vec2 volume(vec3 q){
+  q.xy += gWarp;
   float rho = length(q.xy);
   float sd = (length(vec2(rho - gRm*(1.0 + gLobe), q.z * 1.25)) - gA*(1.0 + 0.8*gLobe)) / gA;
   vec3 n = q / max(uR, 0.05);
   n.xy = rot(uSpin + 0.6*n.z) * n.xy;
   float b = pyro(vec3(n.xy*2.3, n.z*2.3 + uTime*0.3));
+  // Radial streaks: fast along the angle, slow along the radius, which
+  // gives fibrous flame tendrils on the rim instead of pure cauliflower.
+  vec2 dir = n.xy / max(length(n.xy), 1e-3);
+  float streak = abs(snoise(vec3(dir*7.0, length(n.xy)*1.2 + n.z + uTime*0.25)));
+  // Streaks live on the outer rim only and fade as the blast matures.
+  float rimW = smoothstep(0.6, 0.95, length(n.xy)) * mix(0.32, 0.08, smoothstep(0.25, 0.8, uR));
+  b = mix(b, streak*0.9, rimW);
   return vec2(sd - gAmp*(b - 0.28), b);
 }
 
@@ -137,16 +146,22 @@ void main(){
   // Torus that spans hole radius .. outer radius.
   gRm = 0.5*(uR + uRh);
   gA = max(0.5*(uR - uRh), 0.01);
-  gAmp = 0.75 + 1.1*uWarp*4.0;
+  // Billow amplitude: smooth young ring, lumpier as it grows.
+  gAmp = 0.35 + 2.7*uWarp;
 
   // Background with a faint cool vignette and warm bounce near the blast.
   vec3 bg = uBg * (1.0 - 0.35*smoothstep(0.35, 1.1, length(p*vec2(0.8,1.0))));
-  float glowFall = exp(-max(r - uR*0.8, 0.0) * 3.2);
-  bg += uBgGlow * uHeat * glowFall * smoothstep(0.0, 0.25, uR);
+  float glowFall = exp(-max(r - uR*0.85, 0.0) * 4.0);
+  // Glow only outside the hole so the eye stays black.
+  bg += uBgGlow * uHeat * glowFall * smoothstep(0.0, 0.25, uR) * smoothstep(uRh*1.1, uRh*2.2, r);
 
   vec3 col = vec3(0.0);
   float trans = 1.0;
   gLobe = 0.0;
+  // Fluid swirl: low-frequency 2D domain warp, scaled with the blast.
+  vec2 wq = q2 / max(uR, 0.05);
+  gWarp = vec2(fbm3(vec3(wq*1.6, uTime*0.2 + 1.0)), fbm3(vec3(wq*1.6 + 5.2, uTime*0.2 + 4.0)))
+        * (0.04 + 0.28*uWarp) * max(uR, 0.05);
   float reach = gA * (1.0 + 0.55*gAmp) + gRm*0.2 + 0.01;
   if (abs(r - gRm) < reach) {
     // Low-frequency patches that cool at different times.
@@ -155,13 +170,16 @@ void main(){
     float cool = 1.0 - smoothstep(0.0, 0.6, uHeat);
     float th = 1.1 - 1.5*uHeat;
     // Large irregular lobes so the ring is not a perfect circle.
-    gLobe = 0.16*fbm3(vec3(un*0.9 + 7.0, uTime*0.12));
+    // Lopsided growth: a big lobe pushes out to the right like the reference.
+    gLobe = 0.22*fbm3(vec3(un*0.8 + 7.0, uTime*0.12))
+          + 0.1*smoothstep(0.15, 0.5, uR)*clamp(un.x*0.8 - 0.1*un.y, -1.0, 1.0);
 
     const int STEPS = 34;
+    float birth = smoothstep(0.02, 0.07, uR); // nothing before the ring exists
     float zTop = gA * (1.0 + 0.5*gAmp) / 1.25;
     float ds = 2.0*zTop / float(STEPS);
-    // Interleaved gradient noise: low-discrepancy jitter, reads as fine grain.
-    float jitter = fract(52.9829189 * fract(dot(frag, vec2(0.06711056, 0.00583715))));
+    // White-noise jitter (no structured pattern), reads as fine film grain.
+    float jitter = hash12(frag * 1.37 + 3.1);
     float sigma = 11.0 / max(gA, 0.05);
     vec3 L = normalize(vec3(-0.55, 0.6, 0.75));
     for (int i = 0; i < STEPS; i++) {
@@ -172,6 +190,9 @@ void main(){
       if (dens < 0.003) continue;
       // Thin out into wisps as it cools; dissipate with uSmoke.
       dens = max(0.0, dens - uThin*(1.15 - v.y)*1.2);
+      // Smoke stays a ring: the outer fringe thins away first, leaving dark corners.
+      float rr = length(q.xy + gWarp) / max(uR, 0.05);
+      dens *= 1.0 - uThin*smoothstep(0.45, 0.88, rr);
       float smokeA = mix(1.0, uSmoke, cool);
       dens *= smokeA;
       if (dens < 0.003) continue;
@@ -182,13 +203,15 @@ void main(){
       // Temperature: hottest deep in the core, patchy cooling.
       float depth = clamp(-v.x, 0.0, 1.0);
       float hot = smoothstep(th - 0.2, th + 0.2, 0.75*patchN + 0.8*(v.y - 0.4) + 0.12);
-      float T = hot * (0.3 + 0.7*uHeat) * (0.74 + 0.35*depth + 0.3*v.y) * (0.8 + 0.25*lit);
-      vec3 emit = emissionRamp(T) * (0.42 + 0.68*lit);
+      // Young ring: the inner rim around the eye glows hottest.
+      float innerRim = (1.0 - smoothstep(0.0, 0.25, uR - 0.1)) * (1.0 - smoothstep(gRm*0.7, gRm, length(q.xy)));
+      float T = hot * (0.3 + 0.7*uHeat) * (0.66 + 0.35*depth + 0.3*v.y + 0.3*innerRim) * (0.62 + 0.5*lit);
+      vec3 emit = emissionRamp(T) * (0.32 + 0.8*lit);
       float emitMix = smoothstep(0.1, 0.5, T);
       vec3 smoke = mix(uSmokeAmb, uSmokeCol, lit) * (0.7 + 0.5*v.y);
       vec3 c = mix(smoke, emit, emitMix);
 
-      float a = 1.0 - exp(-dens * sigma * ds * mix(0.4, 1.0, smoothstep(0.0, 0.5, uHeat)));
+      float a = birth * (1.0 - exp(-dens * sigma * ds * mix(0.4, 1.0, smoothstep(0.0, 0.5, uHeat))));
       col += trans * a * c;
       trans *= 1.0 - a;
       if (trans < 0.02) break;
@@ -199,7 +222,7 @@ void main(){
   }
   col += trans * bg;
   // Lens vignette.
-  col *= 1.0 - 0.25*smoothstep(0.45, 1.15, length(p*vec2(0.85, 1.0)));
+  col *= 1.0 - (0.25 + 0.25*(1.0 - uHeat))*smoothstep(0.45, 1.15, length(p*vec2(0.85, 1.0)));
   // Gentle filmic shoulder so incandescence rolls off to cream, not clip.
   col = col / (1.0 + 0.12*max(col - 0.8, 0.0));
   col = pow(max(col, 0.0), vec3(1.0/1.0));
