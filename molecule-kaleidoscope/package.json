@@ -1,0 +1,41 @@
+{
+  "name": "molecule-kaleidoscope",
+  "version": "1.0.0",
+  "description": "Mirrored metaball molecule kaleidoscope (WebGL2 ray-marched shader) - 3840x2160 @ 30fps",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.539",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.539",
+    "@remotion/tailwind-v4": "4.0.539",
+    "tailwindcss": "4.0.0"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.539",
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "render:v1:4k": "remotion render Molecules-V1-4K out/molecules-v1-4k.mp4",
+    "render:v2:4k": "remotion render Molecules-V2-4K out/molecules-v2-4k.mp4",
+    "render:v1:1080p": "remotion render Molecules-V1-4K out/molecules-v1-1080p.mp4 --scale=0.5",
+    "render:v2:1080p": "remotion render Molecules-V2-4K out/molecules-v2-1080p.mp4 --scale=0.5",
+    "render:all:1080p": "npm run render:v1:1080p && npm run render:v2:1080p"
+  },
+  "sideEffects": [
+    "*.css"
+  ]
+}
