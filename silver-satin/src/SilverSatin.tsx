@@ -25,7 +25,7 @@ const hex = (h: string): [number, number, number] => {
 const SILVER = {
   deep: hex("#1a1218"),
   shadow: hex("#0f1a40"),
-  mid: hex("#68779c"),
+  mid: hex("#6f7a95"),
   light: hex("#e0dcec"),
   sheen: hex("#fff0f6"),
 };

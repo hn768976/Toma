@@ -56,7 +56,9 @@ float satin(vec2 p, float t, float lod) {
   // fine horizontal ripples in some regions of the cloth
   // dense, sharp pleats: in drifting patches and along the left side of frame
   float m = smoothstep(0.15, 0.75, snoise(vec2(q.x * 0.30, q.y * 0.45) + vec2(-t * 0.06, 4.0)));
-  m = max(m, uPleatBias * smoothstep(-0.4, -1.9, p.x));
+  // smooth union of the two masks (a max() here leaves slope kinks = hard seams)
+  float mLeft = uPleatBias * smoothstep(-0.4, -1.9, p.x);
+  m = 1.0 - (1.0 - m) * (1.0 - mLeft);
   float pleatPhase = q.y * 7.0 + 0.25 * q.x + 0.7 * snoise(vec2(q.x * 0.35, q.y * 0.6) + t * 0.05) - t * 0.9;
   h += lod * 0.065 * m * fold(pleatPhase);
   h += lod * 0.012 * m * fold(pleatPhase * 2.1 + 1.3);
@@ -151,10 +153,13 @@ void main() {
   // perspective: far cloth falls off into navy shadow
   col = mix(col, uShadow * 0.45, fog);
 
+  // hold back the highlights as the camera eases in late (keep ring highlights readable)
+  col *= 1.0 - 0.10 * smoothstep(0.6, 1.0, P) * smoothstep(0.75, 1.0, dot(col, vec3(0.333)));
+
   // gentle vignette (reference has darker corners)
   vec2 s = frag / uRes;
   float vig = smoothstep(1.05, 0.25, length((s - 0.5) * vec2(1.2, 1.0)));
-  col = mix(uDeep * 0.6 + uShadow * 0.4, col, mix(0.35, 1.0, vig));
+  col = mix(uDeep * 0.8 + uShadow * 0.2, col, mix(0.22, 1.0, vig));
 
   outColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
