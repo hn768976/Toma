@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { SceneFactory } from "../ThreeStage";
-import { FLOWERS, type FlowerDef } from "./flowers";
+import { FLOWERS, flowerById, flowerWorld, type FlowerDef } from "./flowers";
 
 /* ------------------------------------------------------------------ */
 /* Camera rigs                                                          */
@@ -48,10 +48,16 @@ export const dollyRackRig: CameraRig = (t, duration) => {
     lookAt.y + THREE.MathUtils.lerp(-2.2, 1.4, e),
     Math.cos(arc) * dist,
   );
-  // rack focus from the left bloom (z=-2.8) to the main bloom (z=0) between 1.6 s and 4.4 s
+  // rack focus from the left bloom to the main bloom between 1.6 s and 4.4 s
   const rack = easeInOut((t - 1.6) / 2.8);
-  const leftFocus = position.distanceTo(new THREE.Vector3(-4.48, -0.29, -2.8));
-  const mainFocus = position.distanceTo(new THREE.Vector3(2.74, 0.6, 0));
+  const left = flowerById("left");
+  const main = flowerById("main");
+  const leftFocus = position.distanceTo(
+    new THREE.Vector3(left.x, left.y, left.z),
+  );
+  const mainFocus = position.distanceTo(
+    new THREE.Vector3(main.x, main.y, main.z),
+  );
   return {
     position,
     target: lookAt,
@@ -75,6 +81,7 @@ const SURF_GLSL = /* glsl */ `
   uniform float uLobePhase;
   uniform float uRot;
   uniform float uCurl;
+  uniform float uPulse;
 
   float foldAt(float u, float v) {
     float psi = uNpl * (v - uRot - uTwist * pow(max(u, 0.0), 0.8));
@@ -126,6 +133,7 @@ const surfaceFragment = /* glsl */ `
   uniform vec3 uBase;
   uniform vec3 uSheen;
   uniform vec3 uLightV;
+  uniform float uPulse;
   varying vec3 vNormalV;
   varying vec3 vPosV;
   varying float vU;
@@ -140,8 +148,8 @@ const surfaceFragment = /* glsl */ `
     float fres = pow(1.0 - max(dot(n, vd), 0.0), 3.0);
     float ao = smoothstep(0.04, 0.68, vU);
     ao *= 0.55 + 0.45 * vFold;
-    vec3 col = uBase * (0.28 + 0.95 * diff) * ao;
-    col += uSheen * (spec * 0.75 + fres * 0.22) * ao * (0.35 + 0.65 * vFold);
+    vec3 col = uBase * (0.28 + 0.95 * diff * uPulse) * ao;
+    col += uSheen * (spec * 0.75 * uPulse + fres * 0.22) * ao * (0.35 + 0.65 * vFold);
     gl_FragColor = vec4(col, 1.0);
   }
 `;
@@ -200,7 +208,7 @@ const dotVertex = /* glsl */ `
 
     // lighting on the dot bump
     float diff = max(dot(nv, uLightV), 0.0);
-    float lit = (0.45 + 0.85 * diff) * smoothstep(0.08, 0.6, u);
+    float lit = (0.45 + 0.85 * diff * uPulse) * smoothstep(0.08, 0.6, u);
     float tw = pow(max(0.0, sin(6.28318530718 * (uTime01 * 3.0 + aDot2.x))), 10.0);
     float glint = 1.0 + aDot2.y * tw;
     vBright = aDot.w * lit * glint;
@@ -377,10 +385,11 @@ export const createSpiralBloomScene =
 
     const duration = durationInFrames / fps;
     const camera = new THREE.PerspectiveCamera(26, width / height, 0.5, 200);
-    const tanHalf = Math.tan(THREE.MathUtils.degToRad(13));
     const lightV = new THREE.Vector3();
     const lightWorld = new THREE.Vector3(-0.5, -0.4, 0.78).normalize();
     const res = new THREE.Vector2(width, height);
+    // shared light pulse: the reference brightens/dims on a 90-frame (3 s) cycle
+    const pulse = { value: 1 };
 
     /* render targets */
     const accum = new THREE.WebGLRenderTarget(width, height, {
@@ -391,20 +400,28 @@ export const createSpiralBloomScene =
     });
     const makeLayer = (div: number) => ({
       div,
-      a: new THREE.WebGLRenderTarget(Math.ceil(width / div), Math.ceil(height / div), {
-        type: THREE.HalfFloatType,
-        depthBuffer: true,
-        minFilter: THREE.LinearFilter,
-        magFilter: THREE.LinearFilter,
-      }),
-      b: new THREE.WebGLRenderTarget(Math.ceil(width / div), Math.ceil(height / div), {
-        type: THREE.HalfFloatType,
-        depthBuffer: false,
-        minFilter: THREE.LinearFilter,
-        magFilter: THREE.LinearFilter,
-      }),
+      a: new THREE.WebGLRenderTarget(
+        Math.ceil(width / div),
+        Math.ceil(height / div),
+        {
+          type: THREE.HalfFloatType,
+          depthBuffer: true,
+          minFilter: THREE.LinearFilter,
+          magFilter: THREE.LinearFilter,
+        },
+      ),
+      b: new THREE.WebGLRenderTarget(
+        Math.ceil(width / div),
+        Math.ceil(height / div),
+        {
+          type: THREE.HalfFloatType,
+          depthBuffer: false,
+          minFilter: THREE.LinearFilter,
+          magFilter: THREE.LinearFilter,
+        },
+      ),
     });
-    const layers = [makeLayer(2), makeLayer(4)];
+    const layers = [makeLayer(1), makeLayer(2), makeLayer(4)];
 
     /* fullscreen helpers */
     const fsCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -457,37 +474,35 @@ export const createSpiralBloomScene =
       depthTest: false,
       depthWrite: false,
     });
-    const drawFs = (mat: THREE.Material, target: THREE.WebGLRenderTarget | null) => {
+    const drawFs = (
+      mat: THREE.Material,
+      target: THREE.WebGLRenderTarget | null,
+    ) => {
       fsQuad.material = mat;
       renderer.setRenderTarget(target);
       renderer.render(fsScene, fsCam);
     };
 
     /* flowers */
-    const grid = makeParamGrid(72, 44 * 10);
+    const grid = makeParamGrid(110, 1320);
     const quad = new THREE.PlaneGeometry(1, 1);
     const flowers: FlowerRuntime[] = FLOWERS.map((def) => {
-      const camZ = 20;
-      const dist = camZ - def.z;
-      const halfH = dist * tanHalf;
-      const halfW = halfH * (width / height);
-      const x = (def.sx / 768 - 0.5) * 2 * halfW;
-      const y = (0.5 - def.sy / 432) * 2 * halfH;
-      const R = (def.rPx / 432) * 2 * halfH;
+      const { x, y, radius: R } = flowerWorld(def);
 
       const shared: Record<string, THREE.IUniform> = {
         uR: { value: R },
-        uRin: { value: 0.035 },
-        uDepth: { value: R * 0.55 },
+        uRin: { value: 0.0 },
+        uDepth: { value: R * def.depth },
         uNpl: { value: def.pleats },
         uTwist: { value: def.twist * def.dir },
-        uPleatAmp: { value: 0.07 },
+        uPleatAmp: { value: def.pleatAmp },
         uLobes: { value: def.lobes },
         uLobeAmp: { value: def.lobeAmp },
         uLobePhase: { value: def.lobePhase },
         uRot: { value: 0 },
         uCurl: { value: 0.12 },
         uLightV: { value: lightV },
+        uPulse: pulse,
       };
       const surface = new THREE.Mesh(
         grid,
@@ -535,8 +550,14 @@ export const createSpiralBloomScene =
       const dotGeo = new THREE.InstancedBufferGeometry();
       dotGeo.index = quad.index;
       dotGeo.setAttribute("position", quad.getAttribute("position"));
-      dotGeo.setAttribute("aDot", new THREE.InstancedBufferAttribute(new Float32Array(inst), 4));
-      dotGeo.setAttribute("aDot2", new THREE.InstancedBufferAttribute(new Float32Array(inst2), 4));
+      dotGeo.setAttribute(
+        "aDot",
+        new THREE.InstancedBufferAttribute(new Float32Array(inst), 4),
+      );
+      dotGeo.setAttribute(
+        "aDot2",
+        new THREE.InstancedBufferAttribute(new Float32Array(inst2), 4),
+      );
       dotGeo.instanceCount = inst.length / 4;
       dotGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e4);
       const dots = new THREE.Mesh(
@@ -593,12 +614,15 @@ export const createSpiralBloomScene =
       camera.updateMatrixWorld();
       camera.getWorldDirection(camFwd);
       lightV.copy(lightWorld).transformDirection(camera.matrixWorldInverse);
+      pulse.value = 1 + 0.09 * Math.sin((Math.PI * 2 * frame) / 90);
 
       // coc in 4K pixels from a thin-lens model
       const K = 155 * (width / 3840);
       const sorted = flowers
         .map((f) => {
-          tmp.set(f.group.position.x, f.group.position.y, f.group.position.z).sub(camera.position);
+          tmp
+            .set(f.group.position.x, f.group.position.y, f.group.position.z)
+            .sub(camera.position);
           const d = tmp.dot(camFwd);
           return { f, d, coc: (K * Math.abs(d - cam.focus)) / d };
         })
@@ -620,29 +644,29 @@ export const createSpiralBloomScene =
         dm.uTime01.value = loop;
         dm.uCoc.value = coc;
 
-        if (coc < 2.0) {
-          renderer.setRenderTarget(accum);
-          renderer.clearDepth();
-          renderer.render(f.surfaceScene, camera);
-          renderer.render(f.dotScene, camera);
-        } else {
-          const layer = coc > 14 ? layers[1] : layers[0];
-          renderer.setRenderTarget(layer.a);
-          renderer.setClearColor(0x000000, 0);
-          renderer.clear(true, true, true);
-          renderer.render(f.surfaceScene, camera);
-          blurMat.uniforms.tSrc.value = layer.a.texture;
-          blurMat.uniforms.uTexel.value.set(1 / layer.a.width, 1 / layer.a.height);
-          // surfaces are smoother than the dots in the reference, so they get a wider kernel
-          blurMat.uniforms.uRadius.value = (coc * 1.5) / layer.div;
-          drawFs(blurMat, layer.b);
-          compositeMat.uniforms.tSrc.value = layer.b.texture;
-          drawFs(compositeMat, accum);
-          // dots become bokeh discs, drawn at full resolution
-          renderer.setRenderTarget(accum);
-          renderer.clearDepth();
-          renderer.render(f.dotScene, camera);
-        }
+        // Every bloom goes through the layer path. The in-focus bloom gets a
+        // tiny (~2.4 px at 4K) lens softening that removes rib aliasing and the
+        // hard cut-out rim; defocused blooms get their thin-lens CoC.
+        const surfRadius = Math.max(coc * 1.5, 2.4);
+        const layer = coc > 14 ? layers[2] : coc > 4 ? layers[1] : layers[0];
+        renderer.setRenderTarget(layer.a);
+        renderer.setClearColor(0x000000, 0);
+        renderer.clear(true, true, true);
+        renderer.render(f.surfaceScene, camera);
+        blurMat.uniforms.tSrc.value = layer.a.texture;
+        blurMat.uniforms.uTexel.value.set(
+          1 / layer.a.width,
+          1 / layer.a.height,
+        );
+        // surfaces are smoother than the dots in the reference, so they get a wider kernel
+        blurMat.uniforms.uRadius.value = surfRadius / layer.div;
+        drawFs(blurMat, layer.b);
+        compositeMat.uniforms.tSrc.value = layer.b.texture;
+        drawFs(compositeMat, accum);
+        // dots (or bokeh discs when defocused) are drawn at full resolution
+        renderer.setRenderTarget(accum);
+        renderer.clearDepth();
+        renderer.render(f.dotScene, camera);
       }
 
       finalMat.uniforms.uSeed.value = (frame * 0.618034) % 1;
