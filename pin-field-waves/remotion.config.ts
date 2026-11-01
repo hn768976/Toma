@@ -14,6 +14,9 @@ Config.setCrf(16);
 // WebGL content: use ANGLE with SwiftShader so rendering works on machines
 // without a GPU (CI, containers). Override with --gl=angle on a GPU machine.
 Config.setChromiumOpenGlRenderer("swangle");
+// Software-rendered 4K WebGL frames can take a while on slow / busy CPUs;
+// allow up to 5 minutes per frame instead of the default 30 s.
+Config.setDelayRenderTimeoutInMilliseconds(300000);
 // Frames are independent and deterministic, so they can be rendered in parallel.
 Config.setConcurrency(4);
 
