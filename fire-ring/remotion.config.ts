@@ -16,6 +16,7 @@ Config.setVideoImageFormat("jpeg");
 Config.setJpegQuality(95);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
+Config.setColorSpace("bt709");
 Config.setCrf(16);
 Config.setOverwriteOutput(true);
 // Software WebGL can be slow on the first frame; allow generous time.
