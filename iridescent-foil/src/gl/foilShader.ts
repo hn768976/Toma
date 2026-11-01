@@ -27,7 +27,7 @@ uniform vec3 uCore;     // hottest highlight core (near white)
 
 ${NOISE_GLSL}
 
-const float STREAK_ANGLE = 0.65;  // streaks run bottom-left -> top-right
+const float STREAK_ANGLE = 0.74;  // streaks run bottom-left -> top-right
 
 float surface(vec2 p, float t, float P) {
   // Long, parallel streaks at the start relax into crumpled bulges.
@@ -40,9 +40,8 @@ float surface(vec2 p, float t, float P) {
   vec2 w = vec2(snoise(a * 0.55 + vec2(0.0, t * 0.07)),
                 snoise(a * 0.55 + vec2(4.1, 7.3) + t * 0.05));
   vec2 b = a + w * mix(0.28, 0.70, relax);
-  float h = 0.62 * snoise(b * 0.90 + vec2(1.7, -t * 0.05))
-          + 0.19 * snoise(b * 1.70 + vec2(8.1, 2.3) + t * 0.08)
-          + 0.045 * snoise(b * 3.70 + vec2(3.3, -t * 0.1));
+  float h = 0.64 * snoise(b * 0.76 + vec2(1.7, -t * 0.05))
+          + 0.17 * snoise(b * 1.45 + vec2(8.1, 2.3) + t * 0.08);
   // bundles of fine parallel creases running along the streaks
   float band = smoothstep(-0.25, 0.55, snoise(vec2(b.x * 0.65, b.y * 0.25) + 11.0));
   // narrow but smooth-crested ridges (smooth |sin| avoids slope seams)
@@ -54,11 +53,10 @@ float surface(vec2 p, float t, float P) {
 
 // Cyclic three-colour ramp used for the thin-film iridescence.
 vec3 film(float x) {
-  x = fract(x) * 3.0;
-  vec3 c0 = uKey, c1 = uRim, c2 = uAccent;
-  if (x < 1.0) return mix(c0, c1, smoothstep(0.0, 1.0, x));
-  if (x < 2.0) return mix(c1, c2, smoothstep(0.0, 1.0, x - 1.0));
-  return mix(c2, c0, smoothstep(0.0, 1.0, x - 2.0));
+  // smooth cosine-weighted blend (no segment seams / contour banding)
+  vec3 w = 0.5 + 0.5 * cos(6.2831853 * (fract(x) - vec3(0.0, 1.0 / 3.0, 2.0 / 3.0)));
+  w = w * w;
+  return (uKey * w.x + uRim * w.y + uAccent * w.z) / (w.x + w.y + w.z);
 }
 
 float lobe(vec3 r, vec3 l, float k) { return pow(max(dot(r, normalize(l)), 0.0), k); }
@@ -66,7 +64,7 @@ float lobe(vec3 r, vec3 l, float k) { return pow(max(dot(r, normalize(l)), 0.0),
 void main() {
   vec2 frag = gl_FragCoord.xy;
   vec2 uv = (frag - 0.5 * uRes) / uRes.y;           // y in [-0.5, 0.5]
-  float t = uTime;
+  float t = uTime * 1.35;  // material motion speed
   float P = uProgress;
 
   // --- camera: slow push-in with a gentle roll and drift --------------------
@@ -105,8 +103,10 @@ void main() {
   // everywhere, leaving broad dark regions like the reference.
   vec2 s = frag / uRes;
   float illum = smoothstep(-0.55, 0.45, snoise(p * 0.32 + vec2(3.0, -1.0) + vec2(0.05, 0.03) * t));
-  illum *= mix(1.0, smoothstep(1.05, 0.35, s.x), 0.55 * sin(3.14159 * clamp(P * 1.3, 0.0, 1.0)));
-  illum = 0.22 + 0.95 * illum;
+  // brightness arc: bright opening, dip around frame ~110, recovery at the end
+  float dip = exp(-pow((P - 0.55) / 0.17, 2.0));
+  illum *= mix(1.0, smoothstep(1.05, 0.35, s.x), 0.5 * dip);
+  illum = 0.28 + 0.95 * illum;
   kKey *= illum; kRim *= illum; kTop *= illum; kLow *= illum; broad *= illum;
 
   vec3 col = uBase * (0.20 + 0.60 * facing);
@@ -114,7 +114,7 @@ void main() {
   col += uKey    * kKey * 1.65;
   col += uRim    * kRim * 1.25;
   col += iri     * kTop * 1.30;
-  col += uAccent * kLow * 0.55;
+  col += uAccent * kLow * 0.75;
   col += iri2 * (kKey * 0.35 + kRim) * 0.40;
   col += uCore * (kHot * 1.3 + pow(kKey, 4.0) * 0.8 + pow(kRim, 4.0) * 0.6);
 
@@ -125,27 +125,37 @@ void main() {
   // cavity darkening in the valleys
   col *= mix(0.35, 1.0, smoothstep(-0.70, 0.30, h));
 
-  // --- glitter flakes (locked to the surface) ---------------------------------
-  vec2 g = p * 95.0;
-  vec2 gid = floor(g);
-  vec2 gf = fract(g) - 0.5;
-  vec3 rnd = hash32(gid);
-  vec2 off = (rnd.xy - 0.5) * 0.5;
-  float flake = smoothstep(0.32, 0.05, length(gf - off));
-  float patchy = smoothstep(-0.35, 0.55, snoise(p * 2.2 + 7.0));
-  float present = step(0.92 - 0.55 * patchy, rnd.z);
-  vec3 fn = normalize(N + (hash32(gid + 17.0) - 0.5) * 1.6);
-  vec3 fr = reflect(-V, fn);
-  float glint = pow(max(dot(fr, normalize(vec3(0.3, 0.3, 0.9))), 0.0), 9.0);
-  vec3 flakeCol = hash12(gid + 3.1) > 0.5 ? uAccent : uKey;
+  // --- glitter flakes ---------------------------------------------------------
+  // Two jittered layers at different scales/orientations (no visible lattice),
+  // advected with the material flow and gathered in the shadowed areas.
   float env = clamp(broad + kKey + kRim + kTop, 0.0, 1.5);
-  col += flakeCol * flake * present * (0.25 + 1.6 * glint) * (0.30 + 0.9 * env);
+  float shade = dot(col, vec3(0.3, 0.5, 0.2));
+  float shadowW = 0.35 + 0.65 * smoothstep(0.55, 0.08, shade);
+  float patchy = smoothstep(-0.45, 0.5, snoise(p * 1.8 + vec2(7.0, -t * 0.05)));
+  vec2 flow = rot2(-STREAK_ANGLE) * vec2(0.0, -t * 0.07);
+  for (int L = 0; L < 2; L++) {
+    float fl = float(L);
+    vec2 g = rot2(0.7 + fl * 1.9) * (p - flow) * (150.0 + fl * 70.0) + fl * 31.7;
+    vec2 gid = floor(g);
+    vec2 gf = fract(g);
+    vec3 rnd = hash32(gid + fl * 91.0);
+    vec2 c = 0.18 + 0.64 * rnd.xy;                 // centre anywhere in the cell
+    float flake = smoothstep(0.17, 0.0, length(gf - c));
+    float present = step(1.0 - (0.22 + 0.5 * patchy), rnd.z);
+    vec3 fn = normalize(N + (hash32(gid + 17.0 + fl) - 0.5) * 1.8);
+    float glint = pow(max(dot(reflect(-V, fn), normalize(vec3(0.3, 0.3, 0.9))), 0.0), 10.0);
+    vec3 flakeCol = hash12(gid + 3.1 + fl) > 0.45 ? uAccent : uKey;
+    col += flakeCol * flake * present * shadowW * (0.45 + 1.9 * glint) * (0.45 + 0.8 * env);
+  }
 
   // --- big soft screen-space glows (lens bloom feel) --------------------------
   float glowA = exp(-6.0 * length((s - vec2(1.0 - 0.25 * ease, 0.92)) * vec2(1.6, 1.0)));
   float glowB = exp(-7.0 * length((s - vec2(0.02, 0.62 - 0.3 * ease)) * vec2(1.4, 1.0)));
   col += uKey * glowA * 0.75 * (1.0 - 0.45 * ease);
-  col += mix(uRim, uCore, 0.55) * glowB * 0.85 * (1.0 - 0.55 * ease);
+  col += mix(uRim, uCore, 0.65) * glowB * 1.2 * (1.0 - smoothstep(0.30, 0.55, P) * 0.75);
+  // blown-out white/cyan hotspot on the left edge over the opening ~4 s
+  float hot = exp(-5.5 * length((s - vec2(-0.02, 0.48 - 0.1 * ease)) * vec2(1.7, 0.9)));
+  col += mix(uCore, uRim, 0.25) * hot * 2.2 * (1.0 - smoothstep(0.30, 0.50, P));
 
   // --- tone map + vignette -----------------------------------------------------
   col = 1.0 - exp(-col * 1.55);

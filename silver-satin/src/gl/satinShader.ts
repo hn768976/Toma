@@ -20,6 +20,7 @@ uniform vec2  uRes;
 uniform float uTime;
 uniform float uProgress;
 uniform float uCamMode;
+uniform float uPleatBias;
 
 uniform vec3 uDeep;     // deepest crevices (warm near-black)
 uniform vec3 uShadow;   // navy shadow
@@ -37,7 +38,7 @@ float fold(float x) {
 
 float satin(vec2 p, float t, float lod) {
   // fold orientation slowly turns from horizontal to a gentle diagonal
-  float ang = 0.05 + 0.30 * smoothstep(3.0, 12.0, t);
+  float ang = 0.02 + 0.50 * smoothstep(5.0, 16.0, t) - 0.12 * smoothstep(19.0, 25.0, t);
   p = rot2(ang) * p;
   // gentle, low-frequency warp (keeps folds long and continuous)
   vec2 w = vec2(snoise(vec2(p.x * 0.22, p.y * 0.35) + vec2(0.0, t * 0.07)),
@@ -53,8 +54,12 @@ float satin(vec2 p, float t, float lod) {
   // broad billows
   h += 0.38 * snoise(vec2(q.x * 0.30, q.y * 0.55) + vec2(t * 0.05, -t * 0.09));
   // fine horizontal ripples in some regions of the cloth
-  float m = smoothstep(0.0, 0.65, snoise(vec2(q.x * 0.35, q.y * 0.5) + vec2(-t * 0.06, 4.0)));
-  h += lod * 0.07 * m * fold(q.y * 5.5 + 0.3 * q.x + 2.0 * snoise(q * 0.9 + t * 0.1) - t * 0.7);
+  // dense, sharp pleats: in drifting patches and along the left side of frame
+  float m = smoothstep(0.15, 0.75, snoise(vec2(q.x * 0.30, q.y * 0.45) + vec2(-t * 0.06, 4.0)));
+  m = max(m, uPleatBias * smoothstep(-0.4, -1.9, p.x));
+  float pleatPhase = q.y * 7.0 + 0.25 * q.x + 0.7 * snoise(vec2(q.x * 0.35, q.y * 0.6) + t * 0.05) - t * 0.9;
+  h += lod * 0.065 * m * fold(pleatPhase);
+  h += lod * 0.012 * m * fold(pleatPhase * 2.1 + 1.3);
   return h;
 }
 
@@ -64,18 +69,20 @@ vec3 environment(vec3 R) {
   vec3 Lrim  = normalize(vec3( 0.70, -0.20, 0.68));
   float d = dot(R, Lsoft);
   vec3 c = mix(uShadow, uMid, smoothstep(-0.05, 0.62, d));
-  c = mix(c, uLight, smoothstep(0.72, 0.93, d));
+  c = mix(c, uLight, smoothstep(0.74, 0.94, d));
   c = mix(c, uSheen, smoothstep(0.90, 0.99, d));
   c += uSheen * 0.45 * pow(max(dot(R, Lkey), 0.0), 10.0);
   c += uSheen * 0.60 * pow(max(dot(R, Lsoft), 0.0), 90.0);
   c += uMid * 0.35 * pow(max(dot(R, Lrim), 0.0), 6.0);
+  // soft bloom around the softbox reflection (glowing chrome-satin highlights)
+  c += uSheen * 0.12 * pow(max(d, 0.0), 10.0);
   return c;
 }
 
 void main() {
   vec2 frag = gl_FragCoord.xy;
   vec2 uv = (frag - 0.5 * uRes) / uRes.y;
-  float t = uTime;
+  float t = uTime * 1.9;   // cloth motion speed
   float P = uProgress;
   float ease = P * P * (3.0 - 2.0 * P);
 
@@ -88,7 +95,8 @@ void main() {
 
   if (uCamMode < 0.5) {
     // --- V1: near top-down camera, gentle drift ---------------------------
-    float zoom = 3.4;
+    // camera eases in late in the clip so the final arching fold reads large
+    float zoom = mix(3.4, 2.5, smoothstep(0.55, 1.0, P));
     p = rot2(-0.04 + 0.05 * ease) * uv * zoom + vec2(0.35 * t * 0.1, -0.15 * ease);
     V = vec3(0.0, 0.0, 1.0);
   } else {
@@ -145,8 +153,8 @@ void main() {
 
   // gentle vignette (reference has darker corners)
   vec2 s = frag / uRes;
-  float vig = smoothstep(1.15, 0.30, length((s - 0.5) * vec2(1.2, 1.0)));
-  col *= mix(0.62, 1.0, vig);
+  float vig = smoothstep(1.05, 0.25, length((s - 0.5) * vec2(1.2, 1.0)));
+  col = mix(uDeep * 0.6 + uShadow * 0.4, col, mix(0.35, 1.0, vig));
 
   outColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

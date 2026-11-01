@@ -24,10 +24,10 @@ const hex = (h: string): [number, number, number] => {
 
 const SILVER = {
   deep: hex("#1a1218"),
-  shadow: hex("#14214a"),
-  mid: hex("#6e7b9d"),
+  shadow: hex("#0f1a40"),
+  mid: hex("#68779c"),
   light: hex("#e0dcec"),
-  sheen: hex("#fff6fb"),
+  sheen: hex("#fff0f6"),
 };
 
 /** Version 1 — matches the reference: top-down camera, silver / navy satin. */
@@ -40,6 +40,8 @@ export const SilverSatin: React.FC<SatinProps> = (props) => {
   const uniforms = useMemo(
     () => ({
       uCamMode: props.cameraMode,
+      // V1 reference framing has the dense pleats down the left side
+      uPleatBias: props.cameraMode === 0 ? 1 : 0.6,
       uDeep: props.deep,
       uShadow: props.shadow,
       uMid: props.mid,
