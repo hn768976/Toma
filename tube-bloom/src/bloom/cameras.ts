@@ -1,4 +1,3 @@
-import { track } from "./keyframes";
 import type { CameraPose } from "./scene";
 import type { BloomState } from "./timeline";
 
@@ -9,11 +8,11 @@ export type CameraMode = "topDown" | "lowOrbit";
 // A barely perceptible drift keeps it from feeling static.
 const topDown = (frame: number, s: BloomState): CameraPose => {
   const camZ = 3.54;
-  const t = frame / 269;
-  const dx = 0.03 * Math.sin(t * Math.PI);
+  const t = frame / 270;
+  const dx = 0.03 * Math.sin(t * Math.PI * 2);
   return {
-    position: [dx, -0.02 * t, camZ],
-    target: [dx, -0.02 * t, 0],
+    position: [dx, 0, camZ],
+    target: [dx, 0, 0],
     up: [0, 1, 0],
     fov: 32,
     focus: camZ - (0.34 - 0.24 * s.bloom),
@@ -25,20 +24,12 @@ const topDown = (frame: number, s: BloomState): CameraPose => {
 // Version 2: a low, oblique camera that orbits the gap between the two
 // central flowers and slowly pushes in, revealing the woven 3D depth that the
 // top-down view flattens out. Shallow depth of field gives a macro feel.
-const az = track([
-  [0, -2.15],
-  [269, -1.15],
-]);
-const el = track([
-  [0, 0.92],
-  [135, 0.62],
-  [269, 0.78],
-]);
-const dist = track([
-  [0, 4.4],
-  [120, 3.05],
-  [269, 3.35],
-]);
+// periodic (frame 270 == frame 0) so the alternative also loops seamlessly:
+// sweeps around, dips low and pushes in mid-clip, then rises and pulls back
+const TAU = Math.PI * 2;
+const az = (f: number) => -1.65 + 0.55 * Math.sin((f / 270) * TAU);
+const el = (f: number) => 0.76 + 0.15 * Math.cos((f / 270) * TAU);
+const dist = (f: number) => 3.72 + 0.62 * Math.cos((f / 270) * TAU);
 
 const lowOrbit = (frame: number, s: BloomState): CameraPose => {
   const a = az(frame);

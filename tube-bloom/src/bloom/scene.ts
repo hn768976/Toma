@@ -159,6 +159,8 @@ export class BloomScene {
         uSpan: { value: (310 * Math.PI) / 180 },
         uTubeR: { value: 0.026 },
         uCount: { value: TUBES_PER_FLOWER },
+        uTaper: { value: 0 },
+        uFlatten: { value: 0 },
         uWhite: { value: new THREE.Vector3(...look.white) },
         uPink: { value: new THREE.Vector3(...look.pink) },
         uPinkLight: { value: new THREE.Vector3(...look.pinkLight) },
@@ -190,7 +192,7 @@ export class BloomScene {
         uDepthScale: { value: 1 / DEPTH_RANGE },
         uLightDir: this.tubeMat.uniforms.uLightDir,
         uCamPos: this.tubeMat.uniforms.uCamPos,
-        uTone: { value: 0.93 },
+        uTone: { value: 0.98 },
       },
     });
     this.bodyMesh = new THREE.Mesh(buildBodyGeometry(), this.bodyMat);
@@ -207,7 +209,7 @@ export class BloomScene {
         uRes: { value: new THREE.Vector2(width, height) },
         uFocus: { value: 0.3 },
         uAperture: { value: 20 },
-        uMaxCoC: { value: 0.022 },
+        uMaxCoC: { value: 0.026 },
         uEdgeBlur: { value: 0.6 },
         uSeed: { value: 0 },
         uBg: { value: new THREE.Vector3(...look.bg) },
@@ -229,12 +231,16 @@ export class BloomScene {
     u.uPinkAmt.value = state.pinkAmt;
     u.uPinkS.value = state.pinkS;
     u.uPhi0.value = state.phi0;
+    u.uTaper.value = state.bloom;
+    u.uFlatten.value = 0.72 * Math.max(0, 1 - state.bloom / 0.6);
     u.uSpan.value = state.span;
 
     const bu = this.bodyMat.uniforms;
     bu.uRt.value = state.rt;
-    bu.uRr.value = Math.max(0, state.rr - state.tubeR * 0.9);
-    bu.uRz.value = Math.max(0, state.rz - state.tubeR * 0.9);
+    // body sits almost flush with the tube tops: the wrapped torus reads as a
+    // solid dome carved with grooves rather than an open coil spring
+    bu.uRr.value = Math.max(0, state.rr + state.tubeR * 0.35);
+    bu.uRz.value = Math.max(0, state.rz + state.tubeR * 0.35);
     bu.uK.value = state.bodyK;
     bu.uSink.value = state.bodySink;
     this.bodyMesh.visible = state.bodyK > 0.001;

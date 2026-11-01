@@ -18,7 +18,7 @@ const hex = (h: string): [number, number, number] => {
 // Version 1 — sampled from the reference: off-white paper, navy ink shadow,
 // a warm cream fringe and a faint blush inside the grooves.
 export const PAPER_WHITE: Palette = {
-  bg: hex("#fdfcfc"),
+  bg: hex("#fefefe"),
   paper: hex("#ffffff"),
   shadow: hex("#2e3756"),
   warm: hex("#f3dcb8"),

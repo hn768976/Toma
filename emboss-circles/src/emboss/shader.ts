@@ -34,6 +34,8 @@ uniform float uRingR;     // hub disc radius
 uniform float uRingA;     // hub disc visibility
 uniform float uTinyR;     // centre bead radius (grows into the big fused discs)
 uniform float uBeadA;     // bead visibility
+uniform float uLensBlend; // carries the lens shadow over into the walkers (no pop)
+uniform float uFill;      // paper fill opacity (fades into the ground at loop end)
 uniform vec2  uLight;     // global shadow offset (height units)
 uniform float uGlobal;    // global fade (loop in/out)
 uniform float uRingSh;    // hub shadow strength (rings are flat early on)
@@ -74,10 +76,10 @@ float hash12(vec2 p) {
   return fract((p3.x + p3.y) * p3.z);
 }
 
-// spatially varying shadow density: some cells read darker than others,
-// like the uneven ink of the reference
+// spatially varying shadow density: alternate tile columns read darker or
+// lighter, like the uneven ink of the reference
 float density(vec2 c) {
-  return 0.62 + 0.38 * sin(c.x * 3.3 + c.y * 1.7 + 0.8);
+  return 0.62 + 0.38 * sin(c.x * 3.3 + 0.8);
 }
 
 // Composite one raised paper shape.
@@ -94,7 +96,7 @@ void raised(inout vec3 col, float dC, float dS, float dW, float blur, float a, f
   col = mix(col, uWarm, clamp(wm * 0.42 * uWarmGain * a, 0.0, 1.0));
   // paper fill
   float inside = 1.0 - outside;
-  col = mix(col, uPaper, inside * a);
+  col = mix(col, mix(uBg, uPaper, uFill), inside * a);
   // hair-line edge
   float lw = max(0.0011, px * 0.9);
   float ln = 1.0 - smoothstep(lw * 0.5, lw * 0.5 + px * 1.2, abs(dC));
@@ -118,7 +120,7 @@ void groove(inout vec3 col, float d, float dIn, float a) {
 // neighbouring discs overlap they fuse, so late in the loop only the
 // concave-square gaps between four hubs keep an edge — like the reference.
 void hubSheet(inout vec3 col, vec2 p, vec2 cellId, float R, float a, float shGain,
-              float edgeA, float aoAmt, float blur) {
+              float edgeA, float aoAmt, float blur, float lightK) {
   if (a <= 0.0 || R <= 0.0) return;
   float dC = 1e3, dS = 1e3, dW = 1e3;
   vec2 near = vec2(0.0);
@@ -128,8 +130,8 @@ void hubSheet(inout vec3 col, vec2 p, vec2 cellId, float R, float a, float shGai
       vec2 c = (cellId + vec2(i, j)) * CELL + (s == 1 ? SITE1 : vec2(0.0));
       float d = sdCircle(p, c, R);
       if (d < dC) { dC = d; near = c; }
-      dS = min(dS, sdCircle(p - uLight, c, R));
-      dW = min(dW, sdCircle(p + uLight * 0.6, c, R));
+      dS = min(dS, sdCircle(p - uLight * lightK, c, R));
+      dW = min(dW, sdCircle(p + uLight * 0.6 * lightK, c, R));
     }
   }
   if (aoAmt > 0.0) {
@@ -148,7 +150,7 @@ void main() {
   vec3 col = uBg;
   vec2 cellId = floor(p / CELL);
 
-  float blurW = 0.042;   // walker shadow softness
+  float blurW = 0.034;   // walker shadow softness
   float blurH = 0.040;   // hub shadow softness
 
   // ---------- pass 1: grooves ----------
@@ -170,7 +172,7 @@ void main() {
   }
 
   // ---------- pass 2: hub rings ----------
-  hubSheet(col, p, cellId, uRingR, uRingA * uGlobal, uRingSh, 1.0, 0.0, blurH);
+  hubSheet(col, p, cellId, uRingR, uRingA * uGlobal, uRingSh, 1.0, smoothstep(0.30, 0.38, uRingR), blurH, 1.0);
 
   // ---------- pass 3: walkers ----------
   if (uWalkA > 0.0 && uWalkR > 0.0) {
@@ -188,7 +190,8 @@ void main() {
                                  : (m == 1 ? vec2(0.0, -0.463) : vec2(-0.475, 0.0)));
           // settled pairs swing upright (vertical on one hub row, horizontal
           // on the other) and part to make room for the centre bead
-          float ang = uGamma * (hub0 ? 0.846 : -0.724);
+          // diagonal -> vertical -> other diagonal -> horizontal -> diagonal -> vertical (mirrored on the other hub row, ending horizontal)
+          float ang = uGamma * (hub0 ? 3.99 : -3.866);
           c = hub + rot(c - hub, ang) * uSpread;
           float dC = sdCircle(p, c, uWalkR);
           if (dC > 0.1) continue;
@@ -196,9 +199,10 @@ void main() {
           float jit = (hash12(floor(hub * 7.0) + 3.1) - 0.5) * 1.6;
           vec2 dir = rot(U * float(m), -0.45 + jit);
           vec2 lo = mix(dir * 0.034, uLight, smoothstep(0.0, 1.0, uGamma));
+          lo = mix(lo, vec2(0.7071, 0.7071) * float(k) * 0.028, uLensBlend);
           float dS = sdCircle(p - lo, c, uWalkR);
           float dW = sdCircle(p + lo * 0.6, c, uWalkR);
-          raised(col, dC, dS, dW, blurW, uWalkA * uGlobal, density(hub) * 0.6 + 0.2, 1.0);
+          raised(col, dC, dS, dW, mix(blurW, blurW * 0.9, uLensBlend), uWalkA * uGlobal, mix(density(hub) * 0.6 + 0.2, 1.0, uLensBlend), 1.0);
         }
       }
     }
@@ -225,8 +229,11 @@ void main() {
   }
 
   // ---------- pass 5: centre bead -> big fused discs ----------
-  hubSheet(col, p, cellId, uTinyR, uBeadA * uGlobal, 1.0, uEdgeA,
-           smoothstep(0.30, 0.36, uTinyR), mix(0.016, blurH, smoothstep(0.02, 0.09, uTinyR)));
+  // the bead's shadow offset scales with its size so a newborn bead never
+  // throws a detached shadow
+  hubSheet(col, p, cellId, uTinyR, uBeadA * uGlobal * smoothstep(0.0, 0.012, uTinyR), 1.0, uEdgeA,
+           smoothstep(0.30, 0.36, uTinyR), mix(0.012, blurH, smoothstep(0.02, 0.09, uTinyR)),
+           smoothstep(0.0, 0.09, uTinyR));
 
   // ordered dither against banding in the soft gradients
   float n = hash12(gl_FragCoord.xy + mod(uFrame, 64.0) * 17.0) - 0.5;

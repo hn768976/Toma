@@ -16,6 +16,8 @@ uniform float uPhi0;    // poloidal start angle (the open tube mouth)
 uniform float uSpan;    // poloidal sweep along the tube
 uniform float uTubeR;   // tube thickness
 uniform float uCount;   // tubes per flower
+uniform float uTaper;   // 0..1: taper both tube ends (open flower)
+uniform float uFlatten; // 0..1: shade tubes like the torus surface (smooth dome)
 
 attribute vec3 aFlower; // xy = centre, z = height bias
 attribute float aTube;  // tube index inside its flower
@@ -28,7 +30,10 @@ varying float vViewZ;
 vec3 curve(float s) {
   float th = aTube / uCount * 6.28318530718;
   float phi = uPhi0 - s * uSpan;
-  float psi = th + uTwist * s + uRot;
+  // neighbouring flowers are mirror images, so their petals cross in
+  // symmetric chevrons and nested diamonds
+  float sgn = aFlower.z >= 0.0 ? 1.0 : -1.0;
+  float psi = sgn * (th + uTwist * s + uRot);
   float rho = uRt + uRr * cos(phi);
   return vec3(aFlower.xy + rho * vec2(cos(psi), sin(psi)), uRz * sin(phi) + aFlower.z);
 }
@@ -49,8 +54,14 @@ void main() {
   vec3 n = cos(a) * N1 + sin(a) * N2;
   // slightly tapered mouth reads like a real extruded tube
   float r = uTubeR * mix(0.92, 1.0, smoothstep(0.0, 0.02, s));
+  r *= mix(1.0, smoothstep(0.0, 0.07, s) * smoothstep(1.0, 0.93, s), uTaper);
   vec3 pos = c + n * r;
-  vNormal = n;
+  // torus surface normal at this point of the loop: blending towards it makes
+  // the wrapped state read as a smooth grooved dome instead of a coil spring
+  float phi = uPhi0 - s * uSpan;
+  vec2 dir = normalize(rel);
+  vec3 surfN = normalize(vec3(cos(phi) * dir * max(uRz, 1e-3), sin(phi) * max(uRr, 1e-3)));
+  vNormal = normalize(mix(n, surfN, uFlatten));
   vWorld = pos;
   vS = s;
   vec4 mv = modelViewMatrix * vec4(pos, 1.0);
@@ -88,7 +99,6 @@ void main() {
   float pinkTail = smoothstep(0.86, 0.9, vS);
   float stripe = smoothstep(uPinkS + 0.02, uPinkS + 0.04, vS) * (1.0 - smoothstep(uPinkS + 0.08, uPinkS + 0.1, vS));
   vec3 base = uWhite;
-  base = mix(base, uPinkLight, stripe * 0.75 * uPinkAmt);
   base = mix(base, uPink, clamp(pinkMouth + pinkTail, 0.0, 1.0) * uPinkAmt);
 
   // soft studio lighting
@@ -99,8 +109,8 @@ void main() {
   float rim = pow(1.0 - max(dot(n, V), 0.0), 3.0) * 0.12;
 
   // height-based occlusion: sections that dive under other tubes go grey
-  float ao = mix(0.24, 1.0, smoothstep(-uRz - 0.02, uRz * 0.8, vWorld.z));
-  vec3 col = base * (0.42 * hemi + 0.62 * diff) * ao;
+  float ao = mix(0.42, 1.0, smoothstep(-uRz - 0.02, uRz * 0.8, vWorld.z));
+  vec3 col = base * (0.52 * hemi + 0.6 * diff) * ao;
   col = mix(col, col * uShade, (1.0 - ao) * 0.6);
   col += spec * ao + rim * ao;
   if (back) col *= 0.35;   // looking into the open mouth of a tube
@@ -221,7 +231,7 @@ void main() {
   float diff = max(dot(n, normalize(uLightDir)), 0.0);
   float hemi = 0.5 + 0.5 * n.z;
   float ao = mix(0.45, 1.0, smoothstep(-uRz, uRz * 0.6, vWorld.z));
-  vec3 col = uWhite * uTone * (0.45 * hemi + 0.55 * diff) * ao;
+  vec3 col = uWhite * uTone * (0.52 * hemi + 0.6 * diff) * ao;
   gl_FragColor = vec4(col, clamp(vViewZ * uDepthScale, 0.0, 1.0));
 }
 `;

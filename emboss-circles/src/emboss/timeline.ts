@@ -26,6 +26,14 @@ const walkR = track([
   [84, 0.03],
   [86, 0],
 ]);
+const lensBlend = track([
+  [9, 1],
+  [17, 0],
+]);
+const fill = track([
+  [78, 1],
+  [89.5, 0],
+]);
 const beadA = track([
   [57, 0],
   [58, 1],
@@ -41,8 +49,8 @@ const walkA = track([
   [86, 0],
 ]);
 const lensA = track([
-  [1, 0],
-  [5, 1],
+  [-1, 0],
+  [4, 1],
 ]);
 const chanA = track([
   [9, 0],
@@ -51,9 +59,12 @@ const chanA = track([
   [80, 0],
 ]);
 const gamma = track([
-  [54, 0],
-  [70, 1],
-  [86, 1.35],
+  [24, 0],
+  [36, 0.27],
+  [46, 0.5],
+  [56, 0.76],
+  [66, 1],
+  [76, 1.04],
 ]);
 const ringR = track([
   [38, 0],
@@ -61,7 +72,9 @@ const ringR = track([
   [58, 0.198],
   [66, 0.235],
   [72, 0.325],
-  [78, 0.335],
+  [74, 0.36],
+  [76, 0.4],
+  [78, 0.43],
 ]);
 const ringSh = track([
   [40, 0.3],
@@ -75,7 +88,7 @@ const edgeA = track([
 const ringA = track([
   [38, 0],
   [41, 1],
-  [72, 1],
+  [75, 1],
   [78, 0],
 ]);
 const tinyR = track([
@@ -102,6 +115,8 @@ export type Uniforms = {
   uRingA: number;
   uTinyR: number;
   uBeadA: number;
+  uLensBlend: number;
+  uFill: number;
   uLight: [number, number];
   uGlobal: number;
   uRingSh: number;
@@ -113,7 +128,7 @@ export const uniformsAt = (frame: number): Uniforms => {
   const r = walkR(f);
   // lens phase: two discs of radius r converge from "just touching" to
   // coincident; their intersection grows from a sliver into a full circle.
-  const lensT = Math.min(1, Math.max(0, (f - 1) / 8));
+  const lensT = Math.min(1, Math.max(0, (f + 0.6) / 8.6));
   const lensEase = Math.pow(lensT, 2.0);
   const inLens = f < 9;
 
@@ -130,6 +145,8 @@ export const uniformsAt = (frame: number): Uniforms => {
     uGamma: gamma(f),
     uSpread: f < 58 ? 1 : Math.max(1, (tinyR(f) + r) / SETTLED),
     uBeadA: beadA(f),
+    uLensBlend: inLens ? 1 : lensBlend(f),
+    uFill: fill(f),
     uRingR: ringR(f),
     uRingA: ringA(f),
     uTinyR: tinyR(f),

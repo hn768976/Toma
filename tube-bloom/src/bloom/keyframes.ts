@@ -44,3 +44,19 @@ export const track = (keys: readonly Key[]) => {
     );
   };
 };
+
+// Periodic variant: keys are given inside [0, period) and wrap around, so the
+// curve (and its slope) is continuous from the last frame back to frame 0 —
+// the clip loops seamlessly, like the reference.
+export const periodicTrack = (keys: readonly Key[], period: number) => {
+  const n = keys.length;
+  const padded: Key[] = [
+    [keys[n - 2][0] - period, keys[n - 2][1]],
+    [keys[n - 1][0] - period, keys[n - 1][1]],
+    ...keys,
+    [keys[0][0] + period, keys[0][1]],
+    [keys[1][0] + period, keys[1][1]],
+  ];
+  const t = track(padded);
+  return (x: number) => t(((x % period) + period) % period);
+};

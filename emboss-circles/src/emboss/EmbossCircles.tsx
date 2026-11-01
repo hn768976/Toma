@@ -19,7 +19,7 @@ type GLState = {
 
 const UNIFORMS = [
   "uRes", "uFrame", "uLensO", "uLensA", "uWalkO", "uWalkR", "uWalkA", "uChanA",
-  "uGamma", "uSpread", "uRingR", "uRingA", "uTinyR", "uBeadA", "uLight", "uGlobal", "uRingSh", "uEdgeA",
+  "uGamma", "uSpread", "uRingR", "uRingA", "uTinyR", "uBeadA", "uLensBlend", "uFill", "uLight", "uGlobal", "uRingSh", "uEdgeA",
   "uBg", "uPaper", "uShadow", "uWarm", "uLine", "uChan",
   "uShadowGain", "uWarmGain", "uLineGain",
 ];
@@ -100,6 +100,8 @@ export const EmbossCircles: React.FC<EmbossCirclesProps> = ({ palette }) => {
     gl.uniform1f(loc.uRingA, u.uRingA);
     gl.uniform1f(loc.uTinyR, u.uTinyR);
     gl.uniform1f(loc.uBeadA, u.uBeadA);
+    gl.uniform1f(loc.uLensBlend, u.uLensBlend);
+    gl.uniform1f(loc.uFill, u.uFill);
     gl.uniform2f(loc.uLight, u.uLight[0], u.uLight[1]);
     gl.uniform1f(loc.uGlobal, u.uGlobal);
     gl.uniform1f(loc.uRingSh, u.uRingSh);

@@ -1,59 +1,74 @@
-import { track } from "./keyframes";
+import { periodicTrack } from "./keyframes";
 
 // 270 frames @ 30 fps. Frame numbers below were read off the reference.
 
 // 0 = compact grooved torus ("pincushion"), 1 = fully bloomed flat flower
-const bloom = track([
-  [0, 0],
-  [6, 0.03],
-  [24, 0.42],
-  [44, 0.92],
-  [56, 1],
-  [222, 1],
-  [242, 0.6],
-  [262, 0.1],
-  [269, 0.02],
-]);
+const P = 270; // loop period (frames): frame 270 == frame 0
+
+const bloom = periodicTrack(
+  [
+    [0, 0.03],
+    [24, 0.42],
+    [44, 0.92],
+    [56, 1],
+    [222, 1],
+    [242, 0.6],
+    [258, 0.12],
+    [266, 0],
+  ],
+  P,
+);
 
 // open-state shape keys (they keep the bloomed pattern alive in the middle)
-const openTwist = track([
-  [40, 1.75],
-  [90, 1.95],
-  [130, 1.8],
-  [175, 0.7],
-  [205, 0.35],
-  [235, 1.35],
-  [269, 1.5],
-]);
-const openHole = track([
-  [40, 0.26],
-  [80, 0.3],
-  [120, 0.42],
-  [160, 0.3],
-  [200, 0.12],
-  [235, 0.26],
-  [269, 0.24],
-]);
-const openReach = track([
-  [40, 1.8],
-  [120, 1.85],
-  [200, 2.0],
-  [269, 1.9],
-]);
-const pinkAmt = track([
-  [0, 1],
-  [18, 1],
-  [32, 0.3],
-  [42, 0],
-  [234, 0],
-  [250, 0.6],
-  [260, 1],
-  [269, 1],
-]);
-const rot = track([
-  [0, 0],
-  [269, 0.55],
-]);
+const openTwist = periodicTrack(
+  [
+    [40, 1.75],
+    [90, 1.95],
+    [130, 1.8],
+    [175, 0.7],
+    [205, 0.35],
+    [235, 1.35],
+    [260, 1.5],
+  ],
+  P,
+);
+// hole: large around f120, small f180, medium f205, closing to a pinpoint
+// around f220-232 before the flower curls back up
+const openHole = periodicTrack(
+  [
+    [40, 0.26],
+    [80, 0.33],
+    [120, 0.44],
+    [180, 0.15],
+    [205, 0.22],
+    [222, 0.05],
+    [234, 0.03],
+    [252, 0.15],
+  ],
+  P,
+);
+const openReach = periodicTrack(
+  [
+    [40, 1.8],
+    [120, 1.85],
+    [200, 2.0],
+    [250, 1.9],
+  ],
+  P,
+);
+const pinkAmt = periodicTrack(
+  [
+    [18, 1],
+    [32, 0.3],
+    [42, 0],
+    [234, 0],
+    [250, 0.6],
+    [260, 1],
+  ],
+  P,
+);
+// constant spin; a whole number of tube spacings per loop keeps it seamless
+const rot = (frame: number) => (frame / P) * 3 * ((2 * Math.PI) / 36);
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
@@ -91,7 +106,7 @@ export const stateAt = (frame: number): BloomState => {
     rr: lerp(wRr, oRr, b),
     rz: lerp(wRz, oRz, b),
     twist: lerp(wTw, openTwist(frame), b),
-    tubeR: lerp(0.05, 0.062, b),
+    tubeR: lerp(0.064, 0.062, b),
     rot: rot(frame),
     pinkAmt: pinkAmt(frame),
     pinkS: lerp(0.09, 0.26, Math.min(1, b * 1.6)),
