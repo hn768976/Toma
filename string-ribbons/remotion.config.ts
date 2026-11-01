@@ -21,6 +21,8 @@ Config.overrideBundlerConfig(enableTailwind);
 Config.setChromiumOpenGlRenderer("swangle");
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
+// Standard broadcast-range BT.709, correctly tagged for every player.
+Config.setColorSpace("bt709");
 
 // Optional: reuse a pre-installed Chrome Headless Shell (sandboxed CI images)
 // instead of letting Remotion download its own. Ignored when not present.
