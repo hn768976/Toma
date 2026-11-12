@@ -24,7 +24,7 @@ export type PinFieldProps = z.infer<typeof pinFieldSchema>;
 // ---------------------------------------------------------------------------
 // Look constants (tuned against the reference)
 // ---------------------------------------------------------------------------
-const GRID = 130; // pins per side
+const GRID = 150; // pins per side
 const SPACING = 1;
 
 /** All tunable look values (tuned against the reference). */
@@ -45,12 +45,12 @@ const LOOK = {
   rippleY: 35,
   rippleWavelength: 40,
   rippleMix: 0.45,
-  rippleSpeed: 1.5,
-  edge0: 0.24,
-  edge1: 0.5,
-  cycles: 2, // band periods per loop (integer); ripple does cycles x rippleSpeed = 3,
-  // so the combined pattern only repeats every full loop (gcd(2, 3) = 1)
-  ease: 0.2, // speed modulation within each loop (0 = constant speed)
+  rippleSpeed: 1.3333333333333333,
+  edge0: 0.18,
+  edge1: 0.68,
+  cycles: 3, // band periods per loop (integer); ripple does cycles x rippleSpeed = 4,
+  // so the combined pattern only repeats every full loop (gcd(3, 4) = 1)
+  ease: 0, // speed modulation within each loop (0 = constant speed)
   // Reference camera (Version 1)
   distance: 30,
   elevationDeg: 37,
@@ -166,16 +166,16 @@ const buildScene = (canvas: HTMLCanvasElement, width: number, height: number): S
   scene.background = new THREE.Color(COLORS.background);
   // Bright haze in the far field (as in the reference); it also guarantees
   // the edge of the pin grid is never visible.
-  scene.fog = new THREE.Fog(COLORS.background, 38, 72);
+  scene.fog = new THREE.Fog(COLORS.background, 42, 110);
 
   const camera = new THREE.PerspectiveCamera(38, width / height, 1, 400);
 
   // Lights: soft sky fill + a key light from the upper left that casts the
   // long soft shadows between the pins.
-  const hemi = new THREE.HemisphereLight(COLORS.sky, COLORS.ground, 2.6);
+  const hemi = new THREE.HemisphereLight(COLORS.sky, COLORS.ground, 2.1);
   hemi.position.set(0, 1, 0);
   scene.add(hemi);
-  const key = new THREE.DirectionalLight("#ffffff", 1.05);
+  const key = new THREE.DirectionalLight("#ffffff", 1.55);
   key.position.set(-10, 30, 48);
   key.castShadow = true;
   key.shadow.mapSize.set(4096, 4096);
@@ -188,7 +188,7 @@ const buildScene = (canvas: HTMLCanvasElement, width: number, height: number): S
   sc.far = 200;
   key.shadow.bias = -0.0004;
   key.shadow.normalBias = 0.02;
-  key.shadow.radius = 12;
+  key.shadow.radius = 6;
   scene.add(key);
 
   // Base plate.
