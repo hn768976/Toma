@@ -69,26 +69,26 @@ const helix: HelixStyle = {
   },
 };
 
-const field = (box: FieldStyle["box"], clearRadius?: number, nodes = 850): FieldStyle => ({
+const field = (box: FieldStyle["box"], clearRadius?: number, nodes = 850, boost = 1): FieldStyle => ({
   nodes,
   clearRadius,
   box,
   k: 3,
   maxDist: 1.5,
   lineColor: hex("#cfd6cf"),
-  lineAlpha: 0.33,
+  lineAlpha: 0.33 * boost,
   lineWidth: 1.3,
   nodeKind: 2,
   nodeColor: hex("#f2f6f2"),
   nodeSize: [26, 36],
-  nodeAlpha: 1,
+  nodeAlpha: 1 * boost,
   facetChance: 0,
   facetAlpha: 0,
   dust: 2200,
   dustBox: box,
   dustColors: [hex("#8fd08a"), hex("#c8d8c8"), hex("#5fbf5a"), hex("#d8e85a"), hex("#c8d040")],
   dustSize: [3.5, 7],
-  dustAlpha: [0.4, 0.9],
+  dustAlpha: [0.4 * boost, 0.9 * boost],
 });
 
 /**
@@ -123,7 +123,7 @@ const trackingRig = (t: number, dur: number): Rig => {
 const orbitRig = (t: number, dur: number): Rig => {
   const u = t / dur;
   // reaches the level side view at ~85% of the clip, then holds and drifts
-  const e = lerp(Math.min(1, u / 0.85), smooth(u / 0.85), 0.6);
+  const e = lerp(Math.min(1, u / 0.85), smooth(u / 0.85), 0.35);
   const ang = lerp(-1.65, 1.55, e) + 0.12 * Math.max(0, u - 0.85);
   const rad = lerp(2.25, 4.0, e);
   const y = lerp(-4.9, 1.0, e);
@@ -185,7 +185,7 @@ export const PRESETS = {
       vignette: 0.3,
     },
     helix: helixOrbit,
-    field: field({ x: [-12, 12], y: [-10, 10], z: [-12, 12] }, 3.0, 1700),
+    field: field({ x: [-12, 12], y: [-10, 10], z: [-12, 12] }, 3.0, 1700, 2.6),
     glow: glowOrbit,
     dof: { aperture: 34, fieldApertureScale: 1.3, maxCoc: 90, ringAmount: 0.15, refDepth: 3.5 },
     gain: { points: 1, lines: 1, facets: 1 },
