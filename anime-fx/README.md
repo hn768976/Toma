@@ -55,6 +55,13 @@ bash scripts/render-previews.sh
 
 This runs `--scale=0.3333333333333333`, which gives exactly 1280×720.
 
+`remotion.config.ts` adds `-sws_flags accurate_rnd+full_chroma_int+bitexact`
+to Remotion's encode pass. Without it, ffmpeg's fast RGB→YUV rounding can
+shift saturated flat colours by 2 (for example `#4A7AFF`). With it, flat
+backgrounds decode within ±1 of their listed values (BT.601, limited range).
+The config file only applies to CLI renders; if you render through the Node
+API, pass the same `ffmpegOverride`.
+
 Preview in the Studio with `npm run dev`. Studio draws at full 4K, so playback
 is slow.
 

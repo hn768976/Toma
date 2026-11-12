@@ -20,3 +20,16 @@ for (const p of [
     break;
   }
 }
+
+// Accurate RGB -> YUV rounding in the encoder, so flat background colours
+// survive yuv420p within +/-1 (the fast default can be 2 off on saturated
+// colours such as #4A7AFF).
+Config.overrideFfmpegCommand(({ type, args }) => {
+  if (process.env.SHOW_FFMPEG) console.error(type, JSON.stringify(args));
+  // the RGB -> YUV conversion happens in the pre-stitcher pass
+  if (type !== "pre-stitcher") return args;
+  const out = [...args];
+  const at = out.indexOf("-pix_fmt");
+  out.splice(at < 0 ? out.length - 2 : at, 0, "-sws_flags", "accurate_rnd+full_chroma_int+bitexact");
+  return out;
+});

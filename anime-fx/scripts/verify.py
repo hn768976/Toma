@@ -50,7 +50,11 @@ def mp4(comp):
 
 def decode_frame(path, t):
     raw = subprocess.run(
-        ["ffmpeg", "-v", "error", "-ss", str(t), "-i", path, "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+        # Remotion's previews are untagged BT.601 limited range; decode them
+        # with exact rounding so the check measures the file, not the decoder.
+        ["ffmpeg", "-v", "error", "-ss", str(t), "-i", path, "-frames:v", "1",
+         "-vf", "scale=in_color_matrix=bt601:in_range=tv:out_range=pc:flags=accurate_rnd+full_chroma_int+bitexact,format=rgb24",
+         "-f", "rawvideo", "-"],
         check=True, capture_output=True,
     ).stdout
     return np.frombuffer(raw, np.uint8).reshape(720, 1280, 3)
@@ -112,9 +116,10 @@ def background():
             lossless = os.path.join(VER, f"{comp}_bg{f}.png")
             still(comp, f, lossless)
             L = np.asarray(Image.open(lossless).convert("RGB")).astype(int)
-            # empty = exactly the background in the lossless render, in a 9x9 neighbourhood
+            # empty = exactly the background in the lossless render, in a 33x33
+            # neighbourhood (keeps samples clear of H.264 ringing around marks)
             exact = np.all(L == target, axis=2)
-            pad = 4
+            pad = 16
             cand = []
             tries = 0
             while len(cand) < 50 // len(frames) + 1 and tries < 20000:
