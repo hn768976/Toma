@@ -21,7 +21,7 @@ const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
  * racks at the far end (no sway), matching the reference.
  * Version 2: low-angle crane — starts 16 cm above the glossy floor looking up
  * at the racks from the left of the aisle, arcs across to the right while
- * craning up to ~2 m and tilting down, banking through the move.
+ * craning up to ~2.15 m and tilting down, banking through the move.
  */
 export const cameraPose = (mode: CameraMode, t: number, durationFrames: number): CamPose => {
 	const p = clamp01(t / (durationFrames - 1));
@@ -32,16 +32,16 @@ export const cameraPose = (mode: CameraMode, t: number, durationFrames: number):
 		return {
 			pos: new THREE.Vector3(0, 1.3, z),
 			yaw: 0,
-			pitch: 0.055,
+			pitch: 0.075,
 			roll: 0,
 			fov: 62,
 		};
 	}
 	const k = smooth(p);
 	return {
-		pos: new THREE.Vector3(THREE.MathUtils.lerp(-0.6, 0.48, k), THREE.MathUtils.lerp(0.16, 1.95, k), z),
+		pos: new THREE.Vector3(THREE.MathUtils.lerp(-0.6, 0.62, k), THREE.MathUtils.lerp(0.16, 2.15, k), z),
 		yaw: THREE.MathUtils.lerp(-0.13, 0.1, k),
-		pitch: THREE.MathUtils.lerp(0.38, -0.16, k),
+		pitch: THREE.MathUtils.lerp(0.38, -0.22, k),
 		roll: THREE.MathUtils.lerp(-0.15, 0.06, k),
 		fov: THREE.MathUtils.lerp(74, 60, k),
 	};

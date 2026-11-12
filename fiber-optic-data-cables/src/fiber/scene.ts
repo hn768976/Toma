@@ -42,39 +42,73 @@ const FINAL_B = new THREE.Vector3(34.8, 8.1, 10.7);
 // Phase A (0-150): slow drift beside the fibre bundle, fibres sweep bottom-left → top-right.
 // Phase B (150-212): push into the bundle as connectors rise, then whip round.
 // Phase C (212-300): low angle looking back down the bundle towards its source.
-const CAM_POS: Key[] = [
+const SETTLE = 200; // frame where the whip move comes to rest (reference settles ≈ 6.3–6.7 s)
+const WHIP_START = 146;
+
+// Phase A drift (0 → 150) and the post-settle push (SETTLE → 300) use C1 Hermite tracks.
+const CAM_POS_A: Key[] = [
 	{t: 0, v: V(8.5, 2.2, 37)},
-	{t: 150, v: V(13.5, 4.2, 30.5)},
-	{t: 186, v: V(24, 7.5, 21)},
-	{t: 214, v: FINAL_A, hold: true},
-	{t: 300, v: FINAL_B},
+	{t: WHIP_START, v: V(13.5, 4.2, 30.5)},
 ];
-const CAM_TARGET: Key[] = [
+const CAM_TARGET_A: Key[] = [
 	{t: 0, v: V(17, 7.5, 0)},
-	{t: 150, v: V(19.5, 9.2, 0)},
-	{t: 186, v: V(17, 11, -4)},
-	{t: 214, v: aimAt(FINAL_A, SOURCE, -0.78, -0.42, 50), hold: true},
-	{t: 300, v: aimAt(FINAL_B, SOURCE, -0.8, -0.45, 49)},
+	{t: WHIP_START, v: V(19.5, 9.2, 0)},
 ];
-const CAM_FOV = [
-	{t: 0, v: 36},
-	{t: 150, v: 36},
-	{t: 214, v: 50, hold: true},
-	{t: 300, v: 49},
+const FINAL_FWD = FINAL_B.clone().sub(FINAL_A).normalize();
+const FINAL_C = FINAL_A.clone().addScaledVector(FINAL_FWD, 2.4);
+const CAM_POS_C: Key[] = [
+	{t: SETTLE, v: FINAL_A},
+	{t: 300, v: FINAL_C},
 ];
-const CAM_ROLL = [
-	{t: 0, v: 0},
-	{t: 150, v: 0.02},
-	{t: 190, v: -0.08},
-	{t: 214, v: 0.05, hold: true},
-	{t: 300, v: 0.045},
+const CAM_TARGET_C: Key[] = [
+	{t: SETTLE, v: aimAt(FINAL_A, SOURCE, -0.78, -0.42, 50)},
+	{t: 300, v: aimAt(FINAL_C, SOURCE, -0.8, -0.45, 49)},
 ];
 
-const poseAt = (t: number) => {
-	const pos = sampleTrack(CAM_POS, t);
-	const target = sampleTrack(CAM_TARGET, t);
-	const fov = sampleScalar(CAM_FOV, t);
-	const roll = sampleScalar(CAM_ROLL, t);
+// Whip (WHIP_START → SETTLE): one smooth centripetal Catmull-Rom path, traversed with an
+// easing that starts gently and decelerates over its whole second half (no hard stop).
+const WHIP_POS = new THREE.CatmullRomCurve3(
+	[CAM_POS_A[1].v, V(23, 7, 21), V(31, 7.6, 13), FINAL_A],
+	false,
+	'centripetal',
+);
+WHIP_POS.arcLengthDivisions = 2000;
+const WHIP_TARGET = new THREE.CatmullRomCurve3(
+	[CAM_TARGET_A[1].v, V(17, 11, -4), V(15, 12, -9), CAM_TARGET_C[0].v],
+	false,
+	'centripetal',
+);
+// quintic smootherstep: zero velocity *and* zero acceleration at both ends
+WHIP_TARGET.arcLengthDivisions = 2000;
+const whipEase = (x: number) => {
+	const c = Math.min(1, Math.max(0, x));
+	return c * c * c * (c * (c * 6 - 15) + 10);
+};
+
+export const poseAt = (t: number) => {
+	let pos: THREE.Vector3;
+	let target: THREE.Vector3;
+	let fov: number;
+	let roll: number;
+	if (t <= WHIP_START) {
+		pos = sampleTrack(CAM_POS_A, t);
+		target = sampleTrack(CAM_TARGET_A, t);
+		fov = 36;
+		roll = 0.02 * (t / WHIP_START);
+	} else if (t < SETTLE) {
+		const u = whipEase((t - WHIP_START) / (SETTLE - WHIP_START));
+		// arc-length parameterisation so speed follows the easing exactly
+		pos = WHIP_POS.getPointAt(u);
+		target = WHIP_TARGET.getPointAt(u);
+		fov = THREE.MathUtils.lerp(36, 50, u);
+		roll = 0.02 + Math.sin(u * Math.PI) * -0.09 + (0.05 - 0.02) * u;
+	} else {
+		pos = sampleTrack(CAM_POS_C, t);
+		target = sampleTrack(CAM_TARGET_C, t);
+		const k = (t - SETTLE) / (300 - SETTLE);
+		fov = THREE.MathUtils.lerp(50, 49, k);
+		roll = 0.05;
+	}
 	return {pos, target, fov, roll};
 };
 
@@ -86,7 +120,7 @@ export const fiberMotionBlur = (frame: number) => {
 	// constant sample count through the whole move so blur never pops between frames;
 	// the blur itself fades naturally as the camera decelerates into its hold.
 	void speed;
-	return frame >= 148 && frame <= 224 ? 5 : 1;
+	return frame >= WHIP_START - 2 && frame <= SETTLE + 4 ? 5 : 1;
 };
 
 // ------------------------------------------------------------ background ----
@@ -327,7 +361,7 @@ export const createFiberScene =
 			{kind: 'usbcGlow', sx: -0.6, sy: 0.3, d: 16, dir: [-0.1, 0.2, 1], scale: 1.0, delay: 140, twist: 0.4},
 			{kind: 'usbcGlow', sx: -0.8, sy: -0.06, d: 18, dir: [0, 0, 1], scale: 1.0, delay: 137, twist: 1.0},
 			{kind: 'usbcGlow', sx: -0.38, sy: -0.42, d: 20, dir: [0.1, -0.1, 1], scale: 1.0, delay: 138, twist: 0.3},
-			{kind: 'usba', sx: -0.58, sy: 0.66, d: 15, dir: [-0.2, 0.6, 0.8], scale: 1.0, delay: 130, twist: 0.2},
+			{kind: 'usba', sx: -0.76, sy: 0.7, d: 15, dir: [-0.2, 0.6, 0.8], scale: 1.0, delay: 130, twist: 0.2},
 			{kind: 'usbc', sx: 0.12, sy: -0.8, d: 10, dir: [0.4, -0.6, 0.7], scale: 1.0, delay: 138, twist: 0.6},
 			{kind: 'rj45Clear', sx: -0.46, sy: -0.15, d: 24, dir: [0, 0, 1], scale: 1.0, delay: 136, twist: 0.0},
 			{kind: 'usbcGlow', sx: -0.25, sy: 0.14, d: 28, dir: [0, 0, 1], scale: 1.0, delay: 135, twist: 0.2},
@@ -349,7 +383,7 @@ export const createFiberScene =
 				p2: end.clone().addScaledVector(dir, -Math.min(len * 0.18, 4.5)),
 				p3: end,
 				delay: h.delay,
-				duration: 212 - h.delay + rng.range(-3, 2),
+				duration: SETTLE - 4 - h.delay + rng.range(-3, 2),
 				width: 0,
 				bright: 0,
 				seed: rng.next(),
@@ -425,8 +459,8 @@ export const createFiberScene =
 				[
 					{t: 0, v: 30},
 					{t: 150, v: 26},
-					{t: 200, v: 9},
-					{t: 214, v: 6.6},
+					{t: 185, v: 9},
+					{t: SETTLE, v: 6.6, hold: true},
 					{t: 300, v: 6.2},
 				],
 				t,
@@ -435,16 +469,17 @@ export const createFiberScene =
 				[
 					{t: 0, v: 0.05},
 					{t: 150, v: 0.05},
-					{t: 214, v: 0.05, hold: true},
+					{t: SETTLE, v: 0.05, hold: true},
 					{t: 300, v: 0.05},
 				],
 				t,
 			);
 			const su = strands.material.uniforms;
 			su.uTime.value = t;
-			su.uIntensity.value = THREE.MathUtils.lerp(0.78, 0.45, smoothstep(180, 214, t));
+			su.uIntensity.value = THREE.MathUtils.lerp(0.78, 0.5, smoothstep(170, SETTLE, t));
+			renderer.toneMappingExposure = THREE.MathUtils.lerp(1.0, 1.2, smoothstep(170, SETTLE, t));
 			su.uStubAmt.value = 1 - smoothstep(170, 210, t) * 0.8;
-			su.uFogDensity.value = THREE.MathUtils.lerp(0.012, 0.03, smoothstep(170, 214, t));
+			su.uFogDensity.value = THREE.MathUtils.lerp(0.012, 0.03, smoothstep(170, SETTLE, t));
 			su.uFocus.value = focus;
 			su.uAperture.value = aperture;
 			const tu = tipPts.material.uniforms;
@@ -472,7 +507,7 @@ export const createFiberScene =
 			}
 
 			// background light: teal glow low-left early, softer light up-centre later
-			const k = smoothstep(150, 214, t);
+			const k = smoothstep(150, SETTLE, t);
 			bg.mat.uniforms.uGlowPos.value.set(THREE.MathUtils.lerp(-0.02, 0.15, k), THREE.MathUtils.lerp(0.28, 0.35, k));
 			bg.mat.uniforms.uGlowAmt.value = THREE.MathUtils.lerp(0.75, 0.3, k) * (0.9 + 0.1 * Math.sin(t * 0.05));
 			bg.mat.uniforms.uLightPos.value.set(THREE.MathUtils.lerp(0.42, 0.3, k), THREE.MathUtils.lerp(0.62, 0.7, k));

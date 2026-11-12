@@ -96,7 +96,7 @@ export const createServerScene =
 	(pal: ServerPalette, mode: CameraMode, durationFrames: number, debug: ServerDebug = {}): SceneFactory =>
 	({canvas, width, height}) => {
 		const renderer = createRenderer(canvas, width, height);
-		renderer.toneMappingExposure = 1.1;
+		renderer.toneMappingExposure = 1.22;
 		const scene = new THREE.Scene();
 		scene.background = new THREE.Color(pal.fog);
 		scene.fog = new THREE.FogExp2(new THREE.Color(pal.fog), 0.03);
@@ -168,7 +168,7 @@ export const createServerScene =
 		ceil.position.set(0, CEILING, -1.5);
 		scene.add(ceil);
 		const lightMat = new THREE.MeshBasicMaterial({color: new THREE.Color(pal.ceilingLight).multiplyScalar(1.5)});
-		const gantryMat = new THREE.MeshStandardMaterial({color: '#0e171b', metalness: 0.6, roughness: 0.5, envMapIntensity: 0.15});
+		const gantryMat = new THREE.MeshStandardMaterial({color: '#121d22', metalness: 0.6, roughness: 0.45, envMapIntensity: 0.35});
 		const zLights: number[] = [];
 		for (let z = ROW_START - 0.5; z > END_Z + 0.4; z -= LIGHT_PITCH) zLights.push(z);
 		const lights = new THREE.InstancedMesh(new THREE.BoxGeometry(1.7, 0.035, 0.13), lightMat, zLights.length);
