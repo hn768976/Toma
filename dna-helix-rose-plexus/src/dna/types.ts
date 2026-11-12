@@ -35,7 +35,15 @@ export type RungStyle = {
   /** fraction of the rung length left empty at each end (strand overlap) */
   inset: number;
   /** optional glowing core line along the rung */
-  bar?: { color: RGB; alpha: number; width: number; glowWidth: number; glowAlpha: number };
+  bar?: {
+    color: RGB;
+    alpha: number;
+    width: number;
+    glowWidth: number;
+    glowAlpha: number;
+    /** draw the bar as one continuous tube instead of broken segments */
+    continuous?: boolean;
+  };
   /** optional bright clusters ("hot spots") per rung */
   hot?: { color: RGB; clusters: Range; count: number; spread: number; size: Range; alpha: Range };
 };
@@ -119,6 +127,8 @@ export type Rig = {
   /** tilt of the helix axis: [aroundX, aroundZ] radians */
   helixTilt: readonly [number, number];
   focus: number;
+  /** glow intensity multiplier (default 1) */
+  glow?: number;
 };
 
 export type Background = {
@@ -137,6 +147,8 @@ export type Glow = {
   spacing: number;
   /** offset from the helix axis in helix-local x/z */
   offset: readonly [number, number];
+  /** helix-local y range covered by glow sprites (default: whole helix) */
+  yRange?: readonly [number, number];
 };
 
 export type Preset = {

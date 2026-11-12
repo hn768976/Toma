@@ -32,6 +32,7 @@ export class DnaEngine {
   private camera: THREE.PerspectiveCamera;
   private helix = new THREE.Group();
   private glows: { mesh: THREE.Mesh; local: THREE.Vector3 }[] = [];
+  private glowUniforms?: Record<string, THREE.IUniform>;
   private blobGeom?: THREE.BufferGeometry;
   private shared: Record<string, THREE.IUniform>;
   private bgUniforms: Record<string, THREE.IUniform>;
@@ -107,18 +108,20 @@ export class DnaEngine {
     // --- volumetric glow column (world-space billboards following the helix)
     if (preset.glow) {
       const g = preset.glow;
+      this.glowUniforms = {
+        uColor: { value: new THREE.Color(...g.color) },
+        uIntensity: { value: g.intensity },
+      };
       const mat = new THREE.ShaderMaterial({
         vertexShader: glowVertex,
         fragmentShader: glowFragment,
-        uniforms: {
-          uColor: { value: new THREE.Color(...g.color) },
-          uIntensity: { value: g.intensity },
-        },
+        uniforms: this.glowUniforms,
         ...additive,
       });
       const geom = new THREE.PlaneGeometry(g.size, g.size);
       this.track(geom, mat);
-      for (let y = preset.helix.yMin; y <= preset.helix.yMax; y += g.spacing) {
+      const [y0, y1] = g.yRange ?? [preset.helix.yMin, preset.helix.yMax];
+      for (let y = y0; y <= y1 + 1e-6; y += g.spacing) {
         const mesh = new THREE.Mesh(geom, mat);
         mesh.renderOrder = -50;
         mesh.frustumCulled = false;
@@ -269,6 +272,9 @@ export class DnaEngine {
     cam.updateMatrixWorld(true);
 
     // Glow billboards: follow the helix axis (not its spin) and face camera.
+    if (this.glowUniforms && this.preset.glow) {
+      this.glowUniforms.uIntensity.value = this.preset.glow.intensity * (rig.glow ?? 1);
+    }
     if (this.glows.length) {
       const axisOnly = new THREE.Object3D();
       axisOnly.position.copy(this.helix.position);

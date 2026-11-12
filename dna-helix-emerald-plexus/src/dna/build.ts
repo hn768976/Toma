@@ -180,10 +180,10 @@ export const buildHelix = (h: HelixStyle, seed: number): LayerSet => {
       const pa = lerp(inset * 0.6);
       const pb = lerp(1 - inset * 0.6);
       // Slightly broken core: 3-5 segments with small gaps, like the reference
-      const segs = 3 + Math.floor(rng.next() * 3);
+      const segs = bar.continuous ? 1 : 3 + Math.floor(rng.next() * 3);
       for (let s = 0; s < segs; s++) {
-        const t0 = s / segs + rng.range(0, 0.03);
-        const t1 = (s + 1) / segs - rng.range(0, 0.04);
+        const t0 = bar.continuous ? 0 : s / segs + rng.range(0, 0.03);
+        const t1 = bar.continuous ? 1 : (s + 1) / segs - rng.range(0, 0.04);
         const A = [pa[0] + (pb[0] - pa[0]) * t0, pa[1] + (pb[1] - pa[1]) * t0, pa[2] + (pb[2] - pa[2]) * t0];
         const B = [pa[0] + (pb[0] - pa[0]) * t1, pa[1] + (pb[1] - pa[1]) * t1, pa[2] + (pb[2] - pa[2]) * t1];
         barCore.add(A, B, bar.color, bar.alpha * rng.range(0.7, 1.1));
