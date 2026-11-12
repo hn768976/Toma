@@ -11,10 +11,10 @@ export type DnaHelixProps = {
 };
 
 const LOOK: Look = {
-  bgDeep: [0.015, 0.04, 0.065],
-  bgMid: [0.07, 0.17, 0.25],
-  bgHaze: [0.4, 0.62, 0.76],
-  hazeCenter: [0.8, 0.8],
+  bgDeep: [0.02, 0.05, 0.08],
+  bgMid: [0.09, 0.2, 0.29],
+  bgHaze: [0.55, 0.78, 0.9],
+  hazeCenter: [0.86, 0.9],
   light: [0.45, 0.8, 0.6],
   rimTint: [0.75, 0.9, 1.0],
   dust: [0.8, 0.92, 1.0],
@@ -33,9 +33,12 @@ const APERTURE = 0.125;
 const matchCamera = (t: number, dur: number): Camera => {
   const u = t / dur;
   // gentle ease at both ends, close to linear in the middle (like the ref)
-  const k = lerp(u, easeInOut(u), 0.12); // near-constant speed, as in the reference
-  const pos: Vec3 = lerp3([0.55, 0.3, 6.0], [0.3, 0.02, 3.8], k);
-  const target: Vec3 = lerp3([0.38, 0.14, 0], [0.18, 0.0, 0], k);
+  // Dolly in 1/distance so the on-screen growth rate stays near-constant,
+  // as in the reference; the camera trucks right so the hero drifts left.
+  const e = lerp(u, easeInOut(u), 0.12);
+  const k = (1 / lerp(1 / 6.0, 1 / 3.8, e) - 6.0) / (3.8 - 6.0);
+  const pos: Vec3 = lerp3([0.25, 0.3, 6.0], [0.72, 0.02, 3.8], k);
+  const target: Vec3 = lerp3([0.18, 0.14, 0], [0.62, 0.0, 0], k);
   const fwd = norm(sub(target, pos));
   return {
     pos,
@@ -55,7 +58,8 @@ const matchCamera = (t: number, dur: number): Camera => {
  */
 const orbitCamera = (t: number, dur: number): Camera => {
   const u = t / dur;
-  const k = lerp(u, easeInOut(u), 0.3); // keeps moving through the last frame
+  // ease in only: the camera keeps travelling at full speed until the last frame
+  const k = u < 0.2 ? (u * u) / 0.4 / 0.9 : (u - 0.1) / 0.9;
   const yaw = lerp(-0.25, 0.85, k);
   const radius = lerp(7.4, 5.6, k);
   const height = lerp(-2.2, 2.4, k);

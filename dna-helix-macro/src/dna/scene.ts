@@ -11,14 +11,14 @@ export type Palette = {
 
 export const DNA_PALETTE: Palette = {
   blue: [
-    [0.1, 0.42, 0.98],
-    [0.18, 0.56, 1.0],
-    [0.32, 0.7, 1.0],
+    [0.14, 0.48, 1.0],
+    [0.22, 0.62, 1.0],
+    [0.38, 0.76, 1.0],
   ],
   orange: [
-    [0.98, 0.47, 0.09],
-    [1.0, 0.55, 0.14],
-    [1.0, 0.64, 0.24],
+    [1.0, 0.45, 0.1],
+    [1.0, 0.52, 0.16],
+    [1.0, 0.6, 0.26],
   ],
 };
 
@@ -49,7 +49,7 @@ const HELIX_RADIUS = 1.0;
 const RISE = 0.19; // axial rise per base pair
 const TWIST = (2 * Math.PI) / 10; // 10 bp per turn
 const GROOVE = Math.PI * 0.78; // angular offset of strand B (major/minor groove)
-const BAND = 8; // base pairs per colour period // base pairs per colour band
+const BAND = 9; // base pairs per colour period
 
 export const buildHelix = (h: HelixPlacement, palette: Palette): Atom[] => {
   const rnd = mulberry32(h.seed);
@@ -138,7 +138,7 @@ export const HELICES: HelixPlacement[] = [
   // Foreground left (very blurred)
   { pos: [-1.55, 0.3, 2.4], tiltZ: -0.2, tiltX: 0.05, phase: 2.1, spin: 0.12, seed: 23, halfLength: 34 },
   // Background right
-  { pos: [5.1, -0.5, -4.0], tiltZ: -0.11, tiltX: 0.0, phase: 4.0, spin: 0.14, seed: 37, halfLength: 44 },
+  { pos: [4.6, -0.5, -3.0], tiltZ: -0.11, tiltX: 0.0, phase: 4.0, spin: 0.14, seed: 37, halfLength: 44 },
   // Far haze helices
   { pos: [-4.6, 0.4, -5.5], tiltZ: 0.12, tiltX: 0.0, phase: 1.0, spin: 0.1, seed: 41, halfLength: 50 },
   { pos: [11.0, 0.0, -10.0], tiltZ: -0.05, tiltX: 0.0, phase: 3.0, spin: 0.1, seed: 53, halfLength: 60 },

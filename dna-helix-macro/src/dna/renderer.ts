@@ -42,7 +42,7 @@ vec3 background(vec2 fragPx) {
   vec2 p = (uv - 0.5) * vec2(uFullRes.x / uFullRes.y, 1.0);
   vec2 hc = (uHazeCenter - 0.5) * vec2(uFullRes.x / uFullRes.y, 1.0);
   float d = length((p - hc) * vec2(0.85, 1.15));
-  float haze = exp(-d * d * 3.2);
+  float haze = exp(-d * d * 2.2);
   float wide = exp(-d * d * 0.9);
   vec3 col = mix(uBgDeep, uBgMid, wide);
   col = mix(col, uBgHaze, haze * 0.95);
@@ -58,7 +58,8 @@ const BG_FS = /* glsl */ `#version 300 es
 precision highp float;
 ${COMMON}
 out vec4 o;
-void main() { o = vec4(background(gl_FragCoord.xy), 1.0); }`;
+float dither(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453) - 0.5; }
+void main() { o = vec4(background(gl_FragCoord.xy) + dither(gl_FragCoord.xy) / 255.0, 1.0); }`;
 
 // Smooth (B-spline bicubic) upsampling of a low-resolution premultiplied layer.
 const COMP_FS = /* glsl */ `#version 300 es
@@ -150,14 +151,14 @@ void main() {
   float cov = clamp((R - d) / w + 0.5, 0.0, 1.0);
   cov = cov * cov * (3.0 - 2.0 * cov);
   if (cov <= 0.0) discard;
-  float spread = R / (R + 0.5 * C);
-  float a = cov * mix(1.0, spread, 0.15) * vX.y;
+  float a = cov * vX.y;
 
   vec3 col;
   if (vX.z > 0.5) {
     col = vCol.rgb;
   } else {
-    vec2 q = vP / R;
+    // grow the shading sphere with the blur so the rim falls where alpha fades
+    vec2 q = vP / (R + 0.5 * C);
     float ql = length(q);
     if (ql > 1.0) q /= ql;
     vec3 n = normalize(vec3(q.x, -q.y, sqrt(max(0.0, 1.0 - dot(q, q)))));
@@ -165,10 +166,13 @@ void main() {
     float ndl = dot(n, L);
     float wrap = pow(clamp(ndl * 0.55 + 0.45, 0.0, 1.0), 1.6);
     vec3 H = normalize(L + vec3(0.0, 0.0, 1.0));
-    float spec = pow(max(dot(n, H), 0.0), 60.0) * 0.95 + pow(max(dot(n, H), 0.0), 10.0) * 0.12;
-    float fres = pow(1.0 - n.z, 2.6);
+    float spec = pow(max(dot(n, H), 0.0), 26.0) * 0.5 + pow(max(dot(n, H), 0.0), 6.0) * 0.12;
+    float fres = pow(1.0 - n.z, 2.2) * (1.0 - clamp(C / R, 0.0, 1.0));
+    // soft back-light from the haze glowing through the translucent beads
+    vec3 hazeLight = background(gl_FragCoord.xy / uScale);
     vec3 alb = vCol.rgb;
-    col = alb * (0.22 + 1.05 * wrap) * vCol.a;
+    col = alb * (0.26 + 1.05 * wrap) * vCol.a;
+    col += mix(alb, vec3(1.0), 0.35) * hazeLight * (0.25 + 0.55 * fres) * 0.9;
     // translucent, slightly glowing rim (sub-surface look)
     col += mix(alb, uRim, 0.5) * fres * (0.45 + 0.55 * clamp(ndl + 0.4, 0.0, 1.0));
     col += vec3(1.0, 0.97, 0.92) * spec;
@@ -359,7 +363,7 @@ export class DnaRenderer {
       const C = Math.min(cocMax, cocK * Math.abs(1 - cam.focus / z));
       const ext = R + 0.75 * C + 2;
       if (sx < -ext - margin || sx > W + ext + margin || sy < -ext - margin || sy > H + ext + margin) return;
-      const fog = clamp((z - 7) / 18, 0, 0.82);
+      const fog = clamp((z - 6.2) / 7, 0, 0.85);
       const o = n * FLOATS;
       d[o] = sx;
       d[o + 1] = sy;
