@@ -344,7 +344,7 @@ export class Kit {
   /** Wireframe glass cube: double edge frame, faint faces, face grid, glints. */
   holoCube(size: number, fader: Fader, o: { seed: number; glints?: number; grid?: number } ) {
     const g = new THREE.Group();
-    g.add(this.faces(new THREE.BoxGeometry(size, size, size), fader, { opacity: 0.0045, edge: 5.0 }));
+    g.add(this.faces(new THREE.BoxGeometry(size, size, size), fader, { opacity: 0.003, edge: 6.0 }));
     g.add(this.lines(faceGridLines(size, o.grid ?? 4), fader, { width: 1.3, opacity: 0.05 }));
     g.add(this.lines(boxEdges(size * 0.955, size * 0.955, size * 0.955), fader, { width: 1.3, opacity: 0.22 }));
     g.add(this.lines(boxEdges(size, size, size), fader, { width: 2.1, opacity: 0.8 }));

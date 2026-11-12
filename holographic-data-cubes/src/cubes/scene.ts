@@ -104,7 +104,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
   // ───────────────────────── background lattice ─────────────────────────
   const bgFade = new Fader();
   {
-    const S = 24;
+    const S = 34;
     const coords = [-3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5].map((c) => c * S);
     const lines: number[] = [];
     const pts: number[] = [];
@@ -119,7 +119,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
         for (const c of coords) pts.push(a, b, c);
       }
     }
-    scene.add(kit.lines(lines, bgFade, { color: pal.grid, width: 1.4, opacity: 0.055 }));
+    scene.add(kit.lines(lines, bgFade, { color: pal.grid, width: 1.4, opacity: 0.075 }));
     scene.add(kit.sparkles(pts, bgFade, { size: 0.042, opacity: 1.0, star: 1.4, seed: 3 }));
   }
 
@@ -356,7 +356,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
             j * PITCH + rng.range(-1.1, 1.1),
             k * PITCH + rng.range(-1.1, 1.1),
           );
-          const rot = new THREE.Vector3(rng.range(-0.2, 0.2), rng.range(-0.3, 0.3), rng.range(-0.2, 0.2));
+          const rot = new THREE.Vector3(rng.range(-0.12, 0.12), rng.range(-0.22, 0.22), rng.range(-0.12, 0.12));
           const spin = new THREE.Vector3(rng.range(-0.006, 0.006), rng.range(-0.01, 0.01), rng.range(-0.006, 0.006));
           g.add(kit.holoCube(CUBE, fader, { seed, glints: 8, grid: 2 }));
           const r = makeRng(seed * 7 + 1);
@@ -455,7 +455,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
     setAVis = contentA;
     setA.visible = t < 11.2;
     cubeAFade.set(ss(0.3, 1.9, t) * (1 - handover));
-    innerFade.set(contentA * (1 - 0.7 * ss(5.1, 6.3, t)));
+    innerFade.set(contentA * (1 - 0.85 * ss(5.1, 6.3, t)));
     waveFade.set(contentA * (1 - 0.8 * ss(5.0, 6.2, t)));
     roofFade.set(contentA * ss(5.9, 7.0, t));
     beamAFade.set(contentA * ss(4.6, 6.2, t));
@@ -465,7 +465,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
     const coreVis = handover * (1 - ss(26.2, 27.05, t));
     setB.visible = coreVis > 0.0005;
     // The lone cube is lit a little hotter until its neighbours arrive.
-    coreFade.set(coreVis * (1 + 0.5 * (1 - ss(13.3, 14.6, t))));
+    coreFade.set(coreVis * (1 + 0.1 * (1 - ss(13.3, 14.6, t))));
     beamBFade.set(coreVis * (0.5 + 0.5 * ss(19.5, 20.6, t) * (1 - ss(21.0, 22.5, t))));
     // Core: six loose quads spin in as a pinwheel and lock into a cube.
     const assemble = easeOut((t - 11.55) / 0.95);
@@ -505,7 +505,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
     focus: 20,
     aperture: 0,
     maxCoc: 0.02,
-    bloomStrength: 1.05,
+    bloomStrength: 0.92,
     bloomThreshold: 0.04,
     exposure: 1.0,
     tint: pal.tint,
