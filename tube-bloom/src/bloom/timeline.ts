@@ -67,8 +67,10 @@ const pinkAmt = periodicTrack(
   ],
   P,
 );
-// constant spin; a whole number of tube spacings per loop keeps it seamless
-const rot = (frame: number) => (frame / P) * 6 * ((2 * Math.PI) / 36);
+// Constant spin in whole tube spacings per loop (an integer keeps the loop
+// seamless). 12 matches the steady mid-clip motion of the reference.
+const ROT_STEPS = 12;
+const rot = (frame: number) => (frame / P) * ROT_STEPS * ((2 * Math.PI) / 36);
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
