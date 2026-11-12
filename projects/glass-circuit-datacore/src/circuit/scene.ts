@@ -117,6 +117,10 @@ void main() {
   // single thin specular rim (bevelled glass edge)
   float rim = smoothstep(0.005 + aa, 0.005 - aa, abs(d + 0.004));
   float bevel = 0.0;
+  // bright glints where the bevelled edge turns the corners
+  vec2 hb = uSize * 0.5;
+  float corner = smoothstep(0.2, 0.0, length(abs(p) - hb + 0.07));
+  float glint = corner * (rim * 1.6 + smoothstep(-0.05, 0.0, d) * 0.35);
   // glass thickness: brighter band just inside the rim
   float band = smoothstep(-0.03, -0.004, d) * 0.22;
 
@@ -125,13 +129,14 @@ void main() {
   float g = texture2D(uGlyph, guv).a * inGlyph * uFlicker * (1.0 - uBack);
 
   // faint diagonal sheen
-  float sheen = smoothstep(0.25, 0.0, abs(p.x * 0.6 + p.y - 0.15)) * 0.12;
+  float sheen = smoothstep(0.25, 0.0, abs(p.x * 0.6 + p.y - 0.15)) * 0.16;
 
   // clear glass: mostly transparent body, thin unlit edges that catch a
   // little specular, a second (back) face gives the slab visible thickness
-  float aBase = (0.09 + 0.4 * fres + band + sheen) * mix(1.0, 0.6, uBack);
-  vec3 col = uTint * aBase + uEdge * (rim * 0.75 + bevel * 0.35 + band * 0.35 + sheen * 0.8) + uGlyphCol * g * 1.25;
-  float a = clamp(aBase + rim * 0.6 + bevel * 0.3 + g * 0.8, 0.0, 1.0);
+  // grey-blue glass body with a Fresnel reflection, so the slab reads as glass
+  float aBase = (0.13 + 0.45 * fres + band + sheen) * mix(1.0, 0.6, uBack);
+  vec3 col = uTint * aBase + uEdge * (rim * 0.6 + band * 0.35 + sheen * 0.8 + fres * 0.25 + glint) + uGlyphCol * g * 1.25;
+  float a = clamp(aBase + rim * 0.5 + glint * 0.5 + g * 0.8, 0.0, 1.0);
   a *= inside * uOpacity;
   gl_FragColor = vec4(col * inside * uOpacity, a);
 }

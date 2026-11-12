@@ -6,6 +6,8 @@ import { CircuitScene, createCircuitScene } from "./scene";
 
 export const glassCircuitSchema = z.object({
   variant: z.enum(["v1", "v2"]),
+  /** internal render resolution factor for quick look-dev previews (1 = native 4K) */
+  previewScale: z.number().min(0.1).max(1).optional(),
 });
 export type GlassCircuitProps = z.infer<typeof glassCircuitSchema>;
 
@@ -14,9 +16,12 @@ export type GlassCircuitProps = z.infer<typeof glassCircuitSchema>;
  * fall and light up, with floating glass data panels, shot on a long lens with
  * shallow depth of field. three.js (WebGL 2) + custom GLSL post-processing.
  */
-export const GlassCircuitDatacore: React.FC<GlassCircuitProps> = ({ variant }) => {
+export const GlassCircuitDatacore: React.FC<GlassCircuitProps> = ({ variant, previewScale = 1 }) => {
   const frame = useCurrentFrame();
-  const { width, height, fps } = useVideoConfig();
+  const config = useVideoConfig();
+  const fps = config.fps;
+  const width = Math.round(config.width * previewScale);
+  const height = Math.round(config.height * previewScale);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<CircuitScene | null>(null);
 

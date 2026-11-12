@@ -48,7 +48,7 @@ const float GOLDEN_ANGLE = 2.39996323;
 void main() {
   float zc = linDepth(texture2D(tDepth, vUv).x);
   float cc = cocOf(zc);
-  vec4 centre = texture2D(tColor, vUv);
+  vec4 centre = texture2D(tColor, vUv, 0.75);
   vec4 col = centre;
   float size = cc;
   float tot = 1.0;
@@ -57,7 +57,7 @@ void main() {
   for (int i = 0; i < 200; i++) {
     if (radius >= uMaxCoc) break;
     vec2 tc = vUv + vec2(cos(ang), sin(ang)) * radius / uFullRes;
-    vec4 sc = texture2D(tColor, tc);
+    vec4 sc = texture2D(tColor, tc, 0.75);
     float zs = linDepth(texture2D(tDepth, tc).x);
     float ss = cocOf(zs);
     if (zs > zc) ss = min(ss, cc * 2.0);
@@ -136,7 +136,10 @@ export class LayeredDofPass extends Pass {
         format: THREE.RGBAFormat,
         depthBuffer: depth,
         depthTexture: depth ? new THREE.DepthTexture(w, h) : null,
-        minFilter: THREE.LinearFilter,
+        // mip chain on the full-res layers: the reduced-resolution bokeh
+        // samples a pre-filtered image (no sawtooth/striping on thin bright fins)
+        generateMipmaps: depth,
+        minFilter: depth ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter,
         magFilter: THREE.LinearFilter,
       });
     this.world = mk(width, height, true);

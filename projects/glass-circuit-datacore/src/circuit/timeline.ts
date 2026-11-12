@@ -38,6 +38,8 @@ export type Cell = {
   heights: HeightEvent[];
   glows: GlowEvent[];
   phase: number;
+  /** background cell: its random glows follow the global light rhythm */
+  bg: boolean;
   /** alternate plates glow less, so a lit stack reads as separate layers */
   stripe?: boolean;
 };
@@ -57,6 +59,7 @@ const buildCells = () => {
         heights: [],
         glows: [],
         phase: rnd() * Math.PI * 2,
+        bg: true,
       };
       // background life: random rises and glows
       const nRise = rnd() < 0.35 ? 1 + Math.floor(rnd() * 2) : 0;
@@ -87,6 +90,7 @@ const buildCells = () => {
     c.heights = [];
     c.glows = [];
     c.base = 0.17;
+    c.bg = false;
   };
   // keep the hero area deterministic
   for (let iz = -2; iz <= 2; iz++) for (let ix = -2; ix <= 4; ix++) clearNear(ix, iz);
@@ -99,20 +103,22 @@ const buildCells = () => {
     [1, 2, 0.8],
     [2, -1, 0.75],
   ] as const) {
-    at(ix, iz).glows.push({ t0: -0.3, hold: 1.0, ramp: 0.6, g, wave: 0.3 });
+    at(ix, iz).glows.push({ t0: -0.6, hold: 0.85, ramp: 0.4, g: g * 0.85, wave: 0.3 });
     at(ix, iz).base = 0.26;
   }
   // 1.6–3.1 s: hero core block rises
   at(1, 0).heights.push({ t0: 1.55, hold: 1.0, ramp: 0.55, h: 1.35 });
-  at(1, 0).glows.push({ t0: 1.9, hold: 1.0, ramp: 0.5, g: 0.7, wave: 0.0 });
+  at(1, 0).glows.push({ t0: 2.1, hold: 1.4, ramp: 0.45, g: 0.75, wave: 0.0 });
   at(1, 0).stripe = true;
   // 2.8–4.4 s: white slab flare-up
   for (const [ix, iz, g] of [
-    [2, 0, 0.95],
-    [1, 1, 0.7],
-    [-1, 0, 0.6],
+    [2, 0, 1.1],
+    [1, 1, 0.9],
+    [-1, 0, 0.8],
+    [0, -1, 0.75],
+    [3, -1, 0.7],
   ] as const) {
-    at(ix, iz).glows.push({ t0: 2.6, hold: 0.55, ramp: 0.6, g, wave: 0.6 });
+    at(ix, iz).glows.push({ t0: 2.3, hold: 1.1, ramp: 0.5, g, wave: 0.6 });
     at(ix, iz).stripe = true;
   }
   at(2, 0).heights.push({ t0: 2.7, hold: 1.0, ramp: 0.4, h: 0.62 });
@@ -132,13 +138,13 @@ const buildCells = () => {
   // continuous foreground/mid-ground activity: staggered fin-stack rises
   for (const [ix, iz, t0, h, g] of [
     [-2, -1, 0.2, 0.7, 0.0],
-    [0, -2, 0.7, 0.85, 0.6],
+    [0, -2, 0.7, 0.85, 0.0],
     [-1, 2, 1.2, 0.65, 0.0],
-    [3, -1, 1.6, 0.9, 0.7],
+    [3, -1, 1.6, 0.9, 0.0],
     [-2, 2, 2.2, 0.75, 0.0],
-    [0, 2, 2.9, 0.8, 0.5],
+    [0, 2, 2.9, 0.8, 0.45],
     [4, -2, 3.3, 0.95, 0.0],
-    [-1, -2, 3.8, 0.7, 0.65],
+    [-1, -2, 4.6, 0.7, 0.55],
     [4, 0, 4.4, 0.85, 0.0],
     [1, 2, 4.9, 0.7, 0.55],
     [-2, -2, 5.4, 0.8, 0.0],
@@ -158,6 +164,20 @@ export const cellHeight = (c: Cell, t: number) => {
   return h;
 };
 
+/**
+ * Global light rhythm of the background stacks, keyed to the reference's
+ * luminance curve: bright opening, dark 1–2 s, peak 3–4 s, settle, dim end.
+ */
+const ambient = (t: number) => {
+  const k = (t0: number, t1: number, x: number) => easeInOut((x - t0) / (t1 - t0));
+  let a = 0.8;
+  a -= 0.2 * (1 - k(1.9, 2.35, t)); // calmer opening
+  a -= 0.42 * k(0.45, 0.95, t) * (1 - k(1.9, 2.35, t)); // dark section
+  a += 0.4 * k(2.2, 2.65, t) * (1 - k(3.9, 4.4, t)); // flare section
+  a -= 0.32 * k(5.8, 6.6, t); // dim ending
+  return a;
+};
+
 /** Glow of a plate (0..~1.3), with a soft wave travelling through the stack. */
 export const plateGlow = (c: Cell, plate: number, t: number) => {
   let g = 0;
@@ -166,6 +186,7 @@ export const plateGlow = (c: Cell, plate: number, t: number) => {
     g = Math.max(g, e.g * envelope(t - delay, e.t0, e.hold, e.ramp));
   }
   if (c.stripe) g *= plate % 2 === 0 ? 1.0 : 0.3;
+  if (c.bg) g *= ambient(t);
   // subtle living shimmer
   return g * (0.85 + 0.15 * Math.sin(t * 5 + c.phase + plate * 0.7));
 };
@@ -265,11 +286,11 @@ const buildPanels = (): Panel[] => {
   P([[0, 2.5, 0.3, 2.0]], { rideCell: CELLS.at(2, 2) });
   P([[0, 3.5, 0.3, 0.0]], { rideCell: CELLS.at(3, 0) });
   // mid-ground panels around the focal plane
-  P([[0, 1.5, 0.28, 1.0], [3.2, 1.5, 0.28, 1.0], [3.9, 1.5, 0.5, 1.0], [4.9, 1.5, 0.5, 1.0], [5.7, 2.5, 0.3, 1.0]]);
-  P([[0, -0.5, 0.55, -1.0], [2.2, -0.5, 0.55, -1.0], [2.9, 0.5, 0.6, -1.0]]);
-  P([[0, 0.5, 0.25, 2.0], [1.0, 0.5, 0.25, 2.0], [1.7, -0.5, 0.3, 2.0]]);
-  P([[0, -1.5, 0.22, 1.0], [4.6, -1.5, 0.22, 1.0], [5.3, -1.5, 0.45, 1.0]]);
-  P([[0, -2.5, 0.45, -1.0], [3.6, -2.5, 0.45, -1.0], [4.3, -2.5, 0.2, -2.0]]);
+  P([[0, 1.5, 0.28, 1.0], [0.6, 1.5, 0.28, 1.0], [1.4, 1.5, 0.48, 1.0], [3.2, 1.5, 0.48, 1.0], [3.9, 1.5, 0.3, 0.0], [4.9, 1.5, 0.3, 0.0], [5.7, 2.5, 0.45, 1.0]]);
+  P([[0, -0.5, 0.55, -1.0], [1.0, -0.5, 0.55, -1.0], [1.8, -0.5, 0.35, -1.0], [2.4, -0.5, 0.35, -1.0], [3.1, 0.5, 0.6, -1.0], [5.2, 0.5, 0.6, -1.0], [6.0, 0.5, 0.3, -2.0]]);
+  P([[0, 0.5, 0.25, 2.0], [1.0, 0.5, 0.25, 2.0], [1.7, -0.5, 0.3, 2.0], [3.5, -0.5, 0.3, 2.0], [4.3, -0.5, 0.55, 2.0], [6.1, -0.5, 0.55, 2.0], [6.9, 0.5, 0.3, 2.0]]);
+  P([[0, -1.5, 0.22, 1.0], [0.3, -1.5, 0.22, 1.0], [1.1, -1.5, 0.42, 1.0], [2.6, -1.5, 0.42, 1.0], [3.3, -1.5, 0.22, 1.0], [4.6, -1.5, 0.22, 1.0], [5.3, -1.5, 0.45, 1.0]]);
+  P([[0, -2.5, 0.45, -1.0], [1.5, -2.5, 0.45, -1.0], [2.2, -2.5, 0.25, -1.0], [3.6, -2.5, 0.25, -1.0], [4.3, -2.5, 0.2, -2.0], [5.6, -2.5, 0.2, -2.0], [6.3, -1.5, 0.4, -2.0]]);
   // background panels
   for (let i = 0; i < 14; i++) {
     const ix = Math.floor(rnd() * 12) - 3;

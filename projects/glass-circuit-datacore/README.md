@@ -32,7 +32,7 @@ alternative version.
   white flare (2.8–4.4 s), and tall data blocks rising on the right (4–7.3 s).
 
 ## Commands
-No external media assets are needed: the map, textures and data read-outs are all generated procedurally in code.
+No external media assets are needed: the landscape, glass panels and data read-outs are all generated procedurally in code.
 
 ```bash
 npm install
@@ -54,6 +54,14 @@ Remotion's JPEG frame pipeline otherwise tags the H.264 stream as full-range
 
 The 1080p deliverables are rendered from the 4K compositions with `--scale=0.5`
 (2×2 supersampling).
+
+### Quick look-dev preview
+`previewScale` (optional prop, default 1) lowers the internal render resolution
+for fast checks; deliverables always use the default:
+```bash
+npx remotion render GlassCircuit-V1-Reference out/preview.mp4 --scale=0.25 \
+  --props='{"variant":"v1","previewScale":0.25}'
+```
 
 ### WebGL backend
 The default is `swangle` (software WebGL, which works anywhere). It is slow:
