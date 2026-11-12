@@ -17,6 +17,9 @@ Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setColorSpace("bt709");
+// Software WebGL can need well over 30 s for a single 4K frame on a busy CPU,
+// so allow each frame (and each delayRender) up to 4 minutes.
+Config.setDelayRenderTimeoutInMilliseconds(240000);
 
 // Optional: use an already-installed Chrome / Chromium instead of letting
 // Remotion download its Chrome Headless Shell (e.g. in offline sandboxes).
