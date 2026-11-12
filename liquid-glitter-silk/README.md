@@ -56,5 +56,8 @@ src/
                          specular sheen, glitter flakes, fake depth of field
 ```
 
+`previews/` holds native 3840×2160 stills of each composition (rendered with
+`npm run still:v1` style commands) as proof of the 4K output.
+
 No external image/video/audio assets are needed — everything is procedural.
 The videos are silent (the reference has no audio track).
