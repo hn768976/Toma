@@ -60,18 +60,20 @@ const makeFlips = (
 
 /**
  * Rotation rhythm measured from the reference (per-frame edge-orientation
- * histogram + frame inspection):
- *  - every ~40 frames ALL switches swing 90° clockwise around their knob in
- *    sync, alternating main diagonal -> (horizontal) -> other diagonal ->
- *    (vertical) -> main diagonal;
- *  - ~20 frames after each global swing, patches of switches spin a half-turn
- *    in place, so something turns on every ~20-frame beat.
+ * histogram + frame inspection). The main 45° diagonal always dominates:
+ *  - every 80 frames (cycles at ~28, 108, 188, 268) a burst of switches
+ *    swings 90° clockwise around its knob onto the other diagonal, more
+ *    follow over the next ~30 frames;
+ *  - ~40 frames after the cycle starts they all swing another 90° (passing
+ *    vertical) and the field is back on the main diagonal;
+ *  - short half-turns of patches (passing horizontal) fill the gaps.
  */
-const GLOBAL_SWINGS = [30, 70, 110, 150, 190, 230, 270, 312];
-const PATCH_SPINS = [8, 50, 90, 130, 168, 210, 250, 290];
+const CYCLES = [28, 108, 188, 268];
+const RETURN_AT = 40;
+const PATCH_SPINS = [6, 50, 150, 168, 248, 304];
 const SWING_DUR = 12;
 const SPIN_DUR = 14;
-const ROTOR_SHARE = 0.85;
+const ROTOR_SHARE = 0.75;
 
 const assignRotations = (pieces: PieceDef[], rand: ReturnType<typeof createRandom>) => {
   const patches = PATCH_SPINS.map(() => ({
@@ -91,16 +93,27 @@ const assignRotations = (pieces: PieceDef[], rand: ReturnType<typeof createRando
     // switches sit on random paper layers so knobs of neighbouring rows stay visible
     p.layer = 2 + rand.int(0, 2);
     p.z = p.layer * LAYER_H + rand.range(0, 0.012);
-    const wave = -(p.x + p.y) * 0.18; // the swing ripples from top-right to bottom-left
+    const wave = -(p.x + p.y) * 0.12; // ripples from top-right to bottom-left
     const events: Turn[] = [];
-    for (const c of GLOBAL_SWINGS) {
-      events.push({ start: c - SWING_DUR / 2 + wave + rand.range(-1.2, 1.2), dur: SWING_DUR * rand.range(0.92, 1.08), delta: -Math.PI / 2, pivot: true });
+    const busy: [number, number][] = [];
+    for (const c of CYCLES) {
+      if (rand.next() > 0.6) continue;
+      // ~45% go in the opening burst, the rest trickle in over 30 frames
+      const lag = rand.next() < 0.45 ? rand.range(0, 4) : rand.range(6, 30);
+      const out = c - SWING_DUR / 2 + lag + wave * 0.5;
+      const back = c + RETURN_AT - SWING_DUR / 2 + wave + rand.range(-1.5, 2.5);
+      if (back < out + SWING_DUR + 2) continue;
+      events.push({ start: out, dur: SWING_DUR * rand.range(0.92, 1.08), delta: -Math.PI / 2, pivot: true });
+      events.push({ start: back, dur: SWING_DUR * rand.range(0.92, 1.08), delta: -Math.PI / 2, pivot: true });
+      busy.push([out - 2, back + SWING_DUR + 2]);
     }
     PATCH_SPINS.forEach((c, i) => {
       const q = patches[i];
       const field = Math.sin(p.x * q.fx + q.px) * Math.sin(p.y * q.fy + q.py);
-      if (field > 0.15 && rand.next() < 0.85) {
-        events.push({ start: c - SPIN_DUR / 2 + wave + rand.range(-1.5, 1.5), dur: SPIN_DUR * rand.range(0.92, 1.08), delta: -Math.PI, pivot: false });
+      const start = c - SPIN_DUR / 2 + wave + rand.range(-1.5, 1.5);
+      const clash = busy.some(([a, b]) => start + SPIN_DUR > a && start < b);
+      if (!clash && field > 0.25 && rand.next() < 0.75) {
+        events.push({ start, dur: SPIN_DUR * rand.range(0.92, 1.08), delta: -Math.PI, pivot: false });
       }
     });
     events.sort((a, b) => a.start - b.start);
@@ -147,27 +160,27 @@ export const buildWorld = (opts: {
         ["tile", 0.2],
       ] as const);
       const isTile = kind === "tile";
-      const width = isTile ? rand.range(1.5, 1.95) * TRACK_W : TRACK_W;
+      const width = isTile ? rand.range(1.45, 1.75) * TRACK_W : TRACK_W;
       const length = isTile
-        ? width * rand.range(0.95, 1.12)
+        ? width * rand.range(1.3, 1.6)
         : kind === "switch"
           ? 2 * TRACK_W
           : kind === "long"
             ? 2.5 * TRACK_W
             : TRACK_W;
-      const radius = isTile ? width * rand.range(0.2, 0.3) : TRACK_W * 0.5;
+      const radius = isTile ? width * rand.range(0.32, 0.45) : TRACK_W * 0.5;
       const cs = s + length / 2;
       const cx = ax * cs + nx * n;
       const cy = ay * cs + ny * n;
-      s += length + rand.range(-0.3, 0.22);
+      s += length + rand.range(0.06, 0.38);
       if (Math.abs(cx) > halfX + 2.5 || Math.abs(cy) > halfY + 2.5) continue;
-      if (rand.next() > 0.93) continue;
+      if (rand.next() > 0.88) continue;
 
       const layer = isTile
         ? rand.weighted([[0, 0.55], [1, 0.35], [2, 0.1]] as const)
         : rand.weighted([[0, 0.2], [1, 0.3], [2, 0.3], [3, 0.2]] as const);
-      let accent = rand.next() < (isTile ? 0.04 : 0.075);
-      if (accent && accents.some(([ax2, ay2]) => Math.hypot(ax2 - cx, ay2 - cy) < 2.8)) accent = false;
+      let accent = rand.next() < (isTile ? 0.1 : 0.13);
+      if (accent && accents.some(([ax2, ay2]) => Math.hypot(ax2 - cx, ay2 - cy) < 2.3)) accent = false;
       if (accent) accents.push([cx, cy]);
       const color = accent ? palette.accentTrack : rand.weighted(palette.tracks);
       let knob: KnobDef | null = null;
@@ -177,7 +190,7 @@ export const buildWorld = (opts: {
           ? rand.next() < 0.55
             ? palette.accentKnob
             : rand.weighted(palette.knobs)
-          : rand.next() < 0.04
+          : rand.next() < 0.07
             ? palette.accentKnob
             : rand.weighted(palette.knobs);
         if (knobColor === color) knobColor = rand.weighted(palette.knobs);
@@ -208,7 +221,7 @@ export const buildWorld = (opts: {
   }
   assignRotations(pieces, rand);
 
-  // Base sheet: a dense 45° grid of static rounded tiles under everything, so
+  // Base sheet: a dense 45° grid of static rounded pills under everything, so
   // the swinging switches always read against layered paper (as in the reference).
   const SHEET = 2.05;
   const span = Math.ceil(reach / SHEET);
@@ -219,16 +232,16 @@ export const buildWorld = (opts: {
       const cx = ax * cs + nx * cn;
       const cy = ay * cs + ny * cn;
       if (Math.abs(cx) > halfX + 2.5 || Math.abs(cy) > halfY + 2.5) continue;
-      if (rand.next() < 0.2) continue;
-      const size = rand.range(1.55, 1.9) * TRACK_W;
+      if (rand.next() < 0.65) continue;
+      const size = rand.range(1.0, 1.5) * TRACK_W;
       pieces.push({
         id: id++,
         x: cx + rand.range(-0.1, 0.1),
         y: cy + rand.range(-0.1, 0.1),
         z: rand.range(0, 0.006),
-        length: size * rand.range(0.95, 1.1),
+        length: rand.range(1.9, 2.5) * TRACK_W,
         width: size,
-        radius: size * rand.range(0.2, 0.28),
+        radius: size * rand.range(0.36, 0.5),
         angle: DIAG,
         color: rand.next() < 0.06 ? palette.accentTrack : rand.weighted(palette.tracks),
         knob: null,
