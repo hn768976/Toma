@@ -84,7 +84,15 @@ Integrity: `zip -T` passes on both archives.
 
 Clean-room test: each ZIP was extracted into an empty folder, then `npm ci`, `npm run lint`, `npx remotion compositions`, `npm run render:v1`, `npm run render:v2` (first 30 frames) and `npm run still:v1` were run.
 
-CLEAN_TEST_RESULTS
+| Step | Liquid Glitter Silk | Spiral Ribbon Vortex |
+|---|---|---|
+| `npm ci` | ✔ 338 packages | ✔ 360 packages |
+| `npm run lint` (eslint + tsc) | ✔ | ✔ |
+| Compositions listed | ✔ V1 + V2, 3840×2160, 30 fps, 240 frames | ✔ V1 + V2, 3840×2160, 30 fps, 270 frames |
+| `npm run render:v1` (full) | ✔ 240 frames, 1080p H.264 | ✔ 270 frames, 1080p H.264 |
+| Re-render vs delivered MP4 | **PSNR = ∞ (pixel-identical)** | **PSNR = ∞ (pixel-identical)** |
+| `npm run render:v2` (frames 0–29) | ✔ | ✔ |
+| `npm run still:v1` (native 4K) | ✔ 3840×2160 | ✔ 3840×2160 |
 
 Commands (also in each README):
 
