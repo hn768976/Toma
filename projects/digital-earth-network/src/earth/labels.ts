@@ -8,6 +8,8 @@ export type DataLabel = {
   pos: THREE.Vector3; // world space (labels live in the outer shell frame)
   /** drift velocity (world units / s); intro labels stream past the lens */
   vel: THREE.Vector3;
+  /** rides on the globe (spins with the planet) instead of the outer shell */
+  onEarth?: boolean;
   kind: LabelKind;
   seed: number;
   size: number; // relative font size
@@ -78,6 +80,21 @@ export const buildLabels = (pathHints: THREE.Vector3[], streams: Stream[] = []):
         tick: rng() < 0.5 ? range(rng, 3, 9) : 0,
       });
     }
+  }
+  // Small read-outs riding on the globe surface.
+  for (let i = 0; i < 30; i++) {
+    labels.push({
+      id: id++,
+      pos: randomOnSphere(rng).multiplyScalar(range(rng, 1.03, 1.14)),
+      vel: new THREE.Vector3(),
+      onEarth: true,
+      kind: pick(rng, ["num", "box", "box", "hex", "caption"] as const),
+      seed: Math.floor(rng() * 1e9),
+      size: range(rng, 0.45, 0.75),
+      appear: range(rng, 2.5, 9),
+      vanish: 999,
+      tick: rng() < 0.5 ? range(rng, 2, 6) : 0,
+    });
   }
   // Foreground read-outs that stream past the lens during the opening.
   for (const s of streams) {

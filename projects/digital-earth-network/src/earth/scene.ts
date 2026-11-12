@@ -28,8 +28,8 @@ export type Textures = {
   ocean: THREE.Texture;
 };
 
-/** Direction the light comes from (right, slightly above and behind): leaves the left of the globe in shadow. */
-export const SUN = new THREE.Vector3(1.0, 0.42, -0.18).normalize();
+/** Direction the light comes from (right, slightly above): leaves the left ~40% of the globe in shadow. */
+export const SUN = new THREE.Vector3(1.0, 0.42, 0.12).normalize();
 
 const earthVertex = /* glsl */ `
   varying vec2 vUv;
@@ -56,6 +56,7 @@ const earthFragment = /* glsl */ `
   uniform vec3 uRimCol;
   uniform vec3 uCityCol;
   uniform float uCity;
+  uniform float uFill;
   uniform float uCloudShift;
   varying vec2 vUv;
   varying vec3 vNormalW;
@@ -79,7 +80,7 @@ const earthFragment = /* glsl */ `
 
     float ndl = dot(N, uSun);
     float diffuse = smoothstep(-0.45, 0.75, ndl);
-    col *= 0.05 + 1.35 * diffuse;
+    col *= uFill + 1.35 * diffuse;
 
     // Orange city hot spots (glow taken from a blurred mip of the light map).
     float lightsSharp = texture2D(uLights, vUv).r;
@@ -311,6 +312,7 @@ export const buildScene = (tex: Textures, palette: Palette): Built => {
       uRimCol: { value: vec(palette.rim) },
       uCityCol: { value: vec(palette.city) },
       uCity: { value: 1 },
+      uFill: { value: 0.05 },
       uCloudShift: { value: 0 },
     },
   });
@@ -354,18 +356,46 @@ export const buildScene = (tex: Textures, palette: Palette): Built => {
     uniforms: { uColor: { value: lineColor }, uOpacity: { value: 1 } },
     ...additive,
   });
-  earthGroup.add(new THREE.LineSegments(buildPlexus(surfaceNodes, 0.22, 4, 1.1, rng), surfLineMat));
+  earthGroup.add(new THREE.LineSegments(buildPlexus(surfaceNodes, 0.22, 4, 0.8, rng), surfLineMat));
 
   // Lifted network just above the surface (the bright triangulated mesh).
   const liftNodes: THREE.Vector3[] = [];
   for (let i = 0; i < 160; i++) liftNodes.push(randomOnSphere(rng).multiplyScalar(range(rng, 1.03, 1.35)));
   earthGroup.add(new THREE.LineSegments(buildPlexus(liftNodes.concat(surfaceNodes.slice(0, 160)), 0.5, 4, 1.0, rng), surfLineMat));
 
+  // Spikes: lines rising from surface nodes to nodes high above the globe.
+  const spikeTips: THREE.Vector3[] = [];
+  const spikePos: number[] = [];
+  const spikeAlpha: number[] = [];
+  for (let i = 0; i < 60; i++) {
+    const base = surfaceNodes[(i * 13) % surfaceNodes.length];
+    const n = 1 + Math.floor(rng() * 3);
+    for (let k = 0; k < n; k++) {
+      const tip = base
+        .clone()
+        .add(randomOnSphere(rng).multiplyScalar(range(rng, 0.1, 0.4)))
+        .setLength(range(rng, 1.25, 1.85));
+      spikeTips.push(tip);
+      spikePos.push(base.x, base.y, base.z, tip.x, tip.y, tip.z);
+      const a = range(rng, 0.45, 0.9);
+      spikeAlpha.push(a, a * 0.5);
+    }
+  }
+  const spikeGeo = new THREE.BufferGeometry();
+  spikeGeo.setAttribute("position", new THREE.Float32BufferAttribute(spikePos, 3));
+  spikeGeo.setAttribute("aAlpha", new THREE.Float32BufferAttribute(spikeAlpha, 1));
+  earthGroup.add(new THREE.LineSegments(spikeGeo, surfLineMat));
+
   // --- Outer data network in space -----------------------------------
+  // Denser on the sun-lit (+x) side so the web bunches to the right of the
+  // globe and the shadow side stays mostly dark, as in the reference.
   const shellNodes: THREE.Vector3[] = [];
-  for (let i = 0; i < 520; i++) {
+  while (shellNodes.length < 520) {
+    const dir = randomOnSphere(rng);
+    const bias = Math.pow((dir.x + 1) / 2, 1.5);
+    if (rng() > 0.2 + 0.8 * bias) continue;
     const r = 1.25 + Math.pow(rng(), 1.3) * 5.2;
-    shellNodes.push(randomOnSphere(rng).multiplyScalar(r));
+    shellNodes.push(dir.multiplyScalar(r));
   }
   const shellLineMat = new THREE.ShaderMaterial({
     vertexShader: lineVertex,
@@ -419,7 +449,7 @@ export const buildScene = (tex: Textures, palette: Palette): Built => {
   );
   earthGroup.add(
     new THREE.Points(
-      pointsGeometry(liftNodes.concat(surfaceNodes.filter((_, i) => i % 3 === 0)), () => range(rng, 5, 10), () => range(rng, 0.4, 1)),
+      pointsGeometry(liftNodes.concat(surfaceNodes.filter((_, i) => i % 3 === 0), spikeTips), () => range(rng, 5, 12), () => range(rng, 0.4, 1)),
       nodeMat,
     ),
   );
@@ -437,6 +467,12 @@ export const buildScene = (tex: Textures, palette: Palette): Built => {
   const crossMat = mkPointMat(crossFragment, new THREE.Vector3(0.9, 0.95, 1.0));
   shellGroup.add(
     new THREE.Points(pointsGeometry(crosses, () => range(rng, 45, 85), () => range(rng, 0.6, 1.0)), crossMat),
+  );
+  // Small X markers riding on the globe surface.
+  const surfCrosses: THREE.Vector3[] = [];
+  for (let i = 0; i < 30; i++) surfCrosses.push(randomOnSphere(rng).multiplyScalar(range(rng, 1.01, 1.06)));
+  earthGroup.add(
+    new THREE.Points(pointsGeometry(surfCrosses, () => range(rng, 22, 40), () => range(rng, 0.6, 1.0)), crossMat),
   );
 
   return { scene, earthGroup, shellGroup, earthMat, pointMats, shellLineMat, haze };

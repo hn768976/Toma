@@ -13,6 +13,8 @@ export type CameraState = {
   earthSpin: number;
   /** Intensity of the orange city-light hot spots. */
   cityGlow: number;
+  /** Ambient fill on the globe (lifts the shadow side in the close-up). */
+  fill: number;
 };
 
 const DEG = Math.PI / 180;
@@ -27,6 +29,7 @@ type Track = {
   fov: Key[];
   spin: Key[]; // earth spin (deg)
   city: Key[];
+  fill: Key[];
 };
 
 /**
@@ -54,7 +57,7 @@ const V1: Track = {
     [4, 0],
     [8, -4],
     [12, -6],
-    [29.733, -14],
+    [29.733, -20],
   ],
   el: [
     [0, 40],
@@ -66,10 +69,10 @@ const V1: Track = {
   pitch: [
     [0, 86],
     [1.2, 77],
-    [2.1, 62],
-    [3, 50],
-    [4, 39],
-    [5, 28],
+    [2.1, 59],
+    [3, 46],
+    [4, 36],
+    [5, 26],
     [6, 17],
     [7, 9],
     [8, 3.5],
@@ -104,7 +107,7 @@ const V1: Track = {
   spin: [
     [0, -112],
     [8, -100],
-    [29.733, -48],
+    [29.733, -10],
   ],
   city: [
     [0, 0.2],
@@ -114,6 +117,13 @@ const V1: Track = {
     [8, 0.45],
     [10, 0.22],
     [29.733, 0.22],
+  ],
+  fill: [
+    [0, 0.05],
+    [1.5, 0.45],
+    [5.5, 0.45],
+    [8.5, 0.12],
+    [29.733, 0.1],
   ],
 };
 
@@ -195,6 +205,10 @@ const V2: Track = {
     [14, 0.3],
     [29.733, 0.3],
   ],
+  fill: [
+    [0, 0.05],
+    [29.733, 0.08],
+  ],
 };
 
 const TRACKS: Record<Variant, Track> = { v1: V1, v2: V2 };
@@ -235,5 +249,6 @@ export const cameraAt = (variant: Variant, t: number): CameraState => {
     focus,
     earthSpin: monotone(k.spin, t) * DEG,
     cityGlow: monotone(k.city, t),
+    fill: monotone(k.fill, t),
   };
 };

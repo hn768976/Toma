@@ -122,20 +122,20 @@ export const EarthNetwork: React.FC<EarthNetworkProps> = ({ variant }) => {
     // and past it so the opening reads as travelling through the data.
     const streams: Stream[] = [];
     const rng = mulberry32(99);
-    for (let i = 0; i < 9; i++) {
-      const appear = (i / 9) * 3.0 + rng() * 0.2;
+    for (let i = 0; i < 12; i++) {
+      const appear = (i / 12) * 3.2 + rng() * 0.15;
       const c = cameraAt(variant, appear);
       const q = c.quaternion;
       const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
       const right = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
       const up = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
-      const dist = 1.3 + rng() * 0.6;
+      const dist = 1.6 + rng() * 0.8;
       const pos = c.position
         .clone()
         .add(fwd.clone().multiplyScalar(dist))
         .add(right.clone().multiplyScalar((rng() - 0.5) * 1.1 * dist))
         .add(up.clone().multiplyScalar((rng() - 0.5) * 0.6 * dist));
-      const speed = 0.35 + rng() * 0.25;
+      const speed = 0.9 + rng() * 0.5;
       const p0 = pos.clone().sub(fwd.clone().multiplyScalar(-speed * appear));
       streams.push({ pos: p0, vel: fwd.clone().multiplyScalar(-speed), appear });
     }
@@ -143,7 +143,7 @@ export const EarthNetwork: React.FC<EarthNetworkProps> = ({ variant }) => {
   }, [variant]);
 
   // Shell network turns slowly in the opposite direction for parallax.
-  const shellSpin = -0.02 * t;
+  const shellSpin = -0.03 * t;
   // V1 opens almost black: the network fades up as the planet arrives.
   const intro = variant === "v1" ? 0.2 + 0.8 * smoothstep(0.6, 3.2, t) : 1;
 
@@ -166,6 +166,7 @@ export const EarthNetwork: React.FC<EarthNetworkProps> = ({ variant }) => {
     built.earthGroup.rotation.set(0, cam.earthSpin, 0);
     built.shellGroup.rotation.set(0, shellSpin, 0);
     built.earthMat.uniforms.uCity.value = cam.cityGlow;
+    built.earthMat.uniforms.uFill.value = cam.fill;
     built.shellLineMat.uniforms.uOpacity.value = intro;
     built.earthMat.uniforms.uCloudShift.value = t * 0.0006;
     for (const m of built.pointMats) {
@@ -188,12 +189,14 @@ export const EarthNetwork: React.FC<EarthNetworkProps> = ({ variant }) => {
 
   // ----- HTML overlay: data read-outs projected from 3D -------------------
   const shellRot = new THREE.Matrix4().makeRotationY(shellSpin);
+  const earthRot = new THREE.Matrix4().makeRotationY(cam.earthSpin);
   const focusDist = cam.focus;
   const overlay = labels.map((l) => {
     const life = smoothstep(l.appear, l.appear + 0.6, t) * (1 - smoothstep(l.vanish, l.vanish + 0.8, t));
     if (life <= 0) return null;
     const world = tmp.copy(l.pos).addScaledVector(l.vel, t);
-    if (l.vel.lengthSq() === 0) world.applyMatrix4(shellRot);
+    if (l.onEarth) world.applyMatrix4(earthRot);
+    else if (l.vel.lengthSq() === 0) world.applyMatrix4(shellRot);
     if (occluded(cam.position, world)) return null;
     const viewP = world.clone().applyMatrix4(camera.matrixWorldInverse);
     const depth = -viewP.z;
