@@ -23,12 +23,12 @@ export type DnaPalette = {
 export const PALETTE_REFERENCE: DnaPalette = {
   bg: [0.004, 0.005, 0.009],
   laneBg: [0.0, 0.0, 0.0],
-  a: [0.55, 0.74, 1.0],
-  b: [0.36, 0.47, 0.68],
+  a: [0.68, 0.82, 1.0],
+  b: [0.5, 0.6, 0.78],
   c: [1.0, 0.3, 0.13],
   d: [1.0, 0.3, 0.13],
-  mix: [0.3, 0.075, 0.0, 0.65],
-  blockAccent: 0.2,
+  mix: [0.26, 0.09, 0.0, 0.75],
+  blockAccent: 0.08,
   bloomTint: [0.75, 0.88, 1.0],
 };
 
@@ -55,7 +55,7 @@ const PALETTES = { reference: PALETTE_REFERENCE, fluorescent: PALETTE_FLUORESCEN
 
 // Camera keys (time in s). Matches the reference: a slow lateral truck to the
 // right (~1.45% of frame width per second) with a gentle forward drift,
-// looking down onto the gel at ~38 deg, slightly off-axis.
+// looking down onto the gel at ~38 deg through a moderately wide lens.
 const CAM_X: Key[] = [
   [0, 0],
   [25.033, 4.6],
@@ -192,15 +192,15 @@ export const DnaSequence: React.FC<DnaSequenceProps> = ({ palette }) => {
       gl.viewport(0, 0, bw, bh);
       gl.uniform2f(loc.uRes, bw, bh);
       gl.uniform1f(loc.uTime, t);
-      gl.uniform3f(loc.uCamPos, monotone(CAM_X, t), 10.5, monotone(CAM_Z, t));
+      gl.uniform3f(loc.uCamPos, monotone(CAM_X, t), 8.6, monotone(CAM_Z, t));
       gl.uniformMatrix3fv(
         loc.uCamRot,
         false,
-        camRotation(6 * DEG, monotone(PITCH, t) * DEG, 2.5 * DEG),
+        camRotation(0, monotone(PITCH, t) * DEG, 1.5 * DEG),
       );
-      gl.uniform1f(loc.uTanHalfFov, Math.tan(13 * DEG));
-      gl.uniform1f(loc.uFocusDist, 15.6);
-      gl.uniform1f(loc.uAperture, 95.0);
+      gl.uniform1f(loc.uTanHalfFov, Math.tan(16 * DEG));
+      gl.uniform1f(loc.uFocusDist, 14.6);
+      gl.uniform1f(loc.uAperture, 75.0);
       gl.uniform1f(loc.uPxScale, bh / 1080);
       gl.uniform3f(loc.uBg, ...pal.bg);
       gl.uniform3f(loc.uLaneBg, ...pal.laneBg);
@@ -221,7 +221,7 @@ export const DnaSequence: React.FC<DnaSequenceProps> = ({ palette }) => {
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.uniform1i(ploc.uScene, 0);
-      gl.uniform1f(ploc.uCA, 0.012);
+      gl.uniform1f(ploc.uCA, 0.017);
       gl.uniform1f(ploc.uBloom, 0.55);
       gl.uniform3f(ploc.uBloomTint, ...pal.bloomTint);
       gl.drawArrays(gl.TRIANGLES, 0, 3);

@@ -41,7 +41,7 @@ uniform float uBlockAccent;
 
 const float LANE = 1.0;      // lane pitch
 const float LANE_FILL = 0.78; // bar width inside a lane
-const float CELL = 0.9;     // cell length along a lane
+const float CELL = 1.0;     // cell length along a lane
 
 uint hash(uint x) {
   x ^= x >> 16; x *= 0x7feb352du;
@@ -92,9 +92,9 @@ vec3 shadeCell(int lane, int cell, float lx, float lz, float wx, float wz) {
   float pulse = 0.82 + 0.18 * sin(uTime * (0.6 + 1.6 * h1(lane, cell, 5)) + 6.283 * h1(lane, cell, 6));
   if (kind < 0.5) {
     // big block
-    float len = mix(0.3, 0.74, h1(lane, cell, 2));
+    float len = mix(0.4, 0.86, h1(lane, cell, 2));
     float start = z0 + (CELL - len) * h1(lane, cell, 3);
-    float bright = mix(0.28, 1.15, pow(h1(lane, cell, 4), 0.6)) * pulse;
+    float bright = mix(0.4, 1.15, pow(h1(lane, cell, 4), 0.5)) * pulse;
     float c = cov(lz, start, start + len, wz) * xCov;
     if (c > 0.0) {
       // faint inner scan lines and lighter rim, which fade out as blur grows

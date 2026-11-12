@@ -122,8 +122,8 @@ export const EarthNetwork: React.FC<EarthNetworkProps> = ({ variant }) => {
     // and past it so the opening reads as travelling through the data.
     const streams: Stream[] = [];
     const rng = mulberry32(99);
-    for (let i = 0; i < 12; i++) {
-      const appear = (i / 12) * 3.2 + rng() * 0.15;
+    for (let i = 0; i < 9; i++) {
+      const appear = (i / 9) * 3.0 + rng() * 0.15;
       const c = cameraAt(variant, appear);
       const q = c.quaternion;
       const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
@@ -143,7 +143,7 @@ export const EarthNetwork: React.FC<EarthNetworkProps> = ({ variant }) => {
   }, [variant]);
 
   // Shell network turns slowly in the opposite direction for parallax.
-  const shellSpin = -0.03 * t;
+  const shellSpin = -0.04 * t;
   // V1 opens almost black: the network fades up as the planet arrives.
   const intro = variant === "v1" ? 0.2 + 0.8 * smoothstep(0.6, 3.2, t) : 1;
 
@@ -205,7 +205,7 @@ export const EarthNetwork: React.FC<EarthNetworkProps> = ({ variant }) => {
     if (Math.abs(ndc.x) > 1.2 || Math.abs(ndc.y) > 1.2) return null;
     const x = (ndc.x * 0.5 + 0.5) * width;
     const y = (-ndc.y * 0.5 + 0.5) * height;
-    const scale = Math.min(9, (1.6 / depth) * l.size);
+    const scale = Math.min(14, (1.6 / depth) * l.size);
     // shallow focus only once the planet is in frame; the opening read-outs stay crisp
     const dof = variant === "v1" ? 0.12 + 0.88 * smoothstep(2.2, 4.5, t) : 1;
     const blur = Math.min(22, Math.abs(1 / depth - 1 / focusDist) * 18 * dof * (height / 2160));

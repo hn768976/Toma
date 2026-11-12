@@ -11,8 +11,7 @@ the bands slide and pulse inside their lanes.
 
 **V1** reproduces the reference: steel-blue / white blocks with bright top
 edges, grey-blue variants, clusters of thin bands with rare red-orange calls,
-dotted lane separators, pure black between lanes, camera ~38° above the plane
-and slightly off-axis, lateral truck to the right (~1.45 % of frame width per
+dotted lane separators, pure black between lanes, camera ~38° above the plane, lateral truck to the right (~1.45 % of frame width per
 second) with a gentle forward drift, bloom and slight chromatic fringing.
 
 **V2 (colour palette)** keeps the exact same camera, layout and motion but

@@ -85,9 +85,9 @@ const earthFragment = /* glsl */ `
     // Orange city hot spots (glow taken from a blurred mip of the light map).
     float lightsSharp = texture2D(uLights, vUv).r;
     float lightsSoft = texture2D(uLights, vUv, 2.5).r;
-    float cityMask = 1.0 - 0.35 * smoothstep(0.3, 1.0, ndl);
+    float cityMask = 1.0 - 0.75 * smoothstep(0.15, 0.9, ndl);
     float hot = lightsSharp * lightsSharp * lightsSharp;
-    col = mix(col, col * vec3(0.55, 0.6, 0.75), clamp(lightsSoft * 2.0 * uCity, 0.0, 0.6));
+    col = mix(col, col * vec3(0.55, 0.6, 0.75), clamp(lightsSoft * 2.0 * uCity * cityMask, 0.0, 0.6));
     float cluster = smoothstep(0.22, 0.6, lightsSoft);
     col += uCityCol * (hot * 1.6 * cluster + cluster * 2.0 + lightsSoft * 1.0) * uCity * cityMask;
 
@@ -390,10 +390,10 @@ export const buildScene = (tex: Textures, palette: Palette): Built => {
   // Denser on the sun-lit (+x) side so the web bunches to the right of the
   // globe and the shadow side stays mostly dark, as in the reference.
   const shellNodes: THREE.Vector3[] = [];
-  while (shellNodes.length < 520) {
+  while (shellNodes.length < 340) {
     const dir = randomOnSphere(rng);
-    const bias = Math.pow((dir.x + 1) / 2, 1.5);
-    if (rng() > 0.2 + 0.8 * bias) continue;
+    const bias = Math.pow((dir.x + 1) / 2, 2.2);
+    if (rng() > 0.04 + 0.96 * bias) continue;
     const r = 1.25 + Math.pow(rng(), 1.3) * 5.2;
     shellNodes.push(dir.multiplyScalar(r));
   }
@@ -403,13 +403,15 @@ export const buildScene = (tex: Textures, palette: Palette): Built => {
     uniforms: { uColor: { value: lineColor }, uOpacity: { value: 1 } },
     ...additive,
   });
-  shellGroup.add(new THREE.LineSegments(buildPlexus(shellNodes, 1.15, 3, 1.0, rng), shellLineMat));
+  shellGroup.add(new THREE.LineSegments(buildPlexus(shellNodes, 1.25, 3, 0.85, rng), shellLineMat));
   // Long hub "spokes" - the fan of lines converging on bright hubs.
   const hubs: THREE.Vector3[] = [];
   const spokePos: number[] = [];
   const spokeAlpha: number[] = [];
   for (let h = 0; h < 26; h++) {
-    const hub = randomOnSphere(rng).multiplyScalar(range(rng, 1.4, 3.2));
+    const hubDir = randomOnSphere(rng);
+    if (hubDir.x < -0.25) hubDir.x = -hubDir.x; // keep the hubs off the shadow side
+    const hub = hubDir.multiplyScalar(range(rng, 1.4, 3.2));
     hubs.push(hub);
     const n = 3 + Math.floor(rng() * 4);
     for (let k = 0; k < n; k++) {
@@ -456,7 +458,7 @@ export const buildScene = (tex: Textures, palette: Palette): Built => {
 
   // Dust / distant stars.
   const dust: THREE.Vector3[] = [];
-  for (let i = 0; i < 1400; i++) dust.push(randomOnSphere(rng).multiplyScalar(range(rng, 1.6, 9)));
+  for (let i = 0; i < 1000; i++) dust.push(randomOnSphere(rng).multiplyScalar(range(rng, 1.6, 9)));
   shellGroup.add(
     new THREE.Points(pointsGeometry(dust, () => range(rng, 2, 6), () => range(rng, 0.12, 0.6)), nodeMat),
   );

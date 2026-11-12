@@ -104,7 +104,7 @@ export const buildLabels = (pathHints: THREE.Vector3[], streams: Stream[] = []):
       vel: s.vel,
       kind: pick(rng, ["num", "box", "hex", "num"] as const),
       seed: Math.floor(rng() * 1e9),
-      size: range(rng, 1.1, 1.9),
+      size: range(rng, 2.0, 3.2),
       appear: s.appear,
       vanish: s.appear + range(rng, 2.2, 3.5),
       tick: rng() < 0.5 ? range(rng, 4, 10) : 0,
