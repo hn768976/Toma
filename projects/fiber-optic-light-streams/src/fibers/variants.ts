@@ -18,7 +18,7 @@ export const referenceVariant: FiberVariant = {
   sequence: REFERENCE_SEQUENCE,
   heads: REFERENCE_HEADS,
   lift: [0.05, 0.05, 0.07],
-  saturation: 1.0,
+  saturation: 1.2,
   exposure: 1.7,
 };
 

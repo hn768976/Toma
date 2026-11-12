@@ -11,8 +11,8 @@ const c = (h: number, s = 1, l = 0.55): RGB => hsl(h / 360, s, l);
 
 // Reference colour timeline, measured from the reference clip (mean hue / chroma per frame):
 // a 5-second cycle of red-orange -> neutral -> magenta -> blue, one entry per 0.5 s.
-const RED: Theme = { colors: [c(4), c(12), c(18), c(358), c(24)], white: 0.02 };
-const NEUTRAL: Theme = { colors: [c(185, 0.5), c(200, 0.45), c(165, 0.5), c(40, 0.55), c(210, 0.4)], white: 0.2 };
+const RED: Theme = { colors: [c(6, 1, 0.5), c(14, 1, 0.5), c(20, 1, 0.5), c(0, 1, 0.5), c(26, 1, 0.5)], white: 0.0 };
+const NEUTRAL: Theme = { colors: [c(28, 0.85, 0.5), c(48, 0.85, 0.5), c(95, 0.7, 0.5), c(170, 0.7, 0.5), c(15, 0.85, 0.5)], white: 0.06 };
 const PURPLE: Theme = { colors: [c(300), c(306), c(312), c(294), c(318)], white: 0.08 };
 const ROYAL: Theme = { colors: [c(234, 0.85, 0.58), c(240, 0.8, 0.6), c(228, 0.85, 0.58), c(246, 0.75, 0.62)], white: 0.12 };
 export const REFERENCE_SEQUENCE: Theme[] = [
