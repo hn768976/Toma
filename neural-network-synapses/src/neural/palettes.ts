@@ -19,7 +19,7 @@ export const REFERENCE_PALETTE: Palette = {
   name: "Silver / Cyan (reference)",
   css: "#05080e",
   fog: [0.0003, 0.0006, 0.0014],
-  body: [0.07, 0.084, 0.108],
+  body: [0.075, 0.09, 0.112],
   rim: [0.62, 0.69, 0.78],
   spec: [0.92, 0.96, 1.0],
   signal: [0.02, 0.5, 1.0],

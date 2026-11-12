@@ -3,7 +3,7 @@ import { SceneFactory } from "../engine/ThreeStage";
 import { PostFX, PostParams } from "../engine/postfx";
 import { buildCameraTrack, FOV, placeInView, Pose } from "./camera";
 import { makeSignalMaterial, makeSomaMaterial, makeTubeMaterial } from "./materials";
-import { buildNeuron, Neuron } from "./network";
+import { buildNeuron, buildSweeper, Neuron } from "./network";
 import { Palette } from "./palettes";
 import { makeRng, randomUnit, range } from "./rng";
 
@@ -11,10 +11,10 @@ export type NeuralProps = { palette: Palette };
 
 const NEAR = 0.25;
 const FAR = 150;
-const FOG_DENSITY = 0.027;
+const FOG_DENSITY = 0.028;
 const FOCUS = 11.5;
-const APERTURE = 0.26;
-const MAX_COC = 0.05;
+const APERTURE = 0.5;
+const MAX_COC = 0.075;
 
 /**
  * Hero cell bodies. Each one is positioned so that it sits at the given
@@ -23,11 +23,24 @@ const MAX_COC = 0.05;
  * recedes into focus, as in the reference (0s, 2.4-4.5s, 5s, 8.9-10.5s, 11.3s-end).
  */
 const HEROES = [
-  { t: 0.0, x: 0.02, y: 0.1, d: 9, flashes: [] as number[][] },
+  { t: 0.3, x: 0.02, y: 0.12, d: 12, flashes: [] as number[][] },
   { t: 2.5, x: -0.22, y: -0.06, d: 9.5, flashes: [[3.15, 0.6, 0.4]] },
   { t: 5.0, x: 0.42, y: -0.36, d: 9, flashes: [] as number[][] },
   { t: 9.15, x: 0.5, y: 0.3, d: 7.5, flashes: [[8.75, 0.6, 0.25]] },
-  { t: 11.67, x: -0.6, y: -0.26, d: 10, flashes: [[12.2, 0.5, 0.2]] },
+  { t: 11.67, x: -0.5, y: -0.2, d: 10, flashes: [[12.2, 0.5, 0.2]] },
+];
+
+/**
+ * Foreground sweeps: thick processes right beside the lens. Each is placed at
+ * the given screen position / distance at time `t`; as the camera drifts back
+ * it slides into frame hugely out of focus and then recedes (reference: the
+ * blurred diagonal at 0 s and the big sweeps near 8.5 s and 10.9 s).
+ */
+const SWEEPERS = [
+  { t: 0.3, x: -0.85, y: 0.0, d: 6, roll: -0.75, radius: 0.24, length: 15 },
+  { t: 8.5, x: -0.4, y: -0.5, d: 4.6, roll: 0.3, radius: 0.34, length: 18 },
+  { t: 8.8, x: 0.2, y: 0.8, d: 6, roll: -0.15, radius: 0.24, length: 16 },
+  { t: 10.95, x: -0.75, y: 0.1, d: 4.2, roll: 1.15, radius: 0.34, length: 16 },
 ];
 
 function flashAt(t: number, flashes: number[][]) {
@@ -49,6 +62,8 @@ type Signal = {
   duty: number;
   size: number;
   gain: number;
+  cPeriod: number;
+  cPhase: number;
 };
 
 export const neuralScene: SceneFactory<NeuralProps> = ({
@@ -103,7 +118,7 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
   };
   // Dendrites bend away from the lens so the camera never flies through one;
   // they still pass close enough to sweep by as large out-of-focus shapes.
-  const KEEP_OUT = 5;
+  const KEEP_OUT = 3.4;
   const LEAD_IN = 14; // also keep the view in front of the first frame clear
   const lead = new THREE.Vector3();
   const away = new THREE.Vector3();
@@ -135,9 +150,9 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
     away.z = 0;
     if (away.lengthSq() < 1e-6) away.set(1, 0, 0);
     away.normalize();
-    dir.addScaledVector(away, (1 - d / KEEP_OUT) * 0.9 + 0.08).normalize();
+    dir.addScaledVector(away, (1 - d / KEEP_OUT) * 0.6 + 0.04).normalize();
   };
-  const SPACING = 15;
+  const SPACING = 14;
   const target = Math.round(((zMax - zMin) * 96 * 60) / (SPACING * SPACING * SPACING * 1.25));
   let guard = 0;
   while (centers.length < target && guard++ < 60000) {
@@ -170,7 +185,7 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
   centers.forEach(({ c, hero }, i) => {
     const lateral = pathDistance(c);
     const level = hero >= 0 || lateral < 13 ? 0 : lateral < 30 ? 1 : 2;
-    const radius = hero >= 0 ? 1 : range(rng, 0.8, 1.15);
+    const radius = hero >= 0 ? 1 : range(rng, 0.75, 1.1);
     const n = buildNeuron(1000 + i * 7919, c, radius, level, hero >= 0, steer);
     neurons.push(n);
     disposables.push(n.geometry, n.somaGeometry);
@@ -197,6 +212,18 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
     });
   });
 
+  const rollQ = new THREE.Quaternion();
+  SWEEPERS.forEach((sw, i) => {
+    const pose = poseAt(sw.t);
+    const g = buildSweeper(9100 + i * 131, sw.length, sw.radius);
+    disposables.push(g);
+    const m = new THREE.Mesh(g, tubeMat);
+    m.position.copy(placeInView(pose, sw.x, sw.y, sw.d, aspect));
+    rollQ.setFromAxisAngle(new THREE.Vector3(0, 0, 1), sw.roll);
+    m.quaternion.copy(pose.quat).multiply(rollQ);
+    scene.add(m);
+  });
+
   // ---------------------------------------------------------------- impulses
   const signals: Signal[] = [];
   const srng = makeRng(77123);
@@ -209,22 +236,33 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
     }
     return 0;
   };
+  // Impulses come in tight clusters sitting on a short stretch of dendrite,
+  // each cluster pulsing on its own slow rhythm (as in the reference).
   neurons.forEach((n, ni) => {
     const lateral = pathDistance(n.center);
-    if (lateral > 40) return;
-    const count = n.hero ? 90 : lateral < 16 ? 60 : 30;
-    for (let k = 0; k < count; k++) {
-      signals.push({
-        neuron: ni,
-        path: pickPath(n),
-        u0: srng(),
-        speed: range(srng, 0.5, 2.6) * (srng() < 0.5 ? -1 : 1),
-        period: range(srng, 2.2, 5),
-        phase: srng(),
-        duty: range(srng, 0.35, 0.8),
-        size: range(srng, 0.07, 0.19),
-        gain: range(srng, 1.8, 3.4),
-      });
+    if (lateral > 36) return;
+    const clusters = n.hero ? 9 : lateral < 16 ? 6 : 3;
+    for (let c = 0; c < clusters; c++) {
+      const path = pickPath(n);
+      const uc = range(srng, 0.06, 0.62);
+      const cPeriod = range(srng, 2.6, 5.5);
+      const cPhase = srng();
+      const members = Math.round(range(srng, 6, 13));
+      for (let k = 0; k < members; k++) {
+        signals.push({
+          neuron: ni,
+          path,
+          u0: Math.min(0.97, Math.max(0.02, uc + (srng() - 0.5) * 0.13)),
+          speed: range(srng, 0.4, 1.3),
+          period: range(srng, 1.2, 3),
+          phase: srng(),
+          duty: range(srng, 0.5, 0.9),
+          size: range(srng, 0.07, 0.14),
+          gain: range(srng, 2.2, 4.4),
+          cPeriod,
+          cPhase,
+        });
+      }
     }
   });
   // Sparks dancing on the membrane of a firing hero cell.
@@ -280,10 +318,10 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
     focus: FOCUS,
     aperture: APERTURE,
     maxCoc: MAX_COC,
-    farScale: 0.8,
+    farScale: 0.5,
     bloomStrength: 1.2,
     bloomThreshold: 1.0,
-    exposure: 2.15,
+    exposure: 2.0,
     tint: new THREE.Vector3(...palette.tint),
     lift: new THREE.Vector3(...palette.lift),
     vignette: 0.55,
@@ -299,10 +337,8 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
     for (const s of signals) {
       const n = neurons[s.neuron];
       const path = n.paths[s.path];
-      let u = (s.u0 + (s.speed * t) / path.length) % 1;
-      if (u < 0) u += 1;
-      // Stay on the inner part of the dendrite (near the soma).
-      if (path.depth === 0) u *= 0.6;
+      // Each impulse creeps back and forth around its place in the cluster.
+      const u = Math.min(0.985, Math.max(0.01, s.u0 + 0.035 * Math.sin(t * s.speed + s.phase * 6.28)));
       const f = u * (path.count - 1);
       const i0 = Math.min(path.count - 2, Math.floor(f));
       const k = f - i0;
@@ -313,16 +349,19 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
       // Individual blink cycle...
       const cyc = (t / s.period + s.phase) % 1;
       let e = cyc < s.duty ? Math.sin((Math.PI * cyc) / s.duty) : 0;
-      e *= e;
+      e = 0.25 + 0.75 * e * e;
+      // Cluster pulse: slow rise and fall shared by the whole cluster.
+      const cc = (t / s.cPeriod + s.cPhase) % 1;
+      const pulse = cc < 0.7 ? Math.sin((Math.PI * cc) / 0.7) : 0;
+      e *= pulse * pulse;
       // ...gated by slow waves of activity sweeping through the tissue, and
       // faded at both ends of the branch so impulses never pop.
       const w1 = Math.sin(x * 0.13 + y * 0.09 - z * 0.05 - t * 1.25 + 2.5 * Math.sin(z * 0.07 + t * 0.4));
       const w2 = Math.sin(y * 0.17 - x * 0.06 + z * 0.11 + t * 0.8);
       let wave = (w1 * 0.65 + w2 * 0.35) * 0.5 + 0.5;
-      wave = Math.min(1, Math.max(0, (wave - 0.46) / 0.25));
+      wave = Math.min(1, Math.max(0, (wave - 0.3) / 0.3));
       wave = wave * wave * (3 - 2 * wave);
-      const span = path.depth === 0 ? 0.6 : 1;
-      const ends = Math.min(1, u * 12, (span - u) * 12);
+      const ends = 1;
       iPos[o * 3] = x;
       iPos[o * 3 + 1] = y;
       iPos[o * 3 + 2] = z;

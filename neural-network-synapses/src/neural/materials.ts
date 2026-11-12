@@ -85,21 +85,23 @@ void main() {
   float wrap = 0.5 + 0.5 * dot(N, normalize(vec3(0.3, 0.8, 0.45)));
   // Glass on black: a dark, clear core, a thin bright silhouette line, a faint
   // inner caustic band and hard, wet highlights.
-  vec3 c = uBody * (0.55 + 0.75 * wrap) * (0.75 + 0.5 * vnoise(vWorld * 1.7));
-  c += uRim * pow(1.0 - ndv, 4.5) * 1.5;
-  c += uRim * pow(1.0 - ndv, 1.6) * 0.16;
-  float band = (ndv - 0.45) / 0.1;
-  c += uRim * exp(-band * band) * 0.2;
-  float blotch = vnoise(vWorld * 2.6) * 0.65 + vnoise(vWorld * 7.0) * 0.35;
-  float wet = smoothstep(0.4, 0.7, blotch);
+  // Wet, milky glass: a translucent grey body, a bright silhouette line and
+  // strong blotchy highlights that run along the membrane.
+  vec3 c = uBody * (0.7 + 0.9 * wrap) * (0.7 + 0.6 * vnoise(vWorld * 1.7));
+  c += uRim * pow(1.0 - ndv, 3.6) * 1.25;
+  c += uRim * pow(1.0 - ndv, 1.5) * 0.22;
+  float band = (ndv - 0.45) / 0.12;
+  c += uRim * exp(-band * band) * 0.16;
+  float blotch = vnoise(vWorld * 2.2) * 0.6 + vnoise(vWorld * 6.0) * 0.4;
+  float wet = smoothstep(0.38, 0.66, blotch);
   mat3 camRot = mat3(inverse(viewMatrix));
   vec3 L1 = normalize(camRot * vec3(-0.5, 0.62, 0.6));
   vec3 L2 = normalize(camRot * vec3(0.66, -0.2, 0.72));
-  float g1 = pow(max(dot(N, L1), 0.0), 18.0);
-  float g2 = pow(max(dot(N, L2), 0.0), 80.0);
-  c += uSpec * env * (0.05 + 0.95 * fres) * (0.4 + 1.2 * wet);
-  c += uSpec * (g1 * 2.2 + g2 * 2.4) * (0.45 + 1.6 * wet);
-  c = mix(uBody * 1.4 + uRim * 0.22, c, vFade) * mix(0.6, 1.0, vFade);
+  float g1 = pow(max(dot(N, L1), 0.0), 14.0);
+  float g2 = pow(max(dot(N, L2), 0.0), 60.0);
+  c += uSpec * env * (0.08 + 0.92 * fres) * (0.4 + 1.4 * wet);
+  c += uSpec * (g1 * 2.6 + g2 * 2.6) * (0.25 + 2.2 * wet);
+  c = mix(uBody * 1.2 + uRim * 0.16, c, vFade) * mix(0.45, 1.0, vFade);
   outColor = vec4(applyFog(c, dist), 1.0);
 }`;
 
@@ -225,7 +227,7 @@ void main() {
   // Radii as a fraction of frame height.
   float core = iData.y * uProj / dist * 0.5;
   float coc = min(uAperture * abs(1.0 / uFocus - 1.0 / dist), uMaxCoc);
-  coc *= dist > uFocus ? 0.5 : 0.65;
+  coc *= dist > uFocus ? 0.45 : 0.5;
   float rad = core + coc;
   // Energy spreads over the bokeh disc (softened so discs stay readable).
   float spread = pow(core * core / (rad * rad), 0.62);

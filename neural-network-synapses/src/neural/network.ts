@@ -19,9 +19,9 @@ export type Steer = (worldPoint: THREE.Vector3, dir: THREE.Vector3) => void;
 type Detail = { maxDepth: number; step: number; radial: number; primaries: number };
 
 const DETAIL: Detail[] = [
-  { maxDepth: 3, step: 0.4, radial: 12, primaries: 8 }, // hero / near the lens
-  { maxDepth: 3, step: 0.65, radial: 8, primaries: 7 },
-  { maxDepth: 2, step: 1.0, radial: 5, primaries: 6 },
+  { maxDepth: 3, step: 0.4, radial: 10, primaries: 14 }, // hero / near the lens
+  { maxDepth: 2, step: 0.6, radial: 7, primaries: 12 },
+  { maxDepth: 2, step: 0.9, radial: 5, primaries: 10 },
 ];
 
 const tmpA = new THREE.Vector3();
@@ -116,37 +116,40 @@ function grow(
   const pts: THREE.Vector3[] = [];
   const radii: number[] = [];
   const d = dir.clone().normalize();
+  const heading = d.clone(); // dendrites keep radiating roughly outwards
   const drift = new THREE.Vector3();
   const p = start.clone();
   const ph1 = rng() * 20;
   const ph2 = rng() * 20;
   // A few swollen varicosities per branch give the lumpy, organic silhouette.
   const bulbs: number[] = [];
-  const bulbCount = Math.floor(range(rng, 0, 3.99));
+  const bulbCount = Math.floor(range(rng, 0, 2.6));
   for (let i = 0; i < bulbCount; i++) bulbs.push(range(rng, 0.1, 0.95) * length);
   const stepLen = length / (n - 1);
-  const tipR = Math.max(0.034, r0 * 0.3);
+  const tipR = Math.max(0.026, r0 * 0.22);
   for (let i = 0; i < n; i++) {
     const u = i / (n - 1);
     const s = u * length;
     let r: number;
     if (primary) {
       // Flared root that melts into the soma, then a slow taper.
-      r = r0 * (0.36 + 0.64 * Math.exp(-s / 1.2)) * (1 - 0.5 * u);
+      r = r0 * (0.42 + 0.58 * Math.exp(-s / 0.9)) * (1 - 0.72 * u);
     } else {
-      r = r0 * (1 - 0.6 * u);
+      r = r0 * (1 - 0.75 * u);
     }
     r = Math.max(r, tipR * (1 - 0.5 * u));
     r *= 1 + 0.2 * Math.sin(s * 2.3 + ph1) * Math.sin(s * 0.9 + ph2);
     for (const b of bulbs) {
       const q = (s - b) / 0.32;
-      r *= 1 + 0.55 * Math.exp(-q * q);
+      r *= 1 + 0.4 * Math.exp(-q * q);
     }
     pts.push(p.clone());
     radii.push(r);
     randomUnit(rng, tmpA);
-    drift.multiplyScalar(0.9).addScaledVector(tmpA, 0.06 * (detail.step / 0.5));
-    d.add(tmpB.copy(drift).multiplyScalar(stepLen / detail.step)).normalize();
+    drift.multiplyScalar(0.9).addScaledVector(tmpA, 0.034 * (detail.step / 0.5));
+    d.add(tmpB.copy(drift).multiplyScalar(stepLen / detail.step));
+    // Pull gently back towards the original heading: wavy, never looping.
+    d.addScaledVector(heading, 0.05 * (stepLen / 0.4)).normalize();
     steer(tmpB.copy(p).add(origin), d);
     p.addScaledVector(d, stepLen);
   }
@@ -163,27 +166,27 @@ function grow(
   if (depth >= detail.maxDepth) return;
   const children =
     depth === 0
-      ? Math.round(range(rng, 2.5, 4.4))
+      ? Math.round(range(rng, 1.6, 3.4))
       : depth === 1
-        ? Math.round(range(rng, 1.5, 3))
-        : Math.round(range(rng, 0.6, 2));
+        ? Math.round(range(rng, 0.8, 2.4))
+        : Math.round(range(rng, 0, 1.6));
   for (let c = 0; c < children; c++) {
     const u = range(rng, primary ? 0.1 : 0.15, 0.85);
     const idx = Math.min(n - 2, Math.floor(u * (n - 1)));
     const here = pts[idx];
     const along = tmpA.subVectors(pts[idx + 1], here).normalize().clone();
-    // Fork off at 25-65 degrees around a random perpendicular axis.
+    // Shallow Y-forks (15-40 degrees) around a random perpendicular axis.
     randomUnit(rng, tmpB);
     const axis = tmpB.clone().cross(along).normalize();
-    const childDir = along.clone().applyAxisAngle(axis, range(rng, 0.45, 1.15));
+    const childDir = along.clone().applyAxisAngle(axis, range(rng, 0.26, 0.7));
     grow(
       rng,
       tubes,
       paths,
       here,
       childDir,
-      length * range(rng, 0.42, 0.72),
-      Math.max(0.048, radii[idx] * 0.8),
+      length * (1 - u) * range(rng, 0.7, 1.15) + 1.5,
+      Math.max(0.036, radii[idx] * 0.85),
       depth + 1,
       detail,
       false,
@@ -274,8 +277,8 @@ export function buildNeuron(
       paths,
       d.clone().multiplyScalar(radius * 0.8),
       d,
-      range(rng, 15, 30) * radius,
-      range(rng, 0.23, 0.31) * radius,
+      range(rng, 9, 21) * radius,
+      range(rng, 0.15, 0.25) * radius,
       0,
       detail,
       true,
@@ -291,4 +294,36 @@ export function buildNeuron(
     paths,
     hero,
   };
+}
+
+/**
+ * A single thick, gently bent process used for the reference's foreground
+ * "sweeps": it sits right beside the camera path, far inside the blur range.
+ * Built along the local X axis, centred on the origin.
+ */
+export function buildSweeper(seed: number, length: number, radius: number) {
+  const rng = makeRng(seed);
+  const tubes = new TubeBuilder();
+  const n = 60;
+  const pts: THREE.Vector3[] = [];
+  const radii: number[] = [];
+  const a1 = range(rng, 1.0, 1.8);
+  const a2 = range(rng, 0.5, 1.1);
+  const ph = rng() * 6;
+  for (let i = 0; i < n; i++) {
+    const u = i / (n - 1);
+    const x = (u - 0.5) * length;
+    pts.push(
+      new THREE.Vector3(
+        x,
+        Math.sin(u * 3.3 + ph) * a1 + Math.sin(u * 9 + ph * 2) * 0.25,
+        Math.sin(u * 4.1 + ph * 0.7) * a2,
+      ),
+    );
+    // Lumpy, tapering towards both ends.
+    const lump = 0.7 + 0.3 * Math.sin(u * 11 + ph) + 0.25 * Math.sin(u * 23 + ph * 3);
+    radii.push(radius * lump * (0.3 + 0.7 * Math.sin(Math.PI * u)));
+  }
+  tubes.add(pts, radii, 14);
+  return tubes.build();
 }
