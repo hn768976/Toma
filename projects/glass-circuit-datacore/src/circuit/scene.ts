@@ -22,8 +22,7 @@ import {
 } from "./timeline";
 
 const WORLD_LAYER = 0;
-const PANEL_TURN = THREE.MathUtils.degToRad(-8);
-const GLASS_THICKNESS = 0.035;
+const PANEL_TURN = THREE.MathUtils.degToRad(8);
 const GLASS_LAYER = 1;
 
 /** Thin heat-sink / memory plate with a stepped "tab" profile. */
@@ -115,8 +114,9 @@ void main() {
   vec3 v = normalize(vViewW);
   float fres = pow(1.0 - abs(dot(n, v)), 3.0);
 
-  float rim = smoothstep(0.004 + aa, 0.004 - aa, abs(d + 0.003));
-  float bevel = smoothstep(0.003 + aa, 0.003 - aa, abs(d + 0.03));
+  // single thin specular rim (bevelled glass edge)
+  float rim = smoothstep(0.005 + aa, 0.005 - aa, abs(d + 0.004));
+  float bevel = 0.0;
   // glass thickness: brighter band just inside the rim
   float band = smoothstep(-0.03, -0.004, d) * 0.22;
 
@@ -129,7 +129,7 @@ void main() {
 
   // clear glass: mostly transparent body, thin unlit edges that catch a
   // little specular, a second (back) face gives the slab visible thickness
-  float aBase = (0.16 + 0.45 * fres + band + sheen) * mix(1.0, 0.6, uBack);
+  float aBase = (0.09 + 0.4 * fres + band + sheen) * mix(1.0, 0.6, uBack);
   vec3 col = uTint * aBase + uEdge * (rim * 0.75 + bevel * 0.35 + band * 0.35 + sheen * 0.8) + uGlyphCol * g * 1.25;
   float a = clamp(aBase + rim * 0.6 + bevel * 0.3 + g * 0.8, 0.0, 1.0);
   a *= inside * uOpacity;
@@ -209,13 +209,14 @@ export const createCircuitScene = (
   finMat.onBeforeCompile = (shader) => {
     shader.uniforms.uGlowColor = { value: glowColor };
     shader.uniforms.uGlowIntensity = { value: look.glowIntensity };
+    shader.uniforms.uTipGlow = { value: look.tipGlow };
     shader.vertexShader = shader.vertexShader
-      .replace("#include <common>", "#include <common>\nattribute float aGlow;\nvarying float vGlow;")
-      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvGlow = aGlow;");
+      .replace("#include <common>", "#include <common>\nattribute float aGlow;\nvarying float vGlow;\nvarying float vUp;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvGlow = aGlow;\nvUp = normal.y;");
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
-        "#include <common>\nvarying float vGlow;\nuniform vec3 uGlowColor;\nuniform float uGlowIntensity;",
+        "#include <common>\nvarying float vGlow;\nvarying float vUp;\nuniform vec3 uGlowColor;\nuniform float uGlowIntensity;\nuniform float uTipGlow;",
       )
       .replace(
         "#include <color_fragment>",
@@ -223,7 +224,8 @@ export const createCircuitScene = (
       )
       .replace(
         "#include <emissivemap_fragment>",
-        "#include <emissivemap_fragment>\ntotalEmissiveRadiance += uGlowColor * vGlow * uGlowIntensity;",
+        // bright fin tips: the up-facing top edges catch light (sparkle of the rows)
+        "#include <emissivemap_fragment>\ntotalEmissiveRadiance += uGlowColor * (vGlow * uGlowIntensity + uTipGlow * smoothstep(0.6, 0.95, vUp) * (1.0 - clamp(vGlow, 0.0, 1.0)));",
       )
       .replace(
         "#include <metalnessmap_fragment>",
@@ -267,19 +269,10 @@ export const createCircuitScene = (
     });
     glassMats.push(mat);
     const m = new THREE.Mesh(new THREE.PlaneGeometry(p.w, p.h), mat);
-    // panels stand on the rows, turned ~35° from the plates towards the lens
+    // panels stand on the rows, turned to face the lens ~25° off-axis
     m.rotation.y = -Math.PI / 2 + PANEL_TURN;
     m.layers.set(GLASS_LAYER);
     m.userData.index = i;
-    // back face of the glass slab (thickness)
-    const backMat = mat.clone();
-    backMat.uniforms.uBack.value = 1;
-    backMat.uniforms.uGlyph.value = glyphs[p.glyph];
-    glassMats.push(backMat);
-    const back = new THREE.Mesh(m.geometry, backMat);
-    back.position.z = -GLASS_THICKNESS;
-    back.layers.set(GLASS_LAYER);
-    m.add(back);
     scene.add(m);
     return m;
   });

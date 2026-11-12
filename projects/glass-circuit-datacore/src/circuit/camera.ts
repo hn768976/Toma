@@ -39,7 +39,7 @@ export const cameraAt = (variant: Variant, t: number): CameraPose => {
   const k = t / CLIP_SECONDS;
   if (variant === "v1") {
     const target = new THREE.Vector3(-0.17 + 0.15 * k, 0.6, -0.03 - 0.1 * k);
-    const dist = 6.0 - 0.25 * k;
+    const dist = 5.5 - 0.22 * k;
     const position = orbit(target, dist, 50 + 2.5 * k, 22);
     return { position, target, fov: 19, focus: dist - 0.45 };
   }

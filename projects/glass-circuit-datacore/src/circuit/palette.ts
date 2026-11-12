@@ -8,6 +8,8 @@ export type CircuitLook = {
   finRoughness: number;
   glowColor: string;
   glowIntensity: number;
+  /** emissive highlight on the top edges of the fins */
+  tipGlow: number;
   glassTint: string;
   glassEdge: string;
   glyphColor: string;
@@ -36,11 +38,12 @@ export type CircuitLook = {
  */
 export const LOOK: CircuitLook = {
   background: "#05080c",
-  fin: "#4e5864",
+  fin: "#4a5460",
   finMetalness: 0.8,
-  finRoughness: 0.22,
+  finRoughness: 0.18,
   glowColor: "#dfeaff",
   glowIntensity: 0.7,
+  tipGlow: 0.07,
   glassTint: "#2a3644",
   glassEdge: "#b9d2f2",
   glyphColor: "#e8f2ff",
@@ -48,15 +51,15 @@ export const LOOK: CircuitLook = {
   keyIntensity: 1.8,
   rimColor: "#e6f0ff",
   rimIntensity: 4.0,
-  envIntensity: 0.6,
-  exposure: 0.82,
+  envIntensity: 0.32,
+  exposure: 0.95,
   bloomStrength: 0.3,
   bloomRadius: 0.45,
-  bloomThreshold: 1.1,
-  gradeShadows: [0.7, 0.88, 1.16],
-  gradeHighlights: [0.86, 0.96, 1.07],
+  bloomThreshold: 0.95,
+  gradeShadows: [0.8, 0.92, 1.08],
+  gradeHighlights: [0.95, 0.99, 1.03],
   gradeSaturation: 0.85,
-  gradeLift: -0.035,
+  gradeLift: -0.065,
   vignette: 0.35,
   grain: 0.018,
 };

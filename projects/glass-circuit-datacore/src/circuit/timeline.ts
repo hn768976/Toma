@@ -12,9 +12,9 @@ import { mulberry32 } from "../random";
 export const GRID_X = 9; // cells from -GRID_X..GRID_X along the rows (X)
 export const GRID_Z = 9; // rows from -GRID_Z..GRID_Z (Z)
 export const CELL = 1.0; // cell pitch
-export const PLATES_PER_CELL = 24;
-export const PLATE_SPACING = 0.036;
-export const PLATE_THICKNESS = 0.009;
+export const PLATES_PER_CELL = 26;
+export const PLATE_SPACING = 0.038; // rows read as continuous combs of teeth
+export const PLATE_THICKNESS = 0.015;
 export const PLATE_DEPTH = 0.74;
 
 const easeInOut = (x: number) =>
@@ -38,6 +38,8 @@ export type Cell = {
   heights: HeightEvent[];
   glows: GlowEvent[];
   phase: number;
+  /** alternate plates glow less, so a lit stack reads as separate layers */
+  stripe?: boolean;
 };
 
 const key = (ix: number, iz: number) => `${ix},${iz}`;
@@ -66,10 +68,10 @@ const buildCells = () => {
           h: 0.6 + rnd() * 0.9,
         });
       }
-      if (rnd() < 0.5) {
+      if (rnd() < 0.68) {
         c.glows.push({
           t0: rnd() * 8 - 2.5,
-          hold: 1.2 + rnd() * 3.5,
+          hold: 1.5 + rnd() * 4.0,
           ramp: 0.25 + rnd() * 0.3,
           g: 0.5 + rnd() * 0.6,
           wave: rnd(),
@@ -102,14 +104,16 @@ const buildCells = () => {
   }
   // 1.6–3.1 s: hero core block rises
   at(1, 0).heights.push({ t0: 1.55, hold: 1.0, ramp: 0.55, h: 1.35 });
-  at(1, 0).glows.push({ t0: 1.9, hold: 1.0, ramp: 0.5, g: 0.75, wave: 0.0 });
+  at(1, 0).glows.push({ t0: 1.9, hold: 1.0, ramp: 0.5, g: 0.7, wave: 0.0 });
+  at(1, 0).stripe = true;
   // 2.8–4.4 s: white slab flare-up
   for (const [ix, iz, g] of [
     [2, 0, 0.95],
     [1, 1, 0.7],
     [-1, 0, 0.6],
   ] as const) {
-    at(ix, iz).glows.push({ t0: 2.7, hold: 0.9, ramp: 0.6, g, wave: 0.6 });
+    at(ix, iz).glows.push({ t0: 2.6, hold: 0.55, ramp: 0.6, g, wave: 0.6 });
+    at(ix, iz).stripe = true;
   }
   at(2, 0).heights.push({ t0: 2.7, hold: 1.0, ramp: 0.4, h: 0.62 });
   // 4.0–7.3 s: tall dark blocks rise on the right
@@ -125,6 +129,24 @@ const buildCells = () => {
   // late glows (left foreground) ~5–7 s
   at(-1, 1).glows.push({ t0: 5.0, hold: 3.0, ramp: 0.4, g: 0.9, wave: 0.2 });
   at(-2, 0).glows.push({ t0: 5.3, hold: 3.0, ramp: 0.4, g: 0.7, wave: 0.4 });
+  // continuous foreground/mid-ground activity: staggered fin-stack rises
+  for (const [ix, iz, t0, h, g] of [
+    [-2, -1, 0.2, 0.7, 0.0],
+    [0, -2, 0.7, 0.85, 0.6],
+    [-1, 2, 1.2, 0.65, 0.0],
+    [3, -1, 1.6, 0.9, 0.7],
+    [-2, 2, 2.2, 0.75, 0.0],
+    [0, 2, 2.9, 0.8, 0.5],
+    [4, -2, 3.3, 0.95, 0.0],
+    [-1, -2, 3.8, 0.7, 0.65],
+    [4, 0, 4.4, 0.85, 0.0],
+    [1, 2, 4.9, 0.7, 0.55],
+    [-2, -2, 5.4, 0.8, 0.0],
+    [2, 1, 5.9, 0.6, 0.0],
+  ] as const) {
+    at(ix, iz).heights.push({ t0, hold: 1.4, ramp: 0.55, h });
+    if (g > 0) at(ix, iz).glows.push({ t0: t0 + 0.2, hold: 1.2, ramp: 0.4, g, wave: 0.5 });
+  }
   return { cells: [...cells.values()], at };
 };
 
@@ -143,6 +165,7 @@ export const plateGlow = (c: Cell, plate: number, t: number) => {
     const delay = e.wave * plate * 0.025;
     g = Math.max(g, e.g * envelope(t - delay, e.t0, e.hold, e.ramp));
   }
+  if (c.stripe) g *= plate % 2 === 0 ? 1.0 : 0.3;
   // subtle living shimmer
   return g * (0.85 + 0.15 * Math.sin(t * 5 + c.phase + plate * 0.7));
 };
@@ -193,8 +216,8 @@ const buildPanels = (): Panel[] => {
   ) =>
     panels.push({
       keys: keys.map(([t, x, y, z]) => ({ t, x, y, z })),
-      w: 0.86,
-      h: 0.96,
+      w: 0.98,
+      h: 1.02,
       glyph: Math.floor(rnd() * 4),
       opacity: 1,
       ...opts,
@@ -251,12 +274,18 @@ const buildPanels = (): Panel[] => {
   for (let i = 0; i < 14; i++) {
     const ix = Math.floor(rnd() * 12) - 3;
     const iz = -2 - Math.floor(rnd() * 6);
-    const t1 = 0.5 + rnd() * 5.5;
+    const t1 = 0.2 + rnd() * 2.6;
+    const t2 = t1 + 1.2 + rnd() * 2.2;
     const y = 0.25 + rnd() * 0.6;
+    const x2 = ix + 0.5 + (rnd() < 0.5 ? 1 : -1);
+    const y2 = y + (rnd() - 0.5) * 0.5;
+    const z2 = iz + (rnd() < 0.5 ? 1 : 0);
     P([
       [0, ix + 0.5, y, iz],
       [t1, ix + 0.5, y, iz],
-      [t1 + 0.9, ix + 0.5 + (rnd() < 0.5 ? 1 : 0), y + (rnd() - 0.5) * 0.5, iz + (rnd() < 0.5 ? 1 : 0)],
+      [t1 + 0.9, x2, y2, z2],
+      [t2, x2, y2, z2],
+      [t2 + 0.9, x2, y2 + (rnd() - 0.5) * 0.4, z2 + (rnd() < 0.5 ? -1 : 0)],
     ]);
   }
   // stacked glass plates of the rising core block
