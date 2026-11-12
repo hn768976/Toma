@@ -225,7 +225,7 @@ void main() {
   // Radii as a fraction of frame height.
   float core = iData.y * uProj / dist * 0.5;
   float coc = min(uAperture * abs(1.0 / uFocus - 1.0 / dist), uMaxCoc);
-  coc *= dist > uFocus ? 0.7 : 0.8;
+  coc *= dist > uFocus ? 0.5 : 0.65;
   float rad = core + coc;
   // Energy spreads over the bokeh disc (softened so discs stay readable).
   float spread = pow(core * core / (rad * rad), 0.62);
@@ -262,7 +262,7 @@ out vec4 outColor;
 void main() {
   float q = length(vQ);
   // In focus: hot core with a gaussian falloff. Defocused: flat-ish disc.
-  float edge = mix(0.75, 0.22, clamp(vSoft * 0.25, 0.0, 1.0));
+  float edge = mix(0.8, 0.55, clamp(vSoft * 0.25, 0.0, 1.0));
   float disc = smoothstep(1.0, 1.0 - edge, q);
   float hot = exp(-q * q * 3.5) * (1.0 - clamp(vSoft * 0.3, 0.0, 0.85));
   float halo = exp(-q * q * 0.75) * 0.3;

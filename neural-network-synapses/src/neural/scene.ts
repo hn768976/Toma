@@ -23,11 +23,11 @@ const MAX_COC = 0.05;
  * recedes into focus, as in the reference (0s, 2.4-4.5s, 5s, 8.9-10.5s, 11.3s-end).
  */
 const HEROES = [
-  { t: 0.0, x: 0.42, y: 0.05, d: 9, flashes: [] as number[][] },
+  { t: 0.0, x: 0.02, y: 0.1, d: 9, flashes: [] as number[][] },
   { t: 2.5, x: -0.22, y: -0.06, d: 9.5, flashes: [[3.15, 0.6, 0.4]] },
   { t: 5.0, x: 0.42, y: -0.36, d: 9, flashes: [] as number[][] },
   { t: 9.15, x: 0.5, y: 0.3, d: 7.5, flashes: [[8.75, 0.6, 0.25]] },
-  { t: 11.67, x: -0.45, y: -0.18, d: 8, flashes: [[12.2, 0.5, 0.2]] },
+  { t: 11.67, x: -0.6, y: -0.26, d: 10, flashes: [[12.2, 0.5, 0.2]] },
 ];
 
 function flashAt(t: number, flashes: number[][]) {
@@ -70,7 +70,27 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
   const rng = makeRng(20240611);
   const centers: { c: THREE.Vector3; hero: number }[] = [];
   HEROES.forEach((h, i) => {
-    centers.push({ c: placeInView(poseAt(h.t), h.x, h.y, h.d, aspect), hero: i });
+    const c = placeInView(poseAt(h.t), h.x, h.y, h.d, aspect);
+    // A cell body must never brush the lens: keep its closest approach to the
+    // camera path wide enough that it drifts in softly instead of snapping in.
+    const MIN_PASS = 4.2;
+    let best = Infinity;
+    let nearest = track[0].pos;
+    for (const pose of track) {
+      const d2 = pose.pos.distanceToSquared(c);
+      if (d2 < best) {
+        best = d2;
+        nearest = pose.pos;
+      }
+    }
+    const pass = Math.sqrt(best);
+    if (pass < MIN_PASS) {
+      const out = c.clone().sub(nearest);
+      out.z = 0;
+      if (out.lengthSq() < 1e-6) out.set(1, 0, 0);
+      c.addScaledVector(out.normalize(), MIN_PASS - pass);
+    }
+    centers.push({ c, hero: i });
   });
   const zMin = -105;
   const zMax = track[track.length - 1].pos.z + 6;
@@ -202,7 +222,7 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
         period: range(srng, 2.2, 5),
         phase: srng(),
         duty: range(srng, 0.35, 0.8),
-        size: range(srng, 0.1, 0.17),
+        size: range(srng, 0.07, 0.19),
         gain: range(srng, 1.8, 3.4),
       });
     }
@@ -260,10 +280,10 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
     focus: FOCUS,
     aperture: APERTURE,
     maxCoc: MAX_COC,
-    farScale: 0.6,
+    farScale: 0.8,
     bloomStrength: 1.2,
     bloomThreshold: 1.0,
-    exposure: 1.9,
+    exposure: 2.15,
     tint: new THREE.Vector3(...palette.tint),
     lift: new THREE.Vector3(...palette.lift),
     vignette: 0.55,
