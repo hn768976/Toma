@@ -7,15 +7,15 @@ import { clamp01, easeInOutCubic, makeNoise1D, mulberry32, pick, range, smoothst
 export type BarcodeVariant = "v1" | "v2";
 
 const DURATION = 551 / 30;
-const SPACING = 0.78; // distance between strip centre lines
-const HW = 0.13; // band half width
-const K_MIN = -26; // far strips
-const K_MAX = 12; // near strips
-const X_RANGE = 26;
+const SPACING = 0.52; // distance between strip centre lines
+const HW = 0.105; // band half width
+const K_MIN = -40; // far strips
+const K_MAX = 16; // near strips
+const X_RANGE = 22;
 
 const ink = new THREE.Color("#0d0d0d");
 const inkSoft = new THREE.Color("#2a2a2a");
-const lineGrey = new THREE.Color("#3a3a3a");
+const lineGrey = new THREE.Color("#1f1f1f");
 
 export const createBarcodeScene = (variant: BarcodeVariant): SceneSpec => {
   const rng = mulberry32(643714546);
@@ -30,7 +30,7 @@ export const createBarcodeScene = (variant: BarcodeVariant): SceneSpec => {
   // (mapped over the strips that are actually on screen, so the build-in
   //  starts on the very first frames, as in the reference)
   const revealFor = (k: number) =>
-    rng() < 0.15 ? range(rng, 0.02, 0.4) : 0.02 + 1.05 * clamp01((k + 13) / 16) + range(rng, 0, 0.25);
+    rng() < 0.05 ? range(rng, 0.02, 0.4) : 0.02 + 0.6 * clamp01((k + 14) / 18) + range(rng, 0, 0.15);
 
   const stripV: number[] = [];
   for (let k = K_MIN; k <= K_MAX; k++) {
@@ -41,7 +41,7 @@ export const createBarcodeScene = (variant: BarcodeVariant): SceneSpec => {
   for (let k = K_MIN; k <= K_MAX; k++) {
     const zc = k * SPACING;
     const v = vOf(k);
-    const heavy = rng() < 0.3; // strips that carry the big black blocks
+    const heavy = rng() < 0.5; // strips that carry the big black blocks
     const xr = X_RANGE + Math.abs(v) * DURATION;
 
     // band outlines (long, occasionally broken)
@@ -65,12 +65,12 @@ export const createBarcodeScene = (variant: BarcodeVariant): SceneSpec => {
       const gEnd = x + groupLen;
       while (x < gEnd) {
         let w: number;
-        if (heavy && rng() < 0.18) w = range(rng, 0.09, 0.3);
+        if (heavy && rng() < 0.3) w = range(rng, 0.08, 0.28);
         else w = pick(rng, [0.008, 0.01, 0.014, 0.02, 0.028, 0.04]);
         const partial = rng() < 0.2;
         const z0 = zc - HW + 0.012;
         const z1 = partial ? zc + range(rng, -0.04, 0.06) : zc + HW - 0.012;
-        const tIn = revealFor(k) + range(rng, 0, 0.25);
+        const tIn = revealFor(k) + 0.28 * clamp01((x + 8) / 16) + range(rng, 0, 0.1);
         segs.push({
           x0: x + w / 2, z0, x1: x + w / 2, z1, w,
           color: ink, a: 1.0, v0: v, tIn, inDur: 0.25,
@@ -96,9 +96,9 @@ export const createBarcodeScene = (variant: BarcodeVariant): SceneSpec => {
     }
 
     // dot matrices in the gaps between bands
-    if (rng() < 0.7) {
+    if (rng() < 0.95) {
       const zg0 = zc + HW + 0.075;
-      const rows = Math.floor(range(rng, 3, 8));
+      const rows = Math.floor(range(rng, 3, 7));
       let px = -xr + range(rng, 0, 3);
       while (px < xr) {
         const plen = range(rng, 0.4, 2.6);
@@ -125,19 +125,19 @@ export const createBarcodeScene = (variant: BarcodeVariant): SceneSpec => {
     const life = range(rng, 0.7, 2.4);
     const kHub = Math.round(range(rng, K_MIN + 6, K_MAX - 2));
     const vh = vOf(kHub);
-    const xw = visX(tIn) + range(rng, -7, 6);
+    const xw = visX(tIn) + range(rng, -5, 4.5);
     const hx = xw - vh * tIn; // local coordinate so the hub is at xw at tIn
-    const hz = kHub * SPACING + (rng() < 0.5 ? -HW : HW);
+    const hz = kHub * SPACING + HW;
     const fan = Math.floor(range(rng, 5, 11));
-    const spread = range(rng, 0.8, 3.2);
+    const spread = range(rng, 1.0, 2.8);
     for (let j = 0; j < fan; j++) {
-      const dk = Math.round(range(rng, -3.4, 3.4)) || 1;
+      const dk = rng() < 0.1 ? -1 : 1 + Math.floor(rng() * 3);
       const ke = Math.max(K_MIN, Math.min(K_MAX, kHub + dk));
       const ve = vOf(ke);
       const ex = xw + range(rng, -spread, spread) - ve * tIn;
-      const ez = ke * SPACING + (rng() < 0.5 ? -HW : HW);
+      const ez = ke * SPACING - HW;
       lines.push({
-        x0: hx, z0: hz, x1: ex, z1: ez, w: 0.0055, color: lineGrey, a: range(rng, 0.55, 0.95),
+        x0: hx, z0: hz, x1: ex, z1: ez, w: 0.0085, color: lineGrey, a: range(rng, 0.7, 1.0),
         v0: vh, v1: ve, y: 0.001, tIn: tIn + j * 0.03, inDur: 0.35, tOut: tIn + life, outDur: 0.3, grow: 1, anchor: 0,
       });
     }
@@ -147,7 +147,7 @@ export const createBarcodeScene = (variant: BarcodeVariant): SceneSpec => {
     });
   }
   // a few long straight connectors that sweep across many strips
-  for (let i = 0; i < 70; i++) {
+  for (let i = 0; i < 14; i++) {
     const tIn = range(rng, 0.3, DURATION);
     const k0 = Math.round(range(rng, K_MIN + 6, K_MAX - 2));
     const k1 = Math.max(K_MIN, Math.min(K_MAX, k0 + Math.round(range(rng, -7, 7))));
@@ -172,7 +172,7 @@ export const createBarcodeScene = (variant: BarcodeVariant): SceneSpec => {
   scene.add(bg.mesh, segBatch.mesh, lineBatch.mesh);
 
   const target = new THREE.Vector3();
-  const dof = { focus: 4, aperture: 0.016, maxBlur: 0.0055, nearMul: 1.5, skyBlur: 0.0055 };
+  const dof = { focus: 4, aperture: 0.014, maxBlur: 0.005, nearMul: 1.0, skyBlur: 0.005 };
 
   return {
     scene,
@@ -189,9 +189,9 @@ export const createBarcodeScene = (variant: BarcodeVariant): SceneSpec => {
       let roll = 0;
       if (variant === "v1") {
         // reference: steady high three-quarter view, slow truck along the strips
-        radius = 5.9 - 0.6 * intro - 0.3 * u;
-        el = THREE.MathUtils.degToRad(52 - 6 * intro + 2 * Math.sin(u * Math.PI));
-        az = THREE.MathUtils.degToRad(-31 - 3 * u);
+        radius = 4.4 - 0.45 * intro - 0.2 * u;
+        el = THREE.MathUtils.degToRad(42 - 6 * intro + 2 * Math.sin(u * Math.PI));
+        az = THREE.MathUtils.degToRad(-40 - 3 * u);
         target.set(visX(t), 0, -0.4);
       } else {
         // alternative: low, grazing dolly that banks and orbits along the data
