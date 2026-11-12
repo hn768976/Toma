@@ -157,7 +157,7 @@ const buildScene = (canvas: HTMLCanvasElement, width: number, height: number): S
   renderer.setPixelRatio(1);
   renderer.setSize(width, height, false);
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap; // (PCFSoftShadowMap was removed in r187)
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.18;
