@@ -17,18 +17,18 @@ export const PALETTES: Record<"pearl" | "blush", Palette> = {
   // Version 1: matches the reference - pearl white discs, cool lavender
   // shadows and a soft warm key light.
   pearl: {
-    background: "#868a9c",
-    disc: "#f3f4f5",
-    hole: "#9a9ba8",
-    sky: "#e0e6f8",
-    ground: "#adafb8",
-    hemiIntensity: 1.45,
-    key: "#fff7ea",
-    keyIntensity: 1.85,
-    fill: "#bcc6e2",
-    fillIntensity: 0.4,
-    sheen: "#fff0d4",
-    exposure: 0.94,
+    background: "#8e919f",
+    disc: "#f4f4f3",
+    hole: "#c4c6ce",
+    sky: "#e1e6f6",
+    ground: "#b9b9bd",
+    hemiIntensity: 1.85,
+    key: "#fcfae6",
+    keyIntensity: 2.0,
+    fill: "#c4cbe0",
+    fillIntensity: 0.3,
+    sheen: "#fbf5c8",
+    exposure: 0.93,
   },
   // Version 2: alternative palette - blush rose discs under a golden
   // late-afternoon key with mauve shadows.

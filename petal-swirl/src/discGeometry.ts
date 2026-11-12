@@ -19,7 +19,7 @@ export type DiscShape = {
 
 export const DEFAULT_SHAPE: DiscShape = {
   flutes: 22,
-  twist: -0.62, // negative = flutes curve clockwise outward, as in the reference
+  twist: -0.56, // negative = flutes curve clockwise outward, as in the reference
   depth: 0.012,
   bowl: 0.08,
   scallop: 0.014,
@@ -39,8 +39,8 @@ const surface = (
   sway: number,
   out: THREE.Vector3,
 ): THREE.Vector3 => {
-  // Near-radial at the hole, bending into a gentle swirl toward the rim.
-  const bend = s.twist * Math.pow(smoothstep(0.1, 1.0, u), 1.4);
+  // The swirl curves steadily from the hole out to the rim.
+  const bend = s.twist * Math.pow(smoothstep(0.03, 1.0, u), 0.95);
   // In-place sway (no net rotation): the whole swirl leans back and forth
   // while neighbouring flutes pinch together and apart in antiphase.
   const lean = 0.07 * Math.sin(sway) * Math.pow(u, 1.2);

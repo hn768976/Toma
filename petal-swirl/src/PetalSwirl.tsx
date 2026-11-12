@@ -80,7 +80,7 @@ const SWAY_CYCLES = 3;
 // All discs sway in unison, as in the reference.
 const SWAY_VARIANTS = 1;
 // Tint multipliers from the deepest layer to the top layer.
-const DEPTH_TINTS = ["#c0c1cb", "#d2d3db", "#e5e5ea", "#f4f4f5", "#ffffff"];
+const DEPTH_TINTS = ["#b2b4c0", "#c8cad4", "#dddee5", "#f0f0f3", "#ffffff"];
 const depthBucket = (h: number) =>
   Math.max(0, Math.min(DEPTH_TINTS.length - 1, Math.floor(((h + 3.6) / 6.5) * DEPTH_TINTS.length)));
 
@@ -114,7 +114,7 @@ const Lights: React.FC<{ palette: Props["palette"] }> = ({ palette }) => {
   const p = PALETTES[palette];
   const key = useMemo(() => {
     const l = new THREE.DirectionalLight(p.key, p.keyIntensity);
-    l.position.set(-7, 9, 14);
+    l.position.set(-9, 11, 10.5);
     l.castShadow = true;
     l.shadow.mapSize.set(3072, 3072);
     const c = l.shadow.camera as THREE.OrthographicCamera;
@@ -170,7 +170,7 @@ export const PetalSwirl: React.FC<Props> = ({ palette }) => {
         metalness: 0,
         clearcoat: 0.45,
         clearcoatRoughness: 0.35,
-        sheen: 0.45,
+        sheen: 0.6,
         sheenColor: new THREE.Color(p.sheen),
         vertexColors: true,
         side: THREE.DoubleSide,
