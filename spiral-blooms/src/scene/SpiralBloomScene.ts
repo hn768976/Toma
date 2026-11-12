@@ -99,13 +99,18 @@ const SURF_GLSL = /* glsl */ `
     return vec3(r * cos(v), r * sin(v), z);
   }
 
+  // Finite-difference normal. u is kept off the funnel's centre point, where
+  // the tangents vanish and normalize() would return NaN (which the DOF blur
+  // would then smear into a visible blob).
   vec3 surfNormal(float u, float v) {
+    float uu = max(u, 0.01);
     float eu = 0.002;
     float ev = 0.0008;
-    vec3 p = surf(u, v);
-    vec3 a = surf(u + eu, v) - surf(u - eu, v);
-    vec3 b = surf(u, v + ev) - surf(u, v - ev);
-    return normalize(cross(a, b));
+    vec3 a = surf(uu + eu, v) - surf(uu - eu, v);
+    vec3 b = surf(uu, v + ev) - surf(uu, v - ev);
+    vec3 c = cross(a, b);
+    float l = length(c);
+    return l > 1e-12 ? c / l : vec3(0.0, 0.0, 1.0);
   }
 `;
 
@@ -140,7 +145,8 @@ const surfaceFragment = /* glsl */ `
   varying float vU;
   varying float vFold;
   void main() {
-    vec3 n = normalize(vNormalV);
+    float nl = length(vNormalV);
+    vec3 n = nl > 1e-6 ? vNormalV / nl : vec3(0.0, 0.0, 1.0);
     vec3 vd = normalize(-vPosV);
     if (dot(n, vd) < 0.0) n = -n;
     float diff = max(dot(n, uLightV), 0.0);
@@ -151,6 +157,9 @@ const surfaceFragment = /* glsl */ `
     ao *= 0.55 + 0.45 * vFold;
     vec3 col = uBase * (0.28 + 0.95 * diff * uPulse) * ao;
     col += uSheen * (spec * 0.75 * uSpecGain * uPulse + fres * 0.22) * ao * (0.35 + 0.65 * vFold);
+    // scrub NaN/Inf (comparisons with NaN are false) so nothing invalid reaches the blur
+    if (any(isnan(col)) || any(isinf(col))) col = vec3(0.0);
+    col = clamp(col, 0.0, 16.0);
     gl_FragColor = vec4(col, 1.0);
   }
 `;
@@ -187,7 +196,9 @@ const dotVertex = /* glsl */ `
     vec3 toCam = normalize(-cv.xyz);
     float facing = dot(nv, toCam);
     // lift slightly toward the camera so the dot sits on top of the surface
-    cv.xyz += toCam * 0.03 * uR;
+    // lift toward the camera so the sprite clears its own ribs in the depth test
+    // (more for defocused blooms, whose bokeh discs are larger)
+    cv.xyz += toCam * uR * (0.03 + 0.07 * smoothstep(2.0, 20.0, uCoc));
     vec4 clip = projectionMatrix * cv;
     vec4 clip2 = projectionMatrix * cv2;
     vec2 sp = clip.xy / clip.w * uRes * 0.5;
@@ -203,7 +214,7 @@ const dotVertex = /* glsl */ `
     float b = widPx * 0.5 + uCoc + 1.0;
     vec2 offs = dir * position.x * 2.0 * a + perp * position.y * 2.0 * b;
     gl_Position = clip + vec4(offs / (uRes * 0.5) * clip.w, 0.0, 0.0);
-    if (facing < 0.02) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    if (facing <= 0.0) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     vQuad = position.xy * 2.0;
     vAB = vec2(a, b);
 
@@ -217,7 +228,9 @@ const dotVertex = /* glsl */ `
     // energy spreading: a defocused dot gets dimmer, but keep bokeh readable
     float sharpArea = (lenPx * 0.5 + 1.0) * (widPx * 0.5 + 1.0);
     float blurArea = a * b;
-    vAlpha = clamp(pow(sharpArea / blurArea, 0.55), 0.07, 1.0) * mix(0.6, 1.0, f);
+    // fade out smoothly toward grazing angles instead of popping at a threshold
+    vAlpha = clamp(pow(sharpArea / blurArea, 0.55), 0.07, 1.0) * mix(0.6, 1.0, f)
+           * smoothstep(0.0, 0.3, facing);
   }
 `;
 
@@ -268,7 +281,15 @@ const discBlurFragment = /* glsl */ `
       float r = sqrt(fi / n);
       float th = fi * 2.39996323;
       vec2 o = vec2(cos(th), sin(th)) * r * uRadius * uTexel;
-      acc += texture2D(tSrc, vUv + o);
+      // Mirror (not clamp) samples that fall outside the frame: clamping
+      // repeats the edge row into every outside tap, which smeared bright
+      // edge highlights into streaky blobs along the top/bottom edges.
+      vec2 q = abs(vUv + o);
+      q = 1.0 - abs(1.0 - q);
+      vec4 c = texture2D(tSrc, q);
+      if (any(isnan(c)) || any(isinf(c))) c = vec4(0.0);
+      c = clamp(c, 0.0, 16.0);
+      acc += c;
     }
     gl_FragColor = acc / n;
   }
@@ -347,6 +368,7 @@ type FlowerRuntime = {
   shared: Record<string, THREE.IUniform>;
   surfaceScene: THREE.Scene;
   dotScene: THREE.Scene;
+  depthMat: THREE.ShaderMaterial;
 };
 
 /** Builds the (u, v) grid; actual positions are evaluated in the vertex shader. */
@@ -357,7 +379,8 @@ const makeParamGrid = (uSeg: number, vSeg: number) => {
   const idx: number[] = [];
   for (let i = 0; i <= uSeg; i++) {
     for (let j = 0; j <= vSeg; j++) {
-      const u = Math.pow(i / uSeg, 0.85);
+      // start a hair away from the exact centre (degenerate point)
+      const u = 0.004 + 0.996 * Math.pow(i / uSeg, 0.85);
       verts.push(0, 0, 0);
       uvs.push(u, j / vSeg);
     }
@@ -598,7 +621,25 @@ export const createSpiralBloomScene =
       const gD = group.clone(false);
       gD.add(dots);
       dotScene.add(gD);
-      return { def, group, surface, dots, shared, surfaceScene, dotScene };
+      // depth-only twin of the surface material (shares the same uniforms), used
+      // so dots on the inner wall are hidden behind the bloom's own rim
+      const depthMat = new THREE.ShaderMaterial({
+        vertexShader: surfaceVertex,
+        fragmentShader: surfaceFragment,
+        uniforms: surface.material.uniforms,
+        side: THREE.DoubleSide,
+        colorWrite: false,
+      });
+      return {
+        def,
+        group,
+        surface,
+        dots,
+        shared,
+        surfaceScene,
+        dotScene,
+        depthMat,
+      };
     });
 
     const tmp = new THREE.Vector3();
@@ -677,6 +718,10 @@ export const createSpiralBloomScene =
         // dots (or bokeh discs when defocused) are drawn at full resolution
         renderer.setRenderTarget(accum);
         renderer.clearDepth();
+        const colourMat = f.surface.material;
+        f.surface.material = f.depthMat;
+        renderer.render(f.surfaceScene, camera);
+        f.surface.material = colourMat;
         renderer.render(f.dotScene, camera);
       }
 
@@ -698,6 +743,7 @@ export const createSpiralBloomScene =
           f.dots.geometry.dispose();
           f.surface.material.dispose();
           f.dots.material.dispose();
+          f.depthMat.dispose();
         }
       },
     };

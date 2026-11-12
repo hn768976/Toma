@@ -66,7 +66,7 @@ const blueMain: FlowerLook = {
   warm: "#ffffff",
   warmShare: 0.05,
   dotGain: 1.15,
-  specGain: 2.4,
+  specGain: 4,
   glintShare: 0.16,
 };
 /** Large defocused left bloom: lighter steel blue with small, dense dots. */
@@ -84,7 +84,7 @@ const blueWarm: FlowerLook = {
   dot: "#86a4ee",
   warm: "#ffd9a8",
   warmShare: 0.07,
-  dotGain: 1.35,
+  dotGain: 1.75,
 };
 /** Muted cyan-blue (not green) teal, as in the reference. */
 const teal: FlowerLook = {
@@ -153,7 +153,7 @@ export const FLOWERS: FlowerDef[] = [
     look: blueWarm,
     seed: 12,
     lobePhase: 2.1,
-    pleats: 40,
+    pleats: 44,
   },
   {
     ...base,
@@ -178,7 +178,7 @@ export const FLOWERS: FlowerDef[] = [
     look: purple,
     seed: 14,
     lobePhase: 2.8,
-    pleats: 38,
+    pleats: 44,
   },
   {
     ...base,
@@ -212,6 +212,7 @@ export const FLOWERS: FlowerDef[] = [
   {
     ...base,
     id: "main",
+    swayPleats: 0.15,
     sx: 486,
     sy: 198,
     rPx: 172,
