@@ -173,7 +173,7 @@ const ambient = (t: number) => {
   let a = 0.8;
   a -= 0.2 * (1 - k(1.9, 2.35, t)); // calmer opening
   a -= 0.42 * k(0.45, 0.95, t) * (1 - k(1.9, 2.35, t)); // dark section
-  a += 0.4 * k(2.2, 2.65, t) * (1 - k(3.9, 4.4, t)); // flare section
+  a += 0.3 * k(2.2, 2.65, t) * (1 - k(3.9, 4.4, t)); // flare section
   a -= 0.32 * k(5.8, 6.6, t); // dim ending
   return a;
 };

@@ -287,8 +287,8 @@ export const createCircuitScene = (
     near: camera.near,
     far: camera.far,
     focus: 10,
-    blurScale: 400 * res,
-    maxCoc: 52 * res,
+    blurScale: 540 * res,
+    maxCoc: 64 * res,
   });
   glassMats.forEach((m) => (m.uniforms.uWorldDepth.value = dof.world.depthTexture));
 
@@ -342,6 +342,7 @@ export const createCircuitScene = (
   grade.uniforms.uHighlights.value.set(...look.gradeHighlights);
   grade.uniforms.uSaturation.value = look.gradeSaturation;
   grade.uniforms.uLift.value = look.gradeLift;
+  grade.uniforms.uGamma.value = look.gradeGamma;
   grade.uniforms.uVignette.value = look.vignette;
   grade.uniforms.uGrain.value = look.grain;
   grade.uniforms.uRes.value.set(width, height);

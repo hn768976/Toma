@@ -48,7 +48,9 @@ const float GOLDEN_ANGLE = 2.39996323;
 void main() {
   float zc = linDepth(texture2D(tDepth, vUv).x);
   float cc = cocOf(zc);
-  vec4 centre = texture2D(tColor, vUv, 0.75);
+  // pre-filter level grows with the local blur: wide bokeh samples a smoother mip
+  float lb = 0.75 + clamp(log2(max(cc, 1.0) / 20.0), 0.0, 2.0);
+  vec4 centre = texture2D(tColor, vUv, lb);
   vec4 col = centre;
   float size = cc;
   float tot = 1.0;
@@ -57,11 +59,13 @@ void main() {
   for (int i = 0; i < 200; i++) {
     if (radius >= uMaxCoc) break;
     vec2 tc = vUv + vec2(cos(ang), sin(ang)) * radius / uFullRes;
-    vec4 sc = texture2D(tColor, tc, 0.75);
+    vec4 sc = texture2D(tColor, tc, lb);
     float zs = linDepth(texture2D(tDepth, tc).x);
     float ss = cocOf(zs);
     if (zs > zc) ss = min(ss, cc * 2.0);
-    float m = smoothstep(radius - uRadScale, radius + uRadScale, ss);
+    // soft-edged kernel (tapered rim): no ripple at the fin pitch when CoC ≈ spacing
+    float m = smoothstep(radius - uRadScale, radius + uRadScale, ss)
+            * (1.0 - 0.65 * smoothstep(0.35 * ss, ss, radius));
     col += mix(col / tot, sc, m);
     size += mix(size / tot, ss, m);
     tot += 1.0;
@@ -243,6 +247,7 @@ export const gradeShader = {
     uHighlights: { value: new THREE.Vector3(1, 1, 1) },
     uSaturation: { value: 1 },
     uLift: { value: 0 },
+    uGamma: { value: 1 },
     uVignette: { value: 0.3 },
     uGrain: { value: 0.02 },
     uSeed: { value: 0 },
@@ -261,6 +266,7 @@ uniform vec3 uShadows;
 uniform vec3 uHighlights;
 uniform float uSaturation;
 uniform float uLift;
+uniform float uGamma;
 uniform float uVignette;
 uniform float uGrain;
 uniform float uSeed;
@@ -279,6 +285,8 @@ void main() {
   // lift > 0 raises blacks; lift < 0 sets a black point (crushes shadows)
   c = uLift >= 0.0 ? c * (1.0 - uLift) + uLift * uShadows * vec3(0.8, 0.9, 1.0)
                    : max(c + uLift, 0.0) / (1.0 + uLift);
+  // midtone gamma: darker mids, highlights kept (contrasty, not hazy)
+  c = pow(max(c, 0.0), vec3(uGamma));
   vec2 q = (vUv - 0.5) * vec2(1.0, 0.82);
   c *= 1.0 - uVignette * smoothstep(0.28, 0.75, length(q));
   // grain scaled to output pixels so it survives the 4K→1080p downscale softly
