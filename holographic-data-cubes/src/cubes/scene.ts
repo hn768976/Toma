@@ -135,7 +135,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
 
   // Scrolling code wall and a narrower numeric column.
   {
-    const code = kit.panel(codeTex[0], 4.4, 8.6, innerFade, { opacity: 0.27, uSpan: 0.8 });
+    const code = kit.panel(codeTex[0], 4.4, 8.6, innerFade, { opacity: 0.2, uSpan: 0.8 });
     code.position.set(-0.6, 0.6, -3.6);
     setA.add(code);
     addScroll(code, 0.028);
@@ -265,7 +265,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
       const g = new THREE.Group();
       const geo = new THREE.BoxGeometry(1, 1, 1);
       geo.translate(0, 0.5, 0);
-      g.add(kit.faces(geo, fader, { color: pal.accent, opacity: 0.034, edge: 1.0 }));
+      g.add(kit.faces(geo, fader, { color: pal.accent, opacity: 0.026, edge: 1.0 }));
       g.add(kit.lines(boxEdges(1, 1, 1, 0, 0.5, 0), fader, { color: pal.accent, width: 1.3, opacity: 0.75 }));
       g.position.set(x, CUBE / 2, z);
       setA.add(g);
@@ -400,7 +400,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
         for (let b = 0; b < n; b++) {
           const geo = new THREE.PlaneGeometry(0.62, 1);
           geo.translate(0, 0.5, 0);
-          const bar = kit.faces(geo, fader, { color: pal.accent, opacity: 0.1 + 0.16 * r.next() });
+          const bar = kit.faces(geo, fader, { color: pal.accent, opacity: 0.07 + 0.11 * r.next() });
           bar.position.x = (b - n / 2) * 0.8;
           const base = r.range(1.2, 3.0);
           const sp = r.range(0.5, 1.4);
