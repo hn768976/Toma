@@ -8,7 +8,7 @@ streaks, background contours and film grade.
 
 | Composition      | Size        | FPS | Frames | Duration | Description |
 |------------------|-------------|-----|--------|----------|-------------|
-| `GlowSpheres-V1` | 3840 × 2160 | 30  | 250    | 8.333 s  | Matches the reference: ultraviolet / lavender palette, same light timing |
+| `GlowSpheres-V1` | 3840 × 2160 | 30  | 250    | 8.333 s  | Matches the reference: ultraviolet / magenta-violet palette, same light timing |
 | `GlowSpheres-V2` | 3840 × 2160 | 30  | 250    | 8.333 s  | Alternative **colour palette**: electric cyan / teal, with identical animation and camera |
 
 The reference clip is 250 frames at 29.97 fps (8.342 s). At exactly 30 fps the
