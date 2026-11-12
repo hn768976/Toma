@@ -106,7 +106,7 @@ const roughnessTexture = () =>
     g.fillStyle = "#6a6a6a";
     g.fillRect(0, 0, s, s);
     for (let k = 0; k < 220; k++) {
-      const v = Math.floor(40 + rnd() * 160);
+      const v = Math.floor(110 + rnd() * 120);
       g.fillStyle = `rgb(${v},${v},${v})`;
       const w = 4 + rnd() * 40;
       const h = 2 + rnd() * 18;
@@ -138,7 +138,7 @@ const buildEnvironment = (renderer: THREE.WebGLRenderer, warm: number) => {
         // (distant) reflections pick it up, so near blocks stay dark
         float band = smoothstep(0.55, 0.06, up) * smoothstep(-0.03, 0.05, up);
         sky += vec3(0.16, 0.7, 1.1) * band * (0.35 + 1.6 * pow(az, 2.0)) * 3.2;
-        sky += vec3(0.5, 0.85, 1.2) * k * 1.2;
+        sky += vec3(0.5, 0.85, 1.2) * k * 0.0; // no hard sun spot: it read as a stray flare / orb once defocused
         float strip = smoothstep(0.03, 0.0, abs(d.y - 0.55)) * 0.25 * az;
         sky += vec3(0.4,0.7,1.0) * strip;
         sky = mix(sky, sky + vec3(0.9,0.35,0.05) * smoothstep(0.2, -0.3, up), uWarm);
@@ -158,6 +158,7 @@ const buildEnvironment = (renderer: THREE.WebGLRenderer, warm: number) => {
 // ---------------------------------------------------------------------------
 type GroundUniforms = {
   uIgnite: { value: number };
+  uSpill: { value: number };
   uRadius: { value: number };
   uTime: { value: number };
   uWarm: { value: THREE.Color };
@@ -227,6 +228,7 @@ const buildGround = (scene: THREE.Scene, env: THREE.Texture, rough: THREE.Textur
 
   const uniforms: GroundUniforms = {
     uIgnite: { value: 0 },
+    uSpill: { value: 0.75 },
     uRadius: { value: 0 },
     uTime: { value: 0 },
     uWarm: { value: new THREE.Color().setRGB(1.0, 0.33, 0.06) },
@@ -234,7 +236,7 @@ const buildGround = (scene: THREE.Scene, env: THREE.Texture, rough: THREE.Textur
   const mat = new THREE.MeshStandardMaterial({
     color: "#ffffff",
     metalness: 0.9,
-    roughness: 0.2,
+    roughness: 0.26,
     roughnessMap: rough,
     envMap: env,
     envMapIntensity: 0.8,
@@ -257,7 +259,7 @@ const buildGround = (scene: THREE.Scene, env: THREE.Texture, rough: THREE.Textur
       .replace(
         "#include <common>",
         `#include <common>
-         uniform float uIgnite; uniform float uRadius; uniform float uTime; uniform vec3 uWarm;
+         uniform float uIgnite; uniform float uRadius; uniform float uTime; uniform vec3 uWarm; uniform float uSpill;
          varying float vSeed; varying vec3 vWPos; varying float vTopFace;`,
       )
       .replace(
@@ -268,7 +270,7 @@ const buildGround = (scene: THREE.Scene, env: THREE.Texture, rough: THREE.Textur
            float front = smoothstep(uRadius, uRadius - 2.5, d);
            float near = exp(-d / 3.2);
            float lit = step(0.93, fract(vSeed * 13.7 + floor(uTime * 1.5 + vSeed * 4.0) * 0.37));
-           float g = uIgnite * front * (exp(-d / 2.0) * 0.75 + lit * exp(-d / 3.0) * 0.25);
+           float g = uIgnite * front * (exp(-d / 2.0) * uSpill + lit * exp(-d / 3.0) * 0.25);
            totalEmissiveRadiance += uWarm * g * vTopFace * (0.3 + vSeed);
            // faint warm floor bounce right around the core
            totalEmissiveRadiance += uWarm * uIgnite * exp(-d / 1.4) * 0.35;
@@ -554,7 +556,7 @@ const buildStreaks = (scene: THREE.Scene) => {
         m.setPosition(s.lane, 0.075, along);
       }
       mesh.setMatrixAt(i, m);
-      const warm = s.hue < 0.9;
+      const warm = s.hue < 1.01; // all streaks warm (reference has orange traces only)
       if (warm) c.setRGB(4.0 * k, 1.6 * k, 0.45 * k);
       else c.setRGB(1.6 * k, 3.2 * k, 4.2 * k);
       mesh.setColorAt(i, c);
@@ -653,6 +655,7 @@ const buildDots = (scene: THREE.Scene) => {
         if (aGroup > 0.5 && aGroup < 1.5) a *= 0.55;
         vA = a; vWarm = (aGroup > 2.5) ? uIgnite * step(0.5, aSeed) : 0.0;
         gl_PointSize = clamp(0.035 * uPx / -mv.z, 1.5, 60.0);
+        vA *= smoothstep(2.0, 5.0, -mv.z); // no giant orbs drifting past the lens
       }`,
     fragmentShader: `
       uniform vec3 uColor; uniform vec3 uWarm; varying float vA; varying float vWarm;
@@ -743,7 +746,8 @@ export const createDataCubeScene =
     renderer.toneMapping = THREE.NoToneMapping;
     renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
     const scene = new THREE.Scene();
-    const fogColor = new THREE.Color().setRGB(0.03, 0.15, 0.3);
+    // the low hero angle of V2 looks at the horizon: keep its haze darker
+    const fogColor = variant === "reference" ? new THREE.Color().setRGB(0.03, 0.15, 0.3) : new THREE.Color().setRGB(0.012, 0.065, 0.13);
     scene.background = fogColor;
     scene.fog = new THREE.FogExp2(fogColor, 0.024);
     // sky dome: matches the fog colour at the horizon and darkens upward
@@ -754,7 +758,7 @@ export const createDataCubeScene =
         side: THREE.BackSide,
         fog: false,
         depthWrite: false,
-        uniforms: { uHor: { value: fogColor }, uTop: { value: new THREE.Color().setRGB(0.002, 0.012, 0.03) } },
+        uniforms: { uHor: { value: fogColor }, uTop: { value: new THREE.Color().setRGB(0.0005, 0.003, 0.008) } },
         vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
         fragmentShader: `uniform vec3 uHor, uTop; varying vec3 vDir; void main(){ gl_FragColor = vec4(mix(uHor, uTop, smoothstep(0.0, 0.45, vDir.y)), 1.0); }`,
       }),
@@ -767,10 +771,14 @@ export const createDataCubeScene =
     const rough = roughnessTexture();
     const circuit = circuitTexture(5);
     rough.wrapS = rough.wrapT = THREE.RepeatWrapping;
+    // data texture: keep it linear, and keep a roughness floor so no surface
+    // becomes a near-perfect mirror (those produced pin-point highlights that
+    // bloomed into stray orbs / invalid pixels)
+    rough.colorSpace = THREE.NoColorSpace;
 
     const hemi = new THREE.HemisphereLight("#5fb6ff", "#05080c", 0.06);
     scene.add(hemi);
-    const key = new THREE.DirectionalLight("#7cc8ff", 0.7);
+    const key = new THREE.DirectionalLight("#7cc8ff", 0.35);
     key.position.set(-12, 14, -10);
     scene.add(key);
     const rimL = new THREE.DirectionalLight("#2a6fb0", 0.3);
@@ -778,6 +786,7 @@ export const createDataCubeScene =
     scene.add(rimL);
 
     const ground = buildGround(scene, env, rough);
+    ground.uniforms.uSpill.value = variant === "reference" ? 0.75 : 0.4;
     const core = buildCore(scene, env, rough, circuit);
     const streaks = buildStreaks(scene);
     const dots = buildDots(scene);
@@ -805,7 +814,7 @@ export const createDataCubeScene =
       const slotGlow = frame < LAND_FRAME ? fl * 3.0 : 0;
       core.slotMat.color.copy(ORANGE_HOT).multiplyScalar(slotGlow);
       core.topLight.intensity = slotGlow * 2.5;
-      core.rimMat.color.setRGB(1, 0.36, 0.1).multiplyScalar(frame < LAND_FRAME ? 0.25 + slotGlow * 0.2 : 1.4 + flash * 2);
+      core.rimMat.color.setRGB(1, 0.36, 0.1).multiplyScalar(frame < LAND_FRAME ? 0.35 + slotGlow * 0.55 : 1.4 + flash * 2);
 
       // core brightness: terracotta -> incandescent amber with a flash on ignition
       const glowCol = ORANGE_DIM.clone().lerp(ORANGE_HOT, ignite);
@@ -839,7 +848,7 @@ export const createDataCubeScene =
         focusDistance: focus,
         aperture,
         maxCoc: 24,
-        bloomStrength: 0.36 + 0.14 * ignite + flash * 0.2,
+        bloomStrength: (variant === "reference" ? 0.36 + 0.14 * ignite : 0.4 + 0.3 * ignite) + flash * 0.2,
         bloomRadius: 0.32,
         bloomThreshold: 1.4,
         exposure: lerp(1.15, 0.78, darken),

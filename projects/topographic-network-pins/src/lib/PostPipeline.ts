@@ -29,6 +29,9 @@ void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
 `;
 
 const cocChunk = /* glsl */ `
+// replace NaN/Inf (e.g. from a degenerate specular sample) so a single bad
+// pixel can never be smeared into a block by the blur / bloom passes
+vec3 safe(vec3 c) { return (any(isnan(c)) || any(isinf(c))) ? vec3(0.0) : c; }
 uniform sampler2D tDepth;
 uniform float uNear, uFar, uFocus, uAperture, uMaxCoc, uPxScale;
 float viewDepth(vec2 uv) {
@@ -72,12 +75,12 @@ void main() {
     // background samples cannot spill over a sharper foreground centre
     float reach = (cS < cC) ? aS : min(aS, aC);
     float w = clamp(reach - r + 1.0, 0.0, 1.0) / max(reach * reach, 1.0);
-    vec3 col = texture2D(tColor, suv).rgb;
+    vec3 col = safe(texture2D(tColor, suv).rgb);
     acc += col * w;
     wsum += w;
     nearAcc += (cS < 0.0 ? aS : 0.0) * w;
   }
-  vec3 centre = texture2D(tColor, vUv).rgb;
+  vec3 centre = safe(texture2D(tColor, vUv).rgb);
   float wc = 1.0 / max(aC * aC, 1.0);
   acc += centre * wc; wsum += wc;
   float nearCoc = nearAcc / wsum;
@@ -91,8 +94,9 @@ uniform sampler2D tBlur;
 ${cocChunk}
 varying vec2 vUv;
 void main() {
-  vec3 sharp = texture2D(tColor, vUv).rgb;
+  vec3 sharp = safe(texture2D(tColor, vUv).rgb);
   vec4 blur = texture2D(tBlur, vUv);
+  blur.rgb = safe(blur.rgb);
   float c = max(abs(cocAt(vUv)), blur.a);
   float t = smoothstep(0.6, 2.5, c);
   gl_FragColor = vec4(mix(sharp, blur.rgb, t), 1.0);
@@ -114,7 +118,9 @@ vec3 toSRGB(vec3 c) {
 }
 float hash(vec2 p) { p = fract(p * vec2(443.897, 441.423)); p += dot(p, p.yx + 19.19); return fract((p.x + p.y) * p.x); }
 void main() {
-  vec3 c = texture2D(tColor, vUv).rgb * uExposure;
+  vec3 c = texture2D(tColor, vUv).rgb;
+  if (any(isnan(c)) || any(isinf(c))) c = vec3(0.0);
+  c *= uExposure;
   c += uLift;
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
   c = mix(vec3(l), c, uSaturation);
