@@ -12,7 +12,7 @@
  "ref_duration_s": 9.009,
  "ref_frames_at_30fps": 270,
  "duration_delta_ms": -9.0,
- "bitrate_kbps": 2218,
+ "bitrate_kbps": 2348,
  "audio_streams": 0,
  "decode_errors": "none",
  "black_frames(YAVG<20)": [],
@@ -33,10 +33,10 @@
   269
  ],
  "luma_min_max": [
-  135.2,
+  135.4,
   149.4
  ],
- "mean_frame_diff": 4.4,
+ "mean_frame_diff": 4.73,
  "max_frame_diff": 9.11,
  "flicker_spikes": [],
  "checks": {
