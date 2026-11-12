@@ -32,6 +32,8 @@ export type RungStyle = {
   alpha: Range;
   /** draw rung particles as small hollow ring dots */
   ringDots?: boolean;
+  /** fade rung particles as the rung turns edge-on to camera (avoids additive pile-up) */
+  edgeFade?: boolean;
   /** fraction of the rung length left empty at each end (strand overlap) */
   inset: number;
   /** optional glowing core line along the rung */

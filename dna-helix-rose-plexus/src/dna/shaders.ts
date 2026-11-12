@@ -15,6 +15,7 @@ export const pointVertex = /* glsl */ `
   attribute float alpha;
   attribute float kind;   // 0 sparkle, 1 bokeh-capable dust, 2 node marker, 3 soft blob, 4 ring dot
   attribute float phase;
+  attribute vec3 axis;    // rung direction for edge-on fade, or 0
 
   uniform float uTime;
   uniform float uFocus;
@@ -54,6 +55,11 @@ export const pointVertex = /* glsl */ `
     vColor = color;
     float fog = exp(-max(depth - uFog.x, 0.0) * uFog.y);
     vAlpha = alpha * tw * energy * uGain * smoothstep(0.12, 0.7, depth) * fog;
+    if (dot(axis, axis) > 0.25) {
+      // projected length of the rung on screen: ~0 when seen end-on
+      vec3 dv = normalize(mat3(modelViewMatrix) * axis);
+      vAlpha *= mix(0.1, 1.0, smoothstep(0.2, 0.8, length(dv.xy)));
+    }
     vSharp = base / s;
     // Out-of-focus dust becomes a ring; sparkles mostly stay soft discs.
     float ringiness = kind > 0.5 && kind < 1.5 ? 1.0 : 0.35;

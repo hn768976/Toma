@@ -149,6 +149,7 @@ export class DnaEngine {
       geom.setAttribute("alpha", new THREE.BufferAttribute(new Float32Array(n), 1));
       geom.setAttribute("kind", new THREE.BufferAttribute(new Float32Array(n).fill(3), 1));
       geom.setAttribute("phase", new THREE.BufferAttribute(new Float32Array(n), 1));
+      geom.setAttribute("axis", new THREE.BufferAttribute(new Float32Array(n * 3), 3));
       const mat = this.pointMaterial(1);
       const pts = new THREE.Points(geom, mat);
       pts.frustumCulled = false;
@@ -199,6 +200,7 @@ export class DnaEngine {
     geom.setAttribute("alpha", new THREE.Float32BufferAttribute(p.alpha, 1));
     geom.setAttribute("kind", new THREE.Float32BufferAttribute(p.kind, 1));
     geom.setAttribute("phase", new THREE.Float32BufferAttribute(p.phase, 1));
+    geom.setAttribute("axis", new THREE.Float32BufferAttribute(p.axis, 3));
     const mat = this.pointMaterial(this.preset.gain.points, apertureScale);
     const pts = new THREE.Points(geom, mat);
     pts.frustumCulled = false;

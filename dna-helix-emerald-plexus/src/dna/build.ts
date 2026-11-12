@@ -9,13 +9,24 @@ export class PointBuffer {
   alpha: number[] = [];
   kind: number[] = [];
   phase: number[] = [];
-  add(p: readonly number[], c: RGB, size: number, alpha: number, kind: number, phase: number) {
+  /** unit axis for edge-on fading (0,0,0 = none) */
+  axis: number[] = [];
+  add(
+    p: readonly number[],
+    c: RGB,
+    size: number,
+    alpha: number,
+    kind: number,
+    phase: number,
+    axis: readonly number[] = [0, 0, 0],
+  ) {
     this.pos.push(p[0], p[1], p[2]);
     this.col.push(c[0], c[1], c[2]);
     this.size.push(size);
     this.alpha.push(alpha);
     this.kind.push(kind);
     this.phase.push(phase);
+    this.axis.push(axis[0], axis[1], axis[2]);
   }
   get count() {
     return this.size.length;
@@ -161,6 +172,8 @@ export const buildHelix = (h: HelixStyle, seed: number): LayerSet => {
     const b = helixPoint(h, y, 1);
     rungEnds.push([a, b]);
     const lerp = (t: number) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) || 1;
+    const rungAxis = h.rung.edgeFade ? [(b[0] - a[0]) / len, (b[1] - a[1]) / len, (b[2] - a[2]) / len] : [0, 0, 0];
     const inset = h.rung.inset;
     for (let i = 0; i < h.rung.count; i++) {
       const t = inset + rng.next() * (1 - 2 * inset);
@@ -174,6 +187,7 @@ export const buildHelix = (h: HelixStyle, seed: number): LayerSet => {
         r(rng, h.rung.alpha),
         h.rung.ringDots ? 4 : 0,
         rng.next(),
+        rungAxis,
       );
     }
     if (bar) {
