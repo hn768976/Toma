@@ -9,7 +9,8 @@ Config.setVideoImageFormat("png");
 Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
-Config.setCrf(16);
+Config.setCrf(12);
+Config.setX264Preset("slow");
 // WebGL2 via SwiftShader-backed ANGLE works on every machine, GPU or not.
 // On a machine with a GPU you may pass --gl=angle for faster renders.
 Config.setChromiumOpenGlRenderer("swangle");

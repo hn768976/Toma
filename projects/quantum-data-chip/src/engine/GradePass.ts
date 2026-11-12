@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 
-/** Final grade: exposure, vignette, linear -> sRGB and a static 1/255 dither
+/** Final grade: exposure, vignette, linear -> sRGB and a static TPDF dither
  *  (prevents banding in the dark gradients after H.264 encoding). */
 export const createGradePass = (opts: { exposure: number; vignette: number; vignetteColor?: THREE.Color }) =>
   new ShaderPass({
@@ -34,7 +34,9 @@ export const createGradePass = (opts: { exposure: number; vignette: number; vign
         float v = smoothstep(0.35, 1.25, length(q));
         c = mix(c, uVigColor, v * uVignette);
         vec3 s = toSRGB(c);
-        s += (ign(gl_FragCoord.xy) - 0.5) / 255.0;
+        // triangular-PDF dither (~±1.5 LSB): survives H.264 so gradients don't band
+        float d = ign(gl_FragCoord.xy) + ign(gl_FragCoord.xy + vec2(47.0, 113.0)) - 1.0;
+        s += d * 1.5 / 255.0;
         gl_FragColor = vec4(clamp(s, 0.0, 1.0), 1.0);
       }
     `,

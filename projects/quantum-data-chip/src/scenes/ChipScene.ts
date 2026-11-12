@@ -183,6 +183,16 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
     });
   }
   const dustC = col(pal.dust);
+  // larger out-of-focus motes drifting close to the lens: keep the dark
+  // pre-ignition beat alive (as the reference does)
+  for (let i = 0; i < 70; i++) {
+    sparks.push({
+      x: range(rng, -4, 4), y: range(rng, 0.4, 2.2), z: range(rng, -3, 4),
+      vx: range(rng, -0.12, 0.12), vy: range(rng, 0.03, 0.1), vz: range(rng, -0.12, 0.12),
+      size: range(rng, 0.03, 0.07), sharp: 2.5, color: dustC, a: range(rng, 0.25, 0.55),
+      twAmp: 0.7, twFreq: range(rng, 1, 3), twPhase: range(rng, 0, 6.28),
+    });
+  }
   for (let i = 0; i < 380; i++) {
     sparks.push({
       x: range(rng, -12, 12), y: range(rng, 0.05, 2.6), z: range(rng, -9, 9),
@@ -237,6 +247,9 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
       // chip ignition: flare peaks ~1.5 s then settles
       const flare = smoothstep(0.85, 1.45, t) * (1 - 0.8 * smoothstep(1.5, 2.8, t));
       glowBatch.material.uniforms.uIntensity.value = flare * (1 + 0.04 * Math.sin(t * 5.0));
+      // background light slowly drifts and breathes
+      bg.material.uniforms.uGP.value.set(1.0 - 0.06 * Math.sin(t * 0.35), 0.3 + 0.05 * Math.sin(t * 0.5 + 1));
+      bg.material.uniforms.uGS.value = 0.55 + 0.15 * smoothstep(0, 3, t) + 0.06 * Math.sin(t * 1.3);
       // overall bloom breathes in as the data spreads
       if (stage.bloom) stage.bloom.strength = 0.35 + 0.15 * smoothstep(2, 6, t);
     },
