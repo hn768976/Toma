@@ -4,20 +4,55 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  E, anim, st, ellipse, rect, path as shPath, fill, stroke, group,
+  E, ellipse, path as shPath, fill, group,
   shapeLayer, nullLayer, comp, smooth, poly, resetInd,
 } from './lib.mjs';
 
+// NO OUTLINES: every part is a base fill + a darker same-hue tone (~15-20%) for
+// shading + a lighter tone for small highlights. Keep in sync with src/theme.ts.
 const C = {
-  navy: '#1D2B53',
-  coral: '#FF8A8A',
-  coralDark: '#F0697A',
-  cream: '#FFF3DA',
-  yellow: '#FFC93C',
-  orange: '#FF9233',
-  grape: '#8B5FD0',
+  navy: '#1E2A44',
+  coral: '#FF8A8A', coralDark: '#DB6D74', coralLight: '#FFB4AE', coralDeep: '#C25E66',
+  cream: '#FFF3DA', creamDark: '#EAD7B2',
+  yellow: '#FFC93C', yellowDark: '#DBA62A', yellowLight: '#FFE592',
+  orange: '#FF9233', orangeDark: '#D9752A', orangeLight: '#FFBC7E',
+  grape: '#8B5FD0', grapeDark: '#6F48AE', grapeLight: '#AC8BE3',
   white: '#FFFFFF',
 };
+
+/** Thin filled quad from p0 (width w0) to p1 (width w1): ridges, stripes. */
+const wedge = (p0, p1, w0, w1) => {
+  const dx = p1[0] - p0[0], dy = p1[1] - p0[1];
+  const L = Math.hypot(dx, dy) || 1;
+  const nx = -dy / L, ny = dx / L;
+  return poly([
+    [p0[0] + nx * w0 / 2, p0[1] + ny * w0 / 2], [p1[0] + nx * w1 / 2, p1[1] + ny * w1 / 2],
+    [p1[0] - nx * w1 / 2, p1[1] - ny * w1 / 2], [p0[0] - nx * w0 / 2, p0[1] - ny * w0 / 2],
+  ]);
+};
+/** Filled crescent along a quadratic curve p0 -> c -> p1, thickness 2t at the middle. */
+const lensP = (p0, c, p1, t) => {
+  const q = (cy) => {
+    const c1 = [p0[0] + (2 / 3) * (c[0] - p0[0]), p0[1] + (2 / 3) * (cy - p0[1])];
+    const c2 = [p1[0] + (2 / 3) * (c[0] - p1[0]), p1[1] + (2 / 3) * (cy - p1[1])];
+    return [c1, c2];
+  };
+  const [a1, a2] = q(c[1] - t);
+  const [b1, b2] = q(c[1] + t);
+  return {
+    c: true,
+    v: [p0, p1],
+    o: [[a1[0] - p0[0], a1[1] - p0[1]], [b2[0] - p1[0], b2[1] - p1[1]]],
+    i: [[b1[0] - p0[0], b1[1] - p0[1]], [a2[0] - p1[0], a2[1] - p1[1]]],
+  };
+};
+/** Transform a path object: scale about (ox,oy) then translate. */
+const xf = (pth, k, ox, oy, dx = 0, dy = 0) => ({
+  c: pth.c,
+  v: pth.v.map(([x, y]) => [ox + (x - ox) * k + dx, oy + (y - oy) * k + dy]),
+  i: pth.i.map(([x, y]) => [x * k, y * k]),
+  o: pth.o.map(([x, y]) => [x * k, y * k]),
+});
 
 const outDir = process.argv[2] ?? path.join(process.cwd(), 'public', 'lottie');
 fs.mkdirSync(outDir, { recursive: true });
@@ -35,7 +70,7 @@ const sc = (v, k) => [v[0] * k, v[1] * k];
 /* ------------------------------------------------------------------ */
 function buildClam() {
   resetInd();
-  const W = 520, H = 440, SW = 2.3; // shown at ~1.31x in the wide -> ~3px
+  const W = 520, H = 440;
   const hx = 260, hy = 300; // hinge line centre
 
   // scalloped fan for lid (in lid-local coords, hinge at 0,0, pointing up)
@@ -50,12 +85,7 @@ function buildClam() {
   const ridges = [];
   for (let k = 1; k < 8; k++) {
     const a = Math.PI + (k / 8) * Math.PI;
-    ridges.push(
-      group(`ridge${k}`, [
-        shPath(poly([[Math.cos(a) * 40, Math.sin(a) * 30], [Math.cos(a) * 196, Math.sin(a) * 190]], false)),
-        stroke(C.cream, 5),
-      ]),
-    );
+    ridges.push(shPath(wedge([Math.cos(a) * 40, Math.sin(a) * 30], [Math.cos(a) * 196, Math.sin(a) * 190], 3, 12)));
   }
 
   const root = nullLayer('root', {
@@ -78,7 +108,12 @@ function buildClam() {
 
   const lidBack = shapeLayer(
     'lidBack',
-    [group('ridges', ridges), group('fan', [shPath(fanPath), stroke(C.navy, SW), fill(C.grape)])],
+    [
+      group('ridges', [...ridges, fill(C.grapeLight)]),
+      // darker tone deep inside the lid, near the hinge
+      group('hingeShade', [ellipse(300, 70, 0, -6), fill(C.grapeDark)]),
+      group('fan', [shPath(fanPath), fill(C.grape)]),
+    ],
     {
       a: [0, 0, 0],
       p: [hx, hy - 2, 0],
@@ -101,8 +136,10 @@ function buildClam() {
   const interior = shapeLayer(
     'interior',
     [
-      group('shadow', [ellipse(300, 40, hx, hy - 6), fill(C.coral)]),
-      group('lining', [ellipse(408, 92, hx, hy + 4), stroke(C.navy, SW), fill(C.cream)]),
+      // inside the clam: cream lining with a darker back half, inside a darker shell wall
+      group('liningShade', [ellipse(330, 36, hx, hy - 12), fill(C.creamDark)]),
+      group('lining', [ellipse(404, 86, hx, hy + 4), fill(C.cream)]),
+      group('innerWall', [ellipse(432, 108, hx, hy), fill(C.grapeDark)]),
     ],
     {},
     { parent: root.ind },
@@ -113,7 +150,8 @@ function buildClam() {
     [
       group('hi2', [ellipse(10, 10, hx + 14, hy - 10), fill(C.white)]),
       group('hi', [ellipse(22, 16, hx - 12, hy - 42), fill(C.white)]),
-      group('ball', [ellipse(80, 80, hx, hy - 26), stroke(C.navy, SW), fill(C.cream)]),
+      group('ball', [ellipse(72, 72, hx - 3, hy - 30), fill(C.cream)]),
+      group('ballShade', [ellipse(80, 80, hx, hy - 26), fill(C.creamDark)]),
     ],
     {
       a: [hx, hy + 8, 0],
@@ -133,7 +171,7 @@ function buildClam() {
   // closed dome = lid seen from the front, flattens to edge-on as it swings back
   const lidFront = shapeLayer(
     'lidFront',
-    [group('ridges', ridges), group('dome', [shPath(fanPath), stroke(C.navy, SW), fill(C.grape)])],
+    [group('ridges', [...ridges, fill(C.grapeLight)]), group('dome', [shPath(fanPath), fill(C.grape)])],
     {
       a: [0, 0, 0],
       p: [hx, hy + 2, 0],
@@ -160,19 +198,16 @@ function buildClam() {
   const bowlRidges = [];
   for (let k = 1; k < 8; k++) {
     const x = 32 + (k / 8) * 456;
-    bowlRidges.push(
-      group(`bridge${k}`, [
-        shPath(poly([[x + (hx - x) * 0.05, hy + 24], [hx + (x - hx) * 0.55, 418]], false)),
-        stroke(C.cream, 5),
-      ]),
-    );
+    bowlRidges.push(shPath(wedge([x + (hx - x) * 0.05, hy + 26], [hx + (x - hx) * 0.55, 410], 12, 3)));
   }
   const bowlLayer = shapeLayer(
     'bowl',
     [
-      group('rimLip', [shPath(poly([[60, hy + 14], [460, hy + 14]], false)), stroke(C.navy, 2.3)]),
-      ...bowlRidges,
-      group('bowl', [shPath(bowl), stroke(C.navy, SW), fill(C.grape)]),
+      // lighter tone along the rim, light ridges, base, darker underside
+      group('rimLip', [shPath(wedge([70, hy + 6], [450, hy + 6], 8, 8)), fill(C.grapeLight)]),
+      group('ridges', [...bowlRidges, fill(C.grapeLight)]),
+      group('bowl', [shPath(xf(bowl, 0.97, hx, hy, 0, -2)), fill(C.grape)]),
+      group('bowlShade', [shPath(bowl), fill(C.grapeDark)]),
     ],
     {},
     { parent: root.ind },
@@ -192,7 +227,6 @@ const P = (x, y) => [PC[0] + x, PC[1] + y];
 
 function puffLayers({ rootKs, puffKs, spikeKs, eyesKs, mouthKs, finR, tailR, dorsalR }) {
   resetInd();
-  const SW = 2.2; // shown at ~1.3-1.45x -> ~3px
   const root = nullLayer('root', { a: [...P(0, 70), 0], p: [...P(0, 70), 0], ...rootKs });
   const puff = nullLayer('puffer', { a: [...P(0, 0), 0], p: [...P(0, 0), 0], ...puffKs }, { parent: root.ind });
 
@@ -201,13 +235,9 @@ function puffLayers({ rootKs, puffKs, spikeKs, eyesKs, mouthKs, finR, tailR, dor
     const a = (k / 14) * Math.PI * 2 + 0.2;
     const b = 0.17;
     const pt = (ang, r) => [Math.cos(ang) * r, Math.sin(ang) * r];
-    spikes.push(
-      group(`spike${k}`, [
-        shPath(smooth([pt(a - b, 56), pt(a, 96), pt(a + b, 56)], true, 0.15)),
-        stroke(C.navy, SW * 0.8),
-        fill(C.orange),
-      ]),
-    );
+    // two-tone spike: lit half + darker half (no outline)
+    spikes.push(group(`spikeL${k}`, [shPath(poly([pt(a - b, 56), pt(a, 96), pt(a, 56)])), fill(C.orange)]));
+    spikes.push(group(`spikeD${k}`, [shPath(poly([pt(a, 56), pt(a, 96), pt(a + b, 56)])), fill(C.orangeDark)]));
   }
   const spikeLayer = shapeLayer('spikes', [group('spk', spikes)], {
     a: [0, 0, 0], p: [...P(0, 0), 0], ...spikeKs,
@@ -216,32 +246,39 @@ function puffLayers({ rootKs, puffKs, spikeKs, eyesKs, mouthKs, finR, tailR, dor
   const tail = shapeLayer('tail', [
     group('tailfin', [
       shPath(smooth([[0, -6], [40, -34], [52, -30], [44, 0], [52, 30], [40, 34], [0, 6]], true, 0.8)),
-      stroke(C.navy, SW), fill(C.orange),
+      fill(C.orange),
     ]),
-  ], { a: [0, 0, 0], p: [...P(62, 4), 0], r: tailR }, { parent: puff.ind });
+    group('tailShade', [shPath(smooth([[0, 2], [44, 0], [52, 30], [40, 34], [0, 6]], true, 0.8)), fill(C.orangeDark)]),
+  ].reverse(), { a: [0, 0, 0], p: [...P(62, 4), 0], r: tailR }, { parent: puff.ind });
 
   const dorsal = shapeLayer('dorsal', [
     group('dfin', [
       shPath(smooth([[-22, 6], [-10, -26], [6, -30], [18, -14], [22, 6]], true, 0.8)),
-      stroke(C.navy, SW), fill(C.orange),
+      fill(C.orange),
     ]),
-  ], { a: [0, 0, 0], p: [...P(14, -62), 0], r: dorsalR }, { parent: puff.ind });
+    group('dShade', [shPath(smooth([[4, -2], [18, -14], [22, 6], [-4, 8]], true, 0.8)), fill(C.orangeDark)]),
+  ].reverse(), { a: [0, 0, 0], p: [...P(14, -62), 0], r: dorsalR }, { parent: puff.ind });
 
   const body = shapeLayer('body', [
     group('spots', [
       ellipse(20, 18, ...P(28, -38)), ellipse(14, 13, ...P(52, -4)), ellipse(22, 20, ...P(36, 36)),
       ellipse(12, 11, ...P(-12, 46)), ellipse(10, 9, ...P(4, -56)), fill(C.orange),
     ]),
+    group('finShade', [ellipse(40, 18, ...P(30, 36)), fill(C.yellowDark)]),
+    group('bellyShade', [ellipse(62, 14, ...P(-12, 50)), fill(C.creamDark)]),
     group('belly', [ellipse(74, 38, ...P(-14, 36)), fill(C.cream)]),
-    group('ball', [ellipse(140, 136, ...P(0, 0)), stroke(C.navy, SW), fill(C.yellow)]),
+    group('shine', [ellipse(36, 18, ...P(-24, -44)), fill(C.yellowLight)]),
+    group('ball', [ellipse(132, 128, ...P(-4, -5)), fill(C.yellow)]),
+    group('ballShade', [ellipse(140, 136, ...P(0, 0)), fill(C.yellowDark)]),
   ], {}, { parent: puff.ind });
 
   const fin = shapeLayer('fin', [
     group('pfin', [
       shPath(smooth([[0, -7], [22, -14], [32, -4], [26, 10], [12, 12], [0, 6]], true, 0.9)),
-      stroke(C.navy, SW), fill(C.orange),
+      fill(C.orange),
     ]),
-  ], { a: [0, 0, 0], p: [...P(30, 26), 0], r: finR }, { parent: puff.ind });
+    group('pfinShade', [shPath(smooth([[0, 2], [30, 0], [26, 10], [12, 12], [0, 6]], true, 0.9)), fill(C.orangeDark)]),
+  ].reverse(), { a: [0, 0, 0], p: [...P(30, 26), 0], r: finR }, { parent: puff.ind });
 
   const eyes = shapeLayer('eyes', [
     group('hl', [ellipse(6, 6, ...P(-40, -20)), ellipse(5, 5, ...P(-6, -22)), fill(C.white)]),
@@ -349,7 +386,6 @@ function buildPuffInflate() {
 function buildNovaCheer() {
   resetInd();
   const op = 90;
-  const SW = 2; // shown at ~1.52x -> ~3px
   const FX = 300, FY = 470; // feet / ground contact
 
   const root = nullLayer('root', {
@@ -401,7 +437,7 @@ function buildNovaCheer() {
   const tail = shapeLayer('tail', [
     group('fluke', [
       shPath(smooth([[0, 0], [-30, -40], [-70, -70], [-92, -58], [-62, -46], [-58, -34], [-96, -22], [-82, -6], [-40, 4]], true, 0.9)),
-      stroke(C.navy, SW), fill(C.coral),
+      fill(C.coralDark),
     ]),
   ], {
     a: [0, 0, 0], p: [190, 300, 0],
@@ -411,43 +447,51 @@ function buildNovaCheer() {
   const farFin = shapeLayer('farFin', [
     group('fin', [
       shPath(smooth([[0, -10], [-44, -2], [-66, 22], [-50, 34], [-14, 22], [6, 10]], true, 0.9)),
-      stroke(C.navy, SW), fill(C.coralDark),
+      fill(C.coralDeep),
     ]),
   ], {
     a: [0, 0, 0], p: [168, 372, 0],
     r: osc(0, 89, 7, 34, 3).map(([t, v, e]) => [t, -v, e]),
   }, P);
 
+  const blob = smooth([[300, 190], [390, 205], [448, 260], [462, 340], [432, 420], [352, 466], [250, 466], [170, 426], [140, 346], [160, 262], [215, 207]], true, 1);
+  const belly = smooth([[220, 380], [300, 340], [400, 352], [438, 400], [400, 452], [300, 466], [226, 440]], true, 1);
   const body = shapeLayer('body', [
-    group('spots', [ellipse(16, 12, 250, 222), ellipse(10, 8, 282, 208), ellipse(13, 10, 402, 238), fill(C.coralDark)]),
-    group('belly', [
-      shPath(smooth([[220, 380], [300, 340], [400, 352], [438, 400], [400, 452], [300, 466], [226, 440]], true, 1)),
-      fill(C.cream),
-    ]),
-    group('blob', [
-      shPath(smooth([[300, 190], [390, 205], [448, 260], [462, 340], [432, 420], [352, 466], [250, 466], [170, 426], [140, 346], [160, 262], [215, 207]], true, 1)),
-      stroke(C.navy, SW), fill(C.coral),
-    ]),
+    group('spots', [ellipse(16, 12, 250, 232), ellipse(10, 8, 282, 220), ellipse(13, 10, 402, 248), fill(C.coralDark)]),
+    // darker tone under the near fin
+    group('finShade', [ellipse(58, 26, 420, 392), fill(C.coralDark)]),
+    group('bellyShade', [ellipse(168, 28, 322, 444), fill(C.creamDark)]),
+    group('belly', [shPath(belly), fill(C.cream)]),
+    // lighter tone on top of the head
+    group('headShine', [ellipse(130, 22, 292, 210), fill(C.coralLight)]),
+    group('blob', [shPath(xf(blob, 0.965, 300, 190)), fill(C.coral)]),
+    group('blobShade', [shPath(blob), fill(C.coralDark)]),
   ], {}, P);
 
-  const nearFin = shapeLayer('nearFin', [
+  const nearFin = shapeLayer('nearFin', ([
     group('fin', [
       shPath(smooth([[0, -12], [44, -4], [70, 20], [54, 36], [14, 24], [-6, 10]], true, 0.9)),
-      stroke(C.navy, SW), fill(C.coral),
+      fill(C.coralLight),
     ]),
-  ], {
+    group('finEdge', [shPath(smooth([[0, 6], [60, 22], [54, 36], [14, 24], [-6, 10]], true, 0.9)), fill(C.coral)]),
+  ]).reverse(), {
     a: [0, 0, 0], p: [438, 368, 0],
     r: osc(0, 89, 7, 34, 3),
   }, P);
 
   // horn: local coords, base at 0,0 pointing up (-y)
   const hornShape = smooth([[-21, 0], [-14, -60], [-6, -130], [0, -152], [6, -130], [14, -60], [21, 0], [0, 6]], true, 0.6);
-  const stripes = [-36, -72, -104].map((y, k) =>
-    group(`stripe${k}`, [shPath(poly([[-17 + k * 3.5, y + 6], [16 - k * 3.5, y - 6]], false)), stroke(C.navy, 2)]),
-  );
+  // stripes as filled darker bands, inset so they stay inside the cone
+  const stripes = [-36, -72, -104].map((y, k) => {
+    const hw = 17 - k * 4.5;
+    return shPath(wedge([-hw, y + 7], [hw, y - 7], 7, 7));
+  });
   const horn = shapeLayer('horn', [
-    ...stripes,
-    group('cone', [shPath(hornShape), stroke(C.navy, SW), fill(C.yellow)]),
+    group('stripes', [...stripes, fill(C.yellowDark)]),
+    // lighter tone along the left (top) edge, darker right (under) side
+    group('hornLight', [shPath(poly([[-17, -4], [-11, -62], [-4, -128], [-1, -146], [-6, -100], [-9, -50], [-11, -4]])), fill(C.yellowLight)]),
+    group('hornDark', [shPath(poly([[2, 4], [2, -146], [6, -130], [14, -60], [21, 0], [8, 6]])), fill(C.yellowDark)]),
+    group('cone', [shPath(hornShape), fill(C.yellow)]),
   ], {
     a: [0, 0, 0], p: [330, 206, 0],
     r: [[0, 22], [8, 28], [12, 16], [18, 24], [25, 14], [29, 26], [33, 22], [40, 28], [45, 16], [52, 26], [56, 20], [62, 22], [89, 22]],
@@ -462,7 +506,7 @@ function buildNovaCheer() {
     group(`eye${k}`, [
       group('hl', [ellipse(pr * 0.75, pr * 0.75, cx + pr * 0.05, cy - pr * 0.42), ellipse(pr * 0.36, pr * 0.36, cx + pr * 0.85, cy + pr * 0.45), fill(C.white)]),
       group('pupil', [ellipse(pr * 2, pr * 2.1, cx + 10, cy + 6), fill(C.navy)]),
-      group('white', [ellipse(w, h, cx, cy), stroke(C.navy, SW), fill(C.white)]),
+      group('white', [ellipse(w, h, cx, cy), fill(C.white)]),
     ]);
   const eyesOpen = shapeLayer('eyesOpen', [eye(262, 292, 64, 76, 21, 0), eye(356, 288, 70, 82, 22, 1)], {
     a: [310, 300, 0], p: [310, 300, 0],
@@ -470,8 +514,9 @@ function buildNovaCheer() {
     o: [[0, 100, null], [6, 0, null], [65, 100]],
   }, P);
 
-  const arc = (cx, cy, w) => shPath({ c: false, v: [[cx - w, cy + 8], [cx, cy - 14], [cx + w, cy + 8]], i: [[0, 0], [-w * 0.55, 0], [0, -10]], o: [[0, -10], [w * 0.55, 0], [0, 0]] });
-  const eyesHappy = shapeLayer('eyesHappy', [group('arcs', [arc(262, 296, 28), arc(356, 292, 30), stroke(C.navy, 4.5)])], {
+  // happy squint: filled navy crescents (no strokes)
+  const arc = (cx, cy, w) => shPath(lensP([cx - w, cy + 8], [cx, cy - 22], [cx + w, cy + 8], 4.5));
+  const eyesHappy = shapeLayer('eyesHappy', [group('arcs', [arc(262, 296, 28), arc(356, 292, 30), fill(C.navy)])], {
     a: [310, 300, 0], p: [310, 300, 0],
     s: [[0, [100, 40, 100]], [6, [100, 40, 100], E.out], [9, [104, 110, 100]], [12, [100, 100, 100]]],
     o: [[0, 0, null], [6, 100, null], [65, 0]],
@@ -479,9 +524,9 @@ function buildNovaCheer() {
 
   const brows = shapeLayer('brows', [
     group('b', [
-      shPath(poly([[240, 238], [266, 230], [284, 236]], false)),
-      shPath(poly([[332, 232], [358, 224], [380, 230]], false)),
-      stroke(C.navy, 3.5),
+      shPath(lensP([240, 240], [262, 226], [284, 238], 3)),
+      shPath(lensP([332, 234], [356, 220], [380, 232], 3)),
+      fill(C.navy),
     ]),
   ], {
     p: [[0, [0, 0, 0]], [5, [0, 8, 0]], [9, [0, -10, 0]], [14, [0, -6, 0]], [60, [0, -6, 0]], [66, [0, -12, 0]], [72, [0, -4, 0]]],
@@ -507,7 +552,7 @@ function buildNovaCheer() {
     }),
     group('m', [
       shPath([[0, smile], [5, smile, E.out], [9, big], [12, grin], [89, grin]]),
-      stroke(C.navy, 2), fill(C.navy),
+      fill(C.navy),
     ]),
   ], { p: [312, 362, 0] }, P);
 

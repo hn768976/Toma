@@ -1,10 +1,10 @@
 import React from 'react';
 import { AbsoluteFill, useCurrentFrame } from 'remotion';
-import { Horn } from '../characters/NovaFace';
-import { fontFamily } from '../fonts';
+import { Horn, lens } from '../characters/NovaFace';
 import { LottieAt } from '../lib/LottieAt';
 import { blinkAt, breathe, ease, Key, popScale, track, wave } from '../lib/motion';
-import { C, LETTER_COLORS } from '../theme';
+import { C, LETTER_TONES } from '../theme';
+import { ChunkyText, GLINT } from '../set/Seabed';
 
 const START = 150; // global frame where this shot begins
 const LX = [330, 750, 1170, 1590];
@@ -15,13 +15,14 @@ const LETTERS = ['A', 'B', 'C', 'D'];
 const POP = [165, 195, 255, 285]; // C is late: Puff steals its beat at 225
 const GAG = 225;
 const GROUP_BOUNCES = [300, 315, 330];
-const SW = 3;
 
 /* ---------- background: cream with faint drifting shell pattern ---------- */
 const FaintShell: React.FC<{ x: number; y: number; rot: number }> = ({ x, y, rot }) => (
-  <g transform={`translate(${x} ${y}) rotate(${rot}) scale(1.6)`} fill="#F8E7C6" stroke="#F1DCB4" strokeWidth={2} strokeLinejoin="round">
-    <path d="M 0 14 L -20 -2 Q -22 -18 -10 -22 Q 0 -28 10 -22 Q 22 -18 20 -2 Z" />
-    <path d="M 0 12 L -14 -16 M 0 12 L -5 -20 M 0 12 L 5 -20 M 0 12 L 14 -16" fill="none" strokeLinecap="round" />
+  <g transform={`translate(${x} ${y}) rotate(${rot}) scale(1.6)`}>
+    <path d="M 0 14 L -20 -2 Q -22 -18 -10 -22 Q 0 -28 10 -22 Q 22 -18 20 -2 Z" fill="#F7E6C4" />
+    {[-14, -5, 4, 13].map((dx) => (
+      <path key={dx} d={`M 0 12 L ${dx - 1.6} -20 L ${dx + 1.6} -20 Z`} fill="#F1DDB6" />
+    ))}
   </g>
 );
 
@@ -69,38 +70,38 @@ const Letter: React.FC<{ f: number; i: number }> = ({ f, i }) => {
   const st = popSt * b.st;
   const br = f > P + 17 ? breathe(f, i * 1.7) : 1;
   const rot = track(f, [[P, -14, ease.out], [P + 6, 6, ease.inOut], [P + 11, -3, ease.inOut], [P + 16, 0]]) + (f > P + 16 ? 1.5 * wave(f, 0.5, i) : 0);
-  const color = LETTER_COLORS[i % LETTER_COLORS.length];
+  const tone = LETTER_TONES[i % LETTER_TONES.length];
   const idleBob = f > P + 17 ? 4 * wave(f, 0.5, i * 1.3) : 0;
-  // bold ring burst on landing: 4px, letter colour, scales out + fades over 8 frames
+  // ring burst on landing: 4px filled annulus (no stroke), letter colour, scales out + fades over 8 frames
   const rt = f - L;
   const ring = rt >= 0 && rt <= RING_FRAMES ? rt / RING_FRAMES : null;
+  const rr = ring === null ? 0 : 170 + 140 * ease.out(ring);
   return (
     // SVG text (not HTML text + CSS scale): avoids a Chrome raster ghosting glitch on huge glyphs
     <svg width={1920} height={1080} style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
       {ring !== null ? (
-        <circle
-          cx={LX[i]}
-          cy={LY}
-          r={170 + 140 * ease.out(ring)}
-          fill="none"
-          stroke={color}
-          strokeWidth={4}
+        <path
+          d={`M ${LX[i] - rr - 2} ${LY} a ${rr + 2} ${rr + 2} 0 1 0 ${2 * (rr + 2)} 0 a ${rr + 2} ${rr + 2} 0 1 0 ${-2 * (rr + 2)} 0 Z M ${LX[i] - rr + 2} ${LY} a ${rr - 2} ${rr - 2} 0 1 1 ${2 * (rr - 2)} 0 a ${rr - 2} ${rr - 2} 0 1 1 ${-2 * (rr - 2)} 0 Z`}
+          fill={tone.base}
+          fillRule="evenodd"
           opacity={1 - ease.in(ring)}
         />
       ) : null}
-      <g
-        transform={`translate(${LX[i]} ${BASELINE + drop + b.y + idleBob}) rotate(${rot}) scale(${(s * br) / Math.sqrt(st)} ${s * br * Math.sqrt(st)})`}
-        fontFamily={fontFamily}
-        fontWeight={600}
-        fontSize={FONT}
-        textAnchor="middle"
-      >
-        <text x={0} y={16} fill="rgba(29,43,83,0.16)">
-          {LETTERS[i]}
-        </text>
-        <text x={0} y={0} fill={color}>
-          {LETTERS[i]}
-        </text>
+      <g transform={`translate(${LX[i]} ${BASELINE + drop + b.y + idleBob}) rotate(${rot}) scale(${(s * br) / Math.sqrt(st)} ${s * br * Math.sqrt(st)})`}>
+        {/* flat colour + darker same-hue bottom edge (6px "thickness") + soft drop shadow + glint */}
+        <ChunkyText
+          text={LETTERS[i]}
+          x={0}
+          y={0}
+          size={FONT}
+          base={tone.base}
+          dark={tone.dark}
+          light={tone.light}
+          depth={6}
+          glint={GLINT[LETTERS[i]]}
+          id={`cu-glint-${i}`}
+          shadow
+        />
       </g>
     </svg>
   );
@@ -182,9 +183,11 @@ const NovaPeek: React.FC<{ f: number }> = ({ f }) => {
     <svg width={1920} height={1080} style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
       <g transform={`translate(${cx} ${cy + HEAD_R + idle}) scale(${1 / sq} ${sq}) translate(0 ${-HEAD_R})`}>
         <g transform={`translate(${HORN_BASE.x} ${HORN_BASE.y}) rotate(${ang})`}>
-          <Horn length={HORN_LEN} width={78} sw={SW} />
+          <Horn length={HORN_LEN} width={78} />
         </g>
-        <circle cx={0} cy={0} r={HEAD_R} fill={C.coral} stroke={C.navy} strokeWidth={SW} />
+        <circle cx={0} cy={0} r={HEAD_R} fill={C.coral} />
+        {/* lighter tone on top of the head */}
+        <ellipse cx={-30} cy={-166} rx={92} ry={13} transform="rotate(-8 -30 -166)" fill={C.coralLight} />
         <ellipse cx={-70} cy={-140} rx={12} ry={8} fill={C.coralDark} />
         <ellipse cx={90} cy={-150} rx={9} ry={6} fill={C.coralDark} />
         {/* eyes looking up at the letter */}
@@ -193,26 +196,26 @@ const NovaPeek: React.FC<{ f: number }> = ({ f }) => {
           const rx = k === 0 ? 34 : 38;
           const ry = 42;
           const lid = ouch ? 0.55 : blink;
+          const lidY = ey - ry + lid * ry * 2;
+          const clip = `peek-eye-${k}`;
           return (
             <g key={k}>
-              <ellipse cx={ex} cy={ey} rx={rx} ry={ry} fill={C.white} stroke={C.navy} strokeWidth={SW} />
-              <circle cx={ex + 8} cy={ey - 12} r={17} fill={C.navy} />
-              <circle cx={ex + 3} cy={ey - 18} r={6} fill={C.white} />
-              {lid > 0.02 ? (
-                <path
-                  d={`M ${ex - rx} ${ey} A ${rx} ${ry} 0 0 1 ${ex + rx} ${ey} L ${ex + rx} ${ey - ry + lid * ry * 2} L ${ex - rx} ${ey - ry + lid * ry * 2} Z`}
-                  fill={C.coral}
-                  stroke={C.navy}
-                  strokeWidth={SW}
-                />
-              ) : null}
-              <path
-                d={`M ${ex - rx * 0.7} ${ey - ry - 18 + (ouch ? 6 : 0)} Q ${ex} ${ey - ry - 30} ${ex + rx * 0.7} ${ey - ry - 20}`}
-                stroke={C.navy}
-                strokeWidth={5}
-                fill="none"
-                strokeLinecap="round"
-              />
+              <clipPath id={clip}>
+                <ellipse cx={ex} cy={ey} rx={rx} ry={ry} />
+              </clipPath>
+              <ellipse cx={ex} cy={ey} rx={rx} ry={ry} fill={C.white} />
+              <g clipPath={`url(#${clip})`}>
+                <circle cx={ex + 8} cy={ey - 12} r={17} fill={C.navy} />
+                <circle cx={ex + 3} cy={ey - 18} r={6} fill={C.white} />
+                {lid > 0.02 ? (
+                  <>
+                    <rect x={ex - rx - 2} y={ey - ry - 2} width={rx * 2 + 4} height={lidY - (ey - ry - 2)} fill={C.coral} />
+                    <rect x={ex - rx - 2} y={lidY - 5} width={rx * 2 + 4} height={6} fill={C.coralDark} />
+                  </>
+                ) : null}
+              </g>
+              {/* brow: filled navy crescent */}
+              <path d={lens(ex - rx * 0.7, ey - ry - 16 + (ouch ? 6 : 0), ex, ey - ry - 28, ex + rx * 0.7, ey - ry - 18, 3.2)} fill={C.navy} />
             </g>
           );
         })}
@@ -245,7 +248,8 @@ const PuffGag: React.FC<{ f: number }> = ({ f }) => {
             const x0 = LX[2] + zx - 160 - k * 10;
             const y0 = LY + zy + 130 + o;
             return (
-              <line key={k} x1={x0} y1={y0} x2={x0 - 260 * t * Math.cos((dirDeg * Math.PI) / 180)} y2={y0 - 260 * t * Math.sin((dirDeg * Math.PI) / 180)} stroke={C.navy} strokeWidth={6} strokeLinecap="round" opacity={fade} />
+              // speed line as a filled capsule (no stroke)
+              <rect key={k} x={x0 - 260 * t} y={y0 - 3} width={260 * t} height={6} rx={3} fill={C.orangeDark} opacity={fade} transform={`rotate(${dirDeg} ${x0} ${y0})`} />
             );
           })}
         </svg>
@@ -276,6 +280,11 @@ export const LetterCloseUp: React.FC = () => {
   return (
     <AbsoluteFill style={{ backgroundColor: C.cream, overflow: 'hidden' }}>
       <svg width={1920} height={1080} style={{ position: 'absolute', inset: 0 }}>
+        <defs>
+          <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="9" />
+          </filter>
+        </defs>
         <ShellPattern f={f} />
       </svg>
       {[0, 1, 2, 3].map((i) => (

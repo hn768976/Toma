@@ -1,5 +1,6 @@
 import React from 'react';
-import { C } from '../theme';
+import { C, TONES } from '../theme';
+import { darken, lighten } from '../lib/color';
 import { breathe, ease, seeded, track, wave } from '../lib/motion';
 import { fontFamily } from '../fonts';
 
@@ -7,7 +8,6 @@ export const W = 1920;
 export const H = 1080;
 /** The wide-shot world is wider than the frame; the camera pans across it. */
 export const WORLD_W = 2400;
-const O = 3; // outline
 
 export const sandTop = (x: number) => 852 + 14 * Math.sin(x / 330 + 0.6);
 
@@ -33,7 +33,7 @@ export const Backdrop: React.FC<{ f: number }> = ({ f }) => {
         <g key={i} transform={`rotate(${s.a + 1.6 * wave(f, 0.18, s.ph)} ${s.x} -40)`}>
           <polygon
             points={`${s.x - s.w / 2},-60 ${s.x + s.w / 2},-60 ${s.x + s.w * 1.4},900 ${s.x - s.w * 0.4},900`}
-            fill={C.cream}
+            fill={C.shaft}
             opacity={0.055 + 0.015 * wave(f, 0.25, s.ph)}
           />
         </g>
@@ -75,7 +75,7 @@ export const Kelp: React.FC<{
   phase?: number;
   color?: string;
   dark?: string;
-}> = ({ f, x, height, width = 34, phase = 0, color = C.lime, dark = '#6FAE36' }) => {
+}> = ({ f, x, height, width = 34, phase = 0, color = C.kelp, dark = C.kelpDark }) => {
   const M = 14;
   const base = sandTop(x) + 26;
   const pts: { x: number; y: number; w: number; a: number }[] = [];
@@ -94,6 +94,7 @@ export const Kelp: React.FC<{
   }
   const left = pts.map((p) => [p.x + Math.sin(p.a) * p.w * 0.5, p.y - Math.cos(p.a) * p.w * 0.5]);
   const right = pts.map((p) => [p.x - Math.sin(p.a) * p.w * 0.5, p.y + Math.cos(p.a) * p.w * 0.5]);
+  const mid = pts.map((p) => [p.x - Math.sin(p.a) * p.w * 0.08, p.y + Math.cos(p.a) * p.w * 0.08]);
   const toD = (arr: number[][]) => {
     let d = `M ${arr[0][0]} ${arr[0][1]}`;
     for (let k = 1; k < arr.length - 1; k++) {
@@ -104,11 +105,10 @@ export const Kelp: React.FC<{
     return d;
   };
   const tip = pts[M];
-  const d =
-    toD(left) +
-    ` Q ${tip.x + Math.cos(tip.a) * 26} ${tip.y + Math.sin(tip.a) * 26} ${right[M][0]} ${right[M][1]}` +
-    toD(right.slice().reverse()).replace(/^M/, ' L') +
-    ' Z';
+  const capTo = (arr: number[][]) => ` Q ${tip.x + Math.cos(tip.a) * 26} ${tip.y + Math.sin(tip.a) * 26} ${arr[M][0]} ${arr[M][1]}`;
+  const d = toD(left) + capTo(right) + toD(right.slice().reverse()).replace(/^M/, ' L') + ' Z';
+  // shaded half: from the midline to the right edge, darker tone of the same green
+  const shade = toD(mid) + capTo(right) + toD(right.slice().reverse()).replace(/^M/, ' L') + ' Z';
   const leaves = [3, 5, 7, 9, 11].map((j, k) => {
     const p = pts[j];
     const side = k % 2 === 0 ? 1 : -1;
@@ -116,26 +116,33 @@ export const Kelp: React.FC<{
     const ang = (p.a * 180) / Math.PI + side * (55 + flutter);
     return (
       <g key={j} transform={`translate(${p.x} ${p.y}) rotate(${ang})`}>
-        <path
-          d={`M 0 0 Q 22 -16 ${44 - k * 3} 0 Q 22 14 0 0 Z`}
-          fill={dark}
-          stroke={C.navy}
-          strokeWidth={O}
-          strokeLinejoin="round"
-        />
+        <path d={`M 0 0 Q 22 -16 ${44 - k * 3} 0 Q 22 14 0 0 Z`} fill={dark} />
       </g>
     );
   });
   return (
     <g>
       {leaves}
-      <path d={d} fill={color} stroke={C.navy} strokeWidth={O} strokeLinejoin="round" />
-      <path d={toD(pts.map((p) => [p.x, p.y]).slice(1, -2))} fill="none" stroke={dark} strokeWidth={4} strokeLinecap="round" />
+      <path d={d} fill={color} />
+      <path d={shade} fill={dark} />
     </g>
   );
 };
 
 /* ---------------- coral ---------------- */
+/** Solid tube along a quadratic curve, built from filled circles (no strokes). */
+const tube = (x0: number, y0: number, cx: number, cy: number, x1: number, y1: number, r: number, fill: string, key: string, dx = 0, dy = 0) => {
+  const out: React.ReactNode[] = [];
+  const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 4);
+  for (let k = 0; k <= n; k++) {
+    const t = k / n;
+    const px = (1 - t) * (1 - t) * x0 + 2 * (1 - t) * t * cx + t * t * x1;
+    const py = (1 - t) * (1 - t) * y0 + 2 * (1 - t) * t * cy + t * t * y1;
+    out.push(<circle key={`${key}-${k}`} cx={px + dx} cy={py + dy} r={r} fill={fill} />);
+  }
+  return out;
+};
+
 export const BranchCoral: React.FC<{ f: number; x: number; scale?: number; color?: string; phase?: number }> = ({
   f,
   x,
@@ -145,21 +152,23 @@ export const BranchCoral: React.FC<{ f: number; x: number; scale?: number; color
 }) => {
   const y = sandTop(x) + 20;
   const r = 2.2 * wave(f, 0.35, phase);
-  const branches = [
-    'M 0 0 Q -4 -60 -2 -120',
-    'M -2 -60 Q -40 -80 -46 -128',
-    'M -2 -90 Q 30 -110 40 -160',
-    'M 18 -112 Q 52 -118 64 -100',
-    'M -30 -100 Q -66 -96 -72 -70',
+  // muted for the set so the characters stay the warmest things on screen
+  const base = darken(color, 0.08);
+  const dark = darken(color, 0.25);
+  const light = lighten(color, 0.3);
+  const branches: [number, number, number, number, number, number][] = [
+    [0, 0, -4, -60, -2, -120],
+    [-2, -60, -40, -80, -46, -128],
+    [-2, -90, 30, -110, 40, -160],
+    [18, -112, 52, -118, 64, -100],
+    [-30, -100, -66, -96, -72, -70],
   ];
   return (
     <g transform={`translate(${x} ${y}) scale(${scale}) rotate(${r})`}>
-      {/* draw all navy outlines first so joints read as one shape */}
-      {branches.map((d, i) => (
-        <path key={`o${i}`} d={d} stroke={C.navy} strokeWidth={22 + O * 2} fill="none" strokeLinecap="round" />
-      ))}
-      {branches.map((d, i) => (
-        <path key={`f${i}`} d={d} stroke={color} strokeWidth={22} fill="none" strokeLinecap="round" />
+      {branches.map((b, i) => tube(...b, 11, dark, `d${i}`, 4, 3))}
+      {branches.map((b, i) => tube(...b, 11, base, `b${i}`))}
+      {branches.map((b, i) => (
+        <circle key={`t${i}`} cx={b[4] - 3} cy={b[5] - 2} r={4.5} fill={light} />
       ))}
     </g>
   );
@@ -180,15 +189,16 @@ export const BubbleCoral: React.FC<{ f: number; x: number; scale?: number; color
     [24, -82, 24],
   ];
   const s = breathe(f, 1.2, 0.012, 70);
+  const base = darken(color, 0.08);
   return (
     <g transform={`translate(${x} ${y}) scale(${scale * (2 - s)} ${scale * s})`}>
       {balls.map(([bx, by, r], i) => (
-        <circle key={`o${i}`} cx={bx} cy={by} r={r + O} fill={C.navy} />
+        <circle key={`d${i}`} cx={bx + 3} cy={by + 5} r={r} fill={darken(color, 0.26)} />
       ))}
       {balls.map(([bx, by, r], i) => (
         <g key={`f${i}`}>
-          <circle cx={bx} cy={by} r={r} fill={color} />
-          <circle cx={bx - r * 0.3} cy={by - r * 0.35} r={r * 0.22} fill="#A783E0" />
+          <circle cx={bx} cy={by} r={r} fill={base} />
+          <circle cx={bx - r * 0.3} cy={by - r * 0.35} r={r * 0.22} fill={lighten(color, 0.3)} />
         </g>
       ))}
     </g>
@@ -202,60 +212,138 @@ export const Shell: React.FC<{ x: number; y: number; size?: number; rot?: number
   size = 1,
   rot = 0,
   color = C.coral,
-}) => (
-  <g transform={`translate(${x} ${y}) rotate(${rot}) scale(${size})`}>
-    <path
-      d="M 0 14 L -20 -2 Q -22 -18 -10 -22 Q 0 -28 10 -22 Q 22 -18 20 -2 Z"
-      fill={color}
-      stroke={C.navy}
-      strokeWidth={O / size}
-      strokeLinejoin="round"
-    />
-    {[-12, -5, 2, 9].map((dx, i) => (
-      <path key={i} d={`M 0 12 L ${dx * 1.3 + 2} -18`} stroke={C.navy} strokeWidth={2 / size} strokeLinecap="round" />
-    ))}
-    <rect x={-6} y={10} width={12} height={7} rx={3} fill={color} stroke={C.navy} strokeWidth={O / size} />
+}) => {
+  const dark = darken(color, 0.2);
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${rot}) scale(${size})`}>
+      <path d="M 0 14 L -20 -2 Q -22 -18 -10 -22 Q 0 -28 10 -22 Q 22 -18 20 -2 Z" fill={color} />
+      {/* ridges as thin darker wedges */}
+      {[-14, -5, 4, 13].map((dx, i) => (
+        <path key={i} d={`M 0 12 L ${dx - 2} -20 L ${dx + 2} -20 Z`} fill={dark} />
+      ))}
+      <ellipse cx={-7} cy={-17} rx={4} ry={2.4} fill={lighten(color, 0.45)} />
+      <rect x={-7} y={10} width={14} height={7} rx={3} fill={dark} />
+    </g>
+  );
+};
+
+export const SLATE = { x: 1800, y: 150, w: 540, h: 360 };
+
+/** Text with a darker same-hue "thickness" offset, an optional soft shadow and a clipped glint. */
+export const ChunkyText: React.FC<{
+  text: string;
+  x: number;
+  y: number;
+  size: number;
+  base: string;
+  dark: string;
+  light: string;
+  depth: number;
+  glint?: [number, number, number, number]; // relative to the em size: cx, cy, rx, ry
+  id: string;
+  shadow?: boolean;
+}> = ({ text, x, y, size, base, dark, light, depth, glint, id, shadow }) => (
+  <g fontFamily={fontFamily} fontWeight={600} fontSize={size} textAnchor="middle">
+    {shadow ? (
+      <text x={x} y={y + depth + size * 0.035} fill={C.navy} opacity={0.18} filter="url(#softShadow)">
+        {text}
+      </text>
+    ) : null}
+    <text x={x} y={y + depth} fill={dark}>
+      {text}
+    </text>
+    <text x={x} y={y} fill={base}>
+      {text}
+    </text>
+    {glint ? (
+      <>
+        <clipPath id={id}>
+          <text x={x} y={y}>
+            {text}
+          </text>
+        </clipPath>
+        <ellipse
+          cx={x + glint[0] * size}
+          cy={y + glint[1] * size}
+          rx={glint[2] * size}
+          ry={glint[3] * size}
+          transform={`rotate(-28 ${x + glint[0] * size} ${y + glint[1] * size})`}
+          fill={light}
+          clipPath={`url(#${id})`}
+        />
+      </>
+    ) : null}
   </g>
 );
 
-export const SLATE = { x: 1800, y: 150, w: 540, h: 360 };
+/** Glint positions per letter (fractions of the font size, relative to centre-baseline). */
+export const GLINT: Record<string, [number, number, number, number]> = {
+  A: [-0.07, -0.58, 0.035, 0.11],
+  B: [-0.17, -0.55, 0.03, 0.1],
+  C: [-0.21, -0.5, 0.03, 0.1],
+  D: [-0.18, -0.55, 0.03, 0.1],
+};
 
 export const Slate: React.FC<{ f: number; letters?: number }> = ({ f, letters = 4 }) => {
   const { x, y, w, h } = SLATE;
   const sway = 0.6 * wave(f, 0.22, 0.4);
-  const rope = '#E0A65A';
   const letterRow = ['A', 'B', 'C', 'D'];
-  const cols = [C.cyan, C.yellow, C.grape, C.lime];
+  const tones = [TONES.cyan, TONES.yellow, TONES.grape, TONES.lime];
+  const fr = 15; // rope half-thickness
+  const marks: React.ReactNode[] = [];
+  for (let px = x + 30; px < x + w - 24; px += 20) {
+    marks.push(<rect key={`t${px}`} x={px} y={y - fr} width={6} height={fr * 2} rx={3} fill={C.ropeDark} transform={`skewX(-28)`} style={{ transformBox: 'fill-box', transformOrigin: 'center' }} />);
+    marks.push(<rect key={`b${px}`} x={px} y={y + h - fr} width={6} height={fr * 2} rx={3} fill={C.ropeDark} transform={`skewX(-28)`} style={{ transformBox: 'fill-box', transformOrigin: 'center' }} />);
+  }
+  for (let py = y + 30; py < y + h - 24; py += 20) {
+    marks.push(<rect key={`l${py}`} x={x - fr} y={py} width={fr * 2} height={6} rx={3} fill={C.ropeDark} transform={`skewY(-28)`} style={{ transformBox: 'fill-box', transformOrigin: 'center' }} />);
+    marks.push(<rect key={`r${py}`} x={x + w - fr} y={py} width={fr * 2} height={6} rx={3} fill={C.ropeDark} transform={`skewY(-28)`} style={{ transformBox: 'fill-box', transformOrigin: 'center' }} />);
+  }
   return (
     <g transform={`rotate(${sway} ${x + w / 2} ${y + h + 380})`}>
-      {/* posts */}
-      {[x + 70, x + w - 70].map((px, i) => (
-        <rect key={i} x={px - 14} y={y + h - 20} width={28} height={sandTop(px) - (y + h) + 50} rx={8} fill={rope} stroke={C.navy} strokeWidth={O} />
-      ))}
-      {/* rope frame: navy under-stroke, rope stroke, twist dashes */}
-      <rect x={x} y={y} width={w} height={h} rx={34} fill={C.cream} stroke={C.navy} strokeWidth={30 + O * 2} />
-      <rect x={x} y={y} width={w} height={h} rx={34} fill={C.cream} stroke={rope} strokeWidth={30} />
-      <rect x={x} y={y} width={w} height={h} rx={34} fill="none" stroke={C.navy} strokeWidth={30} strokeDasharray="3 15" opacity={0.55} />
-      <rect x={x + 15 + O / 2} y={y + 15 + O / 2} width={w - 30 - O} height={h - 30 - O} rx={20} fill={C.cream} stroke={C.navy} strokeWidth={O} />
-      {/* faint guide lines */}
-      {[0.42, 0.74].map((t, i) => (
-        <line key={i} x1={x + 50} x2={x + w - 50} y1={y + h * t} y2={y + h * t} stroke={C.sandDark} strokeWidth={4} strokeLinecap="round" strokeDasharray="2 14" />
-      ))}
-      {letterRow.slice(0, letters).map((L, i) => (
-        <text
-          key={L}
-          x={x + w * 0.19 + i * w * 0.206}
-          y={y + h * 0.66}
-          fontFamily={fontFamily}
-          fontWeight={600}
-          fontSize={118 * (w / 480)}
-          textAnchor="middle"
-          fill={cols[i]}
-          transform={`rotate(${2.5 * wave(f, 0.5, i * 1.3)} ${x + w * 0.19 + i * w * 0.206} ${y + h * 0.5})`}
-        >
-          {L}
-        </text>
-      ))}
+      {/* posts: base, darker right side */}
+      {[x + 70, x + w - 70].map((px, i) => {
+        const ph = sandTop(px) - (y + h) + 50;
+        return (
+          <g key={i}>
+            <rect x={px - 15} y={y + h - 20} width={30} height={ph} rx={8} fill={C.rope} />
+            <rect x={px + 3} y={y + h - 20} width={12} height={ph} rx={6} fill={C.ropeDark} />
+          </g>
+        );
+      })}
+      {/* rope frame: darker underside, base, lighter top edge, twist marks */}
+      <rect x={x - fr} y={y - fr + 6} width={w + fr * 2} height={h + fr * 2} rx={40} fill={C.ropeDark} />
+      <rect x={x - fr} y={y - fr} width={w + fr * 2} height={h + fr * 2} rx={40} fill={C.rope} />
+      <rect x={x + 20} y={y - fr + 3} width={w - 40} height={6} rx={3} fill={C.ropeLight} />
+      {marks}
+      {/* board: cream, with a darker band under the top rope (inner shade) */}
+      <rect x={x + fr} y={y + fr} width={w - fr * 2} height={h - fr * 2} rx={22} fill={C.cream} />
+      <rect x={x + fr} y={y + fr} width={w - fr * 2} height={14} rx={7} fill={C.creamDark} />
+      {/* faint guide dots */}
+      {[0.42, 0.74].map((t, i) =>
+        Array.from({ length: 26 }, (_, k) => (
+          <circle key={`${i}-${k}`} cx={x + 50 + k * ((w - 100) / 25)} cy={y + h * t} r={2.4} fill={C.creamDark} />
+        )),
+      )}
+      {letterRow.slice(0, letters).map((L, i) => {
+        const lx = x + w * 0.19 + i * w * 0.206;
+        return (
+          <g key={L} transform={`rotate(${2.5 * wave(f, 0.5, i * 1.3)} ${lx} ${y + h * 0.5})`}>
+            <ChunkyText
+              text={L}
+              x={lx}
+              y={y + h * 0.66}
+              size={118 * (w / 480)}
+              base={tones[i].base}
+              dark={tones[i].dark}
+              light={tones[i].light}
+              depth={4}
+              glint={GLINT[L]}
+              id={`slate-glint-${L}`}
+            />
+          </g>
+        );
+      })}
       <Shell x={x + 8} y={y + 8} size={1.3} rot={-35} color={C.coral} />
       <Shell x={x + w - 6} y={y + 10} size={1.15} rot={30} color={C.orange} />
       <Shell x={x + w - 4} y={y + h - 6} size={1.25} rot={150} color={C.grape} />
@@ -266,10 +354,13 @@ export const Slate: React.FC<{ f: number; letters?: number }> = ({ f, letters = 
 };
 
 /* ---------------- bubbles ---------------- */
+/** Bubble without outline: pale disc, a darker lower crescent and a white shine. */
 export const Bubble: React.FC<{ x: number; y: number; r: number; s?: number }> = ({ x, y, r, s = 1 }) => (
   <g transform={`translate(${x} ${y}) scale(${s})`}>
-    <circle r={r} fill={C.bubble} fillOpacity={0.18} stroke={C.bubble} strokeWidth={Math.max(2, r * 0.18)} />
-    <path d={`M ${-r * 0.55} ${-r * 0.15} Q ${-r * 0.5} ${-r * 0.55} ${-r * 0.1} ${-r * 0.6}`} stroke={C.white} strokeWidth={Math.max(2, r * 0.16)} fill="none" strokeLinecap="round" />
+    <circle r={r} fill={C.bubble} fillOpacity={0.42} />
+    <path d={`M ${-r * 0.8} ${r * 0.2} A ${r * 0.85} ${r * 0.85} 0 0 0 ${r * 0.8} ${r * 0.2} A ${r} ${r} 0 0 1 ${-r * 0.8} ${r * 0.2} Z`} fill={C.bubble} fillOpacity={0.5} />
+    <ellipse cx={-r * 0.36} cy={-r * 0.4} rx={r * 0.28} ry={r * 0.18} transform={`rotate(-35 ${-r * 0.36} ${-r * 0.4})`} fill={C.white} />
+    <circle cx={r * 0.38} cy={-r * 0.05} r={Math.max(1.2, r * 0.09)} fill={C.white} fillOpacity={0.85} />
   </g>
 );
 

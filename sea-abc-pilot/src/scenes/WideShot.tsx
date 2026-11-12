@@ -30,10 +30,10 @@ export const SetBack: React.FC<{ f: number }> = ({ f }) => (
   <svg width={WORLD_W} height={H} style={{ position: 'absolute', left: 0, top: 0, overflow: 'visible' }}>
     <Backdrop f={f} />
     <Plankton f={f} />
-    <Kelp f={f} x={760} height={360} width={28} phase={2.2} color="#79B83A" dark="#5E9E30" />
-    <Kelp f={f} x={1180} height={300} width={26} phase={4.1} color="#79B83A" dark="#5E9E30" />
-    <Kelp f={f} x={1730} height={380} width={30} phase={1.1} color="#79B83A" dark="#5E9E30" />
-    <Kelp f={f} x={2390} height={340} width={28} phase={3.0} color="#79B83A" dark="#5E9E30" />
+    <Kelp f={f} x={760} height={360} width={28} phase={2.2} color={C.kelpBack} dark={C.kelpBackDark} />
+    <Kelp f={f} x={1180} height={300} width={26} phase={4.1} color={C.kelpBack} dark={C.kelpBackDark} />
+    <Kelp f={f} x={1730} height={380} width={30} phase={1.1} color={C.kelpBack} dark={C.kelpBackDark} />
+    <Kelp f={f} x={2390} height={340} width={28} phase={3.0} color={C.kelpBack} dark={C.kelpBackDark} />
     <Slate f={f} />
     <Sand />
     {/* corals kept clear of the clam so nothing reads as part of it */}

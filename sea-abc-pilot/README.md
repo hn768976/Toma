@@ -13,7 +13,19 @@ a seabed set and an alphabet slate. 1920×1080, 30 fps, 450 frames (120 BPM, one
 
 Wide-shot layout: the seabed is a 2400 px wide world (`WORLD_W`) and `Camera` in `src/scenes/WideShot.tsx`
 maps it to the frame (`screen = (world - cam) * zoom`). Nova is drawn at 1.52x (~1/3 of the frame height),
-Puff and the clam scale with her; outlines are re-thinned so they stay ~3px at those sizes.
+Puff and the clam scale with her.
+
+## Style: no outlines
+
+Nothing has a stroke (React SVG, PixiJS texture and the Lottie files: `"ty":"st"` count is 0).
+Parts are separated by colour: each hue has a base, a darker same-hue tone (~15-20%) for
+shading (under the belly, under fins, inside the clam, letter bottoms) and a lighter tone for
+small highlights (top of the head, eye shine, top edge of the horn, a glint on each letter).
+Facial features are filled #1E2A44 shapes. The background (water, sand, kelp, set coral) is
+slightly muted so the characters stay the brightest, warmest things on screen. Palette:
+`src/theme.ts` (mirrored at the top of `scripts/lottie/build.mjs`). Letters are flat colour plus a
+6px darker same-hue bottom edge, a soft blurred drop shadow and a clipped glint (`ChunkyText`).
+Nova's body shading is baked into the MeshRope texture (`novaBodySvg`) so it bends with her.
 
 ## Install
 
