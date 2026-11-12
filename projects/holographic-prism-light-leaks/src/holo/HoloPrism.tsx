@@ -99,9 +99,9 @@ export const HoloPrism: React.FC<HoloPrismProps> = ({
 
     if (variant === "match") {
       // Hand-held macro drift over the foil, like the reference footage.
-      const panX = 0.05 * t + 0.12 * Math.sin(t * 0.61);
-      const panY = 0.02 * t + 0.10 * Math.sin(t * 0.52 + 1.3);
-      const rot = 0.22 * Math.sin(t * 0.27) + 0.06 * Math.sin(t * 0.93);
+      const panX = 0.05 * t + 0.12 * Math.sin(t * 0.61) + 0.025 * Math.sin(t * 1.7);
+      const panY = 0.02 * t + 0.10 * Math.sin(t * 0.52 + 1.3) + 0.02 * Math.sin(t * 2.3 + 0.7);
+      const rot = 0.22 * Math.sin(t * 0.27) + 0.06 * Math.sin(t * 0.93) + 0.025 * Math.sin(t * 2.1);
       const zoom = 1.0 + 0.06 * Math.sin(t * 0.29);
       gl.uniform1i(loc.uMode, 0);
       gl.uniform4f(loc.uCamA, panX, panY, rot, zoom);
