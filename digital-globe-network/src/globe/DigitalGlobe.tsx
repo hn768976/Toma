@@ -12,9 +12,9 @@ export const DigitalGlobe: React.FC<DigitalGlobeProps> = ({ variant }) => {
       style={{
         // Deep navy space with a brighter blue bloom on the right, as in the reference.
         background:
-          "radial-gradient(ellipse 70% 90% at 92% 30%, #1d3f9e 0%, rgba(20,45,130,0.55) 35%, rgba(4,10,40,0) 75%)," +
-          "radial-gradient(ellipse 60% 70% at 85% 105%, #1a3586 0%, rgba(10,25,80,0) 70%)," +
-          "linear-gradient(160deg, #050c2b 0%, #071338 45%, #0a1a4c 100%)",
+          "radial-gradient(ellipse 60% 85% at 95% 25%, #1a3a92 0%, rgba(20,45,130,0.45) 40%, rgba(4,10,40,0) 75%)," +
+          "radial-gradient(ellipse 55% 60% at 88% 105%, #15307a 0%, rgba(10,25,80,0) 70%)," +
+          "linear-gradient(150deg, #01030f 0%, #040a26 45%, #071440 100%)",
       }}
     >
       <ThreeCanvas

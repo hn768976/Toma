@@ -8,7 +8,7 @@ import {
   useVideoConfig,
 } from "remotion";
 import { AMBER_PALETTE, BLUE_PALETTE } from "./palettes";
-import { cameraAt, drawPlexusFrame, FONT_FAMILY } from "./renderer";
+import { cameraAt, drawPlexusFrame, MONO_FAMILY, SANS_FAMILY } from "./renderer";
 import { buildWorld } from "./world";
 
 export type PlexusProps = {
@@ -17,15 +17,14 @@ export type PlexusProps = {
 };
 
 let fontPromise: Promise<void> | null = null;
-const loadFont = () => {
+const loadFonts = () => {
   if (!fontPromise) {
-    const face = new FontFace(
-      FONT_FAMILY,
-      `url(${staticFile("fonts/RobotoMono-Medium.woff2")}) format("woff2")`,
-      { weight: "500" },
-    );
-    fontPromise = face.load().then((f) => {
-      document.fonts.add(f);
+    const faces = [
+      new FontFace(MONO_FAMILY, `url(${staticFile("fonts/RobotoMono-Medium.woff2")}) format("woff2")`, { weight: "500" }),
+      new FontFace(SANS_FAMILY, `url(${staticFile("fonts/Inter-SemiBold.woff2")}) format("woff2")`, { weight: "600" }),
+    ];
+    fontPromise = Promise.all(faces.map((f) => f.load())).then((loaded) => {
+      loaded.forEach((f) => document.fonts.add(f));
     });
   }
   return fontPromise;
@@ -38,10 +37,10 @@ export const PlexusNetwork: React.FC<PlexusProps> = ({ palette, seed }) => {
   const world = useMemo(() => buildWorld(seed), [seed]);
   const pal = palette === "amber" ? AMBER_PALETTE : BLUE_PALETTE;
 
-  const [fontHandle] = useState(() => delayRender("Loading Roboto Mono"));
+  const [fontHandle] = useState(() => delayRender("Loading fonts"));
   const [fontReady, setFontReady] = useState(false);
   useEffect(() => {
-    loadFont()
+    loadFonts()
       .then(() => {
         setFontReady(true);
         continueRender(fontHandle);

@@ -76,7 +76,7 @@ const isLand = (lon, lat) => {
 
 // Output: flat array of [lon, lat, coast] triplets. `coast` = 1 when a
 // neighbouring sample ~1.2 deg away is ocean (used for the warm coastline glow).
-const STEP = Number(process.env.LAND_STEP ?? 0.55); // degrees between dots
+const STEP = Number(process.env.LAND_STEP ?? 0.8); // degrees between dots
 const C = 1.2;
 const out = [];
 for (let lat = -82; lat <= 83; lat += STEP) {

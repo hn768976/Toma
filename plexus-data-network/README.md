@@ -1,8 +1,11 @@
 # Plexus Data Network (Remotion, 4K)
 
-An abstract plexus network: glowing nodes joined by thin light lines, floating
-numeric data labels and tiny code readouts, and a deep bokeh "floor". The
-camera drifts slowly through the 3D network with a breathing rack focus.
+An abstract plexus data network: bright hub nodes throw long light strands
+that form star and triangle patterns, surrounded by live-ticking numeric data
+labels, dense code-column readouts, horizontal light streaks, a soft nebula
+haze and a deep blue bokeh "floor". The camera trucks steadily sideways
+through the 3D network with a breathing rack focus, and near strands sweep
+past as heavily blurred light.
 
 | Composition ID | Version | Resolution | FPS | Frames | Duration |
 | --- | --- | --- | --- | --- | --- |
@@ -24,7 +27,9 @@ single subject that a new camera angle would reframe.
   size from its distance to the focus plane. Out-of-focus elements become
   soft lens bokeh, and their brightness is scaled so total light stays the
   same.
-- Font: Roboto Mono (bundled in `public/fonts`, SIL OFL 1.1).
+- Fonts: Inter SemiBold for labels and Roboto Mono for code readouts, both
+  bundled in `public/fonts` under the SIL OFL 1.1, so no network is needed
+  at render time.
 
 ## Requirements
 
@@ -72,5 +77,5 @@ src/
     world.ts             seeded 3D world: nodes, edges, bokeh, labels, code blocks
     palettes.ts          BLUE (V1) and AMBER (V2) palettes
     random.ts            deterministic PRNG
-public/fonts/            Roboto Mono (OFL)
+public/fonts/            Inter + Roboto Mono (OFL licences included)
 ```

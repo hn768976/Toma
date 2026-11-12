@@ -1,9 +1,12 @@
 # Digital Globe Network (Remotion + Three.js, 4K)
 
-A holographic data globe: halftone dotted continents with warm glowing
-coastlines and a Fresnel rim light. Around it are data spikes, padlock and
-marker icons, orange great-circle data arcs, concentric orbital rings, a
-dotted outer shell, plexus fragments and floating dust.
+A see-through holographic data globe: a regular halftone grid of bright
+continent dots with warm glowing coastlines. The translucent body shows the
+far side faintly. A soft, fuzzy rim glow and silhouette spikes surround it,
+with a plexus mesh hugging the surface, padlocks with halo circles and map
+pins, self-drawing orange great-circle arcs, and dotted orbital rings with
+bright beads. Further out are a large dotted outer shell, plexus fragments,
+light streaks and floating dust.
 
 | Composition ID | Version | Resolution | FPS | Frames | Duration |
 | --- | --- | --- | --- | --- | --- |
@@ -27,7 +30,9 @@ clearly while the colour identity stays intact.
     static/twinkle, dashed rotating rings, self-drawing arcs and pulsing spikes
   - per-point depth of field (circle of confusion + energy conservation)
     produces the lens bokeh in close-ups
-  - Fresnel atmosphere shaders for the rim light and outer glow
+  - Fresnel atmosphere shaders for the rim light, inner haze and outer glow
+  - an analytic ray/sphere test in the vertex shader dims rings, arcs and
+    particles that pass behind the translucent globe body
 - Continents: `src/data/land-dots.json` is generated from Natural Earth land
   polygons (via `world-atlas`) by `scripts/generate-land-dots.mjs`. The
   generated file is committed, so rendering needs no network access.
@@ -74,14 +79,15 @@ WebGL backend) live in `remotion.config.ts`.
 src/
   index.ts                registerRoot
   Root.tsx                both 4K compositions (890 frames @ 30 fps)
-  data/land-dots.json     38,679 continent dots [lon, lat, coast] (generated)
+  data/land-dots.json     18,249 continent dots on a 0.8 deg grid [lon, lat, coast] (generated)
   globe/
     DigitalGlobe.tsx      background, ThreeCanvas (dpr 1 at 4K), vignette
     GlobeScene.tsx        scene graph + per-frame uniform/camera updates
-    layers.ts             geometry builders (land, ocean grid, haze, spikes,
-                          rings, arcs, sparks, shell, dust, triangles, icons)
+    layers.ts             geometry builders (land, ocean grid, haze, rim fuzz,
+                          surface mesh, spikes, rings, arcs, sparks, shell,
+                          dust, triangles, rays, icons)
     shaders.ts            GLSL point, atmosphere and icon shaders
-    cameraPaths.ts        V1 reference camera, V2 orbit camera, globe spin
+    cameraPaths.ts        V1 reference camera (incl. roll + rack focus), V2 orbit camera, globe spin
     math.ts, random.ts    helpers (monotone cubic, seeded PRNG)
 scripts/generate-land-dots.mjs
 ```

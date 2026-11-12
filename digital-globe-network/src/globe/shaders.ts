@@ -30,6 +30,8 @@ const vertexShader = /* glsl */ `
   uniform float uMinPx;
   uniform float uMaxPx;
   uniform float uReveal;      // global fade-in for the layer (0..1)
+  uniform float uBack;        // brightness kept on the far side (see-through hologram)
+  uniform float uOcclusion;   // brightness kept when hidden behind the globe body (1 = off)
 
   varying vec3 vColor;
   varying float vAlpha;
@@ -66,10 +68,27 @@ const vertexShader = /* glsl */ `
     vec3 v = normalize(cameraPosition - world.xyz);
     float facing = dot(n, v);
     if (uFacing > 0.5) {
-      a *= smoothstep(-0.12, 0.18, facing);
+      a *= mix(uBack, 1.0, smoothstep(-0.12, 0.18, facing));
     }
     if (uRimBoost > 0.0) {
       a *= 1.0 + uRimBoost * pow(1.0 - clamp(abs(facing), 0.0, 1.0), 3.0);
+    }
+
+    if (uOcclusion < 0.999) {
+      // Analytic ray/sphere test (globe radius 1 at the origin): dim points
+      // that sit behind the translucent globe body as seen from the camera.
+      vec3 ro = cameraPosition;
+      vec3 rd = world.xyz - ro;
+      float len = length(rd);
+      rd /= len;
+      float b = dot(ro, rd);
+      float c = dot(ro, ro) - 1.0;
+      float h = b * b - c;
+      if (h > 0.0) {
+        float tHit = -b - sqrt(h);
+        float edge = smoothstep(0.0, 0.02, h);
+        if (tHit > 0.0 && tHit < len - 0.002) a *= mix(1.0, uOcclusion, edge);
+      }
     }
 
     float px = size * uPixelScale / depth;
@@ -100,7 +119,7 @@ const fragmentShader = /* glsl */ `
     if (r > 1.0) discard;
     // Sharp: bright core + soft falloff. Blurred: flat lens disc w/ soft edge.
     float sharp = pow(1.0 - r, 1.6) + 0.35 * (1.0 - smoothstep(0.0, 0.35, r));
-    float disc = (1.0 - smoothstep(0.78, 1.0, r)) * 0.9;
+    float disc = exp(-r * r * 2.6) * (1.0 - smoothstep(0.85, 1.0, r)) * 1.1;
     float shape = mix(sharp, disc, vBlur);
     // alpha 0: pure additive light over the (transparent) canvas background
     gl_FragColor = vec4(vColor * vAlpha * shape, 0.0);
@@ -115,6 +134,12 @@ export type PointLayerOptions = {
   minPx?: number;
   maxPx?: number;
   depthTest?: boolean;
+  /** 0..1 brightness kept on the globe's far side (needs facing). */
+  back?: number;
+  /** Write depth so the translucent globe body can dim the parts behind it. */
+  depthWrite?: boolean;
+  /** Brightness kept when behind the globe body (1 = no dimming). */
+  occlusion?: number;
 };
 
 export const makePointMaterial = (opts: PointLayerOptions) =>
@@ -133,9 +158,11 @@ export const makePointMaterial = (opts: PointLayerOptions) =>
       uMinPx: { value: opts.minPx ?? 1.6 },
       uMaxPx: { value: opts.maxPx ?? 220 },
       uReveal: { value: 1 },
+      uBack: { value: opts.back ?? 0 },
+      uOcclusion: { value: opts.occlusion ?? 1 },
     },
     transparent: true,
-    depthWrite: false,
+    depthWrite: opts.depthWrite ?? false,
     depthTest: opts.depthTest ?? true,
     // Premultiplied colour in the fragment shader -> pure additive light.
     blending: THREE.CustomBlending,
@@ -145,7 +172,7 @@ export const makePointMaterial = (opts: PointLayerOptions) =>
   });
 
 /** Fresnel atmosphere / rim light shell. */
-export const makeAtmosphereMaterial = (color: THREE.Color, power: number, intensity: number, side: THREE.Side) =>
+export const makeAtmosphereMaterial = (color: THREE.Color, power: number, intensity: number, side: THREE.Side, center = false) =>
   new THREE.ShaderMaterial({
     vertexShader: /* glsl */ `
       varying vec3 vN;
@@ -162,12 +189,16 @@ export const makeAtmosphereMaterial = (color: THREE.Color, power: number, intens
       uniform float uPower;
       uniform float uIntensity;
       uniform float uSide;
+      uniform float uCenter;
       varying vec3 vN;
       varying vec3 vV;
       void main() {
         float f = dot(normalize(vN), normalize(vV));
         float rim;
-        if (uSide > 0.5) {
+        if (uCenter > 0.5) {
+          // Inner haze: brightest facing the camera (light scattered inside the hologram)
+          rim = pow(clamp(f, 0.0, 1.0), uPower);
+        } else if (uSide > 0.5) {
           // Back side shell: glow that falls off outside the silhouette
           rim = pow(clamp(-f, 0.0, 1.0), uPower);
         } else {
@@ -181,6 +212,7 @@ export const makeAtmosphereMaterial = (color: THREE.Color, power: number, intens
       uPower: { value: power },
       uIntensity: { value: intensity },
       uSide: { value: side === THREE.BackSide ? 1 : 0 },
+      uCenter: { value: center ? 1 : 0 },
     },
     side,
     transparent: true,
@@ -217,11 +249,11 @@ export const makeIconMaterial = (atlas: THREE.Texture) =>
         float px = size * uPixelScale / depth;
         // Staggered pop-in after the reveal starts, then a gentle pulse.
         // Hex markers are present from the start; padlocks pop in during the reveal.
-        float appear = icon > 0.5 ? 1.0 : smoothstep(phase, phase + 0.12, uReveal);
-        vAlpha = smoothstep(0.05, 0.45, facing) * appear * (0.75 + 0.25 * sin(uTime * 1.7 + phase * 40.0));
+        float appear = (icon > 0.5 && icon < 1.5) ? 1.0 : smoothstep(phase, phase + 0.12, uReveal);
+        vAlpha = mix(0.1, 1.0, smoothstep(0.05, 0.45, facing)) * appear * (0.75 + 0.25 * sin(uTime * 1.7 + phase * 40.0));
         vAlpha *= px * px / (px * px + coc * coc);
         vIcon = icon;
-        gl_PointSize = clamp(px, 2.0, 160.0);
+        gl_PointSize = clamp(px, 2.0, 300.0);
         gl_Position = projectionMatrix * mv;
       }
     `,
@@ -231,7 +263,7 @@ export const makeIconMaterial = (atlas: THREE.Texture) =>
       varying float vIcon;
       varying float vAlpha;
       void main() {
-        vec2 uv = vec2((gl_PointCoord.x + vIcon) * 0.5, 1.0 - gl_PointCoord.y);
+        vec2 uv = vec2((gl_PointCoord.x + vIcon) / 3.0, 1.0 - gl_PointCoord.y);
         float m = texture2D(uAtlas, uv).r;
         gl_FragColor = vec4(uColor * m * vAlpha, 0.0);
       }
