@@ -1,24 +1,28 @@
 # Tile Wave — Remotion project (4K)
 
-A pastel grid of square pillars. Along a zig-zag "pixel staircase" path the
-pillars sink into a terraced valley whose floor glows (pink → violet →
-periwinkle → white → warm yellow), surrounded by a crater rim of raised pink
-pillars. The valley opens from a slit, holds, then snaps shut with a springy
-overshoot, looping every 120 frames (4 s), like the reference.
+A flat pastel sheet of square tiles. Along a zig-zag "pixel staircase" path the
+tiles sink and tip over into curled, overlapping fins, forming a terraced
+valley whose floor glows (pink → violet → periwinkle → white → warm yellow),
+edged by a rim of raised, curling pink tiles. The valley opens from a slit
+(the lower-left end leading), holds briefly, closes with a flick and rests,
+looping every 134 frames (~4.47 s), the period measured from the reference.
 
 | Composition   | Size        | FPS | Frames | Duration | Camera |
 |---------------|-------------|-----|--------|----------|--------|
-| `TileWave-V1` | 3840 × 2160 | 30  | 267    | 8.9 s    | Reference recreation: locked-off steep top-down view, grid rotated ~45° |
+| `TileWave-V1` | 3840 × 2160 | 30  | 267    | 8.9 s    | Reference recreation: locked-off steep top-down view, grid rotated ~45°, horizontal lens shift |
 | `TileWave-V2` | 3840 × 2160 | 30  | 267    | 8.9 s    | Alternative camera angle + movement: low oblique tracking shot that travels along the valley with a slow orbit |
 
 ## Technology
 
 * **Three.js** (`three@0.178`), driven imperatively from a Remotion component.
-* ~9,200 pillars drawn as one `InstancedMesh` with a custom GLSL material:
-  colour is keyed on world height (depth palette below the surface, rim
-  palette above it), soft wrap lighting with lavender-tinted shading.
+* ~18,500 thin plates drawn as one `InstancedMesh` with a custom GLSL
+  material. Each plate is positioned and tilted per frame (it tips to follow
+  the valley slope); the vertex shader curls it like paper and lengthens it
+  along the slope so neighbours overlap like scales. Colour is keyed on world
+  height (depth palette below the surface, rim palette above it), with soft
+  wrap lighting and lavender-tinted shading.
 * **Motion blur + anti-aliasing by accumulation:** each output frame averages
-  8 sub-frame renders spread over a 360° shutter, each with a sub-pixel camera
+  12 sub-frame renders spread over a 1.5-frame shutter, each with a sub-pixel camera
   jitter, into a half-float buffer.
 * Fully deterministic: every pillar height is a pure function of the
   (fractional) frame number.
@@ -32,7 +36,7 @@ src/index.ts                entry (registerRoot)
 src/Root.tsx                the two 4K compositions
 src/TileWave.tsx            React component: canvas + per-frame render
 src/variants.ts             timing, palette, cameras for V1/V2, blur settings
-src/scene/field.ts          grid, zig-zag path, valley/rim/pop animation
+src/scene/field.ts          grid, zig-zag path, valley/rim/flick animation, tile poses
 src/scene/TileRenderer.ts   Three.js scene, shaders, accumulation pipeline
 remotion.config.ts          render defaults (H.264, yuv420p, CRF 16, GL backend)
 ```
@@ -68,8 +72,8 @@ Codec (H.264), pixel format (yuv420p) and CRF are set in `remotion.config.ts`.
 
 * WebGL is provided through ANGLE + SwiftShader (`swangle`) by default, which
   works on any machine, including headless servers without a GPU (slow:
-  roughly 10–15 s per 1080p frame on 4 CPU cores because of the 8× motion-blur
-  accumulation).
+  roughly 5–10 s per 1080p frame on 4 CPU cores because of the 12× motion-blur
+  accumulation; a 4K frame takes about 4× longer).
 * On a machine with a GPU, renders are much faster with
   `REMOTION_GL=angle npm run render:v1`.
 * Remotion downloads its Chrome Headless Shell on first render. If that
