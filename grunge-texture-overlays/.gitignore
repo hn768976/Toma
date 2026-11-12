@@ -4,3 +4,4 @@ out/
 refs/
 *.mp4
 !public/*.mp4
+__pycache__/
