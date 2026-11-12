@@ -21,14 +21,35 @@ BG = {"Black": (0, 0, 0), "White": (255, 255, 255), "Orange": (0xE0, 0x92, 0x0A)
 BLEND = {"Black": "Screen", "White": "Multiply", "Orange": "Normal"}
 
 
+def yuv_to_rgb(Y, U, V):
+    """Exact BT.709 limited-range YUV -> RGB (the clips are tagged BT.709; for grey content,
+    U = V = 128, so the matrix does not matter). Chroma is upsampled by pixel repetition."""
+    U = U.repeat(2, 0).repeat(2, 1).astype(float)
+    V = V.repeat(2, 0).repeat(2, 1).astype(float)
+    y = (Y.astype(float) - 16) / 219
+    cb = (U - 128) / 224
+    cr = (V - 128) / 224
+    kr, kb = 0.2126, 0.0722
+    kg = 1 - kr - kb
+    r = y + 2 * (1 - kr) * cr
+    b = y + 2 * (1 - kb) * cb
+    g = (y - kr * r - kb * b) / kg
+    return np.clip(np.round(np.stack([r, g, b], -1) * 255), 0, 255).astype(np.uint8)
+
+
 def frames(mp4, idx):
-    """Decode the given frame indices (RGB uint8)."""
+    """Decode the given frame indices to RGB uint8 (raw YUV from ffmpeg, converted exactly in numpy;
+    ffmpeg's own YUV->RGB path is approximate by a couple of levels)."""
     out = {}
     for i in idx:
         raw = subprocess.run(
             ["ffmpeg", "-v", "error", "-i", mp4, "-vf", f"select=eq(n\\,{i})", "-vsync", "0", "-frames:v", "1",
-             "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True, check=True).stdout
-        out[i] = np.frombuffer(raw, np.uint8).reshape(H, W, 3)
+             "-f", "rawvideo", "-pix_fmt", "yuv420p", "-"], capture_output=True, check=True).stdout
+        a = np.frombuffer(raw, np.uint8)
+        Y = a[: W * H].reshape(H, W)
+        U = a[W * H: W * H * 5 // 4].reshape(H // 2, W // 2)
+        V = a[W * H * 5 // 4:].reshape(H // 2, W // 2)
+        out[i] = yuv_to_rgb(Y, U, V)
     return out
 
 
@@ -59,8 +80,8 @@ def loop(a, b):
 
 
 def levels(cid, mp4, still_dir):
-    """Empty points are picked where the lossless still is exactly the background in a 9x9 neighbourhood,
-    then checked in the decoded H.264 frame."""
+    """Empty points are picked where the lossless still is exactly the background within 12 px
+    (a 25x25 neighbourhood, i.e. clear of H.264 ringing from nearby grain), then checked in the decoded frame."""
     kind = cid.split("_")[1]
     bg = np.array(BG[kind])
     tol = 2 if kind == "Orange" else 1
@@ -73,12 +94,12 @@ def levels(cid, mp4, still_dir):
     for f in fidx:
         S = np.asarray(Image.open(f"{still_dir}/{cid.replace('_', '-')}_f{f}.png").convert("RGB")).astype(int)
         empty = np.all(S == bg, axis=2).astype(np.uint8)
-        # 9x9 erosion
+        # 25x25 erosion (sampled every 2 px)
         e = empty.copy()
-        for dy in range(-4, 5):
-            for dx in range(-4, 5):
+        for dy in range(-12, 13, 2):
+            for dx in range(-12, 13, 2):
                 e &= np.roll(np.roll(empty, dy, 0), dx, 1)
-        e[:5], e[-5:], e[:, :5], e[:, -5:] = 0, 0, 0, 0
+        e[:13], e[-13:], e[:, :13], e[:, -13:] = 0, 0, 0, 0
         ys, xs = np.nonzero(e)
         if len(ys) < 50:
             print(f"  frame {f}: only {len(ys)} empty points")

@@ -14,3 +14,7 @@ Config.setOverwriteOutput(true);
 if (process.env.REMOTION_BROWSER_EXECUTABLE) {
   Config.setBrowserExecutable(process.env.REMOTION_BROWSER_EXECUTABLE);
 }
+
+// Tag the output as BT.709 (the HD standard) so players decode the colours as they were encoded.
+Config.setColorSpace("bt709");
+// (Remotion then converts with zscale's exact BT.709 matrix: flat #E0920A encodes to the optimal Y/U/V 147/60/168.)
