@@ -1,11 +1,14 @@
 # Contour Maze — Remotion project (4K)
 
-Glowing "contour-wall" landscape: every iso-line of a slowly morphing,
-meandering scalar field is extruded into a thin, equal-height neon wall
-(contour spacing 0.06), giving a dense folded maze. A flat bright island with a
-fine labyrinth and a spiral core sits in the middle of ember-orange terrain.
-The camera pulls back and tilts towards top-down with an ease-out move (most
-travel early, then it settles). Light pulses run along individual walls.
+Glowing "contour-wall" landscape: every iso-line of a slowly morphing scalar
+field is extruded into a thin neon wall (contour spacing 0.06). The glowing
+core is a raised, icy-blue plateau carrying a winding maze and two spirals. It
+is swept along a path that unrolls from a compact blob into a hook (a tall
+arm on the left sweeping down and right into a wide body with a curled end).
+Ember-orange terrain walls hug the core outline, step down away from it, and
+relax into broad wavy terraces. A warm glow builds around the core over the
+shot while the camera eases in and tilts slightly steeper. Light pulses run
+along individual walls.
 
 | Composition      | Size        | FPS | Frames | Duration | Look |
 |------------------|-------------|-----|--------|----------|------|
