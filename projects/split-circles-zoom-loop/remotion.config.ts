@@ -14,6 +14,7 @@ Config.setOverwriteOutput(true);
 Config.setDefaultPremountInSeconds(2);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
+Config.setColorSpace("bt709"); // limited-range yuv420p with BT.709 tags
 
 // Sandboxed environments sometimes block Remotion's Chrome Headless Shell
 // download but ship a Playwright one; reuse it if present.

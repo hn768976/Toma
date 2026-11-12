@@ -40,7 +40,7 @@ def main(path, ref_frames, ref_dur, ref_path=None):
     res = {
         "file": path.split("/")[-1],
         "codec": v["codec_name"], "profile": v.get("profile"),
-        "pix_fmt": v["pix_fmt"], "size": f'{v["width"]}x{v["height"]}',
+        "pix_fmt": v["pix_fmt"], "color": f'{v.get("color_space")}/{v.get("color_range")}', "size": f'{v["width"]}x{v["height"]}',
         "r_frame_rate": v["r_frame_rate"], "avg_frame_rate": v["avg_frame_rate"],
         "frames": int(v["nb_read_frames"]), "duration_s": round(dur, 4),
         "ref_duration_s": ref_dur, "ref_frames_at_30fps": ref_frames,
@@ -55,6 +55,7 @@ def main(path, ref_frames, ref_dur, ref_path=None):
     }
     checks = {
         "H.264": v["codec_name"] == "h264",
+        "yuv420p BT.709 limited range": v["pix_fmt"] == "yuv420p" and v.get("color_space") == "bt709" and v.get("color_range") == "tv",
         "1920x1080": (v["width"], v["height"]) == (1920, 1080),
         "30 fps CFR": v["r_frame_rate"] == "30/1" and v["avg_frame_rate"] == "30/1",
         "frame count": int(v["nb_read_frames"]) == ref_frames,

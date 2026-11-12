@@ -14,6 +14,7 @@ Config.setOverwriteOutput(true);
 Config.setDefaultPremountInSeconds(2);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
+Config.setColorSpace("bt709"); // limited-range yuv420p with BT.709 tags
 
 // The composition is a WebGL 2 shader. "swangle" (SwiftShader) works on every
 // machine incl. GPU-less servers; pass `--gl=angle` for GPU speed-up.

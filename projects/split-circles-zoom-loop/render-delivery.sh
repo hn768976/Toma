@@ -5,7 +5,7 @@ OUT_DIR="${1:-out}"
 mkdir -p "$OUT_DIR"
 npx remotion render SplitCircles-V1-Match-4K \
   "$OUT_DIR/Version-1_Split-Circles-Zoom-Loop_1080p.mp4" \
-  --scale=0.5 --codec=h264 --crf=16 --pixel-format=yuv420p
+  --scale=0.5 --codec=h264 --crf=16 --pixel-format=yuv420p --color-space=bt709
 npx remotion render SplitCircles-V2-CobaltAqua-4K \
   "$OUT_DIR/Version-2_Split-Circles-Zoom-Loop_Cobalt-Aqua-Palette_1080p.mp4" \
-  --scale=0.5 --codec=h264 --crf=16 --pixel-format=yuv420p
+  --scale=0.5 --codec=h264 --crf=16 --pixel-format=yuv420p --color-space=bt709
