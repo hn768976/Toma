@@ -182,7 +182,7 @@ void main() {
   float sx = mix(0.26, 0.46, h1);
   float sy = sx * mix(1.0, 2.1, h2);
   vec2 q = rot(angle) * p;
-  bool curvy = h3 > 0.8;
+  bool curvy = h3 > 0.88;
   if (curvy) {
     q += vec2(fbm(p * 0.22), fbm(p * 0.22 + 7.7)) * 1.6;
   }
@@ -204,9 +204,9 @@ void main() {
   // ------------------------------------------------ parks
   float pn = fbm(p * 0.085 + vec2(-6.0, 21.0));
   float rsd = riverSD(p);
-  float bank = smoothstep(0.8, 0.0, rsd) * smoothstep(0.58, 0.75, fbm(p * 0.12 + 5.0));
+  float bank = smoothstep(0.9, 0.0, rsd) * smoothstep(0.45, 0.65, fbm(p * 0.12 + 5.0));
   float parkField = max(pn, 0.42 + 0.3 * bank) + 0.04 * (vnoise(p * 2.0) - 0.5);
-  float parkSD = 0.522 - parkField;
+  float parkSD = 0.49 - parkField;
   float paa = max(fwidth(parkField) * 0.8, 1e-5);
   float parkA = smoothstep(paa, -paa, parkSD);
   float darkF = fbm(p * 0.21 + 3.0);

@@ -82,7 +82,7 @@ export const planPins = (aspect: number): PinPlan[] => {
         z = base.z + Math.sin(a) * r;
       } else {
         // biased towards the foreground (lower half), like the reference
-        const ndc = new THREE.Vector2(rnd() * 1.9 - 0.95, Math.pow(rnd(), 1.35) * 1.7 - 0.9);
+        const ndc = new THREE.Vector2(rnd() * 1.9 - 0.95, Math.pow(rnd(), 1.12) * 1.7 - 0.9);
         ray.setFromCamera(ndc, cam);
         if (!ray.ray.intersectPlane(ground, hit)) continue;
         x = hit.x;
@@ -97,8 +97,8 @@ export const planPins = (aspect: number): PinPlan[] => {
       pins.push({ x, z, t, size: 0.92 + rnd() * 0.16 });
       placed = true;
     }
-    // accelerating spawn rate: ~2 pins/s at start → ~10 pins/s from 6 s on
-    const rate = 2.0 + 1.35 * Math.min(t, 6.0);
+    // accelerating spawn rate: ~1.3 pins/s at start → ~8 pins/s from 8 s on
+    const rate = 1.3 + 0.85 * Math.min(t, 8.0);
     t += (0.55 + rnd() * 0.9) / rate;
   }
   return pins;
