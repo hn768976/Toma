@@ -50,7 +50,7 @@ const LOOK = {
   edge1: 0.5,
   cycles: 2, // band periods per loop (integer); ripple does cycles x rippleSpeed = 3,
   // so the combined pattern only repeats every full loop (gcd(2, 3) = 1)
-  ease: 0.4, // speed modulation within each loop (0 = constant speed)
+  ease: 0.2, // speed modulation within each loop (0 = constant speed)
   // Reference camera (Version 1)
   distance: 30,
   elevationDeg: 37,
