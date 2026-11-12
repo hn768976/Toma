@@ -10,6 +10,8 @@ Config.setJpegQuality(95);
 Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
+// Standard limited-range BT.709 output (yuv420p, tv range) for broad player compatibility.
+Config.setColorSpace("bt709");
 Config.setCrf(16);
 // WebGL 2 is required. Default "swangle" (SwiftShader via ANGLE) works on any
 // machine, including servers without a GPU. On a machine with a GPU, set
