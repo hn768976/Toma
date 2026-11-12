@@ -151,7 +151,7 @@ void main() {
   cov = cov * cov * (3.0 - 2.0 * cov);
   if (cov <= 0.0) discard;
   float spread = R / (R + 0.5 * C);
-  float a = cov * mix(1.0, spread * spread, 0.5) * vX.y;
+  float a = cov * mix(1.0, spread, 0.15) * vX.y;
 
   vec3 col;
   if (vX.z > 0.5) {
@@ -165,16 +165,16 @@ void main() {
     float ndl = dot(n, L);
     float wrap = pow(clamp(ndl * 0.55 + 0.45, 0.0, 1.0), 1.6);
     vec3 H = normalize(L + vec3(0.0, 0.0, 1.0));
-    float spec = pow(max(dot(n, H), 0.0), 48.0) * 0.55 + pow(max(dot(n, H), 0.0), 8.0) * 0.08;
+    float spec = pow(max(dot(n, H), 0.0), 60.0) * 0.95 + pow(max(dot(n, H), 0.0), 10.0) * 0.12;
     float fres = pow(1.0 - n.z, 2.6);
     vec3 alb = vCol.rgb;
     col = alb * (0.22 + 1.05 * wrap) * vCol.a;
     // translucent, slightly glowing rim (sub-surface look)
-    col += mix(alb, uRim, 0.45) * fres * (0.35 + 0.45 * clamp(ndl + 0.4, 0.0, 1.0));
+    col += mix(alb, uRim, 0.5) * fres * (0.45 + 0.55 * clamp(ndl + 0.4, 0.0, 1.0));
     col += vec3(1.0, 0.97, 0.92) * spec;
     // the further out of focus, the more the sphere reads as its average colour
-    vec3 avg = alb * 0.78 * vCol.a + uRim * 0.06;
-    col = mix(col, avg, clamp(C / (R * 2.2), 0.0, 0.8));
+    vec3 avg = alb * 0.85 * vCol.a;
+    col = mix(col, avg, smoothstep(0.0, 1.0, C / (R * 1.6)));
   }
   col = mix(col, background(gl_FragCoord.xy / uScale), vX.x);
   o = vec4(col * a, a);
@@ -340,7 +340,7 @@ export class DnaRenderer {
     }
     const f = H / 2 / Math.tan(cam.fov / 2);
     const cocK = cam.aperture * H;
-    const cocMax = 0.11 * H;
+    const cocMax = 0.17 * H;
     const sharpMax = SHARP_MAX * H;
     const midMax = MID_MAX * H;
     const margin = 0.02 * H;
@@ -359,7 +359,7 @@ export class DnaRenderer {
       const C = Math.min(cocMax, cocK * Math.abs(1 - cam.focus / z));
       const ext = R + 0.75 * C + 2;
       if (sx < -ext - margin || sx > W + ext + margin || sy < -ext - margin || sy > H + ext + margin) return;
-      const fog = clamp((z - 9) / 22, 0, 0.82);
+      const fog = clamp((z - 7) / 18, 0, 0.82);
       const o = n * FLOATS;
       d[o] = sx;
       d[o + 1] = sy;
