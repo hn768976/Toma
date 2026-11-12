@@ -1,13 +1,14 @@
 # Server Room Fly-through — Remotion project (4K)
 
-Recreation of the reference clip: a continuous forward dolly down a dark data-centre aisle lined
-with server racks full of blinking status LEDs, bright ceiling light bars, a glossy reflective floor
-and a lit bank of racks at the end of the aisle.
+Recreation of the reference clip: a slow, steady push down a dark data-centre aisle lined with
+server racks full of blinking status LEDs, ceiling light bars and gantry frames, a glossy
+reflective floor, towards a lit bank of racks across the cross-aisle at the far end (which roughly
+doubles in size over the shot, as in the reference).
 
 | Composition ID | Version | Resolution | FPS | Frames | Duration |
 | --- | --- | --- | --- | --- | --- |
-| `ServerRoom-V1-Reference` | Version 1 – matches the reference (steady eye-level dolly) | 3840×2160 | 30 | 401 | 13.367 s |
-| `ServerRoom-V2-LowAngleCrane` | Version 2 – alternative **camera angle & movement** (low-angle crane rising from floor level, weaving and banking) | 3840×2160 | 30 | 401 | 13.367 s |
+| `ServerRoom-V1-Reference` | Version 1 – matches the reference (slow eye-level push, centred, no sway) | 3840×2160 | 30 | 401 | 13.367 s |
+| `ServerRoom-V2-LowAngleCrane` | Version 2 – alternative **camera angle & movement** (low-angle crane: starts 28 cm above the floor tilted up and banked, arcs across the aisle while rising to eye level) | 3840×2160 | 30 | 401 | 13.367 s |
 
 Duration matches the reference exactly (401 frames @ 30 fps).
 
@@ -19,7 +20,7 @@ Duration matches the reference exactly (401 frames @ 30 fps).
   deterministic schedule; detail is band-limited with screen-space derivatives to avoid shimmer.
 - Planar mirror floor (`Reflector`) with a custom streaky-gloss shader, PMREM environment,
   instanced rack posts / pillars / ceiling lights, exponential fog, UnrealBloom, SMAA, film grade.
-- Temporal motion blur (2 sub-frame samples per frame).
+- The shared `GLStage` supports temporal motion blur; this slow push does not need it (1 sample).
 - No external image/video/font assets — everything is generated in code.
 
 ## Commands
@@ -40,6 +41,13 @@ npm run still:v1            # single still
 ```
 Outputs go to `out/`. Raw CLI equivalent:
 `npx remotion render ServerRoom-V1-Reference out/v1.mp4 --scale=0.5`.
+
+## Delivery mastering (optional)
+Remotion writes full-range (`yuvj420p`) H.264. The delivered MP4s were normalised to
+broadcast-standard limited-range `yuv420p`, BT.709-tagged, with `+faststart`:
+```bash
+npm run master -- out/input.mp4 out/output-master.mp4   # requires ffmpeg on PATH
+```
 
 ## Rendering notes
 - `remotion.config.ts`: H.264, yuv420p, CRF 16, concurrency 2, `--gl=swangle` (software WebGL

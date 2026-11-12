@@ -35,7 +35,8 @@
     "render:v2:1080p": "remotion render ServerRoom-V2-LowAngleCrane out/version-2-server-room-flythrough-low-angle-crane-1080p.mp4 --scale=0.5",
     "render:v2:4k": "remotion render ServerRoom-V2-LowAngleCrane out/version-2-server-room-flythrough-low-angle-crane-4k.mp4",
     "still:v2": "remotion still ServerRoom-V2-LowAngleCrane out/version-2-server-room-flythrough-low-angle-crane-still.png --frame=150 --scale=0.5",
-    "render:all:1080p": "npm run render:v1:1080p && npm run render:v2:1080p"
+    "render:all:1080p": "npm run render:v1:1080p && npm run render:v2:1080p",
+    "master": "bash scripts/master.sh"
   },
   "sideEffects": [
     "*.css"

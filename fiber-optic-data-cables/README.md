@@ -44,6 +44,13 @@ npm run still:v1
 Outputs go to `out/`. Equivalent raw CLI:
 `npx remotion render FiberOpticCables-V1-Reference out/v1.mp4 --scale=0.5`.
 
+## Delivery mastering (optional)
+Remotion writes full-range (`yuvj420p`) H.264. The delivered MP4s were normalised to
+broadcast-standard limited-range `yuv420p`, BT.709-tagged, with `+faststart`:
+```bash
+npm run master -- out/input.mp4 out/output-master.mp4   # requires ffmpeg on PATH
+```
+
 ## Rendering notes
 - `remotion.config.ts` sets H.264, yuv420p, CRF 16, JPEG frames, concurrency 2 and
   `--gl=swangle` (software WebGL, works on any headless Linux box / CI). On a machine with a GPU,
