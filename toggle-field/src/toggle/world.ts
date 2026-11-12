@@ -10,7 +10,7 @@ import type { TogglePalette } from "./palette";
 export const TRACK_W = 1.0; // width of a switch track (world units)
 export const KNOB_R = 0.49; // knob radius
 export const ROW_SPACING = 1.02;
-export const LAYER_H = 0.13;
+export const LAYER_H = 0.09; // knobs of a lower layer hide under the track above
 export const TRACK_T = 0.07; // paper thickness
 export const KNOB_T = 0.07;
 const DIAG = Math.PI / 4;
@@ -37,6 +37,9 @@ export type PieceDef = {
   knob: KnobDef | null;
   turns: Turn[];
   layer: number;
+  row: number;
+  /** extra starting rotation (pieces that begin on the opposite diagonal) */
+  startAngle: number;
 };
 
 const makeFlips = (
@@ -56,53 +59,50 @@ const makeFlips = (
 };
 
 /**
- * Rotation waves measured from the reference: groups of foreground toggles
- * spin a half-turn clockwise in sync (e.g. f20 diagonal -> f28 horizontal ->
- * f40 other diagonal -> f68 vertical -> f80 back on the diagonal), repeating
- * through the clip. Start frame / duration of each wave:
+ * Rotation rhythm measured from the reference (edge-orientation histogram per
+ * frame): two interleaved groups of switches swing 90° clockwise around their
+ * knob onto the opposite diagonal, hold, then swing another 90° back onto the
+ * main diagonal. A transition happens every ~20 frames, alternating groups.
+ * Centre frames of each group's swings:
  */
-const ROTATION_WAVES: [number, number][] = [
-  [18, 60],
-  [100, 54],
-  [142, 56],
-  [196, 52],
-  [226, 54],
-  [262, 52],
-  [296, 50],
-];
-const ROTOR_SPACING = 2.35; // rotating pieces never sweep into each other
-export const ROTOR_Z = 3 * LAYER_H + 0.16; // rotating pieces ride above the stack
+const GROUP_SWINGS: Record<"A" | "B", number[]> = {
+  A: [30, 70, 108, 152, 190, 230, 268, 312],
+  B: [50, 90, 130, 168, 210, 250, 288, 314],
+};
+const OPENING_SWING = 8; // pieces that start on the other diagonal return here
+const SWING_DUR = 12;
+const ROTOR_SHARE = 0.6;
 
-const assignRotations = (
-  pieces: PieceDef[],
-  rand: ReturnType<typeof createRandom>,
-  accentColor: string,
-) => {
-  const candidates = pieces.filter((p) => p.width <= TRACK_W * 1.01 && p.length > TRACK_W * 1.5);
-  // deterministic shuffle
-  for (let i = candidates.length - 1; i > 0; i--) {
-    const j = Math.floor(rand.next() * (i + 1));
-    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
-  }
-  // accent (yellow) toggles lead the waves, as in the reference
-  candidates.sort((a, b) => Number(b.color === accentColor) - Number(a.color === accentColor));
-  const rotors: PieceDef[] = [];
-  for (const c of candidates) {
-    if (rand.next() > 0.85) continue;
-    if (rotors.some((r) => Math.hypot(r.x - c.x, r.y - c.y) < ROTOR_SPACING)) continue;
-    rotors.push(c);
-  }
-  for (const r of rotors) {
-    r.z = ROTOR_Z + rand.range(0, 0.01);
-    let busyUntil = -Infinity;
-    for (const [start, dur] of ROTATION_WAVES) {
-      if (rand.next() > 0.75) continue;
-      // the wave travels diagonally across the frame
-      const s = start + (r.x + r.y) * 1.2 + rand.range(-4, 4);
-      const d = dur * rand.range(0.9, 1.1);
-      if (s < busyUntil + 4) continue;
-      r.turns.push({ start: s, dur: d, delta: -Math.PI });
-      busyUntil = s + d;
+const assignRotations = (pieces: PieceDef[], rand: ReturnType<typeof createRandom>) => {
+  const rowCounter = new Map<number, number>();
+  const ordered = [...pieces].sort((a, b) => a.row - b.row || a.x + a.y - (b.x + b.y));
+  for (const p of ordered) {
+    const isPill = p.width <= TRACK_W * 1.01 && p.length > TRACK_W * 1.5;
+    if (!isPill || rand.next() > ROTOR_SHARE) {
+      // static pieces form the bottom sheet
+      p.layer = 0;
+      p.z = rand.range(0, 0.012);
+      continue;
+    }
+    const n = rowCounter.get(p.row) ?? 0;
+    rowCounter.set(p.row, n + 1);
+    const group = n % 2 === 0 ? "A" : "B";
+    // each group owns three layers (by row) so swinging pieces pass over/under
+    p.layer = (group === "A" ? 4 : 1) + (((p.row % 3) + 3) % 3);
+    p.z = p.layer * LAYER_H + rand.range(0, 0.012);
+    const wave = (p.x + p.y) * 0.25;
+    if (rand.next() < 0.3) {
+      p.startAngle = Math.PI / 2;
+      p.turns.push({ start: OPENING_SWING - SWING_DUR / 2 + wave * 0.5 + rand.range(-1, 1), dur: SWING_DUR, delta: -Math.PI / 2 });
+    }
+    for (const c of GROUP_SWINGS[group]) {
+      p.turns.push({ start: c - SWING_DUR / 2 + wave + rand.range(-1.5, 1.5), dur: SWING_DUR * rand.range(0.92, 1.08), delta: -Math.PI / 2 });
+    }
+    // knob flips never overlap a swing (the knob is the pivot)
+    if (p.knob) {
+      p.knob.flips = p.knob.flips.filter(
+        (f) => !p.turns.some((t) => f.start < t.start + t.dur + 2 && f.start + f.dur > t.start - 2),
+      );
     }
   }
 };
@@ -194,10 +194,12 @@ export const buildWorld = (opts: {
         knob,
         turns,
         layer,
+        row,
+        startAngle: 0,
       });
     }
   }
-  assignRotations(pieces, rand, palette.accentTrack);
+  assignRotations(pieces, rand);
   return pieces;
 };
 
@@ -214,14 +216,30 @@ export const knobPosition = (knob: KnobDef, frame: number) => {
   return state * 2 - 1;
 };
 
-/** Extra rotation and lift of a piece at `frame`. */
+/** Travel of the knob from the track centre (world units). */
+export const knobTravel = (piece: PieceDef) =>
+  piece.width > TRACK_W * 1.2 ? piece.length / 2 - KNOB_R - 0.14 : piece.length / 2 - KNOB_R;
+
+/**
+ * Rotation, lift and planar offset of a piece at `frame`. Each swing pivots
+ * around the knob position at the start of that swing, so offsets accumulate.
+ */
 export const pieceTurn = (piece: PieceDef, frame: number) => {
-  let angle = 0;
+  let angle = piece.angle + piece.startAngle;
   let lift = 0;
+  let ox = 0;
+  let oy = 0;
+  const travel = knobTravel(piece);
   for (const t of piece.turns) {
     const raw = clamp((frame - t.start) / t.dur);
-    angle += t.delta * easeInOutSine(raw);
-    lift = Math.max(lift, Math.sin(Math.PI * raw) * 0.1);
+    if (raw <= 0) break;
+    const k = piece.knob ? knobPosition(piece.knob, t.start) * travel : 0;
+    const next = angle + t.delta * easeInOutSine(raw);
+    ox += k * (Math.cos(angle) - Math.cos(next));
+    oy += k * (Math.sin(angle) - Math.sin(next));
+    lift = Math.max(lift, Math.sin(Math.PI * raw) * 0.04);
+    angle = next;
+    if (raw < 1) break;
   }
-  return { angle, lift };
+  return { angle, lift, ox, oy };
 };

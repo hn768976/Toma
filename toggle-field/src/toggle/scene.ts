@@ -8,6 +8,7 @@ import {
   KNOB_T,
   knobPosition,
   pieceTurn,
+  knobTravel,
   TRACK_T,
   TRACK_W,
 } from "./world";
@@ -161,10 +162,7 @@ export const createToggleStage =
       group.position.set(p.x, p.y, p.z);
       group.rotation.z = p.angle;
       scene.add(group);
-      const travel =
-        p.width > TRACK_W * 1.2
-          ? p.length / 2 - KNOB_R - 0.14
-          : p.length / 2 - KNOB_R;
+      const travel = knobTravel(p);
       return { p, group, knob, travel };
     });
 
@@ -220,8 +218,8 @@ export const createToggleStage =
 
         for (const l of live) {
           const turn = pieceTurn(l.p, frame);
-          l.group.rotation.z = l.p.angle + turn.angle;
-          l.group.position.z = l.p.z + turn.lift;
+          l.group.rotation.z = turn.angle;
+          l.group.position.set(l.p.x + turn.ox, l.p.y + turn.oy, l.p.z + turn.lift);
           if (l.knob && l.p.knob) {
             l.knob.position.x = knobPosition(l.p.knob, frame) * l.travel;
           }
