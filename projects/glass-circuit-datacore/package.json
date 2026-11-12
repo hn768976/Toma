@@ -1,0 +1,46 @@
+{
+  "name": "glass-circuit-datacore",
+  "version": "1.0.0",
+  "description": "Glass Circuit Datacore \u2013 glowing data-core landscape with glass data panels (Remotion + three.js, 4K compositions)",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.543",
+    "@remotion/tailwind-v4": "4.0.543",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.543",
+    "tailwindcss": "4.0.0",
+    "three": "0.181.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.543",
+    "@types/react": "19.3.0",
+    "@types/three": "0.181.0",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "render:v1": "remotion render GlassCircuit-V1-Reference \"out/Version-1_Glass-Circuit-Datacore_1080p.mp4\" --scale=0.5",
+    "render:v2": "remotion render GlassCircuit-V2-CraneOrbit \"out/Version-2_Glass-Circuit-Datacore-Crane-Orbit_1080p.mp4\" --scale=0.5",
+    "render:v1:4k": "remotion render GlassCircuit-V1-Reference \"out/Version-1_Glass-Circuit-Datacore_4K.mp4\"",
+    "render:v2:4k": "remotion render GlassCircuit-V2-CraneOrbit \"out/Version-2_Glass-Circuit-Datacore-Crane-Orbit_4K.mp4\"",
+    "render:all": "npm run render:v1 && npm run render:v2 && npm run finalize:v1 && npm run finalize:v2",
+    "finalize:v1": "node scripts/finalize.mjs \"out/Version-1_Glass-Circuit-Datacore_1080p.mp4\" \"out/final/Version-1_Glass-Circuit-Datacore_1080p.mp4\"",
+    "finalize:v2": "node scripts/finalize.mjs \"out/Version-2_Glass-Circuit-Datacore-Crane-Orbit_1080p.mp4\" \"out/final/Version-2_Glass-Circuit-Datacore-Crane-Orbit_1080p.mp4\""
+  },
+  "sideEffects": [
+    "*.css"
+  ]
+}
