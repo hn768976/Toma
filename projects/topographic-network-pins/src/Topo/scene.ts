@@ -19,6 +19,7 @@ export type Palette = {
   pinHot: THREE.Color;
   lift: THREE.Vector3;
   saturation: number;
+  floorHaze: number; // violet/teal sheen between contours
 };
 
 const c = (r: number, g: number, b: number) => new THREE.Color().setRGB(r, g, b);
@@ -38,21 +39,23 @@ export const PALETTES: Record<"reference" | "aurora", Palette> = {
     pinHot: c(1.0, 0.36, 0.09),
     lift: new THREE.Vector3(0.006, 0.0, 0.01),
     saturation: 1.05,
+    floorHaze: 1,
   },
   // Version 2: alternative palette -- emerald/teal contours with magenta-rose pins on deep ocean night
   aurora: {
     name: "aurora",
-    skyTop: c(0.002, 0.012, 0.02),
-    skyHorizon: c(0.004, 0.03, 0.04),
-    floor: c(0.0, 0.006, 0.008),
+    skyTop: c(0.0008, 0.005, 0.011),
+    skyHorizon: c(0.002, 0.014, 0.022),
+    floor: c(0.0, 0.002, 0.004),
     line: c(0.02, 0.85, 0.62),
     lineHot: c(0.6, 1.0, 0.92),
-    haze: c(0.02, 0.4, 0.38),
+    haze: c(0.015, 0.24, 0.24),
     dot: c(1.0, 0.18, 0.55),
-    pin: c(1.0, 0.07, 0.42),
-    pinHot: c(1.0, 0.35, 0.68),
-    lift: new THREE.Vector3(0.0, 0.006, 0.01),
-    saturation: 1.05,
+    pin: c(1.0, 0.06, 0.4),
+    pinHot: c(1.0, 0.22, 0.6),
+    lift: new THREE.Vector3(0.0, 0.002, 0.006),
+    saturation: 1.08,
+    floorHaze: 0.3,
   },
 };
 
@@ -93,6 +96,7 @@ const buildGround = (palette: Palette, pxScale: number) => {
     uDot: { value: palette.dot },
     uSkyHorizon: { value: palette.skyHorizon },
     uReveal: { value: 1 },
+    uFloorHaze: { value: palette.floorHaze },
   };
   const mat = new THREE.ShaderMaterial({
     uniforms,
@@ -106,7 +110,7 @@ const buildGround = (palette: Palette, pxScale: number) => {
       }`,
     fragmentShader: /* glsl */ `
       uniform vec3 uCamPos; uniform float uFocus, uAperture, uMaxCoc, uPxScale, uTime, uReveal;
-      uniform vec3 uLine, uLineHot, uHaze, uFloor, uDot, uSkyHorizon;
+      uniform vec3 uLine, uLineHot, uHaze, uFloor, uDot, uSkyHorizon; uniform float uFloorHaze;
       varying vec3 vWorld;
       ${NOISE_GLSL}
       float heightField(vec2 p){
@@ -132,7 +136,7 @@ const buildGround = (palette: Palette, pxScale: number) => {
         float far = smoothstep(0.12, 0.4, fw);
         float lineI = mix(core + glow, avg, far);
         vec3 lineCol = mix(uLine, uLineHot, clamp(core * 0.8, 0.0, 1.0) * (1.0 - far));
-        vec3 col = uFloor + uLine * (0.018 + 0.02 * fbm(p * 0.05 + 3.0)) + lineCol * lineI * 1.6;
+        vec3 col = uFloor + uLine * uFloorHaze * (0.018 + 0.02 * fbm(p * 0.05 + 3.0)) + lineCol * lineI * 1.6;
 
         // sparse node sparks sitting on the contours
         vec2 q = p / 1.7;
