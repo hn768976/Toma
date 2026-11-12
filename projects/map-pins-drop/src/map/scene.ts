@@ -48,7 +48,8 @@ export type PinPlan = { x: number; z: number; t: number; size: number };
 
 /**
  * Pins pop in over the whole clip with an accelerating rate (the reference
- * starts with a single pin and ends with ~40 on screen). Each pin is placed
+ * starts empty, gets its first pin at ~0.15 s and levels off at ~25–30 pins
+ * on screen from ~8 s, as new pins balance the ones leaving frame). Each pin is placed
  * on the ground somewhere inside the camera view at its spawn time; ~30 %
  * spawn next to a previous pin to form the small clusters seen in the clip.
  */
@@ -59,14 +60,14 @@ export const planPins = (aspect: number): PinPlan[] => {
   const ray = new THREE.Raycaster();
   const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   const hit = new THREE.Vector3();
-  const pins: PinPlan[] = [{ x: 0, z: 0, t: -1, size: 1 }];
-  // seed pin: visible lower-left in the first frame (as in the reference)
-  poseCamera(cam, 0);
+  const pins: PinPlan[] = [];
+  // first pin: lower-left at ~0.15 s (as in the reference)
+  poseCamera(cam, 0.15);
   ray.setFromCamera(new THREE.Vector2(-0.62, -0.55), cam);
   ray.ray.intersectPlane(ground, hit);
-  pins[0] = { x: hit.x, z: hit.z, t: -1, size: 1 };
+  pins.push({ x: hit.x, z: hit.z, t: 0.15, size: 1 });
 
-  let t = 0.55;
+  let t = 0.75;
   while (t < CLIP_SECONDS - 0.4) {
     poseCamera(cam, t);
     let placed = false;
@@ -95,39 +96,35 @@ export const planPins = (aspect: number): PinPlan[] => {
       pins.push({ x, z, t, size: 0.92 + rnd() * 0.16 });
       placed = true;
     }
-    // accelerating spawn rate: ~2 pins/s at start → ~13 pins/s from 9 s on
-    const rate = 2.0 + 1.25 * Math.min(t, 9.0);
+    // accelerating spawn rate: ~1.8 pins/s at start → ~7.4 pins/s from 8 s on
+    const rate = 1.8 + 0.7 * Math.min(t, 8.0);
     t += (0.55 + rnd() * 0.9) / rate;
   }
   return pins;
 };
 
 // ----------------------------------------------------------- pin animation
-const DROP_TIME = 0.26;
-const DROP_HEIGHT = 0.9;
+// Pins grow upright in place from their ground anchor (tip): 0 → ~1.1 → 1
+// over ~9 frames, then a tiny settling wobble – as in the reference.
+const GROW_TIME = 0.3;
+const DROP_TIME = 0.12; // ripple (V2) starts as the pin reaches full size
+
+const backOut = (k: number) => {
+  const c1 = 1.9;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2);
+};
 
 export const pinPose = (age: number) => {
   if (age < 0) return { y: 0, sxz: 0, sy: 0, shadow: 0, visible: false };
-  if (age < DROP_TIME) {
-    const k = age / DROP_TIME;
-    const s = 0.35 + 0.65 * (1 - (1 - k) * (1 - k));
-    return {
-      y: DROP_HEIGHT * (1 - k * k),
-      sxz: s,
-      sy: s,
-      shadow: k * k,
-      visible: true,
-    };
+  if (age < GROW_TIME) {
+    const k = age / GROW_TIME;
+    const s = Math.max(0.001, backOut(k));
+    return { y: 0, sxz: s, sy: s, shadow: Math.min(1, k * 1.4), visible: true };
   }
-  const b = age - DROP_TIME;
-  const spring = Math.exp(-b * 8.5) * Math.sin(b * 24);
-  return {
-    y: Math.max(0, 0.12 * spring),
-    sxz: 1 + 0.1 * spring,
-    sy: 1 - 0.16 * spring,
-    shadow: 1,
-    visible: true,
-  };
+  const b = age - GROW_TIME;
+  const wobble = 0.025 * Math.exp(-b * 9) * Math.sin(b * 26);
+  return { y: 0, sxz: 1 + wobble, sy: 1 - wobble, shadow: 1, visible: true };
 };
 
 // ------------------------------------------------------------ scene build

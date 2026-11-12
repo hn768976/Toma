@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
 /** World-space height of a pin at scale 1 (tip on the ground → top of head). */
-export const PIN_HEIGHT = 0.64;
+export const PIN_HEIGHT = 0.7;
 
 /**
  * Classic map-marker silhouette (round head tapering to a point) with a
@@ -9,8 +9,8 @@ export const PIN_HEIGHT = 0.64;
  * Origin = tip of the pin, +Y up, centred in depth.
  */
 export const createPinGeometry = () => {
-  const R = 0.5; // head radius
-  const cy = 1.22; // head centre height above the tip
+  const R = 0.46; // head radius
+  const cy = 1.42; // head centre height above the tip (tall teardrop)
   const phi = Math.asin(R / cy); // tangent angle
   const shape = new THREE.Shape();
   const tipRound = 0.06;
@@ -22,15 +22,15 @@ export const createPinGeometry = () => {
   shape.lineTo(-tipRound * 0.6, tipRound);
 
   const hole = new THREE.Path();
-  hole.absarc(0, cy, 0.24, 0, Math.PI * 2, true);
+  hole.absarc(0, cy, 0.2, 0, Math.PI * 2, true);
   shape.holes.push(hole);
 
-  const depth = 0.2;
+  const depth = 0.12;
   const geo = new THREE.ExtrudeGeometry(shape, {
     depth,
     bevelEnabled: true,
-    bevelThickness: 0.09,
-    bevelSize: 0.05,
+    bevelThickness: 0.07,
+    bevelSize: 0.045,
     bevelSegments: 6,
     curveSegments: 40,
   });
@@ -43,10 +43,11 @@ export const createPinGeometry = () => {
 
 /** Glossy white inlay that fills the pin's hole (reads as the marker "dot"). */
 export const createPinDotGeometry = () => {
-  const R = 0.5;
-  const cy = 1.22;
+  const R = 0.46;
+  const cy = 1.42;
   const s = PIN_HEIGHT / (cy + R + 0.07);
-  const geo = new THREE.CylinderGeometry(0.2, 0.2, 0.26, 40);
+  // thinner than the pin body so it reads as a recessed dimple
+  const geo = new THREE.CylinderGeometry(0.17, 0.17, 0.1, 40);
   geo.rotateX(Math.PI / 2);
   geo.translate(0, cy + 0.07, 0);
   geo.scale(s, s, s);

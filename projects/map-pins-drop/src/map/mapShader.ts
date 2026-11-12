@@ -125,23 +125,23 @@ float curveDist(float dy, float slope) {
 
 // ------------------------------------------------------------- features
 float riverCenter(float x) {
-  return 2.6 * sin(x * 0.09 + 0.6) + 1.2 * sin(x * 0.21 + 2.1) + 0.35 * sin(x * 0.53 + 0.3);
+  return 2.6 * sin(x * 0.09 + 0.6) + 1.2 * sin(x * 0.21 + 2.1) + 0.7 * sin(x * 0.53 + 0.3);
 }
 float riverSlope(float x) {
-  return 2.6 * 0.09 * cos(x * 0.09 + 0.6) + 1.2 * 0.21 * cos(x * 0.21 + 2.1) + 0.35 * 0.53 * cos(x * 0.53 + 0.3);
+  return 2.6 * 0.09 * cos(x * 0.09 + 0.6) + 1.2 * 0.21 * cos(x * 0.21 + 2.1) + 0.7 * 0.53 * cos(x * 0.53 + 0.3);
 }
 // signed distance to river water (negative inside)
 float riverSD(vec2 p) {
   vec2 r = rot(-0.2) * (p - vec2(0.0, 13.0));
   float c = riverCenter(r.x);
   float d = curveDist(r.y - c, riverSlope(r.x));
-  float width = 0.45 + 0.75 * smoothstep(0.35, 0.75, fbm(vec2(r.x * 0.08, 4.0)));
+  float width = 0.26 + 0.42 * smoothstep(0.35, 0.75, fbm(vec2(r.x * 0.08, 4.0)));
   // ragged banks
   width += 0.12 * (vnoise(p * 2.2) - 0.5);
   float sd = d - width;
   // lakes / wide basins along the river
   vec2 lw = p + vec2(fbm(p * 0.35), fbm(p * 0.35 + 9.0)) * 2.4;
-  float lake = length((lw - vec2(14.2, 17.4)) * vec2(0.55, 0.95)) - 1.3 + 1.1 * (fbm(p * 0.8) - 0.5);
+  float lake = length((lw - vec2(14.2, 17.4)) * vec2(0.55, 0.95)) - 1.0 + 0.9 * (fbm(p * 0.8) - 0.5);
   float lake2 = length((lw - vec2(-4.8, 13.2)) * vec2(0.7, 1.0)) - 0.8 + 0.9 * (fbm(p * 0.9 + 3.0) - 0.5);
   sd = min(sd, min(lake, lake2));
   // a narrow tributary / canal
@@ -154,13 +154,12 @@ float riverSD(vec2 p) {
   return sd;
 }
 
-// highway: double carriageway, returns distance to the nearer carriageway
+// highway centreline distance
 float highwayDist(vec2 p, float ang, vec2 off, float amp, float freq, float ph) {
   vec2 h = rot(ang) * (p - off);
   float c = amp * sin(h.x * freq + ph) + 0.35 * amp * sin(h.x * freq * 2.7 + ph * 1.3);
   float s = amp * freq * cos(h.x * freq + ph) + 0.35 * amp * freq * 2.7 * cos(h.x * freq * 2.7 + ph * 1.3);
-  float d = curveDist(h.y - c, s);
-  return abs(d - 0.045);
+  return curveDist(h.y - c, s);
 }
 
 void main() {
@@ -183,9 +182,9 @@ void main() {
   float sx = mix(0.26, 0.46, h1);
   float sy = sx * mix(1.0, 2.1, h2);
   vec2 q = rot(angle) * p;
-  bool curvy = h3 > 0.72;
+  bool curvy = h3 > 0.8;
   if (curvy) {
-    q += vec2(fbm(p * 0.5), fbm(p * 0.5 + 7.7)) * 1.4;
+    q += vec2(fbm(p * 0.22), fbm(p * 0.22 + 7.7)) * 1.6;
   }
   vec2 gi = floor(q / vec2(sx, sy));
   vec2 gf = fract(q / vec2(sx, sy));
@@ -196,18 +195,18 @@ void main() {
 
   // building lots / special areas inside blocks
   float lotH = hash12(gi + cellId * 3.1);
-  if (lotH > 0.955 && !curvy) {
+  if (lotH > 0.985 && !curvy) {
     vec2 inset = gd - 0.035;
     float sdLot = -min(inset.x, inset.y);
-    col = mix(col, lotH > 0.997 ? uSand : uBlock, fillShape(sdLot, aa));
+    col = mix(col, uBlock, fillShape(sdLot, aa) * 0.7);
   }
 
   // ------------------------------------------------ parks
-  float pn = fbm(p * 0.085 + vec2(11.0, -4.0));
+  float pn = fbm(p * 0.085 + vec2(3.0, 8.5));
   float rsd = riverSD(p);
-  float bank = smoothstep(1.2, 0.0, rsd) * smoothstep(0.5, 0.7, fbm(p * 0.12 + 5.0));
+  float bank = smoothstep(0.8, 0.0, rsd) * smoothstep(0.58, 0.75, fbm(p * 0.12 + 5.0));
   float parkField = max(pn, 0.42 + 0.3 * bank) + 0.04 * (vnoise(p * 2.0) - 0.5);
-  float parkSD = 0.535 - parkField;
+  float parkSD = 0.565 - parkField;
   float paa = max(fwidth(parkField) * 0.8, 1e-5);
   float parkA = smoothstep(paa, -paa, parkSD);
   float darkF = fbm(p * 0.21 + 3.0);
@@ -252,14 +251,19 @@ void main() {
   col = mix(col, uMajorCore, artCoreA * dry);
 
   // ------------------------------------------------ highways
-  float hw1 = highwayDist(p, 0.32, vec2(-16.0, 9.0), 2.0, 0.07, 0.4);
+  float hw1 = abs(highwayDist(p, 0.32, vec2(-16.0, 9.0), 2.0, 0.07, 0.4) - 0.045); // double carriageway
   float hw2 = highwayDist(p, -1.25, vec2(2.0, 12.0), 1.4, 0.09, 2.2);
-  float hw = min(hw1, hw2);
+  float hw = hw1;
   float hwA = stroke(hw, 0.016, aa);
+  // main motorway: one thick, saturated band curving through the frame
+  float mw = hw2;
+  float mwA = stroke(mw, 0.05, aa);
   // soft neon halo for the night palette
   float halo = exp(-hw * hw / 0.02) * 0.45 * uGlow;
   col += uHighway * halo;
   col = mix(col, uHighway, hwA);
+  col += uHighway * exp(-mw * mw / 0.03) * 0.5 * uGlow;
+  col = mix(col, uHighway * mix(0.82, 1.0, uGlow), mwA);
   // night palette: arterials glow faintly too
   col += uMajorCore * exp(-artD * artD / 0.01) * 0.18 * uGlow * dry;
 
