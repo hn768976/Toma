@@ -41,6 +41,9 @@ export type FieldParams = {
   rippleCenter: [number, number];
   rippleWavelength: number;
   rippleMix: number;
+  /** Ripple travel relative to the bands (integer keeps the loop seamless;
+   *  negative values travel the opposite way). */
+  rippleSpeed: number;
   /** Threshold band that turns the sine into raised / flat zones. */
   edge0: number;
   edge1: number;
@@ -68,7 +71,7 @@ export const heightAt = (
   const rx = x - p.rippleCenter[0];
   const ry = y - p.rippleCenter[1];
   const r = Math.sqrt(rx * rx + ry * ry) / p.rippleWavelength;
-  const ripple = Math.sin(tau * (r - phase) + warp * 0.5);
+  const ripple = Math.sin(tau * (r - phase * p.rippleSpeed) + warp * 0.5);
   const v = 0.5 + 0.5 * ((1 - p.rippleMix) * band + p.rippleMix * ripple);
   return smoothstep(p.edge0, p.edge1, v);
 };

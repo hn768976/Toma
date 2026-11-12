@@ -45,6 +45,7 @@ const LOOK = {
   rippleY: 35,
   rippleWavelength: 22,
   rippleMix: 0.6,
+  rippleSpeed: -2,
   edge0: 0.24,
   edge1: 0.5,
   cycles: 1, // wave periods travelled per loop (integer keeps the loop seamless)
@@ -73,6 +74,7 @@ const fieldFrom = (L: Look): FieldParams => ({
   rippleCenter: [L.rippleX, L.rippleY],
   rippleWavelength: L.rippleWavelength,
   rippleMix: L.rippleMix,
+  rippleSpeed: L.rippleSpeed,
   edge0: L.edge0,
   edge1: L.edge1,
 });
