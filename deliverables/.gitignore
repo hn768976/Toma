@@ -1,0 +1,3 @@
+# Rendered videos and project ZIPs are delivered as files, not committed.
+*.mp4
+*.zip
