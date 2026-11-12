@@ -32,7 +32,7 @@ export const createBarcodeScene = (variant: BarcodeVariant): SceneSpec => {
   // (mapped over the strips that are actually on screen, so the build-in
   //  starts on the very first frames, as in the reference)
   const revealFor = (k: number) =>
-    rng() < 0.06 ? range(rng, 0.1, 0.6) : 0.15 + 1.0 * clamp01((k + 14) / 18) + range(rng, 0, 0.25);
+    rng() < 0.1 ? range(rng, 0.03, 0.5) : 0.1 + 1.0 * clamp01((k + 14) / 18) + range(rng, 0, 0.25);
 
   const stripV: number[] = [];
   for (let k = K_MIN; k <= K_MAX; k++) {
@@ -54,7 +54,7 @@ export const createBarcodeScene = (variant: BarcodeVariant): SceneSpec => {
         const len = range(rng, 1.2, 6);
         segs.push({
           x0: x, z0: zc + side * hw, x1: x + len, z1: zc + side * hw, w: 0.0055,
-          color: inkSoft, a: 0.85, v0: v, tIn: revealFor(k), inDur: 0.5, grow: 1, anchor: 0,
+          color: inkSoft, a: 0.85, v0: v, tIn: 0.03 + 0.4 * revealFor(k), inDur: 0.7, grow: 1, anchor: 0.5,
         });
         x += len + range(rng, 0.05, 0.5);
       }
@@ -125,7 +125,7 @@ export const createBarcodeScene = (variant: BarcodeVariant): SceneSpec => {
   const visX = (t: number) => (variant === "v1" ? 0.095 * t : 0.32 * t); // camera truck
   const HUBS = 560;
   for (let i = 0; i < HUBS; i++) {
-    const tIn = i < 60 ? range(rng, 0.2, 1.8) : range(rng, 0.4, DURATION);
+    const tIn = i < 60 ? range(rng, 0.05, 1.6) : range(rng, 0.4, DURATION);
     const life = range(rng, 0.7, 2.4);
     const kHub = Math.round(range(rng, K_MIN + 6, K_MAX - 2));
     const vh = vOf(kHub);
