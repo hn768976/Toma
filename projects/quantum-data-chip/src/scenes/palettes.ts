@@ -12,6 +12,7 @@ export type ChipPalette = {
   spark: string;
   dust: string;
   vignette: string;
+  exposure: number;
 };
 
 /** Version 1 – matches the reference: deep navy, cyan-blue data, amber sparks. */
@@ -27,14 +28,15 @@ export const BLUE: ChipPalette = {
   spark: "#ff8a33",
   dust: "#5fb8ff",
   vignette: "#000000",
+  exposure: 0.7,
 };
 
 /** Version 2 – alternative palette: molten amber/gold data on warm black,
  *  with cyan sparks as the complementary accent. */
 export const EMBER: ChipPalette = {
   bgA: "#040201",
-  bgB: "#1c0b03",
-  bgGlow: "#432006",
+  bgB: "#251006",
+  bgGlow: "#4d2408",
   tick: "#d8741c",
   tickBright: "#ffd08a",
   rail: "#b55a12",
@@ -43,6 +45,7 @@ export const EMBER: ChipPalette = {
   spark: "#2fd4ff",
   dust: "#ffb066",
   vignette: "#000000",
+  exposure: 0.8,
 };
 
 export const col = (hex: string) => new THREE.Color(hex);

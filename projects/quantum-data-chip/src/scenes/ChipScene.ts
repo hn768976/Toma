@@ -254,7 +254,7 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
     batches: [stripBatch, chipBatch, sparkBatch, glowBatch],
     dof,
     bloom: { strength: 0.45, radius: 0.5, threshold: 0.2 },
-    grade: { exposure: 0.7, vignette: 0.55, vignetteColor: col(pal.vignette) },
+    grade: { exposure: pal.exposure, vignette: 0.55, vignetteColor: col(pal.vignette) },
     animate: (t, stage) => {
       // eased push-in plus a constant slow drift so the camera is never static
       const u = 0.75 * easeInOutCubic(Math.min(1, t / 10.0333)) + 0.25 * (t / 10.0333);
