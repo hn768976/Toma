@@ -69,8 +69,8 @@ const helix: HelixStyle = {
   },
 };
 
-const field = (box: FieldStyle["box"], clearRadius?: number): FieldStyle => ({
-  nodes: 850,
+const field = (box: FieldStyle["box"], clearRadius?: number, nodes = 850): FieldStyle => ({
+  nodes,
   clearRadius,
   box,
   k: 3,
@@ -122,20 +122,21 @@ const trackingRig = (t: number, dur: number): Rig => {
  */
 const orbitRig = (t: number, dur: number): Rig => {
   const u = t / dur;
-  const s = soft(u);
-  const ang = lerp(-1.25, 1.35, s);
-  const rad = lerp(2.9, 4.1, s);
-  const y = lerp(-3.4, 1.2, s);
-  const look = lerp(2.4, 0.25, smooth(u * 1.1));
+  // reaches the level side view at ~85% of the clip, then holds and drifts
+  const e = lerp(Math.min(1, u / 0.85), smooth(u / 0.85), 0.6);
+  const ang = lerp(-1.65, 1.55, e) + 0.12 * Math.max(0, u - 0.85);
+  const rad = lerp(2.25, 4.0, e);
+  const y = lerp(-4.9, 1.0, e);
+  const look = lerp(4.3, 0.2, smooth(u / 0.8));
   return {
     camPos: [Math.sin(ang) * rad, y, Math.cos(ang) * rad],
-    target: [Math.sin(ang) * 0.35, y + look, Math.cos(ang) * 0.35],
-    fov: lerp(46, 38, s),
-    roll: lerp(-0.22, 0.04, s),
+    target: [Math.sin(ang) * 0.3, y + look, Math.cos(ang) * 0.3],
+    fov: lerp(54, 38, e),
+    roll: lerp(-0.28, 0.03, e),
     helixPos: [0, 0, 0],
-    helixSpin: 1.0 + 0.09 * t,
+    helixSpin: 1.0 + 0.12 * t,
     helixTilt: [0, 0],
-    focus: rad - 0.55,
+    focus: rad - 0.45,
     glow: lerp(1, 0.75, u),
   };
 };
@@ -149,6 +150,8 @@ const glow = {
   yRange: [0.0, 2.0] as const,
 };
 const glowOrbit = { ...glow, offset: [0, 0] as const, yRange: [-3.5, 3.5] as const, intensity: 0.13 };
+
+const helixOrbit: HelixStyle = { ...helix, yMax: 15 };
 
 export const PRESETS = {
   "emerald-v1": {
@@ -181,13 +184,13 @@ export const PRESETS = {
       radius: [0.5, 0.6],
       vignette: 0.3,
     },
-    helix,
-    field: field({ x: [-12, 12], y: [-9, 10], z: [-12, 12] }, 5.2),
+    helix: helixOrbit,
+    field: field({ x: [-12, 12], y: [-10, 10], z: [-12, 12] }, 3.0, 1700),
     glow: glowOrbit,
     dof: { aperture: 34, fieldApertureScale: 1.3, maxCoc: 90, ringAmount: 0.15, refDepth: 3.5 },
     gain: { points: 1, lines: 1, facets: 1 },
     twinkle: 0.4,
-    fog: { start: 5, density: 0.22 },
+    fog: { start: 4.2, density: 0.13 },
     rig: orbitRig,
   },
 } satisfies Record<string, Preset>;
