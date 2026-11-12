@@ -35,10 +35,11 @@ frame for frame.
 | Pixel format | yuv420p, BT.709, tv range | same | same | same |
 | Audio | none (reference has none) | none | none | none |
 | Decode errors (full decode) | 0 | 0 | 0 | 0 |
-| Largest 1-frame luma jump | 2.10 | 2.09 | 2.09 | 1.62 |
-| Black sections | none | none | 0-0.5 s and 26.6-30 s (intended, as in reference) | same |
+| Largest 1-frame luma jump | 3.83 | 3.33 | 1.88 | 1.54 |
+| Mean luma (reference) | 61.4 (69.0) | 51.7 | 49.8 (44.3) | 41.9 |
+| Black sections | none | none | 0-0.6 s and 26.6-30 s (intended, as in reference) | 0-0.7 s and 26.5-30 s |
 | Frozen sections | none | none | only inside the black intro / end hold | same |
-| File size | 67.3 MB | 61.8 MB | 83.5 MB | 78.5 MB |
+| File size | 51.9 MB | 44.9 MB | 79.4 MB | 75.0 MB |
 
 For comparison, the references' largest 1-frame luma jumps are 14 (neural) and
 2.4 (data cubes), so none of the renders contains a flash, pop or cut that the
@@ -74,40 +75,52 @@ Chrome Headless Shell was used via `REMOTION_BROWSER`.
 
 ## Independent visual review
 
-A separate reviewer agent compared the renders with the references at matching
-frame indices over three passes; its findings drove two rounds of fixes.
+Separate reviewer agents compared the renders with the references at matching
+frame indices (side-by-side sheets, consecutive-frame runs, per-frame luma and
+frame-difference statistics). The last full review covered all four files.
 
-| File | Reviewer score | Verdict |
+| File | Reviewer result | Verdict |
 |---|---|---|
-| Neural V1 | 4.5 -> 5.5 -> 6 / 10 | deliverable with caveats |
-| Data Cubes V1 | 7 -> 8 / 10 | deliverable with caveats |
-| Neural V2 | clearly distinct, same timing as V1 | deliverable with caveats |
-| Data Cubes V2 | clearly distinct, same timing as V1 | deliverable as-is |
+| Data Cubes V1 | 7 / 10, no defects found | deliverable with caveats |
+| Data Cubes V2 | clearly distinct, same geometry and timing, no defects found | deliverable |
+| Neural V1 | 4 / 10 on the previous render; reworked afterwards (see below) | loose match, see caveats |
+| Neural V2 | clearly distinct, same geometry and timing as V1 | same caveats as V1 |
 
-Fixed after review: neural depth of field, impulse clustering and bokeh,
-hero-cell timing, tube faceting, and a hero cell that snapped in over half the
-frame near frame 320 (luma jump 43, now 2.1); data-cubes ending, lattice
-density and brightness, and a washed-out transition near frame 320.
+Client requests from the second round, checked by the reviewer on the final
+data-cubes files:
+- Multi-cube section (frames 400-780): cubes are axis-aligned on a regular
+  grid; apparent skew is camera roll and perspective only. **Pass.**
+- Opening (frames 40-150): reads clearly as a cube with corners and several
+  faces visible. **Pass.**
+
+Neural network: the reviewer rejected the previous render because foreground
+tubes faded on in front of the lens over 2-5 frames (frames 245-248, 315-319)
+with a visible dither weave, the background was too sharp and the picture too
+dark. All four points were then changed: foreground tubes are now positioned
+so they slide in from the frame edge, the dither dissolve is limited to the
+last unit before the lens, far focus is softer, haze is brighter and impulses
+are smaller. The final files were checked by the author on comparison sheets
+and luma statistics (largest 1-frame step 3.8, previously 51), but **the final
+neural render has not been re-scored by the independent reviewer.**
 
 ### Known remaining differences from the references
 
-Neural network (a loose match, not a frame-accurate one):
-- The reference's two bright foreground sweeps (around frames 260 and 322-340)
-  are not reproduced.
-- Depth of field is shallower on mid/far filaments than in the reference.
-- Dendrites read as smoother, less branching tubes than the reference's
-  tapering, wet-looking ones; a few tube ends show small kinks
-  (e.g. frames 120-125, 316-326).
-- Hero-cell framing differs at frame 0 (top-centre vs centred) and frame 350.
-- Version 2 is about 13 luma levels darker than Version 1 and its palette
-  reads closer to dusty rose / maroon with amber than to bright rose-gold.
+Neural network (a loose match in look and motion, not a frame-accurate one):
+- Cell-body positions and sizes do not line up frame for frame with the
+  reference.
+- Filaments are smoother and more uniform than the reference's wet, irregular,
+  glossy ones; cell bodies are cleaner spheres.
+- Depth of field is still less shallow than the reference, and heavy near blur
+  can show slight sample ghosting.
+- Mean brightness is lower (61 vs 69); impulses are fewer and larger.
+- Version 2 is about 10 luma levels darker than Version 1.
 
 Data cubes:
-- Lines and text are slightly crisper and thinner than the reference.
-- The multi-cube section is a few luma levels brighter (56-60 vs 50-52) and
-  the neighbour cubes are seeded, not copied one-to-one.
-- The inner object at frame 360 and the end framing at frame 780 differ
-  slightly.
+- Cubes are crisper and more line-dense than the reference's softly glowing
+  faces; chart panels are only loosely echoed.
+- Slightly brighter overall (mean luma 50 vs 44).
+- Framing is more centred than the reference in the opening, and the
+  multi-cube camera positions are approximations per beat.
 - No depth of field in this project; softness comes from bloom.
 
 Both: the stock watermark in the references is intentionally not reproduced.
