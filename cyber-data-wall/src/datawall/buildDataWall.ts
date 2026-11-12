@@ -326,18 +326,19 @@ vec3 toSRGB(vec3 c) {
 void main() {
   float depth = viewDepth(vUv);
   float coc = clamp(abs(depth - uFocus) * uAperture, 0.0, uMaxBlur) * 0.45;
-  // sample a pre-filtered mip level matched to the tap spacing, so large blurs
-  // stay smooth instead of breaking into a structured dot pattern
-  float lod = log2(max(1.0, coc * uResY / 3.5));
+  // rotate the sample spiral per pixel with a static interleaved-gradient noise,
+  // so large blurs over fine detail do not break into a structured dot pattern
+  float ign = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+  float rot = ign * 6.2831853;
   vec3 acc = vec3(0.0);
   float wsum = 0.0;
   const int N = 56;
   for (int i = 0; i < N; i++) {
     float r = sqrt((float(i) + 0.5) / float(N));
-    float a = float(i) * 2.39996323;
+    float a = float(i) * 2.39996323 + rot;
     vec2 off = vec2(cos(a), sin(a)) * r * coc;
     off.x /= uAspect;
-    vec3 c = textureLod(tColor, vUv + off, lod).rgb;
+    vec3 c = texture2D(tColor, vUv + off).rgb;
     float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
     float w = 1.0 + 2.5 * max(l - 0.45, 0.0); // brighter bokeh highlights
     acc += c * w;
@@ -549,8 +550,8 @@ export const makeDataWallBuilder =
       type: THREE.HalfFloatType,
       samples: 4,
       depthTexture: new THREE.DepthTexture(Math.round(width * pixelRatio), Math.round(height * pixelRatio)),
-      generateMipmaps: true,
-      minFilter: THREE.LinearMipmapLinearFilter,
+      generateMipmaps: false,
+      minFilter: THREE.LinearFilter,
       magFilter: THREE.LinearFilter,
     });
     const finalMat = new THREE.ShaderMaterial({
