@@ -51,7 +51,7 @@ The delivered 1080p files were made from the 4K masters with a Lanczos downscale
 
 ```bash
 ffmpeg -i "out/<name> (4K).mp4" -vf "scale=1920:1080:flags=lanczos,noise=c0s=3:c0f=t" \
-  -c:v libx264 -preset slow -tune grain -crf 16 -pix_fmt yuv420p -r 30 -movflags +faststart \
+  -c:v libx264 -preset slow -crf 19 -pix_fmt yuv420p -r 30 -movflags +faststart \
   "<name> (1080p).mp4"
 ```
 
