@@ -27,8 +27,10 @@ export const createBarcodeScene = (variant: BarcodeVariant): SceneSpec => {
   const lines: Seg[] = [];
 
   // reveal: far strips first, sweeping toward the camera during the first ~1.4 s
+  // (mapped over the strips that are actually on screen, so the build-in
+  //  starts on the very first frames, as in the reference)
   const revealFor = (k: number) =>
-    0.08 + 1.25 * clamp01((k - K_MIN - 10) / (K_MAX - K_MIN - 10)) + range(rng, 0, 0.35);
+    rng() < 0.15 ? range(rng, 0.02, 0.4) : 0.02 + 1.05 * clamp01((k + 13) / 16) + range(rng, 0, 0.25);
 
   const stripV: number[] = [];
   for (let k = K_MIN; k <= K_MAX; k++) {
