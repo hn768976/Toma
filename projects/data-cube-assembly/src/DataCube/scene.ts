@@ -137,8 +137,8 @@ const buildEnvironment = (renderer: THREE.WebGLRenderer, warm: number) => {
         // bright cold band low on the horizon behind the subject: only grazing
         // (distant) reflections pick it up, so near blocks stay dark
         float band = smoothstep(0.55, 0.06, up) * smoothstep(-0.03, 0.05, up);
-        sky += vec3(0.25, 0.68, 1.15) * band * (0.35 + 1.6 * pow(az, 2.0)) * 3.2;
-        sky += vec3(0.5, 0.85, 1.2) * k * 3.0;
+        sky += vec3(0.16, 0.7, 1.1) * band * (0.35 + 1.6 * pow(az, 2.0)) * 3.2;
+        sky += vec3(0.5, 0.85, 1.2) * k * 1.2;
         float strip = smoothstep(0.03, 0.0, abs(d.y - 0.55)) * 0.25 * az;
         sky += vec3(0.4,0.7,1.0) * strip;
         sky = mix(sky, sky + vec3(0.9,0.35,0.05) * smoothstep(0.2, -0.3, up), uWarm);
@@ -268,7 +268,7 @@ const buildGround = (scene: THREE.Scene, env: THREE.Texture, rough: THREE.Textur
            float front = smoothstep(uRadius, uRadius - 2.5, d);
            float near = exp(-d / 3.2);
            float lit = step(0.93, fract(vSeed * 13.7 + floor(uTime * 1.5 + vSeed * 4.0) * 0.37));
-           float g = uIgnite * front * (exp(-d / 2.2) * 0.4 + lit * exp(-d / 3.0) * 0.25);
+           float g = uIgnite * front * (exp(-d / 2.0) * 0.75 + lit * exp(-d / 3.0) * 0.25);
            totalEmissiveRadiance += uWarm * g * vTopFace * (0.3 + vSeed);
            // faint warm floor bounce right around the core
            totalEmissiveRadiance += uWarm * uIgnite * exp(-d / 1.4) * 0.35;
@@ -385,10 +385,17 @@ const buildCore = (scene: THREE.Scene, env: THREE.Texture, rough: THREE.Texture,
   const glowMesh = new THREE.InstancedMesh(vGeo, glowMat, glowVox.length);
   const m = new THREE.Matrix4();
   const c = new THREE.Color();
+  const lim = (VOX / 2 - 0.5) * VS - 1e-3;
   glowVox.forEach((v, i) => {
-    m.makeTranslation(v.x, v.y, v.z);
+    // rough, irregular shell: each voxel slightly inset/outset and resized
+    const out = (rnd() - 0.5) * 0.03;
+    const ox = Math.abs(v.x) >= lim ? Math.sign(v.x) * out : 0;
+    const oz = Math.abs(v.z) >= lim ? Math.sign(v.z) * out : 0;
+    const sc = 0.95 + rnd() * 0.05;
+    m.makeScale(sc, 0.92 + rnd() * 0.08, sc);
+    m.setPosition(v.x + ox, v.y, v.z + oz);
     glowMesh.setMatrixAt(i, m);
-    const dim = rnd() < 0.12 ? 0.35 : 1;
+    const dim = rnd() < 0.12 ? 0.62 : 1;
     const k = (0.5 + rnd() * 0.75) * dim;
     c.setRGB(k, k * (0.7 + rnd() * 0.4), k * (0.6 + rnd() * 0.5));
     glowMesh.setColorAt(i, c);
@@ -580,7 +587,7 @@ const buildDots = (scene: THREE.Scene) => {
       }
   };
   // clusters lying on the city
-  for (let k = 0; k < 150; k++) {
+  for (let k = 0; k < 260; k++) {
     const r = 2.5 + Math.pow(rnd(), 0.8) * 22;
     const a = rnd() * Math.PI * 2;
     addMatrix(Math.cos(a) * r, 0.25 + rnd() * 0.6, Math.sin(a) * r, 2 + Math.floor(rnd() * 6), 1 + Math.floor(rnd() * 3), 2, 0.09, 0);
@@ -643,6 +650,7 @@ const buildDots = (scene: THREE.Scene) => {
         float blink = step(0.25, fract(sin(floor(uTime * 6.0 + aSeed * 11.0) * 91.7 + aSeed * 13.1) * 43758.5));
         float a = mix(1.0, blink, 0.6);
         if (aGroup > 2.5) a *= 0.35 + 0.65 * uIgnite;
+        if (aGroup > 0.5 && aGroup < 1.5) a *= 0.55;
         vA = a; vWarm = (aGroup > 2.5) ? uIgnite * step(0.5, aSeed) : 0.0;
         gl_PointSize = clamp(0.035 * uPx / -mv.z, 1.5, 60.0);
       }`,
@@ -652,7 +660,7 @@ const buildDots = (scene: THREE.Scene) => {
         vec2 q = gl_PointCoord - 0.5;
         float d = length(q);
         float a = smoothstep(0.5, 0.32, d);
-        gl_FragColor = vec4(mix(uColor, uWarm, vWarm) * 3.2 * a * vA, 1.0);
+        gl_FragColor = vec4(mix(uColor, uWarm, vWarm) * 2.6 * a * vA, 1.0);
       }`,
   });
   const points = new THREE.Points(geo, mat);
@@ -692,8 +700,8 @@ const referenceRig = (f: number): Pose => {
   const wideA = pose(-0.2, 0.9, 0.3, 47, 41, 16.5, 34);
   const wideB = pose(-0.35, 0.85, 0.45, 50.5, 39.5, 17.6, 34);
   const drift = mixPose(wideA, wideB, clamp01((f - LAND_FRAME - PULLBACK_FRAMES) / (141 - LAND_FRAME - PULLBACK_FRAMES)));
-  if (f < LAND_FRAME) return close;
-  const tp = easeOutExpo(clamp01((f - LAND_FRAME) / PULLBACK_FRAMES));
+  if (f < LAND_FRAME) return close; // frame 40 is already the first frame of the pull-back
+  const tp = easeOutExpo(clamp01((f - LAND_FRAME + 1) / PULLBACK_FRAMES));
   return mixPose(closeEnd, drift, tp);
 };
 
@@ -793,7 +801,7 @@ export const createDataCubeScene =
       core.modGlowMat.color.setRGB(0.87, 0.95, 1).multiplyScalar(modGlow);
 
       // slot flicker while docking (pulses in bursts, as in the reference)
-      const fl = smoothstep(4, 14, frame) * (((frame >> 1) % 2 === 0 ? 1 : 0.55) * (frame % 7 === 3 ? 0.6 : 1));
+      const fl = smoothstep(4, 16, frame) * (((frame >> 1) % 2 === 0 ? 1 : 0.78) * (frame % 7 === 3 ? 0.82 : 1));
       const slotGlow = frame < LAND_FRAME ? fl * 3.0 : 0;
       core.slotMat.color.copy(ORANGE_HOT).multiplyScalar(slotGlow);
       core.topLight.intensity = slotGlow * 2.5;
@@ -805,7 +813,7 @@ export const createDataCubeScene =
       core.glowMat.color.copy(glowCol).multiplyScalar(lerp(0.62, 3.9, ignite) * pulse + flash * 3);
       (core.modWarm.material as THREE.MeshBasicMaterial).color.setRGB(1, 0.4, 0.15).multiplyScalar(lerp(0.04, 2.2, ignite));
       core.coreLight.intensity = lerp(3, 38, ignite) + flash * 50;
-      core.barMat.color.copy(CYAN).multiplyScalar(1.2 + ignite * 0.5);
+      core.barMat.color.copy(CYAN).multiplyScalar(0.6 + ignite * 0.25);
 
       ground.uniforms.uIgnite.value = ignite;
       ground.uniforms.uRadius.value = Math.max(0, (frame - LAND_FRAME) / 30) * 26 + 1.5;
@@ -817,7 +825,7 @@ export const createDataCubeScene =
 
       // close-up: bright wet cyan ground; after the cut the city settles darker
       const darken = smoothstep(LAND_FRAME, LAND_FRAME + 45, frame);
-      (ground.mesh.material as THREE.MeshStandardMaterial).envMapIntensity = lerp(1.7, 0.75, darken);
+      (ground.mesh.material as THREE.MeshStandardMaterial).envMapIntensity = lerp(1.35, 0.7, darken);
       const p = rig(frame);
       applyPose(camera, p);
       // focus on the face of the cube nearest to camera
@@ -825,14 +833,14 @@ export const createDataCubeScene =
       const focus = camera.position.distanceTo(focusPoint) - CUBE * 0.45;
 
       const closeness = frame < LAND_FRAME ? 1 : 1 - easeOutExpo(clamp01((frame - LAND_FRAME) / PULLBACK_FRAMES));
-      const aperture = variant === "reference" ? lerp(46, 90, closeness) : lerp(40, 75, closeness);
+      const aperture = variant === "reference" ? lerp(70, 90, closeness) : lerp(60, 75, closeness);
 
       post.render(scene, camera, {
         focusDistance: focus,
         aperture,
         maxCoc: 24,
-        bloomStrength: 0.32 + 0.08 * ignite + flash * 0.25,
-        bloomRadius: 0.22,
+        bloomStrength: 0.36 + 0.14 * ignite + flash * 0.2,
+        bloomRadius: 0.32,
         bloomThreshold: 1.4,
         exposure: lerp(1.15, 0.78, darken),
         vignette: 0.55,
