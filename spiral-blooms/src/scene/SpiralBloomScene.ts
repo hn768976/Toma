@@ -300,8 +300,11 @@ const discBlurFragment = /* glsl */ `
 
 const copyFragment = /* glsl */ `
   uniform sampler2D tSrc;
+  uniform vec2 uScale;
+  uniform vec2 uOffset;
   varying vec2 vUv;
-  void main() { gl_FragColor = texture2D(tSrc, vUv); }
+  // crops the guard band away: the frame occupies the centre of the layer
+  void main() { gl_FragColor = texture2D(tSrc, vUv * uScale + uOffset); }
 `;
 
 const backgroundFragment = /* glsl */ `
@@ -427,29 +430,37 @@ export const createSpiralBloomScene =
       minFilter: THREE.LinearFilter,
       magFilter: THREE.LinearFilter,
     });
-    const makeLayer = (div: number) => ({
-      div,
-      a: new THREE.WebGLRenderTarget(
-        Math.ceil(width / div),
-        Math.ceil(height / div),
-        {
-          type: THREE.HalfFloatType,
-          depthBuffer: true,
-          minFilter: THREE.LinearFilter,
-          magFilter: THREE.LinearFilter,
-        },
-      ),
-      b: new THREE.WebGLRenderTarget(
-        Math.ceil(width / div),
-        Math.ceil(height / div),
-        {
-          type: THREE.HalfFloatType,
-          depthBuffer: false,
-          minFilter: THREE.LinearFilter,
-          magFilter: THREE.LinearFilter,
-        },
-      ),
-    });
+    // Blur layers carry a guard band beyond the frame on every side. The bloom
+    // is rendered with a proportionally wider frustum (same pixel scale), so
+    // the frame edges are not clip edges within the blur's reach and the blur
+    // sees real off-frame content. (Without it, bloom tips near the frame
+    // edge produced occasional bright clipped pixels that the blur smeared
+    // into single-frame flashes.)
+    const GUARD = Math.ceil(128 * (width / 3840));
+    const makeTarget = (w: number, h: number, depth: boolean) =>
+      new THREE.WebGLRenderTarget(w, h, {
+        type: THREE.HalfFloatType,
+        depthBuffer: depth,
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter,
+      });
+    const makeLayer = (div: number) => {
+      const iw = Math.ceil(width / div);
+      const ih = Math.ceil(height / div);
+      const m = Math.ceil(GUARD / div);
+      const fw = iw + 2 * m;
+      const fh = ih + 2 * m;
+      return {
+        div,
+        iw,
+        ih,
+        m,
+        fw,
+        fh,
+        a: makeTarget(fw, fh, true),
+        b: makeTarget(fw, fh, false),
+      };
+    };
     const layers = [makeLayer(1), makeLayer(2), makeLayer(4)];
 
     /* fullscreen helpers */
@@ -473,7 +484,11 @@ export const createSpiralBloomScene =
     const compositeMat = new THREE.ShaderMaterial({
       vertexShader: fsVertex,
       fragmentShader: copyFragment,
-      uniforms: { tSrc: { value: null } },
+      uniforms: {
+        tSrc: { value: null },
+        uScale: { value: new THREE.Vector2(1, 1) },
+        uOffset: { value: new THREE.Vector2(0, 0) },
+      },
       depthTest: false,
       depthWrite: false,
       transparent: true,
@@ -645,6 +660,7 @@ export const createSpiralBloomScene =
       };
     });
 
+    const guardCam = new THREE.PerspectiveCamera(26, width / height, 0.5, 200);
     const tmp = new THREE.Vector3();
     const camFwd = new THREE.Vector3();
 
@@ -698,10 +714,23 @@ export const createSpiralBloomScene =
         // hard cut-out rim; defocused blooms get their thin-lens CoC.
         const surfRadius = Math.max(coc * 1.5, 2.4);
         const layer = coc > 14 ? layers[2] : coc > 4 ? layers[1] : layers[0];
+        // wider frustum covering the guard band at the same pixel scale
+        guardCam.position.copy(camera.position);
+        guardCam.quaternion.copy(camera.quaternion);
+        guardCam.fov = THREE.MathUtils.radToDeg(
+          2 *
+            Math.atan(
+              Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) *
+                (layer.fh / layer.ih),
+            ),
+        );
+        guardCam.aspect = layer.fw / layer.fh;
+        guardCam.updateProjectionMatrix();
+        guardCam.updateMatrixWorld();
         renderer.setRenderTarget(layer.a);
         renderer.setClearColor(0x000000, 0);
         renderer.clear(true, true, true);
-        renderer.render(f.surfaceScene, camera);
+        renderer.render(f.surfaceScene, guardCam);
         blurMat.uniforms.tSrc.value = layer.a.texture;
         blurMat.uniforms.uTexel.value.set(
           1 / layer.a.width,
@@ -717,6 +746,14 @@ export const createSpiralBloomScene =
         );
         drawFs(blurMat, layer.b);
         compositeMat.uniforms.tSrc.value = layer.b.texture;
+        compositeMat.uniforms.uScale.value.set(
+          layer.iw / layer.fw,
+          layer.ih / layer.fh,
+        );
+        compositeMat.uniforms.uOffset.value.set(
+          layer.m / layer.fw,
+          layer.m / layer.fh,
+        );
         drawFs(compositeMat, accum);
         // dots (or bokeh discs when defocused) are drawn at full resolution
         renderer.setRenderTarget(accum);

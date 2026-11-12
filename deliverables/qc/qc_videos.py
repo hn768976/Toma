@@ -54,7 +54,7 @@ def black_frames(path):
     return re.findall(r"black_start:\S+ black_end:\S+ black_duration:\S+", r.stderr)
 
 
-def transient_pops(path, w=480, h=270, thresh=50, block=16, min_block_px=40):
+def transient_pops(path, w=480, h=270, thresh=30, block=16, min_block_px=22):
     """Frames where a compact blob flashes for 1-2 frames.
 
     A pixel "pops" in frame i when it differs from both the frame before the
