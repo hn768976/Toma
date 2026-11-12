@@ -84,7 +84,6 @@ export function ThreeStage<P>({
       renderer.dispose();
     };
     // The scene is rebuilt only if the composition itself changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [width, height, durationInFrames, fps, factory, sceneProps]);
 
   useLayoutEffect(() => {

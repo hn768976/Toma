@@ -26,7 +26,7 @@ const HEROES = [
   { t: 0.4, x: -0.06, y: 0.12, d: 10.5, flashes: [] as number[][] },
   { t: 2.5, x: -0.22, y: -0.06, d: 9.5, flashes: [[3.15, 0.6, 0.4]] },
   { t: 9.15, x: 0.5, y: 0.3, d: 7.5, flashes: [[8.75, 0.6, 0.25]] },
-  { t: 12.4, x: -0.3, y: -0.24, d: 11, flashes: [[12.7, 0.5, 0.2]] },
+  { t: 12.4, x: -0.42, y: -0.3, d: 11, flashes: [[12.7, 0.5, 0.2]] },
 ];
 
 function flashAt(t: number, flashes: number[][]) {
@@ -82,12 +82,22 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
   };
   // Dendrites bend away from the lens so the camera never flies through one;
   // they still pass close enough to sweep by as large out-of-focus shapes.
-  const KEEP_OUT = 3.6;
+  const KEEP_OUT = 5;
+  const LEAD_IN = 14; // also keep the view in front of the first frame clear
+  const lead = new THREE.Vector3();
   const away = new THREE.Vector3();
   const steer = (p: THREE.Vector3, dir: THREE.Vector3) => {
-    if (p.z < -KEEP_OUT || p.z > zMax + KEEP_OUT) return;
+    if (p.z < -LEAD_IN || p.z > zMax + KEEP_OUT) return;
     let best = KEEP_OUT * KEEP_OUT;
     let hit = -1;
+    if (p.z < track[0].pos.z) {
+      lead.set(track[0].pos.x, track[0].pos.y, p.z);
+      const d2 = lead.distanceToSquared(p);
+      if (d2 < best) {
+        best = d2;
+        hit = 0;
+      }
+    }
     for (let i = 0; i < track.length; i += 2) {
       const dz = track[i].pos.z - p.z;
       if (dz < -KEEP_OUT) continue;

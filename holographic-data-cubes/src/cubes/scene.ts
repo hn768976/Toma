@@ -11,7 +11,7 @@ import { makeCodeTexture, makeDataTexture } from "./textures";
 export type DataCubesProps = { palette: Palette };
 
 const CUBE = 10; // edge length of every data cube
-const PITCH = 11; // lattice spacing in shot 2
+const PITCH = 10.5; // lattice spacing in shot 2
 const easeOut = (x: number) => 1 - Math.pow(1 - clamp01(x), 3);
 
 const WAVE_VERT = /* glsl */ `
@@ -29,7 +29,7 @@ void main() {
   p.y += h * 0.95;
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   float d = max(-mv.z, 0.001);
-  gl_PointSize = max(0.0042 * uPixelH * (14.0 / d), 1.0);
+  gl_PointSize = max(0.0048 * uPixelH * (14.0 / d), 1.0);
   vGain = (0.45 + 0.4 * smoothstep(-1.2, 1.4, h)) * (1.0 - smoothstep(uFog.x, uFog.y, d));
   gl_Position = projectionMatrix * mv;
 }`;
@@ -135,15 +135,15 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
 
   // Scrolling code wall and a narrower numeric column.
   {
-    const code = kit.panel(codeTex[0], 5.6, 9.0, innerFade, { opacity: 0.85, vSpan: 0.42, uSpan: 0.78 });
+    const code = kit.panel(codeTex[0], 4.4, 8.6, innerFade, { opacity: 0.42, uSpan: 0.8 });
     code.position.set(-0.6, 0.6, -1.0);
     setA.add(code);
     addScroll(code, 0.028);
-    const nums = kit.panel(dataTex, 2.6, 1.5, innerFade, { opacity: 0.8, vSpan: 0.24, uSpan: 0.72 });
+    const nums = kit.panel(dataTex, 2.4, 1.3, innerFade, { opacity: 0.8, uSpan: 0.9 });
     nums.position.set(2.9, 3.6, -2.2);
     setA.add(nums);
     addScroll(nums, 0.05);
-    const nums2 = kit.panel(dataTex, 2.2, 1.1, innerFade, { opacity: 0.6, vSpan: 0.2, uSpan: 0.6, vStart: 0.4 });
+    const nums2 = kit.panel(dataTex, 2.0, 1.0, innerFade, { opacity: 0.6, uSpan: 0.8, vStart: 0.4 });
     nums2.position.set(0.2, 4.1, -3.4);
     setA.add(nums2);
     addScroll(nums2, 0.04);
@@ -192,7 +192,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
         uPixelH: { value: pixelHeight },
         uFog: kit.fog,
         uColor: { value: pal.dots },
-        uOpacity: { value: 0.5 },
+        uOpacity: { value: 1.15 },
       },
       transparent: true,
       blending: THREE.AdditiveBlending,
@@ -200,11 +200,10 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
       depthWrite: false,
       toneMapped: false,
     });
-    waveFade.add(mat, 0.5);
+    waveFade.add(mat, 1.15);
     const pts = new THREE.Points(geo, mat);
     pts.frustumCulled = false;
     setA.add(pts);
-    updaters.push(() => undefined);
   }
 
   // Animated wire net hovering above the wave (lines + node glints).
@@ -229,7 +228,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
       }
     }
     const node = new Float32Array(NX * NZ * 3);
-    const line = kit.lines(new Array(pairs.length * 6).fill(0), innerFade, { width: 1.25, opacity: 0.6 }) as LineSegments2;
+    const line = kit.lines(new Array(pairs.length * 6).fill(0), innerFade, { width: 1.3, opacity: 0.8 }) as LineSegments2;
     const buf = (line.geometry.attributes.instanceStart as THREE.InterleavedBufferAttribute).data;
     const arr = buf.array as Float32Array;
     const glints = kit.sparkles(Array.from(node), innerFade, { size: 0.016, sizeJitter: 0.3, opacity: 0.9, star: 0.5, seed: 9 });
@@ -238,7 +237,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
     updaters.push((t) => {
       for (let n = 0; n < NX * NZ; n++) {
         node[n * 3] = bx[n];
-        node[n * 3 + 1] = -0.2 + 0.75 * wobble(bx[n] * 0.8, bz[n] * 0.9, t * 0.9 + 4.0);
+        node[n * 3 + 1] = -0.9 + 0.75 * wobble(bx[n] * 0.8, bz[n] * 0.9, t * 0.9 + 4.0);
         node[n * 3 + 2] = bz[n];
       }
       for (let p = 0; p < pairs.length; p++) {
@@ -256,17 +255,17 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
   {
     const blocks = [
       // x, z, width, depth, height, start time
-      [-0.8, 1.6, 3.0, 3.0, 1.7, 6.5],
-      [-1.6, -1.4, 2.6, 2.6, 2.6, 7.0],
-      [0.6, -0.6, 2.4, 2.4, 3.4, 7.5],
-      [2.6, -1.6, 1.6, 3.2, 6.2, 8.1],
+      [-0.8, 1.6, 3.0, 3.0, 1.3, 6.2],
+      [-1.6, -1.4, 2.6, 2.6, 2.0, 6.8],
+      [0.6, -0.6, 2.4, 2.4, 2.6, 7.4],
+      [2.6, -1.6, 1.6, 3.2, 4.3, 8.1],
     ];
     blocks.forEach(([x, z, w, d, h, t0], i) => {
       const fader = new Fader();
       const g = new THREE.Group();
       const geo = new THREE.BoxGeometry(1, 1, 1);
       geo.translate(0, 0.5, 0);
-      g.add(kit.faces(geo, fader, { color: pal.accent, opacity: 0.04, edge: 1.2 }));
+      g.add(kit.faces(geo, fader, { color: pal.accent, opacity: 0.022, edge: 1.5 }));
       g.add(kit.lines(boxEdges(1, 1, 1, 0, 0.5, 0), fader, { color: pal.accent, width: 1.3, opacity: 0.75 }));
       g.position.set(x, CUBE / 2, z);
       setA.add(g);
@@ -279,7 +278,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
     });
     // Floating read-outs left and right of the blocks.
     const mk = (x: number, y: number, z: number, w: number, h: number, ry: number, vStart: number) => {
-      const p = kit.panel(dataTex, w, h, roofFade, { opacity: 0.7, vSpan: (h / w) * 0.72, uSpan: 0.72, vStart });
+      const p = kit.panel(dataTex, w, h, roofFade, { opacity: 0.7, uSpan: 1.0, vStart });
       p.position.set(x, y, z);
       p.rotation.y = ry;
       setA.add(p);
@@ -290,7 +289,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
     mk(5.6, 8.6, -3.5, 3.4, 1.5, 0.5, 0.3);
     mk(4.6, 6.6, -1.0, 2.6, 0.8, 0.5, 0.8);
   }
-  const beamA = kit.beam(2.2, 90, beamAFade, 0.1);
+  const beamA = kit.beam(2.2, 90, beamAFade, 0.05);
   beamA.position.set(2.7, 10, -0.6);
   setA.add(beamA);
   let setAVis = 0;
@@ -310,7 +309,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
   const coreFaces: Array<{ mesh: THREE.Mesh; n: THREE.Vector3 }> = [];
   {
     const s = 1.7;
-    const shades = [0.62, 0.3, 0.8, 0.22, 0.48, 0.36];
+    const shades = [0.2, 0.12, 0.25, 0.08, 0.16, 0.12];
     const normals = [
       [1, 0, 0],
       [-1, 0, 0],
@@ -333,12 +332,12 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
   const cells: Cell[] = [];
   {
     const rng = makeRng(2024);
-    const forced = new Set(["-1,0,0", "1,0,0", "0,-1,0", "0,1,0", "-1,-1,1", "1,-1,0", "-1,1,0", "1,1,-1", "0,0,-1", "1,0,1", "-1,0,1"]);
+    const forced = new Set(["-1,0,0", "1,0,0", "0,-1,0", "0,1,0", "-1,-1,1", "-1,1,0", "1,-1,0", "1,1,-1", "0,0,-1", "-1,0,-1", "1,-1,-1"]);
     for (let i = -1; i <= 1; i++) {
       for (let j = -1; j <= 1; j++) {
         for (let k = -1; k <= 1; k++) {
           const key = `${i},${j},${k}`;
-          const keep = rng.chance(0.45);
+          const keep = k === -1 && rng.chance(0.3);
           if ((i === 0 && j === 0 && k === 0) || key === "0,0,1" || key === "0,-1,1") continue;
           if (!forced.has(key) && !keep) continue;
           const fader = new Fader();
@@ -348,26 +347,25 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
           g.add(kit.holoCube(CUBE, fader, { seed, glints: 10 }));
           const r = makeRng(seed * 7 + 1);
           // Every cube carries one or two scrolling code sheets…
-          const sheets = r.chance(0.55) ? 2 : 1;
+          const sheets = r.int(1, 3);
           for (let s = 0; s < sheets; s++) {
-            const w = r.range(4.5, 7.5);
-            const h = r.range(4, 8);
+            const w = r.range(2.8, 4.6);
+            const h = r.range(3, 7.5);
             const p = kit.panel(r.pick(codeTex), w, h, fader, {
-              opacity: r.range(0.45, 0.75),
-              vSpan: (h / w) * 0.4,
-              uSpan: 0.8,
+              opacity: r.range(0.3, 0.55),
+              uSpan: 0.95,
               vStart: r.next(),
             });
             const face = r.int(0, 2);
             const off = r.range(-4.2, 4.2);
             if (face === 0) {
-              p.position.set(r.range(-1, 1), r.range(-0.8, 0.8), off);
+              p.position.set(r.range(-2.5, 2.5), r.range(-1.2, 1.2), off);
             } else if (face === 1) {
               p.rotation.y = Math.PI / 2;
-              p.position.set(off, r.range(-0.8, 0.8), r.range(-1, 1));
+              p.position.set(off, r.range(-1.2, 1.2), r.range(-2.5, 2.5));
             } else {
               p.rotation.x = -Math.PI / 2;
-              p.position.set(r.range(-1, 1), off, r.range(-1, 1));
+              p.position.set(r.range(-2.5, 2.5), off, r.range(-1.2, 1.2));
             }
             g.add(p);
             addScroll(p, r.range(0.008, 0.03));
@@ -424,7 +422,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
           }
           setB.add(g);
           const dist = Math.hypot(i, j, k);
-          cells.push({ fader, t0: 13.1 + (dist - 1) * 1.1 + r.range(0, 0.9) });
+          cells.push({ fader, t0: 13.2 + (dist - 1) * 0.7 + r.range(0, 0.5) });
         }
       }
     }
@@ -437,19 +435,20 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
     (inA ? TRACK_A : TRACK_B).apply(camera, t);
 
     // Shot 1 visibility: fades in while tumbling closer, out during the dive.
-    setAVis = ss(0.15, 1.7, t) * (1 - ss(10.45, 11.05, t));
+    setAVis = ss(0.3, 1.9, t) * (1 - ss(10.55, 11.1, t));
     setA.visible = setAVis > 0.0005;
     cubeAFade.set(setAVis);
-    innerFade.set(setAVis * (1 - 0.45 * ss(5.4, 6.6, t)));
-    waveFade.set(setAVis * (1 - 0.8 * ss(5.3, 6.5, t)));
-    roofFade.set(setAVis * ss(6.3, 7.4, t));
+    innerFade.set(setAVis * (1 - 0.7 * ss(5.1, 6.3, t)));
+    waveFade.set(setAVis * (1 - 0.8 * ss(5.0, 6.2, t)));
+    roofFade.set(setAVis * ss(5.9, 7.0, t));
     beamAFade.set(setAVis * ss(4.6, 6.2, t));
 
     // Shot 2 visibility.
     const out = 1 - ss(26.0, 27.2, t);
-    const coreVis = ss(10.85, 11.5, t) * out;
+    const coreVis = ss(10.6, 11.15, t) * out;
     setB.visible = coreVis > 0.0005;
-    coreFade.set(coreVis);
+    // The lone cube is lit a little hotter until its neighbours arrive.
+    coreFade.set(coreVis * (1 + 0.7 * (1 - ss(13.3, 14.6, t))));
     beamBFade.set(coreVis * (0.4 + 0.6 * ss(19.5, 20.6, t) * (1 - ss(21.0, 22.5, t))));
     const assemble = easeOut((t - 11.55) / 1.1);
     coreFaceFade.set(coreVis * ss(11.5, 12.0, t));
@@ -473,17 +472,17 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
 
   /** Time ranges with fast camera moves that get temporal supersampling. */
   const BLUR: Array<[number, number]> = [
-    [0.6, 2.4],
-    [5.2, 6.5],
-    [10.1, 12.4],
-    [19.0, 21.7],
-    [25.2, 27.3],
+    [0.8, 2.2],
+    [4.9, 6.3],
+    [10.3, 12.3],
+    [19.2, 21.2],
+    [25.3, 27.0],
   ];
   const postParams = {
     focus: 20,
     aperture: 0,
     maxCoc: 0.02,
-    bloomStrength: 0.85,
+    bloomStrength: 0.75,
     bloomThreshold: 0.04,
     exposure: 1.0,
     tint: pal.tint,
@@ -500,7 +499,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
     render: (frame) => {
       const t = frame / fps;
       const blurred = BLUR.some(([a, b]) => t >= a && t <= b);
-      const n = blurred ? 6 : 1;
+      const n = blurred ? 4 : 1;
       const shutter = 0.55 / fps;
       const subs: Array<() => void> = [];
       for (let i = 0; i < n; i++) {

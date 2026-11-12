@@ -48,7 +48,7 @@ float fogFactor(float viewDist) {
 
 const FACE_VERT = /* glsl */ `
 ${FOG_PARS}
-out vec2 vUv;
+centroid out vec2 vUv;
 out float vFog;
 void main() {
   vUv = uv;
@@ -64,12 +64,12 @@ precision highp float;
 uniform vec3 uColor;
 uniform float uOpacity;
 uniform float uEdge;
-in vec2 vUv;
+centroid in vec2 vUv;
 in float vFog;
 out vec4 outColor;
 void main() {
   vec2 q = abs(vUv - 0.5) * 2.0;
-  float e = max(q.x, q.y);
+  float e = min(max(q.x, q.y), 1.0);
   float a = uOpacity * (1.0 + uEdge * pow(e, 14.0));
   outColor = vec4(uColor * a * vFog, 1.0);
 }`;
@@ -78,7 +78,7 @@ const BEAM_FRAG = /* glsl */ `
 precision highp float;
 uniform vec3 uColor;
 uniform float uOpacity;
-in vec2 vUv;
+centroid in vec2 vUv;
 in float vFog;
 out vec4 outColor;
 void main() {
@@ -301,19 +301,23 @@ export class Kit {
   }
 
   /**
-   * Text read-out panel. Shows a `vSpan` tall window of a vertically tiling
-   * texture; scroll it by changing `material.map.offset.y`.
+   * Text read-out panel. Shows a window of a vertically tiling texture:
+   * `uSpan` is the fraction of the texture width shown across the panel and
+   * the vertical span follows from the panel's aspect, so glyphs are never
+   * stretched. Scroll it by changing `material.map.offset.y`.
    */
   panel(
     tex: THREE.Texture,
     w: number,
     h: number,
     fader: Fader,
-    o: { opacity?: number; color?: THREE.Color; vSpan?: number; uSpan?: number; vStart?: number } = {},
+    o: { opacity?: number; color?: THREE.Color; uSpan?: number; vStart?: number } = {},
   ) {
     const map = tex.clone();
     map.needsUpdate = true;
-    map.repeat.set(o.uSpan ?? 1, o.vSpan ?? 0.5);
+    const img = tex.image as { width: number; height: number };
+    const uSpan = o.uSpan ?? 1;
+    map.repeat.set(uSpan, (uSpan * img.width * h) / (w * img.height));
     map.offset.set(0, o.vStart ?? 0);
     this.track(map);
     const geo = this.track(new THREE.PlaneGeometry(w, h));
@@ -340,8 +344,8 @@ export class Kit {
   /** Wireframe glass cube: double edge frame, faint faces, face grid, glints. */
   holoCube(size: number, fader: Fader, o: { seed: number; glints?: number; grid?: number } ) {
     const g = new THREE.Group();
-    g.add(this.faces(new THREE.BoxGeometry(size, size, size), fader, { opacity: 0.012, edge: 2.5 }));
-    g.add(this.lines(faceGridLines(size, o.grid ?? 4), fader, { width: 1.0, opacity: 0.09 }));
+    g.add(this.faces(new THREE.BoxGeometry(size, size, size), fader, { opacity: 0.0045, edge: 5.0 }));
+    g.add(this.lines(faceGridLines(size, o.grid ?? 4), fader, { width: 1.0, opacity: 0.065 }));
     g.add(this.lines(boxEdges(size * 0.955, size * 0.955, size * 0.955), fader, { width: 1.0, opacity: 0.3 }));
     g.add(this.lines(boxEdges(size, size, size), fader, { width: 1.7, opacity: 1.0 }));
     // Glints sit on face-grid intersections.
