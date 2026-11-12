@@ -78,16 +78,24 @@ export const MoleculeKaleidoscope: React.FC<{ palette: MoleculePalette }> = ({ p
     gl.uniform1i(u.uBallCount, scene.ballCount);
     gl.uniform1i(u.uBondCount, scene.bondCount);
     gl.uniform4fv(u.uBall, scene.balls);
-    // resolve atom colours on the CPU (cheaper than branching per pixel)
+    // resolve atom colours on the CPU (cheaper than branching per pixel):
+    // each ball is a weighted mix of the palette's atom colours, so atoms
+    // can recolour smoothly between poses
     const kindCol = [palette.red, palette.pale, palette.yellow];
     const ballCol = new Float32Array(16 * 3);
-    for (let i = 0; i < scene.ballCount; i++) ballCol.set(kindCol[scene.kinds[i]], i * 3);
+    for (let i = 0; i < scene.ballCount; i++) {
+      for (let c = 0; c < 3; c++) {
+        let v = 0;
+        for (let k = 0; k < 3; k++) v += scene.colourWeights[i * 3 + k] * kindCol[k][c];
+        ballCol[i * 3 + c] = v;
+      }
+    }
     const bondA = new Float32Array(16 * 3);
     const bondB = new Float32Array(16 * 3);
-    const toGoo = (c: number[]) => c.map((v, k) => v * 0.2 + palette.goo[k] * 0.8);
+    const toGoo = (i: number) => [0, 1, 2].map((c) => ballCol[i * 3 + c] * 0.3 + palette.goo[c] * 0.7);
     for (let i = 0; i < scene.bondCount; i++) {
-      bondA.set(toGoo(kindCol[scene.kinds[scene.bonds[i * 4]]]), i * 3);
-      bondB.set(toGoo(kindCol[scene.kinds[scene.bonds[i * 4 + 1]]]), i * 3);
+      bondA.set(toGoo(scene.bonds[i * 4]), i * 3);
+      bondB.set(toGoo(scene.bonds[i * 4 + 1]), i * 3);
     }
     gl.uniform3fv(u.uBallCol, ballCol);
     gl.uniform3fv(u.uBondColA, bondA);

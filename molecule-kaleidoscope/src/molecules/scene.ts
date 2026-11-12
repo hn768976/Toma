@@ -4,53 +4,75 @@
  * Units: the screen is 1.0 high (y in [-0.5, 0.5], y grows downwards) and
  * `aspect` wide. z points towards the (top-down) camera. Only the right half
  * of the image is modelled – the shader mirrors it across x = 0.
+ *
+ * Like the reference, one 5 s loop cycles through three poses:
+ *   A  the opening layout (six molecules spread across the frame)
+ *   B  two separated compact clusters, one per side, hollow in the middle
+ *   C  a yellow-dominant branched pose
+ * Each move is a ~30-frame liquid morph: molecules glide to the next pose
+ * while turning in 3D, fuse into each other mid-move and recolour.
  */
 
 export type AtomKind = "red" | "pale" | "yellow";
 type Vec3 = [number, number, number];
 type Mat3 = number[]; // row-major 3x3
+type Pose = 0 | 1 | 2;
 
 type MoleculeDef = {
-  centre: [number, number];
-  atoms: { kind: AtomKind; pos: Vec3 }[];
+  /** Molecule centre in each pose (A, B, C). */
+  centres: [[number, number], [number, number], [number, number]];
+  /** Atom positions (local) and colour in each pose (A, B, C). */
+  atoms: { pos: Vec3; kinds: [AtomKind, AtomKind, AtomKind] }[];
   bonds: [number, number][];
-  /** One world-space rotation per transition (3 per loop, composing to identity). */
+  /** One world-space rotation per move (3 per loop, composing to identity). */
   steps: { axis: Vec3; angle: number }[];
-  /** Direction the molecule lunges towards while it is turning. */
-  lunge: [number, number];
 };
 
 export const LOOP_FRAMES = 150; // the reference repeats every 5 s
-/** Start/end frame of the three transitions inside one loop. */
+/**
+ * [start, end] frame of the three moves A→B, B→C, C→A, matched to the
+ * reference's ~30-frame morphs and ~20-frame holds.
+ */
 export const TRANSITIONS: [number, number][] = [
-  [8, 29],
-  [53, 74],
-  [100, 125],
+  [2, 32],
+  [52, 82],
+  [103, 133],
 ];
 
 export const ATOM_RADIUS: Record<AtomKind, number> = {
-  red: 0.06,
-  pale: 0.055,
-  yellow: 0.055,
+  red: 0.064,
+  pale: 0.058,
+  yellow: 0.058,
 };
-export const BOND_RADIUS = 0.023;
+export const BOND_RADIUS = 0.024;
 export const BASE_BLEND = 0.028;
+/** Extra smooth-union radius at the peak of a move: the liquid fusing. */
+const MOVE_BLEND = 0.034;
+/**
+ * Depth is flattened while molecules turn, so atoms passing over each other
+ * stay within reach of the smooth union and fuse instead of occluding.
+ */
+const DEPTH_SQUASH = 0.45;
 
 const PI = Math.PI;
 const X: Vec3 = [1, 0, 0];
 const Y: Vec3 = [0, 1, 0];
 const Z: Vec3 = [0, 0, 1];
 
-/** Molecules in the right half, laid out after the reference's first frame. */
+/** Molecules in the right half. Pose A follows the reference's first frame. */
 const MOLECULES: MoleculeDef[] = [
   // inner, upper
   {
-    centre: [0.195, -0.183],
+    centres: [
+      [0.195, -0.183],
+      [0.335, -0.125],
+      [0.16, -0.165],
+    ],
     atoms: [
-      { kind: "red", pos: [0.115, -0.077, 0.02] },
-      { kind: "pale", pos: [-0.052, -0.085, -0.025] },
-      { kind: "red", pos: [-0.105, 0.073, 0.02] },
-      { kind: "yellow", pos: [0.041, 0.088, -0.02] },
+      { pos: [0.115, -0.077, 0.02], kinds: ["red", "red", "yellow"] },
+      { pos: [-0.052, -0.085, -0.025], kinds: ["pale", "yellow", "yellow"] },
+      { pos: [-0.105, 0.073, 0.02], kinds: ["red", "red", "red"] },
+      { pos: [0.041, 0.088, -0.02], kinds: ["yellow", "pale", "yellow"] },
     ],
     bonds: [
       [0, 1],
@@ -62,16 +84,19 @@ const MOLECULES: MoleculeDef[] = [
       { axis: X, angle: PI },
       { axis: Z, angle: PI },
     ],
-    lunge: [-0.07, 0.045],
   },
   // inner, lower (vertical mirror of the upper one, different choreography)
   {
-    centre: [0.195, 0.183],
+    centres: [
+      [0.195, 0.183],
+      [0.335, 0.125],
+      [0.16, 0.165],
+    ],
     atoms: [
-      { kind: "red", pos: [0.115, 0.077, 0.02] },
-      { kind: "pale", pos: [-0.052, 0.085, -0.025] },
-      { kind: "red", pos: [-0.105, -0.073, 0.02] },
-      { kind: "yellow", pos: [0.041, -0.088, -0.02] },
+      { pos: [0.115, 0.077, 0.02], kinds: ["red", "red", "yellow"] },
+      { pos: [-0.052, 0.085, -0.025], kinds: ["pale", "pale", "red"] },
+      { pos: [-0.105, -0.073, 0.02], kinds: ["red", "yellow", "yellow"] },
+      { pos: [0.041, -0.088, -0.02], kinds: ["yellow", "yellow", "yellow"] },
     ],
     bonds: [
       [0, 1],
@@ -83,16 +108,19 @@ const MOLECULES: MoleculeDef[] = [
       { axis: Z, angle: -PI },
       { axis: Y, angle: -PI },
     ],
-    lunge: [-0.06, -0.05],
   },
   // outer ring
   {
-    centre: [0.49, 0.0],
+    centres: [
+      [0.49, 0.0],
+      [0.535, 0.0],
+      [0.475, 0.0],
+    ],
     atoms: [
-      { kind: "pale", pos: [0.1045, 0, 0.0] },
-      { kind: "yellow", pos: [-0.0935, 0, 0.0] },
-      { kind: "red", pos: [-0.005, -0.138, 0.035] },
-      { kind: "red", pos: [-0.005, 0.138, -0.035] },
+      { pos: [0.1045, 0, 0.0], kinds: ["pale", "pale", "yellow"] },
+      { pos: [-0.0935, 0, 0.0], kinds: ["yellow", "pale", "yellow"] },
+      { pos: [-0.005, -0.138, 0.035], kinds: ["red", "red", "yellow"] },
+      { pos: [-0.005, 0.138, -0.035], kinds: ["red", "red", "red"] },
     ],
     bonds: [
       [2, 0],
@@ -106,7 +134,6 @@ const MOLECULES: MoleculeDef[] = [
       // half-turn about the xy-diagonal: Rd(PI)·Rx(PI)·Rz(PI/2) = identity
       { axis: [Math.SQRT1_2, -Math.SQRT1_2, 0], angle: PI },
     ],
-    lunge: [-0.075, 0.0],
   },
 ];
 
@@ -141,17 +168,19 @@ const apply = (m: Mat3, v: Vec3): Vec3 => [
 ];
 const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
-/** Snappy ease – slow out of the hold, fast through the middle, soft settle. */
+/** Mostly steady speed with soft starts and stops (the reference morphs
+ *  at a near-constant rate rather than with a sharp ease peak). */
 const ease = (t: number) => {
   const c = Math.min(1, Math.max(0, t));
-  return c < 0.5 ? 4 * c * c * c : 1 - Math.pow(-2 * c + 2, 3) / 2;
+  const sine = 0.5 - 0.5 * Math.cos(Math.PI * c);
+  return 0.45 * c + 0.55 * sine;
 };
 
 export type SceneFrame = {
   /** xyz + radius, per ball. */
   balls: Float32Array;
-  /** atom kind index per ball (0 red, 1 pale, 2 yellow). */
-  kinds: Int32Array;
+  /** colour weights per ball: [red, pale, yellow] (sum to 1). */
+  colourWeights: Float32Array;
   /** index a, index b, radius, unused per bond. */
   bonds: Float32Array;
   ballCount: number;
@@ -166,49 +195,70 @@ export const computeScene = (frame: number): SceneFrame => {
   const f = ((frame % LOOP_FRAMES) + LOOP_FRAMES) % LOOP_FRAMES;
 
   const balls = new Float32Array(16 * 4);
-  const kinds = new Int32Array(16);
+  const colourWeights = new Float32Array(16 * 3);
   const bonds = new Float32Array(16 * 4);
   let nb = 0;
   let ns = 0;
   let activity = 0;
 
+  // which pose we are in / moving between, and how far along
+  let from: Pose = 0;
+  let to: Pose = 0;
+  let p = 0;
+  TRANSITIONS.forEach(([a, b], i) => {
+    if (f >= a) {
+      from = i as Pose;
+      to = ((i + 1) % 3) as Pose;
+      p = ease((f - a) / (b - a));
+      if (f < b) activity = Math.max(activity, Math.sin(PI * ((f - a) / (b - a))));
+    }
+  });
+  if (f < TRANSITIONS[0][0]) {
+    // still holding pose A from the end of the previous loop
+    from = 0;
+    to = 0;
+    p = 0;
+  }
+
   for (const m of MOLECULES) {
     let orient = IDENTITY;
-    let lunge = 0;
     TRANSITIONS.forEach(([a, b], i) => {
-      const p = ease((f - a) / (b - a));
-      const step = m.steps[i];
-      orient = mul(rot(step.axis, step.angle * p), orient);
-      if (f > a && f < b) {
-        const s = Math.sin(PI * ((f - a) / (b - a)));
-        lunge = Math.max(lunge, s);
-        activity = Math.max(activity, s);
-      }
+      const s = m.steps[i];
+      orient = mul(rot(s.axis, s.angle * ease((f - a) / (b - a))), orient);
     });
+    const cA = m.centres[from];
+    const cB = m.centres[to];
+    const cx = cA[0] + (cB[0] - cA[0]) * p;
+    const cy = cA[1] + (cB[1] - cA[1]) * p;
 
     const base = nb;
-    for (const atom of m.atoms) {
-      const p = apply(orient, atom.pos);
-      const cx = m.centre[0] + m.lunge[0] * lunge * 0.55;
-      const cy = m.centre[1] + m.lunge[1] * lunge * 0.55;
-      // a touch of perspective: atoms swinging towards the camera grow
-      const r = ATOM_RADIUS[atom.kind] * (1 + 0.9 * p[2]) * (1 + 0.06 * lunge);
-      balls.set([cx + p[0], cy + p[1], p[2], r], nb * 4);
-      kinds[nb] = KIND_INDEX[atom.kind];
+    m.atoms.forEach((atom) => {
+      const q = apply(orient, atom.pos);
+      // flatten depth while turning so overlapping atoms fuse
+      const z = q[2] * (1 - (1 - DEPTH_SQUASH) * activity);
+      const kFrom = atom.kinds[from];
+      const kTo = atom.kinds[to];
+      const radius =
+        (ATOM_RADIUS[kFrom] * (1 - p) + ATOM_RADIUS[kTo] * p) * (1 + 0.9 * z) * (1 + 0.05 * activity);
+      balls.set([cx + q[0], cy + q[1], z, radius], nb * 4);
+      // colours cross-fade through the middle of the move
+      const cp = Math.min(1, Math.max(0, (p - 0.35) / 0.3));
+      colourWeights[nb * 3 + KIND_INDEX[kFrom]] += 1 - cp;
+      colourWeights[nb * 3 + KIND_INDEX[kTo]] += cp;
       nb++;
-    }
+    });
     for (const [a, b] of m.bonds) {
-      bonds.set([base + a, base + b, BOND_RADIUS * (1 + 0.25 * lunge), 0], ns * 4);
+      bonds.set([base + a, base + b, BOND_RADIUS * (1 + 0.3 * activity), 0], ns * 4);
       ns++;
     }
   }
 
   return {
     balls,
-    kinds,
+    colourWeights,
     bonds,
     ballCount: nb,
     bondCount: ns,
-    blend: BASE_BLEND + 0.016 * activity,
+    blend: BASE_BLEND + MOVE_BLEND * activity,
   };
 };

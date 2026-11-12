@@ -44,8 +44,8 @@ uint gMask;
 // polynomial smooth-min that also blends colour
 void sunion(inout float d, inout vec3 c, float d2, vec3 c2, float k) {
   float h = clamp(0.5 + 0.5 * (d2 - d) / k, 0.0, 1.0);
-  // colour transitions over a narrower band than the geometry -> no mud
-  float hc = clamp(0.5 + 0.5 * (d2 - d) / (k * 0.45), 0.0, 1.0);
+  // colour bleeds across most of the fused neck, like the reference
+  float hc = clamp(0.5 + 0.5 * (d2 - d) / (k * 0.8), 0.0, 1.0);
   d = mix(d2, d, h) - k * h * (1.0 - h);
   c = mix(c2, c, hc);
 }

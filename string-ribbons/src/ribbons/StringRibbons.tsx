@@ -114,8 +114,8 @@ export const StringRibbons: React.FC<StringRibbonsProps> = ({ rig, palette }) =>
     ctx.globalCompositeOperation = "multiply";
     ctx.drawImage(ink.canvas, 0, 0);
     ctx.drawImage(paper.grid, 0, 0);
-    ctx.globalCompositeOperation = "screen";
-    ctx.globalAlpha = 0.3;
+    ctx.globalCompositeOperation = "overlay";
+    ctx.globalAlpha = 0.55;
     ctx.drawImage(paper.grunge, 0, 0);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = "multiply";

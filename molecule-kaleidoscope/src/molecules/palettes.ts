@@ -31,14 +31,14 @@ const hex = (h: string): RGB => {
 /** Version 1 – sampled from the reference footage. */
 export const REFERENCE_PALETTE: MoleculePalette = {
   background: hex("#c7e5ea"),
-  backgroundEdge: hex("#bcdbe1"),
+  backgroundEdge: hex("#c5e3e8"), // the reference has no visible vignette
   dot: hex("#9fb85f"),
   dotOpacity: 0.55,
   shadow: hex("#7fa3ab"),
   shadowStrength: 0.42,
   red: hex("#f0605b"),
   pale: hex("#c0e4ef"),
-  yellow: hex("#c1bd4a"),
+  yellow: hex("#b6ad52"),
   goo: hex("#ec6a5e"),
   rim: hex("#e0583e"),
   specular: 0.32,

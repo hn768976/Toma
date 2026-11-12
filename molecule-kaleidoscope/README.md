@@ -1,8 +1,10 @@
 # Molecule Kaleidoscope (Remotion)
 
 A mirrored kaleidoscope of glossy metaball "molecules" (ball-and-stick atoms
-fused with smooth unions) that flip through 3D rotations in snappy, eased
-moves, on pale dotted paper. Modelled on reference clip *istockphoto-2266998825*.
+fused with smooth unions) on pale dotted paper. Every 5 s it cycles through
+three poses – the opening layout, two separated compact ring clusters, and a
+yellow-dominant branched pose – with ~30-frame liquid morphs in which the
+molecules glide, turn in 3D, fuse into each other and recolour. Modelled on reference clip *istockphoto-2266998825*.
 
 | | |
 |---|---|

@@ -23,7 +23,7 @@ export type CameraRig = (frame: number, durationInFrames: number) => Camera;
 export const closeOrbitRig: CameraRig = (frame) => {
   const tau = (2 * Math.PI * frame) / LOOP_FRAMES;
   const phi = tau + 0.6;
-  const radius = 1.62 + 0.22 * Math.sin(tau * 2 + 0.4);
+  const radius = 2.25 + 0.25 * Math.sin(tau * 2 + 0.4);
   const eye: V3 = [
     radius * Math.sin(phi),
     0.35 * Math.sin(tau * 2 + 1.1) + 0.1,
@@ -35,48 +35,45 @@ export const closeOrbitRig: CameraRig = (frame) => {
     eye,
     target,
     roll: 0.45 * Math.sin(tau + 0.3) + 0.2,
-    focal: 1.35,
+    focal: 1.8,
     focus: dist * (0.8 + 0.12 * Math.sin(tau * 3 + 0.7)),
     aperture: 0.075,
   };
 };
 
 /**
- * Version 2 – alternative camera: a high, wide crane shot. The camera starts
- * looking down on the whole sculpture from above and slowly descends while
- * arcing 120° around it, revealing the folded sheets as complete forms with
- * only gentle depth of field.
+ * Version 2 – alternative camera angle and movement: a high, overhead three-
+ * quarter view (~50° down) that circles the whole sculpture once in 12 s at a
+ * slow, steady pace with no roll – a calm "turntable" reading of the forms
+ * instead of V1's low, restless fly-through. Close enough that the sheets
+ * still run off the frame edges; loops seamlessly (one orbit = two morph
+ * loops).
  */
-export const wideCraneRig: CameraRig = (frame, durationInFrames) => {
-  const p = frame / Math.max(1, durationInFrames - 1);
-  const e = p * p * (3 - 2 * p); // smoothstep ease
-  const phi = -0.9 + e * ((2 * Math.PI) / 3);
-  const elevation = 1.05 - 0.75 * e; // radians above the horizon
-  const radius = 4.1 - 0.55 * e;
-  const eye: V3 = [
-    radius * Math.cos(elevation) * Math.sin(phi),
-    radius * Math.sin(elevation),
-    radius * Math.cos(elevation) * Math.cos(phi),
-  ];
-  // aim at the sculpture's centre of mass so the slowly morphing form stays
-  // composed; the camera orbits around that same point
+export const highOrbitRig: CameraRig = (frame, durationInFrames) => {
+  const t = (2 * Math.PI * frame) / Math.max(1, durationInFrames);
+  const phi = t + 0.9;
+  const elevation = 0.88 + 0.08 * Math.sin(2 * t); // radians above the horizon
+  const radius = 2.2 + 0.12 * Math.sin(2 * t + 1.2);
+  // aim at the sculpture's centre of mass so the morphing form stays composed
   const c = sceneCentroid(frame);
+  const eye: V3 = [
+    c[0] + radius * Math.cos(elevation) * Math.sin(phi),
+    c[1] + radius * Math.sin(elevation),
+    c[2] + radius * Math.cos(elevation) * Math.cos(phi),
+  ];
   const target: V3 = [c[0], c[1], c[2]];
-  eye[0] += c[0];
-  eye[1] += c[1];
-  eye[2] += c[2];
   const dist = Math.hypot(eye[0] - target[0], eye[1] - target[1], eye[2] - target[2]);
   return {
     eye,
     target,
-    roll: -0.12 + 0.18 * e,
-    focal: 1.25,
+    roll: 0,
+    focal: 1.45,
     focus: dist,
     aperture: 0.06,
   };
 };
 
-export const RIGS = { closeOrbit: closeOrbitRig, wideCrane: wideCraneRig } as const;
+export const RIGS = { closeOrbit: closeOrbitRig, highOrbit: highOrbitRig } as const;
 export type RigName = keyof typeof RIGS;
 
 export type View = {

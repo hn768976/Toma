@@ -6,11 +6,11 @@ on worn grid paper. Modelled on reference clip *istockphoto-2287708613*.
 
 | | |
 |---|---|
-| Compositions | `Ribbons-V1-4K` (reference: close, restless orbit through the sculpture), `Ribbons-V2-4K` (alternative camera: high, wide crane shot that descends and arcs 120° around the whole sculpture) |
+| Compositions | `Ribbons-V1-4K` (reference: close, restless orbit through the sculpture), `Ribbons-V2-4K` (alternative camera angle and movement: a high overhead three-quarter view, about 50° down, circling the sculpture once in 12 s at a slow, steady, roll-free pace) |
 | Resolution | 3840 × 2160 (4K UHD) |
 | Frame rate | 30 fps |
 | Duration | 360 frames (12.000 s) – frame-for-frame match of the 360-frame reference |
-| Loop | the sculpture morph (and the V1 camera) repeats every 180 frames (6 s), like the reference |
+| Loop | the sculpture morph and the V1 camera repeat every 180 frames (6 s), like the reference; the V2 orbit loops over the full 12 s |
 | Technology | WebGL2 shaders for the strands + Canvas 2D for the paper/print texture and compositing |
 
 ## Commands
@@ -36,8 +36,8 @@ straight stroke (erf across × erf along the segment). These are summed
 additively into a float ink-density buffer – blur therefore varies
 continuously along strands that pass through the focal plane, with no
 seams – and resolved with Beer–Lambert absorption so overlapping sheets
-darken like ink. Canvas 2D then layers paper, ink, printed grid, grunge
-speckle and vignette.
+darken like ink. Canvas 2D then layers paper, ink, printed grid, terrazzo
+grain and a light vignette.
 
 ### Notes
 
@@ -55,7 +55,7 @@ src/Root.tsx                    compositions (ids, size, fps, duration)
 src/ribbons/StringRibbons.tsx   frame component: projection, DOF, compositing
 src/ribbons/inkRenderer.ts      WebGL2 analytic depth-of-field strand renderer
 src/ribbons/scene.ts            ribbon (rail) definitions and looping morph
-src/ribbons/camera.ts           V1 close-orbit rig, V2 wide-crane rig
+src/ribbons/camera.ts           V1 close-orbit rig, V2 high-orbit rig
 src/ribbons/paper.ts            procedural paper, grid, grunge, vignette
 src/ribbons/palettes.ts         teal print palette
 ```

@@ -28,7 +28,7 @@ export const RemotionRoot: React.FC = () => {
         fps={FPS}
         width={WIDTH}
         height={HEIGHT}
-        defaultProps={{ rig: "wideCrane" as const, palette: TEAL_PRINT }}
+        defaultProps={{ rig: "highOrbit" as const, palette: TEAL_PRINT }}
       />
     </>
   );

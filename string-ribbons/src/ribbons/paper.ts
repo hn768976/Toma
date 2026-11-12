@@ -143,35 +143,41 @@ export const buildPaper = (w: number, h: number, pal: PaperPalette): PaperLayers
   for (let y = oy; y < h; y += minor, k++) drawLine(0, y, w, y, k % 2 === 0);
   g.globalAlpha = 1;
 
-  // ---- light grunge speckles (visible on top of the dark ink too) -------
+  // ---- terrazzo grain (overlaid on everything, ink included) -----------
+  // Neutral grey = no change under "overlay"; light and dark grains of
+  // irregular size cluster in worn patches, plus fine per-pixel noise.
   const grunge = makeCanvas(w, h);
-  const speck = makeCanvas(w, h);
-  const gr = speck.getContext("2d")!;
+  const gr = grunge.getContext("2d")!;
+  gr.fillStyle = "#808080";
+  gr.fillRect(0, 0, w, h);
   const dens = noiseCanvas(w, h, Math.max(2, H / 60), 31, 4);
-  const dctx = dens.getContext("2d")!;
-  const dd = dctx.getImageData(0, 0, dens.width, dens.height).data;
-  gr.fillStyle = pal.speckle;
-  const count = Math.round(14000 * (w * h) / (1920 * 1080));
+  const dd = dens.getContext("2d")!.getImageData(0, 0, dens.width, dens.height).data;
+  const count = Math.round(60000 * (w * h) / (1920 * 1080));
   for (let i = 0; i < count; i++) {
     const x = rnd() * w, y = rnd() * h;
     const dx = Math.min(dens.width - 1, Math.floor((x / w) * dens.width));
     const dy = Math.min(dens.height - 1, Math.floor((y / h) * dens.height));
     const d = dd[(dy * dens.width + dx) * 4] / 255;
-    // speckles cluster in the "worn" patches of the density noise
-    const patch = Math.max(0, (d - 0.5) * 2.6);
-    if (rnd() > patch * patch) continue;
-    const r = H * (0.002 + 0.008 * rnd() ** 2);
-    gr.globalAlpha = 0.1 + 0.35 * rnd();
+    // denser in worn patches, but present everywhere
+    if (rnd() > 0.25 + 0.75 * d * d) continue;
+    const r = H * (0.0006 + 0.0028 * rnd() ** 2.2);
+    const light = rnd() < 0.62;
+    gr.fillStyle = light ? pal.speckle : "#000000";
+    gr.globalAlpha = light ? 0.25 + 0.5 * rnd() : 0.12 + 0.25 * rnd();
     gr.beginPath();
-    gr.ellipse(x, y, r * (0.7 + 0.6 * rnd()), r * (0.7 + 0.6 * rnd()), rnd() * 3, 0, Math.PI * 2);
+    // irregular grain: a squashed, rotated ellipse
+    gr.ellipse(x, y, r * (0.5 + rnd()), r * (0.4 + 0.6 * rnd()), rnd() * Math.PI, 0, Math.PI * 2);
     gr.fill();
   }
   gr.globalAlpha = 1;
-  // soften all speckles with a single blur pass
-  const gctx = grunge.getContext("2d")!;
-  gctx.filter = `blur(${(H * 0.0016).toFixed(2)}px)`;
-  gctx.drawImage(speck, 0, 0);
-  gctx.filter = "none";
+  const grain = gr.getImageData(0, 0, w, h);
+  for (let i = 0; i < grain.data.length; i += 4) {
+    const n = (rnd() - 0.5) * 22;
+    grain.data[i] = Math.max(0, Math.min(255, grain.data[i] + n));
+    grain.data[i + 1] = Math.max(0, Math.min(255, grain.data[i + 1] + n));
+    grain.data[i + 2] = Math.max(0, Math.min(255, grain.data[i + 2] + n));
+  }
+  gr.putImageData(grain, 0, 0);
 
   // ---- vignette ----------------------------------------------------------
   const vignette = makeCanvas(w, h);

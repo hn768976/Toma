@@ -26,51 +26,39 @@ export const LOOP_FRAMES = 180; // the reference repeats every 6 s
 const RIBBONS: Ribbon[] = [
   // big fan converging to an apex, folded once (reference: opening frames)
   {
-    strands: 30,
+    strands: 24,
     rails: [
       { kind: "point", p: [-0.35, -1.05, 0.15] },
       { kind: "arc", c: [0.0, 0.25, 0.0], a: [1.05, 0, 0], b: [0, 0.15, 0.95], t0: -2.3, t1: 0.35, wobble: 0.25 },
       { kind: "line", p0: [1.35, 0.85, -0.55], p1: [0.2, 1.25, 0.95] },
     ],
-    fillet: 0.32,
+    fillet: 0.12,
     pivot: [0, 0, 0],
     sway: { x: 0.18, y: 0.35, z: 0.12, phase: 0 },
   },
   // twisted strip with a hard Z-bend (reference: the "<" shaped sheets)
   {
-    strands: 28,
+    strands: 22,
     rails: [
       { kind: "line", p0: [-1.35, -0.25, -0.75], p1: [-0.55, -0.75, 0.85] },
       { kind: "line", p0: [0.45, 0.55, -0.85], p1: [0.15, 0.05, 0.75] },
       { kind: "line", p0: [1.25, -0.65, 0.55], p1: [1.05, 0.35, -0.75] },
     ],
-    fillet: 0.22,
+    fillet: 0.08,
     pivot: [0, 0, 0],
     sway: { x: 0.25, y: -0.3, z: 0.2, phase: 2.1 },
   },
   // helical sheet sweeping around the centre
   {
-    strands: 32,
+    strands: 26,
     rails: [
       { kind: "arc", c: [0, -0.35, 0], a: [1.2, 0, 0], b: [0, 0, 1.2], t0: 0.4, t1: 3.3, wobble: 0.2 },
       { kind: "arc", c: [0, 0.45, 0], a: [0.55, 0, 0], b: [0, 0.2, 0.55], t0: 1.4, t1: 4.6 },
       { kind: "point", p: [0.25, 1.35, 0.15] },
     ],
-    fillet: 0.28,
+    fillet: 0.1,
     pivot: [0, 0.2, 0],
     sway: { x: -0.2, y: 0.4, z: 0.15, phase: 4.0 },
-  },
-  // smaller crossing fan
-  {
-    strands: 24,
-    rails: [
-      { kind: "line", p0: [-0.9, 0.9, 0.6], p1: [-1.2, 0.2, -0.6] },
-      { kind: "point", p: [-0.15, 0.1, -0.15] },
-      { kind: "arc", c: [-0.2, -0.8, -0.2], a: [0.75, 0, 0], b: [0, 0.25, 0.75], t0: 3.4, t1: 5.9, wobble: 0.3 },
-    ],
-    fillet: 0.4,
-    pivot: [-0.3, 0, 0],
-    sway: { x: 0.3, y: 0.25, z: -0.2, phase: 1.0 },
   },
 ];
 
