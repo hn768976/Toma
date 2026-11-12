@@ -13,19 +13,19 @@ export type VariantName = "v1" | "v2";
 export const LOOK: Look = {
   stops: [
     { depth: 0.0, color: "#fff4f3" },
-    { depth: 0.5, color: "#f2bfdf" },
-    { depth: 1.15, color: "#b048c8" },
-    { depth: 1.95, color: "#6a1fa8" },
-    { depth: 2.75, color: "#8db0f5" },
+    { depth: 0.45, color: "#efb6e0" },
+    { depth: 0.9, color: "#b84ccc" },
+    { depth: 1.9, color: "#6a1fa8" },
+    { depth: 2.65, color: "#8db0f5" },
     { depth: 3.2, color: "#f4f6ff" },
-    { depth: 3.9, color: "#fff3a8" },
+    { depth: 3.65, color: "#fff6c4" },
   ],
   // Pillars raised above the surface (crater rim / snap-shut pop).
   upStops: [
     { height: 0.0, color: "#fff4f3" },
-    { height: 1.0, color: "#f6d4ea" },
-    { height: 2.0, color: "#e08edc" },
-    { height: 3.2, color: "#b866da" },
+    { height: 0.5, color: "#f3c4e8" },
+    { height: 1.2, color: "#e39ade" },
+    { height: 2.4, color: "#b866da" },
   ],
   background: "#fff6f4",
   shadowTint: "#a95cc4",
@@ -35,7 +35,7 @@ export const LOOK: Look = {
   vignette: 0.02,
 };
 
-export const MOTION_BLUR = { samples: 12, shutter: 1.5 };
+export const MOTION_BLUR = { samples: 12, shutter: 0.9 };
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
@@ -56,19 +56,19 @@ export const cameraFor = (variant: VariantName) => (frame: number): CameraState 
     // rotated ~45 degrees so the valley runs bottom-left -> top-right.
     const target: [number, number, number] = [-5, -2, -6];
     return {
-      position: orbit(target, 43, 1.1, 2.88),
+      position: orbit(target, 49, 1.1, 2.88),
       target,
-      roll: 2.24,
+      roll: 2.14,
       fov: 40,
-      shiftX: 0.18,
+      shiftX: 0.14,
     };
   }
   // Version 2: low, oblique tracking shot travelling along the valley with a
   // slow orbit, revealing the depth of the terraced walls.
   const t = frame / DURATION_IN_FRAMES;
-  const target: [number, number, number] = [lerp(-14, 12, t), -2.5, lerp(1.5, -0.5, t)];
+  const target: [number, number, number] = [lerp(-14, 12, t), -2.5, lerp(-10, 4.5, t)];
   return {
-    position: orbit(target, lerp(30, 25, t), lerp(0.5, 0.42, t), lerp(-1.05, -0.75, t)),
+    position: orbit(target, lerp(30, 25, t), lerp(0.5, 0.42, t), lerp(-1.55, -1.26, t)),
     target,
     roll: 0,
     fov: 34,

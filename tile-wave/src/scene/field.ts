@@ -6,7 +6,7 @@
 // again. One cycle = 134 frames (~4.47 s), measured from the reference, so the
 // 267-frame shot runs ~2 cycles, in phase with the reference.
 
-export const CYCLE_FRAMES = 134;
+export const CYCLE_FRAMES = 132;
 export const GRID = 136; // GRID x GRID tiles, centred on the origin
 export const MAX_DEPTH = 4.0; // depth of the valley floor, in tile units
 
@@ -21,36 +21,31 @@ const mulberry32 = (seed: number) => () => {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 };
 
-// "Lightning-bolt" path in grid coordinates (u along the valley, v across
-// it): short runs of 3-5 tiles along u alternate with 3-5 tile jogs in v that
-// switch direction (zig-zag), so every step follows the tile grid.
-const lightning = (u0: number, v0: number, u1: number, seed: number, dirU: 1 | -1, driftV: number) => {
+// Staircase ("lightning") path in grid coordinates: runs of 6-9 tiles along
+// u alternate with steps of 3-5 tiles along v, always climbing the same way,
+// so the band zig-zags along the tile grid while running diagonally to it.
+const staircase = (u0: number, v0: number, uEnd: number, seed: number, dirU: 1 | -1, dirV: 1 | -1, short = 1) => {
   const rnd = mulberry32(seed);
   const pts: [number, number][] = [[u0, v0]];
   let u = u0;
   let v = v0;
-  let side = 1;
-  while (dirU > 0 ? u < u1 : u > u1) {
-    u += dirU * (4 + Math.floor(rnd() * 3));
+  while (dirU > 0 ? u < uEnd : u > uEnd) {
+    u += dirU * Math.round((11 + Math.floor(rnd() * 4)) * short);
     pts.push([u, v]);
-    const jog = 3 + Math.floor(rnd() * 3);
-    const centre = v0 + driftV * Math.abs(u - u0);
-    // Zig-zag about the drift line, never wandering more than ~4 tiles off it.
-    if (Math.abs(v + side * jog - centre) > 4.5) side = -side;
-    v += side * jog;
-    side = -side;
+    v += dirV * (6 + Math.floor(rnd() * 3));
     pts.push([u, v]);
   }
   return pts;
 };
 
-// Along-band / across-band coordinates in grid space.
-export const alongBand = (x: number, _y: number) => x;
-export const acrossBand = (_x: number, y: number) => y;
+// Along-band / across-band coordinates in grid space (band direction ~ (7, 4)).
+const BAND = { x: 0.868, y: 0.496 };
+export const alongBand = (x: number, y: number) => x * BAND.x + y * BAND.y;
+export const acrossBand = (x: number, y: number) => -x * BAND.y + y * BAND.x;
 
-const MAIN = lightning(-80, 0, 80, 7, 1, 0);
-// Shallower side branch splitting off towards the lower-left, like the reference.
-const BRANCH = lightning(-26, -2, -60, 11, -1, 0.5);
+const MAIN = staircase(-74, -44, 74, 7, 1, 1);
+// Shorter side branch splitting off the main band towards the lower-left.
+const BRANCH = staircase(-30, -16, -74, 11, -1, -1, 0.8);
 
 const toSegs = (pts: [number, number][], depth: number, width: number): Seg[] => {
   const out: Seg[] = [];
@@ -60,7 +55,7 @@ const toSegs = (pts: [number, number][], depth: number, width: number): Seg[] =>
   return out;
 };
 
-const SEGS: Seg[] = [...toSegs(MAIN, 1, 1), ...toSegs(BRANCH, 0.62, 0.7)];
+const SEGS: Seg[] = [...toSegs(MAIN, 1, 1), ...toSegs(BRANCH, 0.7, 0.75)];
 
 // Chebyshev distance from a cell centre to an axis-aligned segment: keeps the
 // valley rings square, giving the pixel-staircase look.
@@ -141,7 +136,7 @@ export const CELLS: Cell[] = (() => {
         widthMul: n.widthMul,
         // Random per-cell jitter, a little lag away from the axis, and a
         // travelling delay along the path (the lower-left end leads).
-        delay: hash(i, j, 1) * 0.05 + n.best * 0.008 + (alongBand(x, y) + half) * 0.0011 + Math.abs(alongBand(x, y)) * 0.0022,
+        delay: hash(i, j, 1) * 0.04 + n.best * 0.006 + (alongBand(x, y) + half) * 0.0007,
         jitter: hash(i, j, 2) - 0.5,
         rnd: hash(i, j, 3),
         rnd2: hash(i, j, 4),
@@ -157,28 +152,22 @@ const smoothstep = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
-// Valley opening over one cycle (phase 0..1), shaped after the reference:
-// a ~40-frame rise from a slit to the full band, a short hold, a ~45-frame
-// close, a brief springy flick as it snaps shut, then ~30 frames at rest.
+// Valley opening over one cycle (phase 0..1), shaped after the reference's
+// colour curve: a ~50-frame rise from a slit to the full band, a ~30-frame
+// lively hold, a ~36-frame close, then ~15 frames at rest.
 export const opening = (phase: number) => {
   const p = ((phase % 1) + 1) % 1;
-  if (p < 0.36) return smoothstep(0, 0.36, p);
-  if (p < 0.42) return 1;
-  if (p < 0.7) return 1 - smoothstep(0.42, 0.7, p);
-  if (p < 0.8) {
-    // Flick above the surface, then settle.
-    const u = (p - 0.7) / 0.1;
-    return -0.3 * Math.sin(Math.PI * Math.pow(u, 0.6)) * (1 - 0.5 * u);
-  }
-  // Rest: a faint residual slit that fades out just before the next rise.
-  const r = (p - 0.8) / 0.2;
-  return 0.03 * Math.sin(Math.PI * Math.min(1, r * 1.4));
+  if (p < 0.4) return smoothstep(0.02, 0.4, p);
+  if (p < 0.55) return 1;
+  if (p < 0.84) return 1 - smoothstep(0.55, 0.84, p);
+  // Rest: a faint residual slit.
+  return 0.03 * Math.sin(Math.PI * (p - 0.84) / 0.16);
 };
 
 // Phase offset so frame 0 starts on a freshly opening slit (as the reference does).
 export const PHASE_OFFSET = 0.12;
 
-const W_MAX = 5.0; // half width of the fully open valley, in cells
+const W_MAX = 6.5; // half width of the fully open valley, in cells
 const RIM_LIFT = 2.6; // how far the crater-rim tiles rise while open
 const POP_LIFT = 1.2; // flick height when the valley snaps shut
 const TILT_GAIN = 1.15; // exaggerates the slope -> tiles stand up as fins
@@ -191,8 +180,8 @@ const profile = (dist: number, a: number, strength: number) => {
   const open = smoothstep(0, 0.1, a);
   const ring = Math.max(0, 1 - dist / (w + 0.6));
   const depth = MAX_DEPTH * strength * ring * open;
-  const x = (dist - (w + 1.5)) / 1.4;
-  const rim = RIM_LIFT * a * Math.exp(-x * x) * strength;
+  const x = (dist - (w + 1.0)) / 1.0;
+  const rim = 0.6 * RIM_LIFT * a * Math.exp(-x * x) * strength;
   return rim - depth;
 };
 
@@ -209,21 +198,21 @@ export type Pose = {
 const bladeEnv = (p: number) => {
   const q = ((p % 1) + 1) % 1;
   // Closing: blades grow as the valley narrows, then relax during the rest.
-  const closing = smoothstep(0.5, 0.68, q) * (1 - smoothstep(0.84, 0.96, q));
+  const closing = smoothstep(0.62, 0.78, q) * (1 - smoothstep(0.9, 0.98, q));
   // Opening slit: the first tiles to tip are drawn out too.
   const w = q > 0.5 ? q - 1 : q;
-  const opening = Math.exp(-Math.pow((w - 0.03) / 0.07, 2)) * 0.8;
+  const opening = Math.exp(-Math.pow((w - 0.06) / 0.09, 2));
   return Math.max(closing, opening);
 };
-const BLADE_REACH = 7.0; // cells from the axis that form blades
+const BLADE_REACH = 9.0; // cells from the axis that form blades
 const BLADE_TILT = 0.22; // radians
 
 // Blades all point straight across the band (as in the reference); tiles
 // blend from their local slope direction towards that as they are drawn out.
 const bladeDir = (c: Cell, blade: number): [number, number] => {
-  const side = c.gy !== 0 ? Math.sign(c.gy) : c.rnd < 0.5 ? -1 : 1;
-  const ax = 0;
-  const ay = side;
+  const side = Math.sign(acrossBand(c.gx, c.gy)) || (c.rnd < 0.5 ? -1 : 1);
+  const ax = -BAND.y * side;
+  const ay = BAND.x * side;
   const k = Math.min(1, blade * 2.5);
   const x = c.gx + (ax - c.gx) * k;
   const y = c.gy + (ay - c.gy) * k;
@@ -239,7 +228,7 @@ export const cellPose = (c: Cell, frame: number): Pose => {
   // Rows stay in step: a gentle per-row variation only.
   // Whole columns across the band are drawn out together, so neighbouring
   // tiles overlap into one long shingled strip; the columns between stay flat.
-  const colSel = smoothstep(0.55, 0.7, c.colRnd);
+  const colSel = smoothstep(0.66, 0.78, c.colRnd);
   const blade = bladeEnv(phase) * Math.pow(reachB, 0.7) * colSel * (0.75 + 0.25 * c.rnd2);
   if (a < 0) {
     // Snap-shut: tiles near the path lift and roll over together, then settle.
@@ -256,9 +245,16 @@ export const cellPose = (c: Cell, frame: number): Pose => {
   const base = profile(c.dist, a, c.strength);
   const [bx, by] = bladeDir(c, blade);
   const slope = (profile(c.dist + 0.5, a, c.strength) - profile(c.dist - 0.5, a, c.strength));
-  const depthNoise = base < 0 ? 1 + 0.07 * c.jitter : 0.3 + 0.9 * Math.pow(c.rnd, 1.4);
+  const depthNoise = base < 0 ? 1 + 0.16 * c.jitter : 0.8 + 0.3 * c.rnd;
   const h = base * depthNoise;
-  const slopeTilt = Math.atan(slope * TILT_GAIN) * (0.85 + 0.3 * c.rnd2);
+  // Rim cards keep fluttering while the band is open (the reference never holds still).
+  const rimMask = Math.exp(-Math.pow((c.dist - (a * W_MAX + 1.0)) / 2.2, 2)) * c.strength;
+  const flutter = 0.12 * a * rimMask * Math.sin(2 * Math.PI * (phase * 2.6 + c.rnd));
+  // In the valley tiles follow the slope; on the rim they stand up as cards
+  // all leaning in towards the axis, like overlapping scales.
+  const rimF = Math.exp(-Math.pow((c.dist - (a * W_MAX + 1.0)) / 1.0, 2)) * a * c.strength;
+  const slopeTilt =
+    (base < 0 ? Math.atan(slope * TILT_GAIN) * (0.55 + 0.9 * c.rnd2) : rimF * (0.85 + 0.15 * c.rnd2)) + flutter;
   const tilt = Math.max(-MAX_TILT, Math.min(MAX_TILT, slopeTilt + BLADE_TILT * blade));
   return { h, tilt, gx: bx, gy: by, blade };
 };

@@ -24,7 +24,7 @@ const MAX_STOPS = 8;
 const TILE_SIZE = 1.0; // plates butt together: the resting surface reads as one flat sheet
 const TILE_THICKNESS = 0.16;
 const CURL = 0.55; // bend per radian of tilt
-const BLADE_STRETCH = 10.0; // extra length (in tiles) of a fully drawn-out blade
+const BLADE_STRETCH = 7.0; // extra length (in tiles) of a fully drawn-out blade
 
 const VERT = /* glsl */ `
 attribute vec4 aCurl; // (gx, gy) local slope direction, curl amount, stretch
@@ -136,6 +136,9 @@ void main() {
   vec2 v = vUv - 0.5;
   v.x *= uRes.x / uRes.y;
   c *= 1.0 - uVignette * dot(v, v);
+  // Warm, slightly brighter centre fading to pinker corners (soft studio backdrop).
+  float r2 = clamp(dot(v, v) * 1.1, 0.0, 1.0);
+  c *= mix(vec3(1.02, 1.01, 0.97), vec3(0.97, 0.9, 0.94), r2);
   float d = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
   gl_FragColor = vec4(toSrgb(c) + d / 255.0, 1.0);
 }`;
