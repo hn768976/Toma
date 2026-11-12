@@ -159,8 +159,8 @@ attribute vec3 aSize;
 varying vec3 vLocal;
 varying vec3 vN;
 varying float vDepth;
-varying vec4 vData;
-varying vec3 vSize;
+flat varying vec4 vData;
+flat varying vec3 vSize;
 void main() {
   vLocal = position;
   vN = normal;
@@ -184,8 +184,8 @@ uniform float uFogDensity;
 varying vec3 vLocal;
 varying vec3 vN;
 varying float vDepth;
-varying vec4 vData;
-varying vec3 vSize;
+flat varying vec4 vData;
+flat varying vec3 vSize;
 ${GLSL_COMMON}
 
 void main() {
@@ -209,19 +209,24 @@ void main() {
     col = uFace;
     if (kind < 0.5) {
       // barcode-style vertical bars
-      float sl = floor(fx / 0.055);
+      float sl = floor(fx / 0.08);
       float tick = floor(uTime * rate + seed * 7.0);
       float b = h31(vec3(sl, seed * 13.0, tick));
       float lenTop = vSize.y - 0.12 - step(0.6, h31(vec3(sl, seed, 2.0))) * h31(vec3(sl, seed, 5.0)) * vSize.y * 0.5;
       float inBar = step(0.12, fy) * step(fy, lenTop);
       float barOn = step(0.5, b) * inBar;
-      float fxl = fract(fx / 0.055);
-      float aab = fwidth(fx / 0.055) + 1e-4;
+      float fxl = fract(fx / 0.08);
+      float aab = fwidth(fx / 0.08) + 1e-4;
       float barShape = smoothstep(0.12 - aab, 0.12 + aab, fxl) * smoothstep(0.88 + aab, 0.88 - aab, fxl);
-      // when a bar slice gets close to a pixel wide, fade to its average coverage
-      // so the barcode texture does not shimmer as the camera drifts
-      float coverage = mix(barShape, 0.76, smoothstep(0.18, 0.5, aab));
-      col = mix(col, uLine * (0.7 + 0.5 * b), barOn * coverage * on);
+      // when bar slices shrink towards a pixel or two, fade the whole barcode
+      // (random on/off pattern included) to its average coverage, so distant
+      // panels read as an even glow instead of per-pixel speckle
+      float fine = smoothstep(0.05, 0.2, aab);
+      float sharpBars = barOn * barShape;
+      // average height profile (bars are shortened at random, so fade towards the top)
+      float avgBars = 0.36 * step(0.12, fy) * smoothstep(vSize.y - 0.12, vSize.y * 0.45, fy) * 0.9 + 0.36 * 0.1 * step(0.12, fy) * step(fy, vSize.y - 0.12);
+      vec3 barCol = mix(uLine * (0.7 + 0.5 * b), uLine * 0.95, fine);
+      col = mix(col, barCol, mix(sharpBars, avgBars, fine) * on);
       col = mix(col, uLine * 0.75, frameLine * on);
     } else if (kind < 1.5) {
       // luminous light block, split into sub-cells
