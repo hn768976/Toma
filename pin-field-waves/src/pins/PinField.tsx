@@ -45,18 +45,18 @@ const LOOK = {
   rippleY: 35,
   rippleWavelength: 22,
   rippleMix: 0.6,
-  rippleSpeed: -2,
+  rippleSpeed: -3,
   edge0: 0.24,
   edge1: 0.5,
-  cycles: 1, // wave periods travelled per loop (integer keeps the loop seamless)
+  cycles: 2, // wave periods travelled per loop (integer keeps the loop seamless)
   ease: 0.5, // speed modulation within each loop (0 = constant speed)
   // Reference camera (Version 1)
-  distance: 34,
+  distance: 30,
   elevationDeg: 37,
   azimuthDeg: 0,
   rollDeg: 62,
   fov: 32,
-  focus: 31,
+  focus: 27,
   targetX: 0,
   targetZ: 0,
   // Rendering
