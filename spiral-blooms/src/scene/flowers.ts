@@ -18,6 +18,10 @@ export type FlowerLook = {
   warmShare?: number;
   /** Overall brightness multiplier of the dots */
   dotGain: number;
+  /** Specular strength multiplier on the pleat crests */
+  specGain?: number;
+  /** Share of dots that sparkle (white glints) */
+  glintShare?: number;
 };
 
 export type FlowerDef = {
@@ -29,8 +33,8 @@ export type FlowerDef = {
   look: FlowerLook;
   /** Pleat count */
   pleats: number;
-  /** Pleats advanced over the full loop (integer => seamless loop) */
-  loopPleats: number;
+  /** Amplitude (in pleats) of the in-place 90-frame twist of the pleats */
+  swayPleats: number;
   /** Rotation direction (+1 / -1) */
   dir: number;
   /** Spiral twist in radians from centre to rim */
@@ -62,23 +66,25 @@ const blueMain: FlowerLook = {
   warm: "#ffffff",
   warmShare: 0.05,
   dotGain: 1.15,
+  specGain: 2.4,
+  glintShare: 0.16,
 };
 /** Large defocused left bloom: lighter steel blue with small, dense dots. */
 const steelBlue: FlowerLook = {
   base: "#1c3470",
   sheen: "#5d88d8",
   dot: "#8ea6ec",
-  warm: "#ffe2bc",
-  warmShare: 0.035,
+  warm: "#fff0dc",
+  warmShare: 0.03,
   dotGain: 0.95,
 };
 const blueWarm: FlowerLook = {
-  base: "#122458",
-  sheen: "#4a72cc",
-  dot: "#6f8fe0",
+  base: "#1b3272",
+  sheen: "#5a84dc",
+  dot: "#86a4ee",
   warm: "#ffd9a8",
-  warmShare: 0.05,
-  dotGain: 1.0,
+  warmShare: 0.07,
+  dotGain: 1.35,
 };
 /** Muted cyan-blue (not green) teal, as in the reference. */
 const teal: FlowerLook = {
@@ -108,8 +114,8 @@ const navy: FlowerLook = {
 
 const base = {
   pleats: 44,
-  // the reference advances exactly one pleat every 90 frames (3 s): 3 pleats per 9 s loop
-  loopPleats: 3,
+  // in-place twist, repeating every 90 frames like the reference
+  swayPleats: 0.3,
   dir: 1,
   twist: 1.15,
   lobes: 4,
@@ -222,8 +228,8 @@ export const FLOWERS: FlowerDef[] = [
     lobePhase: 0.55,
     tiltX: 0.22,
     tiltY: -0.28,
-    lobes: 3,
-    lobeAmp: 0.085,
+    lobes: 5,
+    lobeAmp: 0.06,
   },
   {
     ...base,

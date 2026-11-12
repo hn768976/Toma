@@ -134,6 +134,7 @@ const surfaceFragment = /* glsl */ `
   uniform vec3 uSheen;
   uniform vec3 uLightV;
   uniform float uPulse;
+  uniform float uSpecGain;
   varying vec3 vNormalV;
   varying vec3 vPosV;
   varying float vU;
@@ -149,7 +150,7 @@ const surfaceFragment = /* glsl */ `
     float ao = smoothstep(0.04, 0.68, vU);
     ao *= 0.55 + 0.45 * vFold;
     vec3 col = uBase * (0.28 + 0.95 * diff * uPulse) * ao;
-    col += uSheen * (spec * 0.75 * uPulse + fres * 0.22) * ao * (0.35 + 0.65 * vFold);
+    col += uSheen * (spec * 0.75 * uSpecGain * uPulse + fres * 0.22) * ao * (0.35 + 0.65 * vFold);
     gl_FragColor = vec4(col, 1.0);
   }
 `;
@@ -256,18 +257,20 @@ const discBlurFragment = /* glsl */ `
   uniform sampler2D tSrc;
   uniform vec2 uTexel;
   uniform float uRadius;
+  uniform int uTaps;
   varying vec2 vUv;
   void main() {
     vec4 acc = vec4(0.0);
-    const int N = 72;
-    for (int i = 0; i < N; i++) {
+    float n = float(uTaps);
+    for (int i = 0; i < 72; i++) {
+      if (i >= uTaps) break;
       float fi = float(i) + 0.5;
-      float r = sqrt(fi / float(N));
+      float r = sqrt(fi / n);
       float th = fi * 2.39996323;
       vec2 o = vec2(cos(th), sin(th)) * r * uRadius * uTexel;
       acc += texture2D(tSrc, vUv + o);
     }
-    gl_FragColor = acc / float(N);
+    gl_FragColor = acc / n;
   }
 `;
 
@@ -436,6 +439,7 @@ export const createSpiralBloomScene =
         tSrc: { value: null },
         uTexel: { value: new THREE.Vector2() },
         uRadius: { value: 0 },
+        uTaps: { value: 72 },
       },
       depthTest: false,
       depthWrite: false,
@@ -467,7 +471,7 @@ export const createSpiralBloomScene =
       fragmentShader: finalFragment,
       uniforms: {
         tSrc: { value: accum.texture },
-        uExposure: { value: 0.92 },
+        uExposure: { value: 1.0 },
         uSeed: { value: 0 },
         uRes: { value: res },
       },
@@ -513,17 +517,19 @@ export const createSpiralBloomScene =
             ...shared,
             uBase: { value: linear(def.look.base) },
             uSheen: { value: linear(def.look.sheen) },
+            uSpecGain: { value: def.look.specGain ?? 1 },
           },
           side: THREE.DoubleSide,
         }),
       );
       surface.frustumCulled = false;
 
-      // dot instances: pattern repeats every `loopPleats` pleats so the loop is seamless
+      // dot instances: random per pleat (the 90-frame motion returns to its
+      // start, so no repeating motif is needed for the seamless loop)
       const rand = mulberry32(def.seed * 977);
-      const motif: number[][] = [];
-      for (let k = 0; k < def.loopPleats; k++) {
-        const list: number[][] = [];
+      const inst: number[] = [];
+      const inst2: number[] = [];
+      for (let p = 0; p < def.pleats; p++) {
         const n = def.dotsPerRidge;
         for (let i = 0; i < n; i++) {
           if (rand() < def.dropout) continue;
@@ -533,18 +539,13 @@ export const createSpiralBloomScene =
           const bright = 0.7 + rand() * 0.6;
           const glintPhase = rand();
           const isWarm = rand() < (def.look.warmShare ?? 0) ? 1 : 0;
-          const glintAmp = isWarm ? 3.5 + rand() * 4 : rand() < 0.08 ? 2.5 : 0;
-          list.push([uu, off, size, bright, glintPhase, glintAmp, isWarm]);
-        }
-        motif.push(...list.map((d) => [k, ...d]));
-      }
-      const inst: number[] = [];
-      const inst2: number[] = [];
-      for (let p = 0; p < def.pleats; p++) {
-        for (const m of motif) {
-          if (m[0] !== p % def.loopPleats) continue;
-          inst.push(m[1], p + m[2], m[3], m[4]);
-          inst2.push(m[5], m[6], m[7], 0);
+          const glintAmp = isWarm
+            ? 3.5 + rand() * 4
+            : rand() < (def.look.glintShare ?? 0.08)
+              ? 2.5
+              : 0;
+          inst.push(uu, p + off, size, bright);
+          inst2.push(glintPhase, glintAmp, isWarm, 0);
         }
       }
       const dotGeo = new THREE.InstancedBufferGeometry();
@@ -635,11 +636,15 @@ export const createSpiralBloomScene =
 
       for (const { f, coc } of sorted) {
         const def = f.def;
-        const rot =
-          def.dir * ((Math.PI * 2 * def.loopPleats) / def.pleats) * loop;
-        f.shared.uRot.value = rot;
+        // The reference repeats exactly every 90 frames (3 s) and morphs in
+        // place rather than turning as a rigid body: the pleats twist back and
+        // forth by a fraction of a pleat and the rim breathes, on a 90-frame cycle.
+        const cyc = (Math.PI * 2 * frame) / 90;
+        const pleatAngle = (Math.PI * 2) / def.pleats;
+        f.shared.uRot.value =
+          def.dir * def.swayPleats * pleatAngle * Math.sin(cyc + def.seed);
         f.shared.uLobePhase.value =
-          def.lobePhase + 0.12 * Math.sin(Math.PI * 2 * loop + def.seed);
+          def.lobePhase + 0.06 * Math.sin(cyc + def.seed * 1.7);
         const dm = f.dots.material.uniforms;
         dm.uTime01.value = loop;
         dm.uCoc.value = coc;
@@ -659,7 +664,13 @@ export const createSpiralBloomScene =
           1 / layer.a.height,
         );
         // surfaces are smoother than the dots in the reference, so they get a wider kernel
-        blurMat.uniforms.uRadius.value = surfRadius / layer.div;
+        const rPx = surfRadius / layer.div;
+        blurMat.uniforms.uRadius.value = rPx;
+        // enough golden-angle taps for the kernel area, capped at 72
+        blurMat.uniforms.uTaps.value = Math.min(
+          72,
+          Math.max(12, Math.round(rPx * rPx * 1.1)),
+        );
         drawFs(blurMat, layer.b);
         compositeMat.uniforms.tSrc.value = layer.b.texture;
         drawFs(compositeMat, accum);
