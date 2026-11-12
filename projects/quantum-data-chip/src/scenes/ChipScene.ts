@@ -8,7 +8,7 @@ import { BLUE, EMBER, ChipPalette, col } from "./palettes";
 
 export type ChipVariant = "v1" | "v2";
 
-const STRIPS = 7; // data bands on each side of the centre band
+const STRIPS = 10; // data bands on each side of the centre band
 const LENGTH = 26; // half length of every strip along X
 const CHIP = 0.5; // chip half size
 
@@ -91,7 +91,7 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
           const bright = rng() < 0.16;
           segs.push({
             x0: x, z0: edge + dirOut * p, x1: x, z1: edge + dirOut * (p + len), w: 0.017,
-            color: bright ? tickBright : tick, a: (bright ? 1.0 : 0.78) * fall,
+            color: bright ? tickBright : tick, a: (bright ? 1.25 : 1.0) * fall,
             tIn: t0 + p * 0.3, inDur: 0.45,
             twAmp: 0.18, twFreq: range(rng, 0.5, 3), twPhase: range(rng, 0, 6.28),
           });
@@ -132,8 +132,8 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
       chipSegs.push({ x0, z0, x1, z1, w, color: chipC, a, tIn: t + i * 0.1, inDur: 0.4, grow: 1, anchor: 0, y: 0.012 }),
     );
   };
-  frame(CHIP, 0.5, 1.3, 0.014);
-  frame(CHIP * 0.82, 0.3, 1.5, 0.009);
+  frame(CHIP, 0.75, 1.3, 0.014);
+  frame(CHIP * 0.82, 0.45, 1.5, 0.009);
   // cross dividing the core into four windows
   chipSegs.push({ x0: -CHIP * 0.82, z0: 0, x1: CHIP * 0.82, z1: 0, w: 0.014, color: chipC, a: 0.7, tIn: 1.7, inDur: 0.4, grow: 1, anchor: 0.5, y: 0.012 });
   chipSegs.push({ x0: 0, z0: -CHIP * 0.82, x1: 0, z1: CHIP * 0.82, w: 0.014, color: chipC, a: 0.7, tIn: 1.75, inDur: 0.4, grow: 1, anchor: 0.5, y: 0.012 });
@@ -173,6 +173,24 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
       });
   }
 
+  // ---- secondary chips (sit off-focus in the foreground / far side) ---------
+  const secondary: [number, number, number][] = [
+    // [along-band x, across z, reveal time]
+    [2.6, 3.4, 3.9],
+    [-1.2, -3.6, 4.3],
+    [-4.2, 2.6, 4.6],
+  ];
+  for (const [sx, sz, t0] of secondary) {
+    const h = 0.32;
+    chipSegs.push({ x0: sx - h, z0: sz, x1: sx + h, z1: sz, w: 2 * h, color: tickBright, a: 0.06, tIn: t0, inDur: 0.6, y: 0.01 });
+    for (const [a0, b0, a1, b1] of [[-h, -h, h, -h], [h, -h, h, h], [h, h, -h, h], [-h, h, -h, -h], [0, -h, 0, h], [-h, 0, h, 0]])
+      chipSegs.push({ x0: sx + a0, z0: sz + b0, x1: sx + a1, z1: sz + b1, w: 0.014, color: chipC, a: 0.55, tIn: t0 + 0.1, inDur: 0.5, grow: 1, anchor: 0, y: 0.01 });
+    for (const i of [-1, 1]) for (const j of [-1, 1]) {
+      const cx = sx + i * h * 0.5, cz = sz + j * h * 0.5;
+      chipSegs.push({ x0: cx - h * 0.35, z0: cz, x1: cx + h * 0.35, z1: cz, w: h * 0.7, color: tickBright, a: 0.11, tIn: t0 + 0.2, inDur: 0.4, y: 0.01 });
+    }
+  }
+
   // ---- sparks & dust --------------------------------------------------------
   const sparks: Sprite[] = [];
   const spark = col(pal.spark);
@@ -196,7 +214,7 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
     sparks.push({
       x: range(rng, -4, 4), y: range(rng, 0.4, 2.2), z: range(rng, -3, 4),
       vx: range(rng, -0.12, 0.12), vy: range(rng, 0.03, 0.1), vz: range(rng, -0.12, 0.12),
-      size: range(rng, 0.03, 0.07), sharp: 2.5, color: dustC, a: range(rng, 0.1, 0.28),
+      size: range(rng, 0.03, 0.07), sharp: 2.5, color: dustC, a: range(rng, 0.06, 0.18),
       twAmp: 0.7, twFreq: range(rng, 1, 3), twPhase: range(rng, 0, 6.28),
     });
   }
@@ -204,7 +222,7 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
     sparks.push({
       x: range(rng, -12, 12), y: range(rng, 0.05, 2.6), z: range(rng, -9, 9),
       vx: range(rng, -0.08, 0.08), vy: range(rng, 0.02, 0.07), vz: range(rng, -0.08, 0.08),
-      size: range(rng, 0.012, 0.03), sharp: 3, color: dustC, a: range(rng, 0.15, 0.45),
+      size: range(rng, 0.012, 0.03), sharp: 3, color: dustC, a: range(rng, 0.1, 0.3),
       twAmp: 0.6, twFreq: range(rng, 0.5, 2), twPhase: range(rng, 0, 6.28),
     });
   }
@@ -228,7 +246,7 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
   scene.add(bg.mesh, stripBatch.mesh, chipBatch.mesh, sparkBatch.mesh, glowBatch.mesh);
 
   const target = new THREE.Vector3(0, 0, 0);
-  const dof = { focus: 12, aperture: 0.015, maxBlur: 0.0065, nearMul: 1.2, skyBlur: 0.0065 };
+  const dof = { focus: 17, aperture: 0.016, maxBlur: 0.0065, nearMul: 1.2, skyBlur: 0.0065 };
 
   return {
     scene,
@@ -241,11 +259,11 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
       // eased push-in plus a constant slow drift so the camera is never static
       const u = 0.75 * easeInOutCubic(Math.min(1, t / 10.0333)) + 0.25 * (t / 10.0333);
       // long lens (13° fov) from far away: near-parallel bands, as in the reference
-      // grazing (~10°), slightly rolled camera: bands run ~36° down-right while
+      // low (~14°), rolled camera: bands run ~36° down-right while
       // the ticks read almost horizontal, exactly like the reference framing
-      const radius = 12 - 0.6 * u;
-      const el = THREE.MathUtils.degToRad(10 + 0.8 * u);
-      const az = THREE.MathUtils.degToRad(72 - 1.5 * u);
+      const radius = 17 - 0.8 * u;
+      const el = THREE.MathUtils.degToRad(14.6 - 0.6 * u);
+      const az = THREE.MathUtils.degToRad(50 - 1.5 * u);
       camera.position.set(
         target.x + radius * Math.cos(el) * Math.sin(az),
         target.y + radius * Math.sin(el),
@@ -253,14 +271,14 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
       );
       camera.up.set(0, 1, 0);
       camera.lookAt(target);
-      camera.rotateZ(THREE.MathUtils.degToRad(8));
+      camera.rotateZ(THREE.MathUtils.degToRad(18));
       stage.dof.params.focus = radius;
       // chip ignition: soft glow builds from ~0.3 s, peaks ~1.6 s then settles
       const flare = smoothstep(0.35, 1.7, t) * (1 - 0.4 * smoothstep(2.0, 3.4, t));
       glowBatch.material.uniforms.uIntensity.value = flare * (1 + 0.04 * Math.sin(t * 5.0));
       // background light slowly drifts and breathes
       bg.material.uniforms.uGP.value.set(1.0 - 0.06 * Math.sin(t * 0.35), 0.3 + 0.05 * Math.sin(t * 0.5 + 1));
-      bg.material.uniforms.uGS.value = 0.3 + 0.15 * smoothstep(1, 5, t) + 0.05 * Math.sin(t * 1.3);
+      bg.material.uniforms.uGS.value = 0.2 + 0.2 * smoothstep(2, 6, t) + 0.04 * Math.sin(t * 1.3);
       // overall bloom breathes in as the data spreads
       if (stage.bloom) stage.bloom.strength = 0.35 + 0.15 * smoothstep(2, 6, t);
     },
