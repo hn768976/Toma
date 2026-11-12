@@ -74,7 +74,7 @@ export class CameraTrack {
 /**
  * One continuous move (every cube is centred on the origin, edge 10):
  *  0–2 s    tumble in from far away
- *  2–5 s    front view of the data cube, slow push
+ *  2–5 s    three-quarter corner view of the data cube, slow push
  *  5–10 s   tilt up to the bar blocks growing on its roof
  *  10–12 s  swing down the front of the (now empty) cube to a low angle
  *  12–19 s  pull back / drift while the neighbouring cubes appear

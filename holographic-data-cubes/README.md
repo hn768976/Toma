@@ -3,7 +3,7 @@
 A procedural, fully code-generated recreation of a wireframe "data cube" HUD
 sequence: a glass cube with scrolling code, a dotted wave surface and wire
 mesh, 3D bar blocks growing from its roof, a solid core cube, and a field of
-tumbled neighbour cubes, ending on a fade to black.
+grid-aligned neighbour cubes, ending on a fade to black.
 
 Created with the Remotion CLI (`npx create-video --blank`). Rendering is done
 with **Three.js on WebGL 2 with custom GLSL shaders** (fat lines, instanced
