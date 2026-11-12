@@ -57,11 +57,18 @@ export const createRackMaterial = (pal: ServerPalette, axis: 'z' | 'x', side: nu
 				return m.x * m.y;
 			}
 
+			// anti-aliased elliptical LED dot (rounder than a box when seen up close)
+			float dotMask(vec2 p, vec2 b, vec2 w){
+				float r = length(p / b);
+				float aa = length(w / b) + 1e-4;
+				return clamp((1.0 - r) / aa + 0.5, 0.0, 1.0);
+			}
+
 			// returns emissive LED colour of type sel (0 white,1 cyan,2 red,3 amber)
 			vec3 ledColor(float sel){
-				if (sel < 0.72) return uWhite;
-				if (sel < 0.93) return uCyan;
-				if (sel < 0.975) return uRed;
+				if (sel < 0.68) return uWhite;
+				if (sel < 0.88) return uCyan;
+				if (sel < 0.965) return uRed;
 				return uAmber;
 			}
 
@@ -98,8 +105,8 @@ export const createRackMaterial = (pal: ServerPalette, axis: 'z' | 'x', side: nu
 				vec2 fwU = vec2(fw.x, fw.y / 0.94 * units);
 				if (ui >= 0.0 && ui < units) {
 					float dotOn = step(0.62, h3(vec3(ri, ui, 7.0 + uSide)));
-					float dL = boxMask(vec2((u - 0.075) / 0.84 * 26.0, (fu - 0.5)), vec2(0.35, 0.18), fwU * vec2(26.0 / 0.84, 1.0));
-					float dR = boxMask(vec2((u - 0.925) / 0.84 * 26.0, (fu - 0.5)), vec2(0.35, 0.18), fwU * vec2(26.0 / 0.84, 1.0));
+					float dL = dotMask(vec2((u - 0.075) / 0.84 * 26.0, (fu - 0.5)), vec2(0.35, 0.18), fwU * vec2(26.0 / 0.84, 1.0));
+					float dR = dotMask(vec2((u - 0.925) / 0.84 * 26.0, (fu - 0.5)), vec2(0.35, 0.18), fwU * vec2(26.0 / 0.84, 1.0));
 					float rail = (dL + dR) * dotOn * blink(vec3(ri, ui, 2.0), 0.03);
 					emit += rail * mix(uCyan, uRed, step(0.93, h3(vec3(ri, ui, 5.0)))) * 1.6;
 				}
@@ -132,10 +139,10 @@ export const createRackMaterial = (pal: ServerPalette, axis: 'z' | 'x', side: nu
 							float bay = boxMask(vec2(fx - 0.5, fy - 0.5), vec2(0.42, 0.36), fwBay);
 							base += bay * vec3(0.022, 0.03, 0.036);
 							vec3 id = vec3(ri * 31.0 + ci, block * 2.0 + row, uSide);
-							float led = boxMask(vec2(fx - 0.82, fy - 0.5), vec2(0.08, 0.07), fwBay);
+							float led = dotMask(vec2(fx - 0.82, fy - 0.5), vec2(0.08, 0.07), fwBay);
 							float on = blink(id, 0.08 + 0.4 * h3(id + 1.0));
 							emit += led * on * ledColor(h3(id + 5.0) * 0.8) * 4.2;
-							float led2 = boxMask(vec2(fx - 0.62, fy - 0.5), vec2(0.08, 0.07), fwBay);
+							float led2 = dotMask(vec2(fx - 0.62, fy - 0.5), vec2(0.08, 0.07), fwBay);
 							emit += led2 * step(0.5, h3(id + 8.0)) * blink(id + 9.0, 0.2) * ledColor(h3(id + 10.0) * 0.75) * 3.6;
 						}
 						float st = boxMask(vec2((lx - 0.06) * 20.0, by - 0.5), vec2(0.35, 0.12), vec2(fwB.x * 20.0, fwB.y));
@@ -151,10 +158,10 @@ export const createRackMaterial = (pal: ServerPalette, axis: 'z' | 'x', side: nu
 							float bay = boxMask(vec2(fx - 0.5, by - 0.5), vec2(0.4, 0.42), fwBay);
 							base += bay * vec3(0.02, 0.026, 0.032);
 							vec3 id = vec3(ri * 57.0 + ci, block, uSide + 2.0);
-							float led = boxMask(vec2(fx - 0.5, by - 0.2), vec2(0.22, 0.05), fwBay);
+							float led = dotMask(vec2(fx - 0.5, by - 0.2), vec2(0.22, 0.05), fwBay);
 							float on = blink(id, 0.15 + 0.6 * h3(id + 2.0));
 							emit += led * on * ledColor(h3(id + 6.0) * 0.9) * 4.5;
-							float led2 = boxMask(vec2(fx - 0.5, by - 0.38), vec2(0.22, 0.05), fwBay);
+							float led2 = dotMask(vec2(fx - 0.5, by - 0.38), vec2(0.22, 0.05), fwBay);
 							emit += led2 * step(0.6, h3(id + 9.0)) * blink(id + 4.0, 0.3) * uWhite * 3.0;
 						}
 					} else if (t < 0.76) {
@@ -167,7 +174,7 @@ export const createRackMaterial = (pal: ServerPalette, axis: 'z' | 'x', side: nu
 							vec2 f = fract(g);
 							vec2 fwG = vec2(fwB.x / 0.92 * cols, fwB.y * rows);
 							vec3 id = vec3(ri * 89.0 + ci.x, block * 4.0 + ci.y, uSide + 8.0);
-							float led = boxMask(f - 0.5, vec2(0.12, 0.18), fwG);
+							float led = dotMask(f - 0.5, vec2(0.12, 0.18), fwG);
 							float on = step(0.35, h3(id + 4.0)) * blink(id, 0.06 + 0.5 * h3(id + 7.0));
 							emit += led * on * ledColor(h3(id + 2.0) * 0.85) * 4.5;
 						}
@@ -184,7 +191,7 @@ export const createRackMaterial = (pal: ServerPalette, axis: 'z' | 'x', side: nu
 							float port = boxMask(vec2(fx - 0.5, fy - 0.45), vec2(0.36, 0.3), fwP);
 							base = mix(base, vec3(0.006), port);
 							vec3 id = vec3(ri * 71.0 + ci, block * 2.0 + row, uSide + 4.0);
-							float led = boxMask(vec2(fx - 0.25, fy - 0.85), vec2(0.1, 0.08), fwP);
+							float led = dotMask(vec2(fx - 0.25, fy - 0.85), vec2(0.1, 0.08), fwP);
 							emit += led * blink(id, 0.5 + h3(id) * 0.8) * mix(uCyan, uWhite, step(0.6, h3(id + 3.0))) * 3.0;
 						}
 					} else {
@@ -196,10 +203,10 @@ export const createRackMaterial = (pal: ServerPalette, axis: 'z' | 'x', side: nu
 						if (gx > 0.0 && gx < cols) {
 							float cx = floor(gx);
 							vec3 did = id + vec3(cx * 13.0, 0.0, 0.0);
-							float d = boxMask(vec2(fract(gx) - 0.5, fy - 0.5), vec2(0.13, 0.14), vec2(fwB.x / 0.75 * cols, fwB.y * 2.0));
+							float d = dotMask(vec2(fract(gx) - 0.5, fy - 0.5), vec2(0.13, 0.14), vec2(fwB.x / 0.75 * cols, fwB.y * 2.0));
 							emit += d * step(0.4, h3(did)) * blink(did, 0.1 + 0.3 * h3(did + 1.0)) * ledColor(h3(did + 2.0) * 0.8) * 3.4;
 						}
-						float led = boxMask(vec2((lx - 0.08) * 30.0, fy - 0.5), vec2(0.4, 0.15), vec2(fwB.x * 30.0, fwB.y * 2.0));
+						float led = dotMask(vec2((lx - 0.08) * 30.0, fy - 0.5), vec2(0.4, 0.15), vec2(fwB.x * 30.0, fwB.y * 2.0));
 						emit += led * ledColor(h3(id + 1.0)) * 3.0 * blink(id + 2.0, 0.1);
 					}
 				}

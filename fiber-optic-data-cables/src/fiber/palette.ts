@@ -49,7 +49,7 @@ export const AMBER_PLUM: FiberPalette = {
 	bgTop: '#1e0918',
 	bgMid: '#521a45',
 	bgBottom: '#0c040a',
-	bgGlow: '#b8481c',
+	bgGlow: '#8a3070',
 	strandEdge: '#d9400f',
 	strandCore: '#ff9a3c',
 	strandHead: '#fff0d6',

@@ -60,7 +60,7 @@ export const createConnectorMaterials = (
 	}),
 	insulator: new THREE.MeshStandardMaterial({color: '#050608', roughness: 0.6}),
 	glow: new THREE.MeshBasicMaterial({
-		color: new THREE.Color(glowColor).multiplyScalar(1.8),
+		color: new THREE.Color(glowColor).multiplyScalar(1.3),
 		toneMapped: true,
 	}),
 	wires: ['#e8742a', '#f2f2f2', '#2fae4a', '#2f6fe0', '#f2f2f2', '#2fae4a', '#f2f2f2', '#7a4a2a'].map(

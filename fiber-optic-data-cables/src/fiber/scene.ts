@@ -83,8 +83,10 @@ export const fiberMotionBlur = (frame: number) => {
 	const a = poseAt(frame - 0.5);
 	const b = poseAt(frame + 0.5);
 	const speed = a.pos.distanceTo(b.pos) + a.target.distanceTo(b.target) * 0.6;
-	if (frame > 150 && frame < 216) return Math.min(7, Math.max(3, Math.round(speed * 4)));
-	return 1;
+	// constant sample count through the whole move so blur never pops between frames;
+	// the blur itself fades naturally as the camera decelerates into its hold.
+	void speed;
+	return frame >= 148 && frame <= 224 ? 5 : 1;
 };
 
 // ------------------------------------------------------------ background ----
@@ -177,9 +179,9 @@ const makeCableMaterial = () => {
 		color: '#07090e',
 		roughness: 0.22,
 		metalness: 0,
-		clearcoat: 1,
-		clearcoatRoughness: 0.12,
-		envMapIntensity: 1.6,
+		clearcoat: 0.45,
+		clearcoatRoughness: 0.3,
+		envMapIntensity: 1.0,
 		side: THREE.DoubleSide,
 	});
 	const uniforms = {uTime: {value: 0}};
@@ -231,7 +233,7 @@ export const createFiberScene =
 
 		// ---------------- glowing fibres
 		const specs: StrandSpec[] = [];
-		for (let i = 0; i < 100; i++) {
+		for (let i = 0; i < 75; i++) {
 			const p0 = V(rng.range(-3, 2), rng.range(-1.2, 1.0), rng.range(-3.5, 3.5));
 			const L = rng.range(30, 64);
 			const th = Math.pow(rng.next(), 1.1) * 0.95 + 0.03;
@@ -239,11 +241,11 @@ export const createFiberScene =
 			specs.push({
 				p0,
 				p1: p0.clone().add(V(0.38 * L, 0.02 * L, dz * 0.25)),
-				p2: p0.clone().add(V(0.7 * L * Math.cos(th * 0.8), 0.5 * L * Math.sin(th), dz * 0.65)),
+				p2: p0.clone().add(V(0.68 * L * Math.cos(th * 0.95), 0.56 * L * Math.sin(th), dz * 0.65)),
 				p3: p0.clone().add(V(L * Math.cos(th), L * Math.sin(th), dz)),
 				delay: 14 + rng.next() * 70 + th * 14,
 				duration: rng.range(30, 58),
-				width: rng.range(0.08, 0.17),
+				width: rng.range(0.1, 0.2),
 				bright: rng.range(0.6, 1.5),
 				seed: rng.next(),
 			});
@@ -316,17 +318,17 @@ export const createFiberScene =
 
 		type HeroDef = {kind: ConnectorKind; sx: number; sy: number; d: number; dir: [number, number, number]; scale: number; delay: number; twist: number};
 		const heroDefs: HeroDef[] = [
-			{kind: 'rj45Clear', sx: 0.02, sy: -0.04, d: 6.0, dir: [0.25, -0.12, 1], scale: 2.3, delay: 144, twist: 0.1},
-			{kind: 'usbc', sx: 0.6, sy: 0.08, d: 7.5, dir: [1, 0.12, 0.35], scale: 1.4, delay: 147, twist: 0.0},
-			{kind: 'usbc', sx: 0.72, sy: 0.58, d: 8, dir: [0.75, 0.6, 0.4], scale: 1.4, delay: 146, twist: 0.3},
-			{kind: 'rj45Blue', sx: 0.82, sy: -0.3, d: 8, dir: [0.9, 0.05, 0.6], scale: 1.4, delay: 149, twist: 0.0},
-			{kind: 'usbc', sx: 0.32, sy: 0.92, d: 6.2, dir: [0.45, 1, 0.35], scale: 1.3, delay: 143, twist: 0.4},
-			{kind: 'usbcGlow', sx: -0.88, sy: -0.64, d: 9, dir: [-0.15, -0.25, 1], scale: 1.1, delay: 150, twist: 1.2},
+			{kind: 'rj45Clear', sx: 0.02, sy: -0.04, d: 6.0, dir: [0.25, -0.12, 1], scale: 2.3, delay: 132, twist: 0.1},
+			{kind: 'usbc', sx: 0.6, sy: 0.08, d: 7.5, dir: [1, 0.12, 0.35], scale: 1.4, delay: 135, twist: 0.0},
+			{kind: 'usbc', sx: 0.66, sy: 0.55, d: 7, dir: [0.75, 0.6, 0.45], scale: 1.7, delay: 134, twist: 0.3},
+			{kind: 'rj45Blue', sx: 0.82, sy: -0.3, d: 8, dir: [0.9, 0.05, 0.6], scale: 1.4, delay: 137, twist: 0.0},
+			{kind: 'usbc', sx: 0.32, sy: 0.92, d: 6.2, dir: [0.45, 1, 0.35], scale: 1.3, delay: 131, twist: 0.4},
+			{kind: 'usbcGlow', sx: -0.88, sy: -0.64, d: 9, dir: [-0.15, -0.25, 1], scale: 1.1, delay: 138, twist: 1.2},
 			{kind: 'usbcGlow', sx: -0.6, sy: 0.3, d: 16, dir: [-0.1, 0.2, 1], scale: 1.0, delay: 140, twist: 0.4},
 			{kind: 'usbcGlow', sx: -0.8, sy: -0.06, d: 18, dir: [0, 0, 1], scale: 1.0, delay: 137, twist: 1.0},
 			{kind: 'usbcGlow', sx: -0.38, sy: -0.42, d: 20, dir: [0.1, -0.1, 1], scale: 1.0, delay: 138, twist: 0.3},
-			{kind: 'usba', sx: -0.15, sy: 0.56, d: 13, dir: [0.2, 0.6, 0.8], scale: 1.0, delay: 142, twist: 0.2},
-			{kind: 'usbc', sx: 0.12, sy: -0.8, d: 10, dir: [0.4, -0.6, 0.7], scale: 1.0, delay: 150, twist: 0.6},
+			{kind: 'usba', sx: -0.58, sy: 0.66, d: 15, dir: [-0.2, 0.6, 0.8], scale: 1.0, delay: 130, twist: 0.2},
+			{kind: 'usbc', sx: 0.12, sy: -0.8, d: 10, dir: [0.4, -0.6, 0.7], scale: 1.0, delay: 138, twist: 0.6},
 			{kind: 'rj45Clear', sx: -0.46, sy: -0.15, d: 24, dir: [0, 0, 1], scale: 1.0, delay: 136, twist: 0.0},
 			{kind: 'usbcGlow', sx: -0.25, sy: 0.14, d: 28, dir: [0, 0, 1], scale: 1.0, delay: 135, twist: 0.2},
 		];
@@ -371,7 +373,7 @@ export const createFiberScene =
 				p1: p0.clone().lerp(end, 0.33),
 				p2: p0.clone().lerp(end, 0.66),
 				p3: end,
-				delay: rng.range(133, 158),
+				delay: rng.range(124, 148),
 				duration: rng.range(30, 42),
 				width: 0,
 				bright: 0,
@@ -451,7 +453,7 @@ export const createFiberScene =
 			tu.uAperture.value = aperture;
 			tu.uProj.value = (projScale * Math.tan(THREE.MathUtils.degToRad(36 / 2))) / Math.tan(THREE.MathUtils.degToRad(pose.fov / 2));
 			cable.uniforms.uTime.value = t;
-			cableMesh.visible = debug.cables !== false && t >= 131;
+			cableMesh.visible = debug.cables !== false && t >= 118;
 
 			for (const h of heroes) {
 				const g = growth(t, h.spec.delay, h.spec.duration);
