@@ -33,7 +33,7 @@ export const PAPER_WHITE: Palette = {
 // scene. Ink-blue paper, near-black shadows and a copper rim light.
 export const MIDNIGHT_COPPER: Palette = {
   bg: hex("#121830"),
-  paper: hex("#212b52"),
+  paper: hex("#1a2243"),
   shadow: hex("#02030a"),
   warm: hex("#e79a5b"),
   line: hex("#d8925e"),

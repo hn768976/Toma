@@ -105,12 +105,12 @@ void main() {
   float diff = max(dot(n, normalize(uLightDir)), 0.0);
   float hemi = 0.5 + 0.5 * n.z;
   vec3 H = normalize(normalize(uLightDir) + V);
-  float spec = pow(max(dot(n, H), 0.0), 40.0) * 0.18;
-  float rim = pow(1.0 - max(dot(n, V), 0.0), 3.0) * 0.12;
+  float spec = pow(max(dot(n, H), 0.0), 40.0) * 0.07;
+  float rim = pow(1.0 - max(dot(n, V), 0.0), 3.0) * 0.06;
 
   // height-based occlusion: sections that dive under other tubes go grey
   float ao = mix(0.42, 1.0, smoothstep(-uRz - 0.02, uRz * 0.8, vWorld.z));
-  vec3 col = base * (0.52 * hemi + 0.6 * diff) * ao;
+  vec3 col = base * (0.5 * hemi + 0.5 * diff) * ao;
   col = mix(col, col * uShade, (1.0 - ao) * 0.6);
   col += spec * ao + rim * ao;
   if (back) col *= 0.35;   // looking into the open mouth of a tube

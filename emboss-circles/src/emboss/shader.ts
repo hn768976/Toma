@@ -202,7 +202,10 @@ void main() {
           lo = mix(lo, vec2(0.7071, 0.7071) * float(k) * 0.028, uLensBlend);
           float dS = sdCircle(p - lo, c, uWalkR);
           float dW = sdCircle(p + lo * 0.6, c, uWalkR);
-          raised(col, dC, dS, dW, mix(blurW, blurW * 0.9, uLensBlend), uWalkA * uGlobal, mix(density(hub) * 0.6 + 0.2, 1.0, uLensBlend), 1.0);
+          // right after the crossing the two discs coincide and would cast a
+          // double-strength shadow; halve it while they separate
+          raised(col, dC, dS, dW, mix(blurW, blurW * 0.9, uLensBlend), uWalkA * uGlobal,
+                 mix(density(hub) * 0.6 + 0.2, 1.0, uLensBlend) * mix(1.0, 0.64, uLensBlend), 1.0);
         }
       }
     }

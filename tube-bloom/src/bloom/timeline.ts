@@ -23,12 +23,12 @@ const bloom = periodicTrack(
 const openTwist = periodicTrack(
   [
     [40, 1.75],
-    [90, 1.95],
-    [130, 1.8],
-    [175, 0.7],
-    [205, 0.35],
-    [235, 1.35],
-    [260, 1.5],
+    [80, 2.1],
+    [120, 1.6],
+    [160, 1.15],
+    [200, 0.6],
+    [240, 1.2],
+    [262, 1.5],
   ],
   P,
 );
@@ -40,7 +40,7 @@ const openHole = periodicTrack(
     [80, 0.33],
     [120, 0.44],
     [180, 0.15],
-    [205, 0.22],
+    [205, 0.11],
     [222, 0.05],
     [234, 0.03],
     [252, 0.15],
@@ -68,7 +68,7 @@ const pinkAmt = periodicTrack(
   P,
 );
 // constant spin; a whole number of tube spacings per loop keeps it seamless
-const rot = (frame: number) => (frame / P) * 3 * ((2 * Math.PI) / 36);
+const rot = (frame: number) => (frame / P) * 6 * ((2 * Math.PI) / 36);
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 

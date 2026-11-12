@@ -6,13 +6,16 @@ export const LOOP_FRAMES = 90;
 const K = 0.33; // walker travel (height units) from lens to hub
 
 const walkO = track([
+  // the key before f9 gives the walkers the lens discs' speed at the
+  // crossing (no stall when the lens turns into a pair)
+  [7, -0.04],
   [9, 0],
-  [12, 0.045],
-  [15, 0.072],
-  [18, 0.1],
-  [24, 0.255],
-  [30, 0.312],
-  [36, 0.328],
+  [12, 0.055],
+  [15, 0.1],
+  [18, 0.14],
+  [24, 0.24],
+  [30, 0.302],
+  [36, 0.326],
   [40, K],
 ]);
 const walkR = track([
@@ -128,8 +131,8 @@ export const uniformsAt = (frame: number): Uniforms => {
   const r = walkR(f);
   // lens phase: two discs of radius r converge from "just touching" to
   // coincident; their intersection grows from a sliver into a full circle.
-  const lensT = Math.min(1, Math.max(0, (f + 0.6) / 8.6));
-  const lensEase = Math.pow(lensT, 2.0);
+  const lensT = Math.min(1, Math.max(0, (f + 0.6) / 9.6));
+  const lensEase = Math.pow(lensT, 1.5);
   const inLens = f < 9;
 
   const ang = -0.35 + (f / LOOP_FRAMES) * 0.7;
