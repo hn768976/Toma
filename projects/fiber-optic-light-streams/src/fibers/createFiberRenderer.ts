@@ -22,7 +22,7 @@ const U_MAX = 13;
 const FLOOR_Y = -3.4;
 
 type Comet = { u0: number; speed: number; tail: number; color: RGB; size: number; energy: number };
-type FiberKind = "band" | "hump" | "top" | "back";
+type FiberKind = "band" | "hump" | "top" | "back" | "spark";
 type Fiber = {
   kind: FiberKind;
   depth: (u: number) => number;
@@ -53,7 +53,7 @@ export const createFiberRenderer = (variant: FiberVariant, fps: number, duration
     // followed by a lit tail. Nothing is lit ahead of a head, so each streak
     // reads as a light trail shooting towards the upper right.
     const fibers: Fiber[] = [];
-    const STREAK_SPAN = U_MAX - U_MIN + 34;
+    const STREAK_SPAN = U_MAX - U_MIN + 36;
     const cometsFor = (n: number, speed: [number, number], tail: [number, number], size: number, energy: number) => {
       const off = rng();
       return Array.from({ length: n }, (_, i) => ({
@@ -67,27 +67,27 @@ export const createFiberRenderer = (variant: FiberVariant, fps: number, duration
     };
 
     // A) the sharp diagonal band of thin fibres (in focus)
-    for (let i = 0; i < 26; i++) {
-      const n = R(-1.9, 1.7);
+    for (let i = 0; i < 32; i++) {
+      const n = R(-2.1, 1.5);
       const ang = BAND_ANGLE + R(-0.02, 0.02);
       const d0 = F + R(-0.6, 1.4);
-      const cy = 1.25 + n;
+      const cy = 1.15 + n;
       fibers.push({
         kind: "band",
         depth: (u) => d0 + u * 0.09,
         path: (u) => [u * Math.cos(ang), cy + u * Math.sin(ang)],
         spacing: 0.012,
-        size: 0.032,
-        energy: R(2.0, 3.6),
+        size: 0.034,
+        energy: R(1.4, 2.6),
         glow: 0.05,
         slot: Math.floor(rng() * 1000),
-        comets: cometsFor(2, [2.6, 4.2], [7, 18], 0.07, 16),
+        comets: cometsFor(4, [12, 17], [4, 13], 0.07, 16),
         uMin: U_MIN,
         uMax: U_MAX,
       });
     }
     // D) softer fibres behind the band (depth / haze)
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 14; i++) {
       const n = R(-3.0, 2.6);
       const ang = BAND_ANGLE + R(-0.05, 0.05);
       const d0 = F + R(5, 12);
@@ -96,53 +96,72 @@ export const createFiberRenderer = (variant: FiberVariant, fps: number, duration
         depth: (u) => d0 + u * 0.15,
         path: (u) => [u * Math.cos(ang), 0.9 + n + u * Math.sin(ang)],
         spacing: 0.03,
-        size: 0.1,
-        energy: R(0.5, 1.0),
-        glow: 0.25,
+        size: 0.12,
+        energy: R(0.6, 1.1),
+        glow: 0.3,
         slot: Math.floor(rng() * 1000),
-        comets: cometsFor(2, [2.0, 3.0], [6, 14], 0.1, 6),
+        comets: cometsFor(3, [9, 13], [5, 12], 0.12, 7),
         uMin: U_MIN,
         uMax: U_MAX,
       });
     }
-    // B) thick out-of-focus foreground cables rising then bending over a hump
-    for (let i = 0; i < 6; i++) {
-      const n = -3.3 + (i / 5) * 3.8 + R(-0.25, 0.25);
-      const d0 = R(6.5, 10);
-      const xb = R(-0.4, 0.9);
-      const s1 = R(0.45, 0.58);
-      const s2 = R(0.08, 0.18);
-      const w = R(1.0, 1.6);
+    // B) thick out-of-focus foreground cables: rise from the lower left, crest once, drop to the right
+    for (let i = 0; i < 4; i++) {
+      const n = -2.7 + (i / 3) * 2.6 + R(-0.2, 0.2);
+      const d0 = R(6.5, 9.5);
+      const xb = R(-0.6, 1.4);
+      const s1 = R(0.6, 0.72);
+      const s2 = R(0.2, 0.32);
+      const w = R(1.1, 1.6);
       fibers.push({
         kind: "hump",
         depth: (u) => d0 + u * 0.05,
-        path: (u) => [u, 0.75 + n + s1 * u - (s1 + s2) * w * softplus((u - xb) / w)],
+        path: (u) => [u, 0.9 + n + s1 * u - (s1 + s2) * w * softplus((u - xb) / w)],
         spacing: 0.12,
-        size: R(0.6, 0.9),
-        energy: R(0.8, 1.2),
+        size: R(0.85, 1.15),
+        energy: R(0.75, 1.05),
         glow: 1.0,
         slot: Math.floor(rng() * 1000),
-        comets: cometsFor(3, [2.0, 3.2], [8, 18], 0.48, 20),
+        comets: cometsFor(4, [10, 14], [6, 14], 0.5, 22),
         uMin: U_MIN,
         uMax: U_MAX,
       });
     }
-    // C) a few thick blurred cables sweeping across the top-left corner
-    for (let i = 0; i < 3; i++) {
-      const n = R(-0.3, 0.6);
+    // C) a blurred cable sweeping across the top-left corner
+    for (let i = 0; i < 2; i++) {
+      const n = R(-0.2, 0.5);
       const d0 = R(7, 9);
       fibers.push({
         kind: "top",
         depth: () => d0,
         path: (u) => [u, 4.3 + n + 0.12 * u + 0.022 * (u + 4) * (u + 4)],
         spacing: 0.08,
-        size: R(0.3, 0.45),
+        size: R(0.4, 0.55),
         energy: R(0.8, 1.2),
         glow: 1.0,
         slot: Math.floor(rng() * 1000),
-        comets: cometsFor(2, [1.8, 2.6], [6, 12], 0.42, 16),
+        comets: cometsFor(3, [8, 11], [5, 10], 0.42, 16),
         uMin: U_MIN,
         uMax: 4,
+      });
+    }
+    // E) loose out-of-focus sparks: bokeh discs only (no visible fibre body), mostly in the lower half
+    for (let i = 0; i < 10; i++) {
+      const n = R(-4.2, -0.6);
+      const d0 = R(6, 10);
+      const ang = BAND_ANGLE + R(-0.1, 0.05);
+      fibers.push({
+        kind: "spark",
+        depth: () => d0,
+        path: (u) => [u * Math.cos(ang), n + u * Math.sin(ang) * 0.8],
+        spacing: 1,
+        size: 0.5,
+        energy: 0,
+        glow: 0,
+        slot: Math.floor(rng() * 1000),
+        comets: cometsFor(2, [10, 15], [1, 2], 0.45, 20),
+        uMin: U_MIN,
+        uMax: U_MAX,
       });
     }
 
@@ -152,6 +171,7 @@ export const createFiberRenderer = (variant: FiberVariant, fps: number, duration
     const samples: Sample[] = [];
     for (let f = 0; f < fibers.length; f++) {
       const fb = fibers[f];
+      if (fb.kind === "spark") continue; // heads only
       for (let u = fb.uMin; u <= fb.uMax; u += fb.spacing) {
         const [sx, sy] = fb.path(u);
         if (Math.abs(sx) > HALF_W * 1.6 || Math.abs(sy) > HALF_H * 1.8) continue;
@@ -189,11 +209,11 @@ export const createFiberRenderer = (variant: FiberVariant, fps: number, duration
     const hazeCount = 60;
     const hazeSpots = Array.from({ length: hazeCount }, () => ({
       sx: R(-HALF_W * 1.3, HALF_W * 1.3),
-      sy: R(-HALF_H * 1.1, HALF_H * 1.1),
+      sy: rng() < 0.7 ? R(-HALF_H * 1.1, -HALF_H * 0.35) : R(HALF_H * 0.45, HALF_H * 1.1),
       depth: R(30, 45),
       size: R(2.5, 4.5),
       slot: Math.floor(rng() * 1000),
-      energy: R(0.025, 0.07),
+      energy: R(0.05, 0.12),
       drift: R(-0.1, 0.1),
     }));
     const reflGeo = createBokehGeometry(reflSources.length + headCount + hazeCount, rng);
@@ -225,17 +245,19 @@ export const createFiberRenderer = (variant: FiberVariant, fps: number, duration
       return out;
     };
     const phaseAt = (sx: number, t: number) => t * WAVE_RATE - sx / WAVE_LEN + 0.3;
-    const reveal = (sx: number, sy: number, t: number) => {
-      // light enters from the lower-left during the first ~1.3 s
+    const reveal = (sx: number, sy: number, t: number, delay = 0) => {
+      // light enters from the lower-left during the first ~1.5 s
       const g = (sx / HALF_W + (sy / HALF_H) * 0.6 + 1.6) / 3.2;
-      const front = -0.2 + t * 1.25;
-      return smoothstep(0, 0.3, front - g);
+      const front = -0.2 + (t - delay) * 1.15;
+      return smoothstep(0, 0.35, front - g);
     };
+    const delayOf = (k: FiberKind) => (k === "band" || k === "back" ? 0.35 : 0);
 
     const col = [0, 0, 0];
+    // Heads travel down-left (towards -u) and the lit trail extends up-right behind them.
     const headAt = (c: Comet, t: number) =>
-      ((((c.u0 + c.speed * t - (U_MIN - 20)) % STREAK_SPAN) + STREAK_SPAN) % STREAK_SPAN) + (U_MIN - 20);
-    const fiberTint: Record<FiberKind, number> = { band: 1, back: 0.55, hump: 0.75, top: 0.6 };
+      ((((c.u0 - c.speed * t - (U_MIN - 20)) % STREAK_SPAN) + STREAK_SPAN) % STREAK_SPAN) + (U_MIN - 20);
+    const fiberTint: Record<FiberKind, number> = { band: 1, back: 0.55, hump: 0.8, top: 0.7, spark: 0 };
 
     return {
       renderFrame(frame: number) {
@@ -246,7 +268,7 @@ export const createFiberRenderer = (variant: FiberVariant, fps: number, duration
         for (let i = 0; i < samples.length; i++) {
           const s = samples[i];
           const fb = fibers[s.f];
-          const vis = reveal(s.sx, s.sy, t);
+          const vis = reveal(s.sx, s.sy, t, delayOf(fb.kind));
           themeColor(phaseAt(s.sx, t), fb.slot, col);
           const norm = vis * Math.min(1, (fb.spacing / fb.size) * 1.3) * fb.energy * fiberTint[fb.kind];
           let lit = fb.glow;
@@ -254,7 +276,7 @@ export const createFiberRenderer = (variant: FiberVariant, fps: number, duration
           let hg = 0;
           let hb = 0;
           for (const c of fb.comets) {
-            const du = headAt(c, t) - s.u;
+            const du = s.u - headAt(c, t);
             if (du > 0 && du < c.tail) {
               const k = Math.pow(1 - du / c.tail, 0.8) + 1.2 * Math.exp(-du / 0.5);
               lit += k;
@@ -281,12 +303,12 @@ export const createFiberRenderer = (variant: FiberVariant, fps: number, duration
             const head = headAt(c, t);
             const [sx, sy] = fb.path(head);
             const d = fb.depth(head);
-            const vis = reveal(sx, sy, t) * (head <= fb.uMax && head >= fb.uMin ? 1 : 0);
+            const vis = reveal(sx, sy, t, delayOf(fb.kind)) * (head <= fb.uMax && head >= fb.uMin ? 1 : 0);
             toWorld(sx, sy, d, geo.positions, h);
             geo.sizes[h] = (c.size * d) / F;
             geo.spacings[h] = 0;
             geo.shapes[h] = 1;
-            const wmix = fb.kind === "band" ? 0.3 : 0.08; // sharp tips are hot-white, bokeh discs stay saturated
+            const wmix = fb.kind === "band" ? 0.3 : 0.0; // sharp tips are hot-white, bokeh discs stay saturated
             geo.colors[h * 3] = c.color[0] * (1 - wmix) + wmix;
             geo.colors[h * 3 + 1] = c.color[1] * (1 - wmix) + wmix;
             geo.colors[h * 3 + 2] = c.color[2] * (1 - wmix) + wmix;
@@ -298,7 +320,7 @@ export const createFiberRenderer = (variant: FiberVariant, fps: number, duration
             reflGeo.colors[r * 3] = c.color[0];
             reflGeo.colors[r * 3 + 1] = c.color[1];
             reflGeo.colors[r * 3 + 2] = c.color[2];
-            reflGeo.energies[r] = 0.25 * vis * (fb.kind === "band" ? 0.2 : 1);
+            reflGeo.energies[r] = 0.12 * vis * (fb.kind === "band" ? 0.2 : 1);
             h++;
             r++;
           }
@@ -315,7 +337,7 @@ export const createFiberRenderer = (variant: FiberVariant, fps: number, duration
           reflGeo.colors[r * 3] = geo.colors[i * 3];
           reflGeo.colors[r * 3 + 1] = geo.colors[i * 3 + 1];
           reflGeo.colors[r * 3 + 2] = geo.colors[i * 3 + 2];
-          reflGeo.energies[r] = 0.08;
+          reflGeo.energies[r] = 0.05;
           r++;
         }
         // --- distant haze blobs
@@ -366,11 +388,11 @@ export const createFiberRenderer = (variant: FiberVariant, fps: number, duration
         ru.uGain.value = 1;
         ru.uStretch.value = 1.7;
 
-        const fadeIn = smoothstep(0.0, 0.9, t);
+        const fadeIn = smoothstep(0.0, 1.5, t);
         pipeline.render(scene, camera, {
           exposure: variant.exposure * (0.3 + 0.7 * fadeIn),
           bloomNear: 0.45,
-          bloomWide: 0.7,
+          bloomWide: 0.85,
           saturation: variant.saturation,
           lift: variant.lift.map((v) => v * fadeIn) as [number, number, number],
           vignette: 0.35,

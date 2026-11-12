@@ -48,13 +48,14 @@ export const createBokehMaterial = () =>
         d = min(d, uMaxSize);
         float sp = spacing * uProj / z;
         float p = spacing > 0.0 ? clamp(uLod * sp / d, 0.02, 1.0) : 1.0;
-        float w = clamp((p - rnd) / max(0.25 * p, 1e-4), 0.0, 1.0);
+        // keep ~p of the samples (soft edge avoids popping); p = 1 keeps all of them
+        float w = clamp((1.25 * p - rnd) / max(0.25 * p, 1e-4), 0.0, 1.0);
         if (w <= 0.0) {
           gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
           gl_PointSize = 0.0;
           return;
         }
-        vColor = color * energy * e * w / p * uGain;
+        vColor = color * energy * e * w / min(1.125 * p, 1.0) * uGain;
         vBlur = clamp(coc / d, 0.0, 1.0);
         vShape = shape;
         gl_PointSize = d;

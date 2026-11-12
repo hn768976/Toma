@@ -17,7 +17,7 @@ export const referenceVariant: FiberVariant = {
   seed: 11,
   sequence: REFERENCE_SEQUENCE,
   heads: REFERENCE_HEADS,
-  lift: [0.03, 0.02, 0.035],
+  lift: [0.04, 0.025, 0.045],
   saturation: 1.0,
   exposure: 1.7,
 };
@@ -28,7 +28,7 @@ export const auroraVariant: FiberVariant = {
   seed: 11,
   sequence: AURORA_SEQUENCE,
   heads: AURORA_HEADS,
-  lift: [0.012, 0.03, 0.03],
+  lift: [0.015, 0.04, 0.04],
   saturation: 1.0,
   exposure: 1.7,
 };
