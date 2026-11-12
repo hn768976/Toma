@@ -99,7 +99,7 @@ export const HoloPrism: React.FC<HoloPrismProps> = ({
 
     if (variant === "match") {
       // Hand-held macro drift over the foil, like the reference footage.
-      const panX = 0.2 * t + 0.12 * Math.sin(t * 0.61);
+      const panX = 0.26 * t + 0.16 * Math.sin(t * 0.61);
       const panY = 0.06 * t + 0.14 * Math.sin(t * 0.52 + 1.3);
       const rot = 0.22 * Math.sin(t * 0.27) + 0.06 * Math.sin(t * 0.93);
       const zoom = 1.0 + 0.06 * Math.sin(t * 0.29);
@@ -109,15 +109,15 @@ export const HoloPrism: React.FC<HoloPrismProps> = ({
     } else {
       // Version 2: low-angle perspective tracking shot gliding across the
       // holographic sheet, with a slow crane-down, banking yaw and roll.
-      const pitch = 0.62 - 0.12 * smooth(u); // ~35.5deg -> ~28.6deg (camera cranes down)
-      const height = 0.62 - 0.17 * smooth(u);
+      const pitch = 0.63 - 0.07 * smooth(u); // ~36deg -> ~32deg (camera cranes down)
+      const height = 0.62 - 0.12 * smooth(u);
       const camX = 0.55 * Math.sin(t * 0.13);
       const camY = 0.36 * t;
       const yaw = 0.32 * Math.sin(t * 0.11 + 0.4);
       const roll = 0.07 * Math.sin(t * 0.19);
       gl.uniform1i(loc.uMode, 1);
       gl.uniform4f(loc.uCamA, camX, camY, height, yaw);
-      gl.uniform4f(loc.uCamB, pitch, roll, 1.05, 0.16);
+      gl.uniform4f(loc.uCamB, pitch, roll, 1.05, 0.24);
     }
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.finish();
