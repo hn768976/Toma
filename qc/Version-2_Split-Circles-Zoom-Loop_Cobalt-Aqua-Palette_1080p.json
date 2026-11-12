@@ -11,7 +11,7 @@
  "ref_duration_s": 9.009,
  "ref_frames_at_30fps": 270,
  "duration_delta_ms": -9.0,
- "bitrate_kbps": 2901,
+ "bitrate_kbps": 2711,
  "audio_streams": 0,
  "decode_errors": "none",
  "black_frames(YAVG<20)": [],
@@ -35,11 +35,11 @@
   269
  ],
  "luma_min_max": [
-  125.1,
+  124.3,
   144.0
  ],
- "mean_frame_diff": 5.81,
- "max_frame_diff": 11.39,
+ "mean_frame_diff": 5.66,
+ "max_frame_diff": 11.48,
  "flicker_spikes": [],
  "checks": {
   "H.264": "PASS",

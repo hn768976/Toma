@@ -4,7 +4,9 @@ import { Palette } from "./palettes";
 import { Keys, smoothstep, spline } from "./spline";
 
 const DEG = Math.PI / 180;
-const R_DISK = 0.27; // split-disk radius
+const R_DISK = 0.253; // split-disk radius (mid-cycle)
+// Disks enter ~7% larger and settle to their resting size as they meet.
+const DISK_SCALE: Keys = [[0, 1.07], [21, 1.07], [27, 1], [90, 1]];
 const PLATFORM_ANGLE = 38 * DEG; // the stadium platform runs along the diagonal
 const HALF_W = 16 / 9 / 2; // half frame width in height units
 
@@ -12,7 +14,7 @@ const HALF_W = 16 / 9 / 2; // half frame width in height units
 // Pair axis angle (maths convention, A -> B), measured from the reference.
 const THETA: Keys = [
   [0, 34], [14, 18], [22, 0], [30, -46], [40, -103], [50, -167],
-  [62, -247], [70, -272], [80, -292], [90, -300],
+  [62, -247], [70, -278], [80, -300], [90, -310],
 ];
 // Extra spin of each disk's split line relative to the pair axis.
 const OFF_A: Keys = [
@@ -38,9 +40,10 @@ const PLAT_R: Keys = [[32.5, 0], [36.5, 0.47], [56, 0.52], [90, 0.52]];
 const PLAT_LEN: Keys = [[0, 3.2], [45, 3.2], [57, 0], [90, 0]];
 
 const ENTRY_SPAN = 2.4; // extra pair separation at t = 0
+const diskR = (t: number) => R_DISK * spline(DISK_SCALE, t);
 const pairDistance = (t: number) => {
-  if (t >= 30) return 2 * R_DISK;
-  return 2 * R_DISK + ENTRY_SPAN * Math.pow(1 - t / 30, 1.6);
+  if (t >= 30) return 2 * diskR(t);
+  return 2 * diskR(t) + ENTRY_SPAN * Math.pow(1 - t / 30, 1.6);
 };
 
 type V = { x: number; y: number };
@@ -67,7 +70,7 @@ export const sceneAt = (t: number): SceneState => {
   const theta = spline(THETA, t);
   const u = axisVec(theta);
   const midR = t >= 61 ? spline(MID_R, t) : 0;
-  const rDisk = R_DISK * diskZoom;
+  const rDisk = diskR(t) * diskZoom;
   let half = pairDistance(t) / 2;
   if (t > 61) half = Math.max(half, rDisk + midR + spline(EXTRA, t));
   return {
@@ -119,6 +122,9 @@ export const drawScene = (
     return g;
   };
   const bgGrad = screenGrad(-HALF_W, HALF_W);
+  const planeGrad = ctx.createLinearGradient(0, 0, W, 0);
+  planeGrad.addColorStop(0, pal.planeLeft);
+  planeGrad.addColorStop(1, pal.planeRight);
 
   // Paper layer with two stacked drop shadows (light from the upper-left):
   // a wide soft ambient shadow plus a tight dark contact shadow.
@@ -172,15 +178,15 @@ export const drawScene = (
     const r = (s.rDisk / z) * 0.97 * s.trailW;
     const headA = { x: s.A.x / z, y: s.A.y / z };
     const headB = { x: s.B.x / z, y: s.B.y / z };
-    layer(() => capsulePath(ctx, TAIL_A, headA, r), z, bgGrad, shadowZ, true, false);
-    layer(() => capsulePath(ctx, TAIL_B, headB, r), z, bgGrad, shadowZ, true, false);
+    layer(() => capsulePath(ctx, TAIL_A, headA, r), z, planeGrad, shadowZ, true, false);
+    layer(() => capsulePath(ctx, TAIL_B, headB, r), z, planeGrad, shadowZ, true, false);
   }
 
   // 3. platform: wide diagonal stadium (lower-left end round the pair) that
   //    retracts into a circle under the pair.
   if (s.platR > 0.002) {
     const far = { x: Math.cos(PLATFORM_ANGLE) * s.platLen, y: -Math.sin(PLATFORM_ANGLE) * s.platLen };
-    layer(() => capsulePath(ctx, { x: 0, y: 0 }, far, s.platR), z, bgGrad, shadowZ);
+    layer(() => capsulePath(ctx, { x: 0, y: 0 }, far, s.platR), z, planeGrad, shadowZ);
   }
 
   // 4. the two split disks
@@ -216,7 +222,7 @@ export const drawScene = (
   // 5. centre circle that grows into the next background
   if (s.midR > 0.0005) {
     const r = s.midR;
-    const G = r * 1.4 + (HALF_W - r * 1.4) * smoothstep(0.5, 1.02, r);
+    const G = r * 2 + (HALF_W - r * 2) * smoothstep(0.4, 1.02, r);
     layer(
       () => ctx.arc(0, 0, r, 0, Math.PI * 2),
       1,
