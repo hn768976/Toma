@@ -4,10 +4,8 @@ import { Palette } from "./palettes";
 import { Keys, smoothstep, spline } from "./spline";
 
 const DEG = Math.PI / 180;
-const R_DISK = 0.253; // split-disk radius
-const BAND_ANGLE = 38 * DEG; // diagonal strips, rising to the right
-const BAND_OFFSET = 0.22; // perpendicular offset of each strip from centre
-const BAND_RADIUS_MAX = 0.28;
+const R_DISK = 0.27; // split-disk radius
+const PLATFORM_ANGLE = 38 * DEG; // the stadium platform runs along the diagonal
 const HALF_W = 16 / 9 / 2; // half frame width in height units
 
 // ---------- choreography (loop-local frame t in [0, 90)) ----------
@@ -17,28 +15,32 @@ const THETA: Keys = [
   [62, -247], [70, -272], [80, -292], [90, -300],
 ];
 // Extra spin of each disk's split line relative to the pair axis.
-const OFF_A: Keys = [[0, 40], [14, 22], [22, 0], [50, 0], [56, 20], [62, 55], [66, 78], [75, 90], [90, 90]];
+const OFF_A: Keys = [
+  [0, 40], [14, 22], [22, 0], [52, 0], [60, 22], [63, 52], [66, 78], [75, 90], [90, 90],
+];
 const OFF_B: Keys = [[0, 50], [14, 32], [22, 0], [90, 0]];
-// Camera push-in (applies fully to strips & platform, partly to disks).
+// Camera push-in (applies fully to trails & platform, partly to disks).
 const ZOOM: Keys = [
-  [0, 1], [58, 1], [62, 1.06], [65, 1.25], [68, 1.55], [71, 1.85],
-  [74, 2.1], [77, 2.6], [80, 3.2], [86, 4.8], [90, 6],
+  [0, 1], [60, 1], [64, 1.06], [67, 1.25], [70, 1.5], [73, 1.8],
+  [76, 2.15], [79, 2.7], [82, 3.3], [87, 4.8], [90, 6],
 ];
 // Radius (screen) of the centre circle that becomes the next background.
 const MID_R: Keys = [
-  [61, 0], [63, 0.014], [65.5, 0.075], [68, 0.15], [71, 0.267], [74, 0.4],
-  [77, 0.55], [80, 0.73], [83, 0.93], [86, 1.12], [90, 1.5],
+  [61, 0], [63, 0.014], [65.5, 0.075], [68, 0.15], [71.5, 0.26], [74.5, 0.4],
+  [77.5, 0.55], [80.5, 0.72], [83.5, 0.9], [86.5, 1.08], [90, 1.45],
 ];
 // Disks are pushed out of frame as the centre circle grows.
-const EXTRA: Keys = [[60, 0], [68, 0], [74, 0.12], [80, 0.38], [90, 0.9]];
-// Platform behind the pair: stadium that rounds itself into a circle.
-const PLAT_R: Keys = [[29, 0], [37, 0.29], [56, 0.5], [90, 0.5]];
-// Strips rise (grow in width) once the disks have rolled past them.
-const BAND_R: Keys = [[15, 0], [22, BAND_RADIUS_MAX], [90, BAND_RADIUS_MAX]];
+const EXTRA: Keys = [[63, 0], [71, 0], [77, 0.12], [83, 0.38], [90, 0.9]];
+// Trails (the wide diagonal strips) rise behind the rolling disks.
+const TRAIL_W: Keys = [[13, 0], [19, 1], [90, 1]];
+// Platform: wide stadium along the diagonal that retracts into a circle.
+const PLAT_R: Keys = [[32.5, 0], [36.5, 0.47], [56, 0.52], [90, 0.52]];
+const PLAT_LEN: Keys = [[0, 3.2], [45, 3.2], [57, 0], [90, 0]];
 
+const ENTRY_SPAN = 2.4; // extra pair separation at t = 0
 const pairDistance = (t: number) => {
   if (t >= 30) return 2 * R_DISK;
-  return 2 * R_DISK + 2.49 * Math.pow(1 - t / 30, 1.6);
+  return 2 * R_DISK + ENTRY_SPAN * Math.pow(1 - t / 30, 1.6);
 };
 
 type V = { x: number; y: number };
@@ -53,11 +55,9 @@ export type SceneState = {
   rDisk: number;
   splitA: number;
   splitB: number;
-  bandHeadA: number;
-  bandHeadB: number;
+  trailW: number;
   platR: number;
-  bandR: number;
-  platL: number;
+  platLen: number;
   midR: number;
 };
 
@@ -69,51 +69,34 @@ export const sceneAt = (t: number): SceneState => {
   const midR = t >= 61 ? spline(MID_R, t) : 0;
   const rDisk = R_DISK * diskZoom;
   let half = pairDistance(t) / 2;
-  if (t > 60) half = Math.max(rDisk, rDisk + midR + spline(EXTRA, t)) ;
-  const A = { x: -u.x * half, y: -u.y * half };
-  const B = { x: u.x * half, y: u.y * half };
-
-  // strip heads end where each disk's path meets the centre (projection at contact)
-  const tb = 30;
-  const ub = axisVec(spline(THETA, tb));
-  const hb = pairDistance(tb) / 2;
-  const dir = { x: Math.cos(BAND_ANGLE), y: -Math.sin(BAND_ANGLE) };
-  const bandHeadA = -hb * (ub.x * dir.x + ub.y * dir.y);
-  const bandHeadB = hb * (ub.x * dir.x + ub.y * dir.y);
-
-  const platR = spline(PLAT_R, t);
-  const platL = t < 56 ? Math.max(0, (pairDistance(t) / 2) * (1 - smoothstep(38, 56, t))) : 0;
-
+  if (t > 61) half = Math.max(half, rDisk + midR + spline(EXTRA, t));
   return {
     zoom,
     diskZoom,
     theta,
-    A,
-    B,
+    A: { x: -u.x * half, y: -u.y * half },
+    B: { x: u.x * half, y: u.y * half },
     rDisk,
     splitA: theta + spline(OFF_A, t),
     splitB: theta + spline(OFF_B, t),
-    bandHeadA,
-    bandHeadB,
-    platR,
-    bandR: spline(BAND_R, t),
-    platL,
+    trailW: spline(TRAIL_W, t),
+    platR: spline(PLAT_R, t),
+    platLen: spline(PLAT_LEN, t),
     midR,
   };
 };
 
+// Far-away start points of the two trails (where each disk came from).
+const TAIL_A: V = (() => {
+  const u = axisVec(spline(THETA, 0));
+  const h = (pairDistance(0) / 2) * 3;
+  return { x: -u.x * h, y: -u.y * h };
+})();
+const TAIL_B: V = { x: -TAIL_A.x, y: -TAIL_A.y };
+
 // ---------- drawing ----------
-const capsulePath = (
-  ctx: CanvasRenderingContext2D,
-  c: V,
-  angle: number, // canvas radians
-  L: number,
-  R: number,
-) => {
-  const dx = Math.cos(angle);
-  const dy = Math.sin(angle);
-  const p1 = { x: c.x - L * dx, y: c.y - L * dy };
-  const p2 = { x: c.x + L * dx, y: c.y + L * dy };
+const capsulePath = (ctx: CanvasRenderingContext2D, p1: V, p2: V, R: number) => {
+  const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
   ctx.moveTo(p2.x + R * Math.cos(angle - Math.PI / 2), p2.y + R * Math.sin(angle - Math.PI / 2));
   ctx.arc(p2.x, p2.y, R, angle - Math.PI / 2, angle + Math.PI / 2);
   ctx.arc(p1.x, p1.y, R, angle + Math.PI / 2, angle + (3 * Math.PI) / 2);
@@ -137,74 +120,73 @@ export const drawScene = (
   };
   const bgGrad = screenGrad(-HALF_W, HALF_W);
 
+  // Paper layer with two stacked drop shadows (light from the upper-left):
+  // a wide soft ambient shadow plus a tight dark contact shadow.
   const layer = (
     build: () => void,
     scale: number,
     fill: CanvasGradient | string,
     shadowScale = 1,
     withShadow = true,
+    rim = true,
   ) => {
     ctx.save();
     ctx.setTransform(S * scale, 0, 0, S * scale, W / 2, H / 2);
     ctx.beginPath();
     build();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    if (withShadow) {
-      ctx.shadowColor = pal.shadow;
-      ctx.shadowBlur = 0.06 * S * shadowScale;
-      ctx.shadowOffsetX = 0.017 * S * shadowScale;
-      ctx.shadowOffsetY = 0.024 * S * shadowScale;
-    }
     ctx.fillStyle = fill;
+    if (withShadow) {
+      const k = S * shadowScale;
+      ctx.shadowColor = pal.shadowWide;
+      ctx.shadowBlur = 0.11 * k;
+      ctx.shadowOffsetX = 0.03 * k;
+      ctx.shadowOffsetY = 0.04 * k;
+      ctx.fill();
+      ctx.shadowColor = pal.shadow;
+      ctx.shadowBlur = 0.035 * k;
+      ctx.shadowOffsetX = 0.012 * k;
+      ctx.shadowOffsetY = 0.017 * k;
+    }
     ctx.fill();
     ctx.shadowColor = "transparent";
-    ctx.lineWidth = Math.max(1, 0.0022 * S);
-    ctx.strokeStyle = pal.rim;
-    ctx.stroke();
+    if (rim) {
+      ctx.lineWidth = Math.max(1, 0.0018 * S);
+      ctx.strokeStyle = pal.rim;
+      ctx.stroke();
+    }
     ctx.restore();
   };
 
   // 1. background
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.globalAlpha = 1;
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, W, H);
 
   const z = s.zoom;
   const shadowZ = Math.min(z, 2.2);
 
-  // 2. diagonal strips laid down behind the incoming disks
-  const dir = { x: Math.cos(BAND_ANGLE), y: -Math.sin(BAND_ANGLE) };
-  const nrm = { x: Math.sin(BAND_ANGLE), y: Math.cos(BAND_ANGLE) };
-  const bandAngleCanvas = Math.atan2(dir.y, dir.x);
-  const TAIL = 4.5;
-  // strip A: from far bottom-left up to its head
-  if (s.bandR > 0.002) {
-    const a0 = -TAIL;
-    const a1 = TAIL;
-    const mid = (a0 + a1) / 2;
-    const c = { x: dir.x * mid - nrm.x * BAND_OFFSET, y: dir.y * mid - nrm.y * BAND_OFFSET };
-    layer(() => capsulePath(ctx, c, bandAngleCanvas, (a1 - a0) / 2, s.bandR), z, bgGrad, shadowZ);
-  }
-  // strip B: from far top-right down to its head
-  if (s.bandR > 0.002) {
-    const b0 = -TAIL;
-    const b1 = TAIL;
-    const mid = (b0 + b1) / 2;
-    const c = { x: dir.x * mid + nrm.x * BAND_OFFSET, y: dir.y * mid + nrm.y * BAND_OFFSET };
-    layer(() => capsulePath(ctx, c, bandAngleCanvas, (b1 - b0) / 2, s.bandR), z, bgGrad, shadowZ);
+  // 2. trails: wide strips laid down behind each disk, from where it entered
+  //    to its current centre (the rounded head is hidden under the disk).
+  if (s.trailW > 0.001) {
+    const r = (s.rDisk / z) * 0.97 * s.trailW;
+    const headA = { x: s.A.x / z, y: s.A.y / z };
+    const headB = { x: s.B.x / z, y: s.B.y / z };
+    layer(() => capsulePath(ctx, TAIL_A, headA, r), z, bgGrad, shadowZ, true, false);
+    layer(() => capsulePath(ctx, TAIL_B, headB, r), z, bgGrad, shadowZ, true, false);
   }
 
-  // 3. platform: stadium around the pair that rounds into a circle
+  // 3. platform: wide diagonal stadium (lower-left end round the pair) that
+  //    retracts into a circle under the pair.
   if (s.platR > 0.002) {
-    const ang = Math.atan2(-Math.sin(s.theta * DEG), Math.cos(s.theta * DEG));
-    layer(() => capsulePath(ctx, { x: 0, y: 0 }, ang, s.platL, s.platR), z, bgGrad, shadowZ);
+    const far = { x: Math.cos(PLATFORM_ANGLE) * s.platLen, y: -Math.sin(PLATFORM_ANGLE) * s.platLen };
+    layer(() => capsulePath(ctx, { x: 0, y: 0 }, far, s.platR), z, bgGrad, shadowZ);
   }
 
   // 4. the two split disks
   const drawDisk = (c: V, splitDeg: number, darkSide: 1 | -1) => {
     const r = s.rDisk;
-    if (Math.abs(c.x) - r > HALF_W + 0.1 || Math.abs(c.y) - r > 0.6) return;
+    if (Math.abs(c.x) - r > HALF_W + 0.25 || Math.abs(c.y) - r > 0.75) return;
     layer(() => ctx.arc(c.x, c.y, r, 0, Math.PI * 2), 1, bgGrad, s.diskZoom);
     // dark half: clip to disk, fill the half-plane on the dark side of the split
     ctx.save();
@@ -215,8 +197,8 @@ export const drawScene = (
     const phi = splitDeg * DEG;
     const lx = Math.cos(phi);
     const ly = -Math.sin(phi);
+    // canvas direction of (phi - 90deg) for darkSide = +1, (phi + 90deg) for -1
     const n = { x: -ly * darkSide, y: lx * darkSide };
-    // n is the canvas direction of (phi + 90deg) for darkSide=+1
     const big = r * 2;
     ctx.beginPath();
     ctx.moveTo(c.x + lx * big, c.y + ly * big);
@@ -228,7 +210,6 @@ export const drawScene = (
     ctx.fill();
     ctx.restore();
   };
-  // A: dark half on the (split - 90deg) side, B on the (split + 90deg) side
   drawDisk(s.A, s.splitA, 1);
   drawDisk(s.B, s.splitB, -1);
 
@@ -240,8 +221,8 @@ export const drawScene = (
       () => ctx.arc(0, 0, r, 0, Math.PI * 2),
       1,
       screenGrad(-G, G),
-      Math.min(1 + r * 1.5, 2.6),
-      r < 1.1,
+      Math.min(1 + r * 1.2, 2.2),
+      r < 1.15,
     );
   }
 };
