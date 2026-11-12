@@ -51,8 +51,8 @@ export const LOOKS: Record<VariantName, Look> = {
     streakColor: hex("#a8c8ff"),
     hazeColor: hex("#ff9a2a"),
     fogColor: hex("#2a0b03"),
-    floorLo: 0.08,
-    floorHi: 0.62,
+    floorLo: 0.13,
+    floorHi: 0.95,
     exposure: 1.15,
     bloomA: 0.45,
     bloomB: 0.35,
@@ -74,8 +74,8 @@ export const LOOKS: Record<VariantName, Look> = {
     streakColor: hex("#ffd27a"),
     hazeColor: hex("#2ad6e0"),
     fogColor: hex("#010812"),
-    floorLo: 0.08,
-    floorHi: 0.62,
+    floorLo: 0.13,
+    floorHi: 0.95,
     exposure: 1.15,
     bloomA: 0.45,
     bloomB: 0.35,
@@ -124,28 +124,37 @@ const STREAKS: Streak[] = (() => {
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 // Core ribbon key shapes in ground coordinates (x -> screen right, y -> away
-// from camera), [x, y, half-width]. It starts as a compact curled blob and
-// unrolls into a hook: a tall arm on the left that sweeps down and right
-// into a wide body whose end curls back up.
+// from camera), [x, y, half-width]. It starts as a tightly folded serpentine
+// (the folds read as maze channels, the outline weaving between them) and
+// unrolls into a hook: a narrow arm on the left that sweeps down and right
+// into a wide body whose tail curls back in on itself.
 const CORE_START: Vec3[] = [
-  [-0.5, 0.42, 0.22],
-  [-0.6, 0.18, 0.28],
-  [-0.48, -0.08, 0.33],
-  [-0.22, -0.16, 0.35],
-  [0.02, -0.06, 0.32],
-  [0.06, 0.16, 0.27],
-  [-0.06, 0.3, 0.24],
-  [-0.2, 0.38, 0.2],
+  [-0.85, 0.38, 0.2],
+  [-0.4, 0.48, 0.22],
+  [0.1, 0.43, 0.22],
+  [0.45, 0.28, 0.2],
+  [0.25, 0.05, 0.22],
+  [-0.2, 0.08, 0.23],
+  [-0.62, 0.0, 0.22],
+  [-0.7, -0.33, 0.21],
+  [-0.35, -0.46, 0.22],
+  [0.1, -0.46, 0.22],
+  [0.45, -0.33, 0.2],
+  [0.5, -0.08, 0.16],
 ];
 const CORE_END: Vec3[] = [
-  [-0.86, 1.05, 0.13],
-  [-0.76, 0.5, 0.16],
-  [-0.56, 0.02, 0.24],
-  [-0.18, -0.3, 0.3],
-  [0.24, -0.56, 0.27],
-  [0.66, -0.66, 0.18],
-  [0.86, -0.36, 0.13],
-  [0.66, -0.12, 0.1],
+  [-0.49, 0.93, 0.13],
+  [-0.45, 0.55, 0.16],
+  [-0.35, 0.18, 0.22],
+  [-0.1, -0.07, 0.3],
+  [0.17, -0.26, 0.34],
+  [0.35, -0.51, 0.32],
+  [0.28, -0.76, 0.24],
+  [0.56, -0.81, 0.18],
+  [0.77, -0.61, 0.16],
+  [0.77, -0.36, 0.13],
+  [0.62, -0.22, 0.11],
+  [0.5, -0.24, 0.08],
 ];
 
 // Catmull-Rom through the key points -> dense polyline for the shader.
@@ -180,8 +189,8 @@ const corePath = (morph: number, time: number): Vec3[] => {
   const keys = CORE_START.map((a, i): Vec3 => {
     const b = CORE_END[i];
     // Small independent wobble keeps the core alive once it has unrolled.
-    const wx = 0.025 * Math.sin(time * 0.55 + i * 1.7);
-    const wy = 0.025 * Math.sin(time * 0.47 + i * 2.3 + 1.0);
+    const wx = 0.04 * Math.sin(time * 0.7 + i * 1.7);
+    const wy = 0.04 * Math.sin(time * 0.6 + i * 2.3 + 1.0);
     return [lerp(a[0], b[0], morph) + wx, lerp(a[1], b[1], morph) + wy, lerp(a[2], b[2], morph)];
   });
   return catmull(keys, 5);
@@ -192,16 +201,16 @@ export const frameParams = (frame: number, variant: VariantName): FrameParams =>
   const total = DURATION_IN_FRAMES / FPS;
   const progress = Math.min(1, Math.max(0, time / total));
   const look = LOOKS[variant];
-  // The core unrolls with an ease-in-out and has its hook shape by ~frame 170.
-  const m = Math.min(1, frame / 170);
+  // The core unrolls with an ease-in-out between frames ~15 and ~190.
+  const m = Math.min(1, Math.max(0, (frame - 15) / 175));
   const morph = m * m * (3 - 2 * m);
 
   // Camera: slow push and a gentle tilt towards a steeper view, easing out.
   const e = 1 - Math.pow(1 - progress, 2.0);
   const yaw = lerp(-1.66, -1.56, e);
-  const pitch = lerp(0.92, 1.08, e);
-  const dist = lerp(3.4, 3.15, e);
-  const target: Vec3 = [lerp(0.02, 0.08, e), lerp(0.05, 0.0, e), 0.15];
+  const pitch = lerp(0.8, 1.06, e);
+  const dist = lerp(3.3, 3.1, e);
+  const target: Vec3 = [lerp(0.02, 0.08, e), lerp(0.15, 0.0, e), 0.15];
   const camPos: Vec3 = [
     target[0] + Math.cos(yaw) * Math.cos(pitch) * dist,
     target[1] + Math.sin(yaw) * Math.cos(pitch) * dist,
@@ -209,13 +218,9 @@ export const frameParams = (frame: number, variant: VariantName): FrameParams =>
   ];
 
   const path = corePath(morph, time);
-  // Spirals sit in the widest part of the core.
-  const sp1 = path[Math.round(path.length * 0.42)];
-  const sp2 = path[Math.round(path.length * 0.62)];
-  const spirals: Vec3[] = [
-    [sp1[0], sp1[1], 1.0],
-    [sp2[0], sp2[1], 0.8 * morph],
-  ];
+  // One large spiral sits in the widest part of the core.
+  const sp1 = path[Math.round((path.length - 1) * 0.45)];
+  const spirals: Vec3[] = [[sp1[0], sp1[1], 1.0]];
   const cx = path.reduce((a, v) => a + v[0], 0) / path.length;
   const cy = path.reduce((a, v) => a + v[1], 0) / path.length;
 
@@ -241,13 +246,13 @@ export const frameParams = (frame: number, variant: VariantName): FrameParams =>
     floorHi: look.floorHi,
     streaks,
     streakCenter: [cx, cy],
-    exposure: look.exposure * lerp(1.0, 1.15, e),
+    exposure: look.exposure * lerp(1.3, 1.2, e),
     bloomA: look.bloomA * lerp(0.9, 1.3, e),
     bloomB: look.bloomB * lerp(0.9, 1.4, e),
     bloomThreshold: look.bloomThreshold,
     path,
     spirals,
     hazeColor: look.hazeColor,
-    haze: lerp(0.18, 0.6, e),
+    haze: lerp(0.55, 0.6, e),
   };
 };

@@ -15,7 +15,7 @@ export const MAX_STOPS = 8;
 // distance to that ribbon, so the walls are offset copies of the core outline
 // that bunch up close to it and relax into broad, wavy terraces further out.
 // Inside it, a warped egg-crate pattern plus two spirals draws the maze.
-export const MAX_PATH = 40;
+export const MAX_PATH = 64;
 export const MAX_SPIRALS = 3;
 const FIELD_GLSL = /* glsl */ `
 uniform float uTime;
@@ -24,7 +24,8 @@ uniform vec3 uPath[${MAX_PATH}];   // xy = point, z = ribbon half-width
 uniform int uPathCount;
 uniform vec3 uSpiral[${MAX_SPIRALS}]; // xy = centre, z = amplitude
 
-// Signed distance to the ribbon (negative inside).
+// Signed distance to the ribbon (negative inside). The path is dense enough
+// that a plain min over the capsule segments stays smooth.
 float ribbonSd(vec2 q) {
   float sd = 1e5;
   for (int i = 0; i < ${MAX_PATH} - 1; i++) {
@@ -42,10 +43,10 @@ float fieldF(vec2 p) {
   float t = uTime;
   // Gentle domain warp keeps every contour organic and flowing.
   vec2 w = vec2(
-    sin(p.y * 1.10 + t * 0.30) + 0.6 * sin(p.x * 1.70 - p.y * 0.60 + t * 0.23),
-    sin(p.x * 0.90 - t * 0.26) + 0.6 * sin(p.y * 1.50 + p.x * 0.70 + t * 0.19)
+    sin(p.y * 1.10 + t * 0.55) + 0.6 * sin(p.x * 1.70 - p.y * 0.60 + t * 0.42),
+    sin(p.x * 0.90 - t * 0.48) + 0.6 * sin(p.y * 1.50 + p.x * 0.70 + t * 0.36)
   );
-  vec2 q = p + 0.07 * w;
+  vec2 q = p + 0.08 * w;
   // Finer warp: folds the far terraces into meanders / U-turn fingers.
   vec2 w2 = vec2(
     sin(q.y * 2.6 + 1.7 * sin(q.x * 1.6 + t * 0.21) + t * 0.27),
@@ -56,35 +57,36 @@ float fieldF(vec2 p) {
   float sd0 = ribbonSd(q);
   float lobe = sin(q.x * 4.3 + 1.9 * sin(q.y * 3.1) + t * 0.12)
              * sin(q.y * 3.9 - 1.3 * sin(q.x * 2.7) - t * 0.1);
-  float sd = sd0 - 0.075 * lobe / (1.0 + 4.0 * max(sd0, 0.0));
+  // Lobes bend the outline and the terrain, but fade out inside the core so
+  // the maze rings there stay parallel to the ribbon's spine.
+  float sd = sd0 - 0.075 * lobe * smoothstep(-0.12, 0.0, sd0) / (1.0 + 4.0 * max(sd0, 0.0));
 
   // Outside: log fall-off -> tight offset walls hugging the core, broad
   // terraces far away, plus slow waves and meanders that grow with distance.
   float so = max(sd, 0.0);
-  float outer = 1.0 - 0.26 * log(1.0 + so / 0.26);
+  float gain = mix(0.12, 0.26, uProgress);
+  float outer = 1.0 - gain * log(1.0 + so / 0.26);
   float far = smoothstep(0.25, 1.2, so);
-  outer += far * (0.16 * sin(q.x * 1.25 + q.y * 0.50 + 0.6 + t * 0.10)
-                + 0.11 * sin(-q.x * 0.70 + q.y * 1.55 - 1.3 - t * 0.08));
-  outer += 0.075 * far * dot(w2, vec2(0.8, 0.6));
+  // Scaled with the fall-off so the far terrain never climbs to core level.
+  float farA = far * gain / 0.26;
+  outer += farA * (0.10 * sin(q.x * 1.25 + q.y * 0.50 + 0.6 + t * 0.2)
+                + 0.07 * sin(-q.x * 0.70 + q.y * 1.55 - 1.3 - t * 0.16));
+  outer += 0.13 * farA * dot(w2, vec2(0.8, 0.6));
 
-  // Inside: a raised maze floor.
+  // Inside: nested offset rings of the outline (continuous maze channels
+  // meeting along the ribbon's spine) plus a few tight spirals.
   float si = max(-sd, 0.0);
-  vec2 mq = q * 4.6 + 1.4 * vec2(sin(q.y * 3.9 + t * 0.15), sin(q.x * 3.4 - t * 0.13));
-  float m = sin(mq.x) * sin(mq.y + 0.6 * sin(mq.x * 0.5));
   float spir = 0.0;
-  float smask = 0.0;
   for (int i = 0; i < ${MAX_SPIRALS}; i++) {
     vec3 sp = uSpiral[i];
     if (sp.z <= 0.0) continue;
     vec2 d = q - sp.xy;
     float rho = length(d);
-    float g = exp(-rho * rho / 0.022) * sp.z;
-    spir += g * sin(atan(d.y, d.x) - rho * 30.0 + t * 0.7);
-    smask = max(smask, g);
+    float g = exp(-rho * rho / 0.04) * smoothstep(0.015, 0.06, rho) * sp.z;
+    spir += g * sin(atan(d.y, d.x) - rho * 36.0 + t * 0.9);
   }
-  // Nested offsets of the outline that wind and finger into each other.
-  float edge = smoothstep(0.02, 0.15, si);
-  float inside = max(1.06 + 0.7 * si + edge * (0.08 * m * (1.0 - smask) + 0.1 * spir), 1.05);
+  float edge = smoothstep(0.03, 0.12, si);
+  float inside = max(1.06 + 0.8 * si + edge * 0.1 * spir, 1.05);
 
   float k = smoothstep(0.012, -0.012, sd);
   return mix(outer, inside, k);
@@ -162,8 +164,8 @@ const float CORE_F = 1.035;
 float wallH(float v) {
   // Terrain ribbons step down away from the core (a terraced hill); the core
   // outline stands just above the plateau, the maze walls on it are short.
-  if (v > 1.05) return HP + 0.05;
-  if (v > 1.0) return HP + 0.07;
+  if (v > 1.05) return HP + 0.1;
+  if (v > 1.0) return HP + 0.16;
   return HP * (0.42 + 0.53 * smoothstep(0.1, 1.0, v));
 }
 
@@ -190,7 +192,7 @@ float streakAmt(float lvl, vec2 p) {
       th = atan(d.y, d.x);
     }
     float da = abs(mod(th - k.y + 3.14159265, 6.2831853) - 3.14159265);
-    s = max(s, k.w * (1.0 - smoothstep(k.z * 0.9, k.z, da)));
+    s = max(s, k.w * (1.0 - smoothstep(k.z * 0.45, k.z, da)));
   }
   return s;
 }
@@ -252,7 +254,7 @@ void main() {
         vec3 pc = ro + rd * tc;
         if (e <= 0.0) {
           // Ray hits the wall face (or the front of its glowing rim tube).
-          vec3 base = palette(b);
+          vec3 base = b > 1.05 ? mix(palette(b), vec3(1.0), 0.5) : palette(b);
           float s = streakAmt(lvl, pc.xy);
           float hz = clamp(pc.z / h, 0.0, 1.0);
           vec2 g = gradT(pc.xy);
@@ -260,7 +262,7 @@ void main() {
           if (dot(nrm, rd) > 0.0) nrm = -nrm;
           float lam = 0.75 + 0.25 * max(dot(nrm, uLightDir), 0.0);
           float glow = pow(hz, 1.6);
-          vec3 face = base * (0.2 + 0.85 * glow) * lam;
+          vec3 face = base * (0.42 + 0.75 * glow) * lam;
           face = mix(face, uStreakCol * (0.5 + 1.6 * glow), s * glow * glow * glow);
           float rimAmt = 1.0 - smoothstep(uRimR * 0.7, uRimR * 1.8 + aa, -e * hl);
           col += T * mix(face, rimColor(b, s), rimAmt);
@@ -280,9 +282,13 @@ void main() {
       }
       if (hit) break;
     }
-    // Landing on the core plateau.
-    if (F1 >= CORE_F && ro.z + rd.z * t1 <= HP) {
-      float tp = clamp((HP - ro.z) / rd.z, t0, t1);
+    // Landing on the core plateau: test the field where the ray actually
+    // crosses the plateau height, not at the end of the step.
+    float z0 = ro.z + rd.z * t0;
+    float z1 = ro.z + rd.z * t1;
+    float tp = z0 > HP ? clamp((HP - ro.z) / rd.z, t0, t1) : t1;
+    float Fp = z0 > HP ? sampleF((ro + rd * tp).xy) : F1;
+    if (z1 <= HP && Fp >= CORE_F) {
       col += T * shadeFloor((ro + rd * tp).xy);
       T = 0.0;
       tHit = tp;
