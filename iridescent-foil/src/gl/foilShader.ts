@@ -104,9 +104,9 @@ void main() {
   vec2 s = frag / uRes;
   float illum = smoothstep(-0.55, 0.45, snoise(p * 0.32 + vec2(3.0, -1.0) + vec2(0.05, 0.03) * t));
   // brightness arc: bright opening, dip around frame ~110, recovery at the end
-  float dip = exp(-pow((P - 0.55) / 0.17, 2.0));
+  float dip = exp(-pow((P - 0.52) / 0.15, 2.0));
   illum *= mix(1.0, smoothstep(1.05, 0.35, s.x), 0.30 + 0.35 * dip);
-  illum = 0.16 + 1.0 * illum;
+  illum = (0.16 + 1.0 * illum) * (1.0 - 0.28 * dip);
   kKey *= illum; kRim *= illum; kTop *= illum; kLow *= illum; broad *= illum;
 
   vec3 col = uBase * (0.20 + 0.60 * facing);
@@ -129,26 +129,37 @@ void main() {
   col *= mix(0.35, 1.0, smoothstep(-0.70, 0.30, h));
 
   // --- glitter flakes ---------------------------------------------------------
-  // Two jittered layers at different scales/orientations (no visible lattice),
-  // advected with the material flow and gathered in the shadowed areas.
+  // Two jittered layers (no visible lattice), locked to the material and
+  // gathered in the shadowed areas.
   float env = clamp(broad + kKey + kRim + kTop, 0.0, 1.5);
   float shade = dot(col, vec3(0.3, 0.5, 0.2));
   float shadowW = 0.35 + 0.65 * smoothstep(0.55, 0.08, shade);
   float patchy = smoothstep(-0.45, 0.5, snoise(p * 1.8 + vec2(7.0, -t * 0.05)));
-  vec2 flow = rot2(-STREAK_ANGLE) * vec2(0.0, -t * 0.07);
+  // Flakes live in the material's own (pre-warp) flow coordinates, so they
+  // travel with the foil instead of sliding over it.
+  float gRelax = smoothstep(0.08, 0.95, P);
+  float gStretch = mix(5.0, 1.6, gRelax);
+  vec2 gq = rot2(STREAK_ANGLE) * p;
+  const float GA = 1.6;                            // cell aspect along the streaks
+  vec2 mat = vec2(gq.x, (gq.y / gStretch - t * 0.07) * GA);
+  float aspect = gStretch / GA;                    // cell-space -> screen-space (y)
   for (int L = 0; L < 2; L++) {
     float fl = float(L);
-    vec2 g = rot2(0.7 + fl * 1.9) * (p - flow) * (150.0 + fl * 70.0) + fl * 31.7;
+    mat2 lr = rot2(fl * 0.9);                      // layers use different lattice angles
+    vec2 g = lr * mat * (150.0 + fl * 70.0) + fl * 31.7;
     vec2 gid = floor(g);
     vec2 gf = fract(g);
     vec3 rnd = hash32(gid + fl * 91.0);
     vec2 c = 0.18 + 0.64 * rnd.xy;                 // centre anywhere in the cell
-    float flake = smoothstep(0.21, 0.0, length(gf - c));
+    vec2 d = rot2(-fl * 0.9) * (gf - c);           // back to material axes
+    d.y *= aspect;                                 // keep flakes round on screen
+    float flake = smoothstep(0.17, 0.0, length(d));
     float present = step(1.0 - (0.22 + 0.5 * patchy), rnd.z);
-    vec3 fn = normalize(N + (hash32(gid + 17.0 + fl) - 0.5) * 1.8);
-    float glint = pow(max(dot(reflect(-V, fn), normalize(vec3(0.3, 0.3, 0.9))), 0.0), 10.0);
-    vec3 flakeCol = hash12(gid + 3.1 + fl) > 0.38 ? uAccent : uKey;
-    col += flakeCol * flake * present * shadowW * (0.85 + 2.4 * glint) * (0.55 + 0.8 * env);
+    // gentle twinkle: wide glint lobe so flakes shimmer rather than pop
+    vec3 fn = normalize(N + (hash32(gid + 17.0 + fl) - 0.5) * 1.2);
+    float glint = pow(max(dot(reflect(-V, fn), normalize(vec3(0.3, 0.3, 0.9))), 0.0), 4.0);
+    vec3 flakeCol = hash12(gid + 3.1 + fl) > 0.25 ? uAccent : uKey;
+    col += flakeCol * flake * present * shadowW * (1.0 + 1.0 * glint) * (0.55 + 0.7 * env);
   }
 
   // --- big soft screen-space glows (lens bloom feel) --------------------------
@@ -160,8 +171,8 @@ void main() {
   float hotFade = 1.0 - smoothstep(0.55, 0.78, P);
   float hotCore = exp(-9.0 * length((s - vec2(-0.03, 0.50 - 0.1 * ease)) * vec2(2.0, 0.7)));
   float hotBand = exp(-4.0 * length((s - vec2(-0.02, 0.50 - 0.1 * ease)) * vec2(2.2, 0.55)));
-  col += uRim * hotBand * 1.5 * hotFade;
-  col += uCore * hotCore * 2.4 * hotFade;
+  col += uRim * hotBand * 2.6 * hotFade;
+  col += uCore * hotCore * 3.2 * hotFade;
 
   // --- tone map + vignette -----------------------------------------------------
   col = 1.0 - exp(-col * 1.55);
