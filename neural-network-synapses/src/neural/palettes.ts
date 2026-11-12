@@ -25,7 +25,7 @@ export const REFERENCE_PALETTE: Palette = {
   signal: [0.02, 0.5, 1.0],
   signalCore: [0.35, 0.85, 1.0],
   tint: [0.97, 1.0, 1.05],
-  lift: [0.0, 0.0002, 0.0006],
+  lift: [0.0026, 0.003, 0.0038],
   saturation: 1.0,
 };
 
@@ -40,6 +40,6 @@ export const EMBER_PALETTE: Palette = {
   signal: [1.0, 0.36, 0.035],
   signalCore: [1.0, 0.86, 0.5],
   tint: [1.06, 0.98, 0.95],
-  lift: [0.0006, 0.0, 0.0003],
+  lift: [0.0036, 0.0026, 0.0028],
   saturation: 1.05,
 };

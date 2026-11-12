@@ -37,7 +37,7 @@ const HEROES = [
  * blurred diagonal at 0 s and the big sweeps near 8.5 s and 10.9 s).
  */
 const SWEEPERS = [
-  { t: 0.3, x: -0.85, y: 0.0, d: 6, roll: -0.75, radius: 0.24, length: 15 },
+  { t: 0.3, x: 0.9, y: -0.85, d: 6.5, roll: -0.6, radius: 0.24, length: 15 },
   { t: 8.5, x: -0.4, y: -0.5, d: 4.6, roll: 0.3, radius: 0.34, length: 18 },
   { t: 8.8, x: 0.2, y: 0.8, d: 6, roll: -0.15, radius: 0.24, length: 16 },
   { t: 10.95, x: -0.75, y: 0.1, d: 4.2, roll: 1.15, radius: 0.34, length: 16 },
@@ -213,14 +213,43 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
   });
 
   const rollQ = new THREE.Quaternion();
+  // A sweep must slide in from the frame edge, never materialise in front of
+  // the lens: while any part of it would first show up closer than ENTRY_MIN,
+  // it is moved further off-axis / away.
+  const ENTRY_MIN = 4.2;
+  const thV = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
+  const probe = new THREE.Vector3();
+  const invQ = new THREE.Quaternion();
   SWEEPERS.forEach((sw, i) => {
     const pose = poseAt(sw.t);
     const g = buildSweeper(9100 + i * 131, sw.length, sw.radius);
     disposables.push(g);
     const m = new THREE.Mesh(g, tubeMat);
-    m.position.copy(placeInView(pose, sw.x, sw.y, sw.d, aspect));
     rollQ.setFromAxisAngle(new THREE.Vector3(0, 0, 1), sw.roll);
     m.quaternion.copy(pose.quat).multiply(rollQ);
+    let k = 1;
+    for (let tries = 0; tries < 24; tries++) {
+      m.position.copy(placeInView(pose, sw.x * k, sw.y * k, sw.d * (1 + (k - 1) * 0.5), aspect));
+      let closest = Infinity;
+      for (const tp of track) {
+        invQ.copy(tp.quat).invert();
+        for (let j = 0; j <= 40; j++) {
+          probe.set((j / 40 - 0.5) * sw.length, 0, 0).applyQuaternion(m.quaternion).add(m.position);
+          probe.sub(tp.pos).applyQuaternion(invQ);
+          const depth = -probe.z;
+          if (depth < 0.05 || depth > closest) continue;
+          const pad = (sw.radius * 1.6) / depth;
+          if (
+            Math.abs(probe.x) / (depth * thV * aspect) < 1 + pad &&
+            Math.abs(probe.y) / (depth * thV) < 1 + pad
+          ) {
+            closest = depth;
+          }
+        }
+      }
+      if (closest >= ENTRY_MIN) break;
+      k *= 1.1;
+    }
     scene.add(m);
   });
 
@@ -257,7 +286,7 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
           period: range(srng, 1.2, 3),
           phase: srng(),
           duty: range(srng, 0.5, 0.9),
-          size: range(srng, 0.07, 0.14),
+          size: range(srng, 0.05, 0.1),
           gain: range(srng, 2.2, 4.4),
           cPeriod,
           cPhase,
@@ -318,10 +347,10 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
     focus: FOCUS,
     aperture: APERTURE,
     maxCoc: MAX_COC,
-    farScale: 0.5,
+    farScale: 0.85,
     bloomStrength: 1.2,
     bloomThreshold: 1.0,
-    exposure: 2.0,
+    exposure: 2.2,
     tint: new THREE.Vector3(...palette.tint),
     lift: new THREE.Vector3(...palette.lift),
     vignette: 0.55,
