@@ -27,15 +27,15 @@ export const PALETTES: Record<"reference" | "aurora", Palette> = {
   // Version 1: matches the reference -- violet contours, amber/orange pins on plum night
   reference: {
     name: "reference",
-    skyTop: c(0.016, 0.006, 0.022),
-    skyHorizon: c(0.034, 0.012, 0.045),
+    skyTop: c(0.02, 0.005, 0.011),
+    skyHorizon: c(0.036, 0.01, 0.026),
     floor: c(0.006, 0.0015, 0.01),
     line: c(0.5, 0.06, 1.0),
     lineHot: c(0.75, 0.3, 1.0),
     haze: c(0.3, 0.08, 0.62),
     dot: c(1.0, 0.32, 0.08),
-    pin: c(1.0, 0.2, 0.025),
-    pinHot: c(1.0, 0.42, 0.12),
+    pin: c(1.0, 0.16, 0.018),
+    pinHot: c(1.0, 0.36, 0.09),
     lift: new THREE.Vector3(0.006, 0.0, 0.01),
     saturation: 1.05,
   },
@@ -57,8 +57,8 @@ export const PALETTES: Record<"reference" | "aurora", Palette> = {
 };
 
 const FOV = 40;
-const FOCUS_APERTURE = 17; // CoC px @1080p per unit relative defocus
-const MAX_COC = 48;
+const FOCUS_APERTURE = 30; // CoC px @1080p per unit relative defocus
+const MAX_COC = 64;
 
 // ---------------------------------------------------------------------------
 const NOISE_GLSL = /* glsl */ `
@@ -115,7 +115,7 @@ const buildGround = (palette: Palette, pxScale: number) => {
       void main(){
         vec2 p = vWorld.xz;
         float dist = length(vWorld - uCamPos);
-        float f = heightField(p) * 26.0;
+        float f = heightField(p) * 32.0;
         float fw = max(fwidth(f), 1e-5);
         float e = abs(fract(f + 0.5) - 0.5);
         float pix = e / fw;                       // distance to the contour in pixels
@@ -125,14 +125,14 @@ const buildGround = (palette: Palette, pxScale: number) => {
         float w = corePx + coc * 0.75;
         float energy = corePx / w;
         float core = exp(-pix * pix / (w * w * 0.6)) * energy;
-        float glowPx = max(0.07 / footprint, 2.0 * uPxScale) + coc;
-        float glow = exp(-pix / glowPx) * 0.11 * energy;
+        float glowPx = max(0.12 / footprint, 2.5 * uPxScale) + coc;
+        float glow = exp(-pix / glowPx) * 0.2 * energy;
         // sub-pixel contours in the distance: replace by their average coverage
         float avg = clamp(corePx * 1.2 * fw, 0.0, 1.0) * 0.55 + 0.06;
-        float far = smoothstep(0.25, 0.8, fw);
+        float far = smoothstep(0.15, 0.5, fw);
         float lineI = mix(core + glow, avg, far);
         vec3 lineCol = mix(uLine, uLineHot, clamp(core * 0.8, 0.0, 1.0) * (1.0 - far));
-        vec3 col = uFloor + lineCol * lineI * 1.6;
+        vec3 col = uFloor + uLine * 0.012 + lineCol * lineI * 1.6;
 
         // sparse node sparks sitting on the contours
         vec2 q = p / 1.7;
@@ -175,7 +175,7 @@ const buildSky = (palette: Palette) => {
       void main(){
         float y = vDir.y;
         vec3 col = mix(uHor, uTop, smoothstep(0.0, 0.5, y));
-        col += uHaze * 0.22 * exp(-max(y, 0.0) * 28.0);
+        col += uHaze * 0.09 * exp(-max(y, 0.0) * 30.0);
         gl_FragColor = vec4(col, 1.0);
       }`,
   });
@@ -191,19 +191,19 @@ type Pin = { x: number; z: number; H: number; R: number; tA: number; avatar: num
 const makePins = (): Pin[] => {
   const rnd = mulberry32(8080);
   const pins: Pin[] = [];
-  while (pins.length < 620) {
-    const z = -4 - Math.pow(rnd(), 0.85) * 110;
-    const spread = 6 + (-z) * 0.55;
-    const x = (rnd() * 2 - 1) * Math.min(spread, 42);
+  while (pins.length < 950) {
+    const z = rnd() < 0.62 ? -3 - rnd() * 45 : -48 - Math.pow(rnd(), 0.9) * 70;
+    const spread = 5 + (-z) * 0.5;
+    const x = (rnd() * 2 - 1) * Math.min(spread, 40);
     // keep the camera corridor clear near the path
-    if (Math.abs(x) < 1.1 && z > -30) continue;
+    if (Math.abs(x) < 0.9 && z > -45) continue;
     const u = clamp01((z + 105) / 100); // 0 far .. 1 near
-    const tA = 1.8 + Math.pow(u, 1.25) * 7.2 + rnd() * 2.0;
+    const tA = (z < -48 ? 1.6 + rnd() * 4.5 : 1.3 + rnd() * 3.2) + u * u * 2.5;
     pins.push({
       x,
       z,
-      H: 0.45 + Math.pow(rnd(), 1.5) * 1.5,
-      R: 0.2 + rnd() * 0.12,
+      H: 0.22 + Math.pow(rnd(), 1.6) * 0.85,
+      R: 0.16 + rnd() * 0.1,
       tA,
       avatar: Math.floor(rnd() * AVATAR_COUNT),
       seed: rnd(),
@@ -263,7 +263,7 @@ const buildPins = (palette: Palette, atlas: THREE.Texture, avgColors: THREE.Colo
     vertexShader: /* glsl */ `
       attribute vec3 aCenter; attribute float aRadius; attribute float aAvatar; attribute float aFade; attribute vec3 aAvg;
       uniform float uFocus, uAperture, uMaxCoc, uWorldPerPx;
-      varying vec2 vLocal; varying float vR; varying float vB; varying float vAvatar; varying float vFade; varying vec3 vAvg; varying float vPx;
+      varying vec2 vLocal; varying float vR; varying float vB; varying float vAvatar; varying float vFade; varying vec3 vAvg; varying float vPx; varying float vHalf;
       void main(){
         vec4 mvC = viewMatrix * vec4(aCenter, 1.0);
         float d = max(-mvC.z, 0.05);
@@ -274,11 +274,11 @@ const buildPins = (palette: Palette, atlas: THREE.Texture, avgColors: THREE.Colo
         vec2 corner = position.xy * h;
         vec4 mv = mvC + vec4(corner, 0.0, 0.0);
         gl_Position = projectionMatrix * mv;
-        vLocal = corner; vR = aRadius; vB = b; vAvatar = aAvatar; vFade = aFade; vAvg = aAvg; vPx = px;
+        vLocal = corner; vHalf = h; vR = aRadius; vB = b; vAvatar = aAvatar; vFade = aFade; vAvg = aAvg; vPx = px;
       }`,
     fragmentShader: /* glsl */ `
       uniform sampler2D uAtlas; uniform vec3 uPin, uPinHot;
-      varying vec2 vLocal; varying float vR; varying float vB; varying float vAvatar; varying float vFade; varying vec3 vAvg; varying float vPx;
+      varying vec2 vLocal; varying float vR; varying float vB; varying float vAvatar; varying float vFade; varying vec3 vAvg; varying float vPx; varying float vHalf;
       void main(){
         float r = length(vLocal);
         float R = vR, b = vB;
@@ -299,15 +299,17 @@ const buildPins = (palette: Palette, atlas: THREE.Texture, avgColors: THREE.Colo
         vec3 av = texture2D(uAtlas, uv, lod).rgb;
         float heavy = smoothstep(0.4, 1.2, b / inner);
         av = mix(av, vAvg, heavy);
-        vec3 ringCol = mix(uPin, uPinHot, 0.2) * 1.15;
-        vec3 col = mix(av * 0.95, ringCol, ring);
+        vec3 ringCol = mix(uPin, uPinHot, 0.2) * 1.3;
+        vec3 inside = mix(av, vec3(1.0, 0.62, 0.42), 0.18) * 0.78 + uPin * 0.08;
+        vec3 col = mix(inside, ringCol, ring);
         // heavy defocus reads as a glowing orange disc with a faint face
-        col = mix(col, mix(ringCol, av, 0.35) * 0.85, heavy * 0.65);
+        col = mix(col, mix(ringCol, av, 0.2) * 0.9, heavy * 0.75);
         float energy = mix(1.0, (R * R) / ((R + b * 0.5) * (R + b * 0.5)), 0.55);
         col *= energy;
         float a = disc * vFade;
         // soft outer glow (additive, alpha 0)
         float halo = exp(-max(r - R, 0.0) / (R * 0.35 + b)) * (1.0 - disc) * 0.12 * vFade * energy;
+        halo *= 1.0 - smoothstep(0.6 * vHalf, 0.98 * vHalf, r);
         gl_FragColor = vec4(col * a + uPin * halo, a);
       }`,
   });
@@ -377,7 +379,7 @@ const buildPins = (palette: Palette, atlas: THREE.Texture, avgColors: THREE.Colo
   stems.renderOrder = 5;
   refl.renderOrder = 4;
 
-  const order: { i: number; d: number }[] = [];
+  const order: { i: number; d: number; along: number }[] = [];
   const update = (t: number, camera: THREE.PerspectiveCamera, focus: number, worldPerPx: number) => {
     for (const m of [badgeMat, stemMat, reflMat]) {
       m.uniforms.uFocus.value = focus;
@@ -386,7 +388,7 @@ const buildPins = (palette: Palette, atlas: THREE.Texture, avgColors: THREE.Colo
     const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
     stemMat.uniforms.uCamRight.value.copy(right);
     reflMat.uniforms.uCamRight.value.copy(right);
-    const growAll = 1 + 0.45 * smoothstep(8, 16, t);
+    const growAll = 1 + 0.9 * smoothstep(7, 16, t);
     order.length = 0;
     const camPos = camera.position;
     const fwd = new THREE.Vector3();
@@ -398,18 +400,18 @@ const buildPins = (palette: Palette, atlas: THREE.Texture, avgColors: THREE.Colo
       const dx = p.x - camPos.x;
       const dz = p.z - camPos.z;
       const along = dx * fwd.x + dz * fwd.z;
-      if (along < 0.3) continue; // behind the camera
-      order.push({ i, d: dx * dx + dz * dz });
+      if (along < 0.5) continue; // behind / right at the camera
+      order.push({ i, d: dx * dx + dz * dz, along });
     }
     order.sort((a, b) => b.d - a.d);
     let n = 0;
-    for (const { i } of order) {
+    for (const { i, along } of order) {
       const p = pins[i];
       const k = clamp01((t - p.tA) / 1.25);
       const grow = easeOutBack(k);
       const h = p.H * growAll * grow + 0.02;
-      const pop = easeOutBack(clamp01((t - p.tA - 0.1) / 0.7));
-      const fade = smoothstep(0, 0.25, k);
+      const pop = 0.28 + 0.72 * smoothstep(0, 1, (t - p.tA - 0.5) / 2.4);
+      const fade = smoothstep(0, 0.25, k) * smoothstep(0.5, 2.2, along);
       const R = p.R * Math.max(pop, 0);
       aCenter.setXYZ(n, p.x, h + R * 0.98, p.z);
       aRadius.setX(n, Math.max(R, 0.001));
@@ -457,7 +459,7 @@ export const createTopoScene =
       const t = frame / 30;
       const u = frame / (DURATION_IN_FRAMES - 1);
       // steady forward glide, slightly descending, with a gentle drift
-      const z = -lerp(0, 23, u);
+      const z = -(12 * u + 26 * u * u);
       const y = lerp(1.42, 1.22, u);
       const x = 0.35 * Math.sin(u * Math.PI * 0.9);
       camera.position.set(x, y, z);
@@ -468,7 +470,7 @@ export const createTopoScene =
       camera.updateMatrixWorld();
       sky.position.copy(camera.position);
 
-      const focus = lerp(10, 8, u);
+      const focus = lerp(7.5, 6, u);
       const worldPerPx = (2 * Math.tan((FOV * Math.PI) / 360)) / 1080;
       ground.uniforms.uCamPos.value.copy(camera.position);
       ground.uniforms.uFocus.value = focus;
