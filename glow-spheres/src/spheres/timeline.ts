@@ -164,12 +164,18 @@ export const LIGHTS: LightDef[] = [
   },
 ];
 
-/** Subtle deterministic strobe of the light, like the reference. */
+/** Subtle deterministic shimmer of the light energy. */
 export const flicker = (frame: number) => {
   const h = (n: number) => {
     const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
     return x - Math.floor(x);
   };
-  const v = 0.6 * h(frame) + 0.4 * h(frame - 1);
-  return 1 + (v - 0.5) * 0.3;
+  // smooth value noise (one key every 5 frames): a gentle shimmer of the light
+  // energy without frame-to-frame strobing (the reference has none)
+  const u = frame / 5;
+  const i = Math.floor(u);
+  const f = u - i;
+  const w = (1 - Math.cos(Math.PI * f)) / 2;
+  const v = h(i) * (1 - w) + h(i + 1) * w;
+  return 1 + (v - 0.5) * 0.1;
 };
