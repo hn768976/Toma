@@ -1,8 +1,8 @@
 # Pin Field Waves (Remotion · Three.js)
 
-A field of white spherical pins on a blue-grey plate. A travelling, domain-warped
-wave raises and shrinks the pins, so raised "islands" of large heads drift across a
-field of tiny needles. Rendered with **Three.js** (instanced meshes, soft shadow
+A field of white pill-shaped pins on a blue-grey plate. Two travelling,
+domain-warped waves (planar bands plus a large off-screen ripple) raise and grow
+the pins, so raised areas of large heads sweep across a field of tiny stubs. Rendered with **Three.js** (instanced meshes, soft shadow
 map, ACES tone mapping) plus a custom **WebGL depth-of-field** post pass.
 
 Everything is procedural: there are no external image/video/font assets.
@@ -11,7 +11,7 @@ Everything is procedural: there are no external image/video/font assets.
 
 | ID | Description |
 |----|-------------|
-| `PinField-V1-4K` | Version 1 – matches the reference: fixed, rolled long-lens camera, foreground defocus, 3 s seamless loop (×3). |
+| `PinField-V1-4K` | Version 1 – matches the reference: fixed, low perspective camera (field recedes to a bright haze on the right), pill-shaped pins, shallow depth of field, 3 s seamless loop (×3). |
 | `PinField-V2-4K` | Version 2 – same field/animation, but a continuous **orbit + crane-down camera move** that ends on a low grazing angle, revealing the pins' height in profile. |
 
 The reference clip is 270 frames at 29.97 fps (9.009 s); at exactly 30 fps the same
@@ -44,7 +44,7 @@ Output: H.264 (High), yuv420p limited range tagged BT.709, CRF 16, MP4 (configur
 remotion.config.ts      codec / GL / browser configuration
 src/index.ts            registerRoot
 src/Root.tsx            the two 4K compositions
-src/pins/PinField.tsx   Three.js scene, camera poses (V1 reference, V2 orbit-crane)
+src/pins/PinField.tsx   Three.js scene, LOOK constants, camera poses (V1 reference, V2 orbit-crane)
 src/pins/field.ts       deterministic height field (travelling warped waves)
 src/pins/dof.ts         depth-of-field post-process shader
 ```
