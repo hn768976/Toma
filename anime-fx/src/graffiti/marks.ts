@@ -72,52 +72,38 @@ const heartPts = (S: number): Pt[] => {
   return out;
 };
 
-// Letter-like squiggle that is deliberately not any letter: random humps,
-// loops and bars joined into one or two cursive runs, plus a swoosh.
+// Tag-like scrawl that never forms letters: 2-3 overlapping random-walk runs
+// with changing curvature, scribbled over each other, plus a swoosh.
 const tagRuns = (r: Rand, h: number): Pt[][] => {
   const runs: Pt[][] = [];
-  let run: Pt[] = [[0, 0]];
-  let x = 0;
-  const n = r.int(3, 6);
-  for (let g = 0; g < n; g++) {
-    const gw = h * r.range(0.35, 0.75);
-    const hh = h * r.range(0.7, 1.25);
-    const t = r.int(0, 6);
-    if (t === 0) {
-      // tight scribble knot
-      for (let q = 0; q < 4; q++) run.push([x + gw * r.range(0, 1), -hh * r.range(0.1, 0.9)]);
-    } else if (t === 1) {
-      // loop up
-      run.push([x + gw * 0.6, -hh * 0.8], [x + gw * 0.1, -hh * 0.9], [x + gw * 0.4, 0], [x + gw, -hh * 0.15]);
-    } else if (t === 2) {
-      // double hump
-      run.push([x + gw * 0.25, -hh * 0.6], [x + gw * 0.45, 0], [x + gw * 0.7, -hh * 0.6], [x + gw, 0]);
-    } else if (t === 3) {
-      // sharp zig
-      run.push([x + gw * 0.3, -hh], [x + gw * 0.55, -hh * 0.1], [x + gw * 0.9, -hh * 0.95], [x + gw, 0]);
-    } else if (t === 4) {
-      // open hook (kept away from digit-like closed s / 8 shapes)
-      run.push([x + gw * 0.15, -hh * 0.75], [x + gw * 0.7, -hh * 1.0], [x + gw * 0.55, -hh * 0.2], [x + gw, 0]);
-    } else {
-      // jagged scrawl
-      run.push([x + gw * 0.3, -hh * 0.4], [x + gw * 0.45, -hh * 1.05], [x + gw * 0.8, -hh * 0.2]);
+  const W = h * r.range(1.6, 2.6);
+  const n = r.int(2, 4);
+  for (let k = 0; k < n; k++) {
+    const run: Pt[] = [];
+    let x = -W / 2 + r.range(0, W * 0.2);
+    let y = r.range(-h * 0.4, h * 0.2);
+    let a = r.range(-0.6, 0.6);
+    let turn = r.range(-0.9, 0.9);
+    const steps = r.int(9, 16);
+    for (let i = 0; i < steps; i++) {
+      run.push([x, y]);
+      turn += r.range(-0.9, 0.9);
+      turn = Math.max(-1.6, Math.min(1.6, turn));
+      a += turn;
+      const st = h * r.range(0.18, 0.4);
+      x += Math.cos(a) * st + W / steps * 0.6;
+      y += Math.sin(a) * st;
+      y = Math.max(-h * 0.8, Math.min(h * 0.6, y));
     }
-    // glyphs crowd and overlap so the run never reads as letters
-    x += gw * r.range(0.45, 0.7);
+    runs.push(run);
   }
-  runs.push(run);
-  // swoosh underline
   runs.push([
-    [-h * 0.3, h * 0.25],
-    [x * 0.5, h * 0.4],
-    [x + h * 0.3, h * 0.1],
-    [x + h * 0.45, -h * 0.3],
+    [-W * 0.6, h * 0.55],
+    [0, h * 0.75],
+    [W * 0.55, h * 0.4],
+    [W * 0.65, h * 0.05],
   ]);
-  const slant = r.range(-0.45, 0.25);
-  const wob = r.range(0.05, 0.16) * h;
-  return runs
-    .filter((q) => q.length > 1)
-    .map((q) => q.map(([px, py]) => [px - x / 2 - py * slant, py + h * 0.4 + Math.sin(px * 0.02) * wob] as Pt));
+  return runs;
 };
 
 export type Gen = (r: Rand, cx: number, cy: number, S: number, pal: GraffitiPalette) => Stroke[];
@@ -158,9 +144,10 @@ export const GENS: Record<string, Gen> = {
       const t = i / 8;
       const a = t * Math.PI * 2;
       const k = 0.6 + 0.8 * Math.abs(Math.sin(t * 1.7 + n));
-      pts.push([(t / n - 0.5) * S * 1.4 + Math.cos(a + Math.PI) * S * 0.2 * k, Math.sin(a) * S * 0.3 * k + Math.sin(t * 2.3) * S * 0.12]);
+      // loops overlap (advance < radius) so the coil never reads as cursive letters
+      pts.push([(t / n - 0.5) * S * 0.7 + Math.cos(a + Math.PI) * S * 0.24 * k, Math.sin(a) * S * 0.3 * k + Math.sin(t * 2.3) * S * 0.12]);
     }
-    return [{ kind: "spray", pts: place(pts, cx, cy, r.range(-0.4, 0.4)), w: S * r.range(0.06, 0.09), color: col }];
+    return [{ kind: "spray", pts: place(pts, cx, cy, r.range(-1.4, 1.4)), w: S * r.range(0.06, 0.09), color: col }];
   },
   arch: (r, cx, cy, S, pal) => {
     const col = r.pick(pal.spray);
@@ -187,11 +174,12 @@ export const GENS: Record<string, Gen> = {
     const col = r.pick(pal.brush);
     const a = r.range(-0.9, 0.9);
     const out: Stroke[] = [];
-    const n = r.int(1, 4);
+    const n = r.int(1, 3);
     for (let k = 0; k < n; k++) {
+      // strokes cross at different angles, never stacked parallel bars
       out.push({
         kind: "marker",
-        pts: place(bent(r, [-S * 0.5, k * S * 0.18], [S * 0.5, k * S * 0.18 + r.range(-0.1, 0.1) * S], r.range(-0.12, 0.12), 5), cx, cy, a),
+        pts: place(bent(r, [-S * 0.5, k * S * 0.1], [S * 0.5, k * S * 0.1 + r.range(-0.1, 0.1) * S], r.range(-0.2, 0.2), 5), cx, cy, a + k * r.range(0.5, 1.1)),
         w: S * r.range(0.08, 0.14),
         color: col,
       });

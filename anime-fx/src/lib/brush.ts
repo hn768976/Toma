@@ -195,9 +195,10 @@ export const markerStroke = (
     const ny = ex / L;
     ctx.strokeStyle = o.color;
     ctx.lineCap = "round";
-    for (let k = 0; k < 4; k++) {
-      const off = (k / 3 - 0.5) * w * 0.8;
-      const ext = o.r.range(0.2, 0.8) * w * 2;
+    const tails = o.r.int(0, 3);
+    for (let k = 0; k < tails; k++) {
+      const off = o.r.range(-0.4, 0.4) * w;
+      const ext = o.r.range(0.1, 0.9) * w * 1.6;
       ctx.lineWidth = o.r.range(1.5, w * 0.12);
       ctx.beginPath();
       const p0 = tail[0];
