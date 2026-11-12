@@ -232,7 +232,7 @@ export class EarthRenderer {
     const dS = this.rayDir(sunPxX, sunPxY, tanHalf);
     const bS = dot(dS, C);
     const nLimb = norm(sub(vscale(dS, bS), C));
-    const lit = 0.16 + 0.2 * s.sunFlare; // the lit crescent widens as the sun clears the limb
+    const lit = 0.18 + 0.3 * s.sunFlare; // the lit crescent widens as the sun clears the limb
     const sunDir = norm([dS[0] + lit * nLimb[0], dS[1] + lit * nLimb[1], dS[2] + lit * nLimb[2]]);
 
     const warmAt = (px: number, py: number) => {
@@ -276,6 +276,10 @@ export class EarthRenderer {
       } else {
         vis = 0;
       }
+      // Depth fade: the mesh is densest and brightest along the limb and
+      // falls off towards the near (lower) part of the globe.
+      const facing = -dot(norm(p), dir); // 0 at the limb, 1 facing the camera
+      vis *= 1 - 0.8 * smoothstep(0.12, 0.55, facing);
       nc[i * 4] = px;
       nc[i * 4 + 1] = py;
       nc[i * 4 + 2] = vis;

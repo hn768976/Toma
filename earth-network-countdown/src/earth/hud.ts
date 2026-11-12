@@ -28,7 +28,7 @@ export const drawHud = (canvas: HTMLCanvasElement, scale: number, groups: string
   const cx = HUD_RECT_4K.w / 2;
 
   // Fixed-cell layout so changing digits never shift (tabular figures).
-  ctx.font = `400 ${FONT_PX}px ${HUD_FONT}`;
+  ctx.font = `600 ${FONT_PX}px ${HUD_FONT}`;
   let digitW = 0;
   for (const ch of "0123456789") digitW = Math.max(digitW, ctx.measureText(ch).width);
   const colonW = ctx.measureText(":").width;

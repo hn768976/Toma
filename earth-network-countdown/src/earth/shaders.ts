@@ -52,7 +52,10 @@ void main() {
   float land = smoothstep(0.515, 0.535, h);
   float terr = fbm(p * 9.0 + vec3(3.0));
   float clusters = smoothstep(0.42, 0.72, fbm(p * 6.0 + vec3(4.0)));
-  float fine = pow(vnoise(p * 300.0), 9.0) * 2.6 + pow(vnoise(p * 130.0 + 3.0), 7.0) * 1.4;
+  vec3 pr = vec3(0.8 * p.x + 0.6 * p.z, p.y, -0.6 * p.x + 0.8 * p.z);
+  vec3 pr2 = vec3(p.x, 0.8 * p.y - 0.6 * p.z, 0.6 * p.y + 0.8 * p.z);
+  float fine = smoothstep(0.66, 0.9, 0.5 * (vnoise(p * 300.0) + vnoise(pr * 310.0 + 5.0))) * 1.6
+             + smoothstep(0.64, 0.9, 0.5 * (vnoise(pr2 * 130.0 + 3.0) + vnoise(p * 140.0 + 9.0))) * 0.8;
   float coast = 1.0 - smoothstep(0.0, 0.05, h - 0.525);
   float city = land * clamp(fine * (0.25 + 2.2 * clusters) + coast * clusters * 0.5 * pow(vnoise(p * 70.0), 2.0) + clusters * clusters * 0.12, 0.0, 1.0);
   float ice = smoothstep(1.15, 1.3, abs(lat));
@@ -132,7 +135,7 @@ void main() {
     col += dayCol * day * uRimI * (0.3 + 2.6 * warm) * mix(vec3(1.0), uSunGlow * 1.3, 0.45);
     // city lights, brightest near the terminator / sunrise
     float nightMask = 1.0 - smoothstep(0.0, 0.4, ndl);
-    float cityI = city * (0.3 + 3.2 * warm) * (0.45 + 0.55 * nightMask);
+    float cityI = city * (0.1 + 3.4 * warm) * (0.45 + 0.55 * nightMask);
     col += uCity * cityI * 1.4;
     // limb brightening
     float rim = pow(1.0 - mu, 4.0);
@@ -149,7 +152,7 @@ void main() {
   // sun: core, halos, anamorphic streak and rays
   float si = uSunI;
   float core = exp(-pow(sunDist / (0.018 * W), 2.0)) * 3.2 + exp(-sunDist / (0.03 * W)) * 1.3;
-  float halo = exp(-sunDist / (0.07 * W)) * 0.85 + exp(-sunDist / (0.11 * W)) * 0.16 + exp(-sunDist / (0.2 * W)) * 0.08;
+  float halo = exp(-sunDist / (0.07 * W)) * 0.85 + exp(-sunDist / (0.11 * W)) * 0.12 + exp(-sunDist / (0.2 * W)) * 0.03;
   float streak = exp(-abs(toSun.y) / (0.0016 * H)) * exp(-abs(toSun.x) / (0.28 * W)) * 1.3
                + exp(-abs(toSun.y) / (0.007 * H)) * exp(-abs(toSun.x) / (0.16 * W)) * 0.4;
   float ang = atan(toSun.y, toSun.x);
@@ -159,7 +162,7 @@ void main() {
   col += uSunGlow * (halo + rays * 0.9) * si;
   col += uStreak * streak * si;
   // faint warm wash over the sky when the sun is up
-  col += uSunGlow * 0.012 * uRimI * exp(-sunDist / (0.35 * W));
+  col += uSunGlow * 0.003 * uRimI * exp(-sunDist / (0.35 * W));
 
   o = vec4(col, 1.0);
 }`;
@@ -258,6 +261,7 @@ void main() {
   c = c * (1.0 - hud.a) + hud.rgb;
   vec2 p = (uv - 0.5) * vec2(uRes.x / uRes.y, 1.0);
   c *= 1.0 - smoothstep(0.55, 1.25, length(p)) * 0.45;
-  c += (h2(frag + fract(uSeed * 0.123) * 91.0) - 0.5) / 255.0;
+  float dn = h2(frag + fract(uSeed * 0.123) * 91.0) + h2(frag.yx + fract(uSeed * 0.311) * 57.0) - 1.0;
+  c += dn * 1.5 / 255.0;
   o = vec4(c, 1.0);
 }`;

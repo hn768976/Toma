@@ -19,7 +19,7 @@ export type EarthVariant = "sunrise" | "aurora";
 export type EarthCountdownProps = { variant: EarthVariant };
 
 const FOV = (40 * Math.PI) / 180;
-const DIST = 1.62; // camera distance from the planet centre (radius = 1)
+const DIST = 1.5; // camera distance from the planet centre (radius = 1)
 const ALPHA = Math.asin(1 / DIST); // angular radius of the planet
 const TOP = Math.atan(0.205 * Math.tan(FOV / 2)); // horizon sits just below frame centre
 const BETA = ALPHA + TOP; // angle of the planet centre below the view axis
