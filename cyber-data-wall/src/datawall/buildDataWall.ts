@@ -1,9 +1,4 @@
 import * as THREE from "three";
-import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
-import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
-import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
-import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
-import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import type { BuildFn } from "../lib/useThreeScene";
 import { hash, rng, smoothstep, clamp01, lerp } from "../lib/useThreeScene";
 import type { WallPalette } from "./palettes";
@@ -223,7 +218,7 @@ void main() {
       float fxl = fract(fx / 0.055);
       float aab = fwidth(fx / 0.055) + 1e-4;
       float barShape = smoothstep(0.12 - aab, 0.12 + aab, fxl) * smoothstep(0.88 + aab, 0.88 - aab, fxl);
-      col = mix(col, uLine * (0.55 + 0.45 * b), barOn * barShape * on);
+      col = mix(col, uLine * (0.7 + 0.5 * b), barOn * barShape * on);
       col = mix(col, uLine * 0.75, frameLine * on);
     } else if (kind < 1.5) {
       // luminous light block, split into sub-cells
@@ -235,7 +230,7 @@ void main() {
       float inner = smoothstep(0.05 - aas, 0.05 + aas, sep) * smoothstep(0.06 - aa, 0.06 + aa, edge);
       float grad = 0.82 + 0.18 * (fy / vSize.y);
       float pulse = 0.9 + 0.1 * sin(uTime * (0.7 + seed * 0.13) + seed * 40.0);
-      col = mix(uFace, uLight * grad * pulse * 1.15, inner * on);
+      col = mix(uFace, uLight * grad * pulse * 1.5, inner * on);
     } else {
       // dark slot with a thin bright outline and a few status LEDs
       col = mix(col, uLine * 0.55, frameLine * on);
@@ -289,46 +284,68 @@ void main() {
 `;
 
 /* ------------------------------------------------------------------ */
-/* Final grade: fade, vignette, grain                                   */
+/* Final single pass: depth of field + grade + sRGB output              */
 /* ------------------------------------------------------------------ */
-const gradeShader = {
-  uniforms: {
-    tDiffuse: { value: null as THREE.Texture | null },
-    uFade: { value: 1 },
-    uSeed: { value: 0 },
-    uVignette: { value: 0.55 },
-    uGrain: { value: 0.004 },
-    uExposure: { value: 1.28 },
-    uLift: { value: new THREE.Color("#000000") },
-  },
-  vertexShader: /* glsl */ `
-    varying vec2 vUv;
-    void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
-  `,
-  fragmentShader: /* glsl */ `
-    uniform sampler2D tDiffuse;
-    uniform float uFade;
-    uniform float uSeed;
-    uniform float uVignette;
-    uniform float uGrain;
-    uniform float uExposure;
-    uniform vec3 uLift;
-    varying vec2 vUv;
-    float h(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
-    void main() {
-      vec4 c = texture2D(tDiffuse, vUv);
-      c.rgb *= uExposure;
-      vec2 q = vUv - 0.5;
-      q.x *= 1.35;
-      float v = smoothstep(0.85, 0.2, length(q));
-      c.rgb *= mix(1.0, v, uVignette);
-      c.rgb += uLift;
-      c.rgb += (h(vUv * 1733.0 + uSeed) - 0.5) * uGrain;
-      c.rgb *= uFade;
-      gl_FragColor = vec4(max(c.rgb, 0.0), 1.0);
-    }
-  `,
-};
+// The scene is rendered once into a render target that carries its own depth
+// texture; this one full-screen pass then does the lens blur, exposure,
+// vignette, grain and fade and writes straight to the canvas. No render
+// target is written and read more than once per frame, which keeps software
+// WebGL (SwiftShader) from ever showing partially-updated tiles.
+const finalVert = /* glsl */ `
+varying vec2 vUv;
+void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
+`;
+const finalFrag = /* glsl */ `
+#include <packing>
+uniform sampler2D tColor;
+uniform sampler2D tDepth;
+uniform float uNear;
+uniform float uFar;
+uniform float uFocus;
+uniform float uAperture;
+uniform float uMaxBlur;
+uniform float uAspect;
+uniform float uFade;
+uniform float uSeed;
+uniform float uVignette;
+uniform float uGrain;
+uniform float uExposure;
+varying vec2 vUv;
+float h(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+float viewDepth(vec2 uv) {
+  return -perspectiveDepthToViewZ(texture2D(tDepth, uv).x, uNear, uFar);
+}
+vec3 toSRGB(vec3 c) {
+  c = max(c, 0.0);
+  return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(vec3(0.0031308), c));
+}
+void main() {
+  float depth = viewDepth(vUv);
+  float coc = clamp(abs(depth - uFocus) * uAperture, 0.0, uMaxBlur) * 0.45;
+  vec3 acc = vec3(0.0);
+  float wsum = 0.0;
+  const int N = 56;
+  for (int i = 0; i < N; i++) {
+    float r = sqrt((float(i) + 0.5) / float(N));
+    float a = float(i) * 2.39996323;
+    vec2 off = vec2(cos(a), sin(a)) * r * coc;
+    off.x /= uAspect;
+    vec3 c = texture2D(tColor, vUv + off).rgb;
+    float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    float w = 1.0 + 2.5 * max(l - 0.45, 0.0); // brighter bokeh highlights
+    acc += c * w;
+    wsum += w;
+  }
+  vec3 col = (coc < 0.0002 ? texture2D(tColor, vUv).rgb : acc / wsum) * uExposure;
+  vec2 q = vUv - 0.5;
+  q.x *= 1.35;
+  col *= mix(1.0, smoothstep(0.85, 0.2, length(q)), uVignette);
+  col = toSRGB(col);
+  col += (h(vUv * 1733.0 + uSeed) - 0.5) * uGrain;
+  col *= uFade;
+  gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+}
+`;
 
 /* ------------------------------------------------------------------ */
 /* Laser-fan events                                                      */
@@ -412,7 +429,7 @@ export const makeDataWallBuilder =
       const rowKindBias = hash(u, 17); // how "light-heavy" a row is
       let x = WALL_X0 + r() * 2;
       while (x < WALL_X1) {
-        const w = 0.5 + r() * 2.6;
+        const w = 0.35 + r() * r() * 2.4;
         const k = r();
         const kind = k < 0.18 + rowKindBias * 0.32 ? 1 : k < 0.75 ? 0 : 2;
         const yb = u * UNIT_H + PANEL_Y0;
@@ -425,7 +442,7 @@ export const makeDataWallBuilder =
           d: 0.22 + r() * 0.3,
           kind,
           seed: r() * 100,
-          on: 0.25 + distIntro * 0.5 + r() * 0.75,
+          on: 1.0 + distIntro * 0.35 + r() * 0.6,
           rate: 0.5 + r() * 3.5,
         });
         x += w + 0.06 + r() * 0.16;
@@ -520,20 +537,37 @@ export const makeDataWallBuilder =
     points.frustumCulled = false;
     scene.add(points);
 
-    /* post-processing */
-    const composer = new EffectComposer(renderer);
-    composer.setPixelRatio(pixelRatio);
-    composer.setSize(width, height);
-    composer.addPass(new RenderPass(scene, camera));
-    const bokeh = new BokehPass(scene, camera, {
-      focus: rig.focus(0),
-      aperture: rig.aperture,
-      maxblur: rig.maxBlur,
+    /* post-processing: one scene render target + one final pass */
+    const rt = new THREE.WebGLRenderTarget(Math.round(width * pixelRatio), Math.round(height * pixelRatio), {
+      type: THREE.HalfFloatType,
+      samples: 4,
+      depthTexture: new THREE.DepthTexture(Math.round(width * pixelRatio), Math.round(height * pixelRatio)),
     });
-    composer.addPass(bokeh);
-    const grade = new ShaderPass(gradeShader);
-    composer.addPass(grade);
-    composer.addPass(new OutputPass());
+    const finalMat = new THREE.ShaderMaterial({
+      uniforms: {
+        tColor: { value: rt.texture },
+        tDepth: { value: rt.depthTexture },
+        uNear: { value: camera.near },
+        uFar: { value: camera.far },
+        uFocus: { value: rig.focus(0) },
+        uAperture: { value: rig.aperture },
+        uMaxBlur: { value: rig.maxBlur },
+        uAspect: { value: width / height },
+        uFade: { value: 1 },
+        uSeed: { value: 0 },
+        uVignette: { value: 0.55 },
+        uGrain: { value: 0.004 },
+        uExposure: { value: 1.28 },
+      },
+      vertexShader: finalVert,
+      fragmentShader: finalFrag,
+      depthTest: false,
+      depthWrite: false,
+    });
+    const fsGeo = new THREE.PlaneGeometry(2, 2);
+    const postScene = new THREE.Scene();
+    postScene.add(new THREE.Mesh(fsGeo, finalMat));
+    const postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
     const tmpQ = new THREE.Quaternion();
     const zAxis = new THREE.Vector3(0, 0, 1);
@@ -549,7 +583,7 @@ export const makeDataWallBuilder =
       camera.updateMatrixWorld();
 
       // boot sequence
-      const boot = 0.25 + 0.75 * smoothstep(0, 1.3, t);
+      const boot = smoothstep(0.1, 1.4, t);
       wallUniforms.uTime.value = t;
       wallUniforms.uBoot.value = boot;
       panelUniforms.uTime.value = t;
@@ -602,23 +636,24 @@ export const makeDataWallBuilder =
       nodes.instanceMatrix.needsUpdate = true;
       if (nodes.instanceColor) nodes.instanceColor.needsUpdate = true;
 
-      // depth of field
-      const bu = bokeh.uniforms as unknown as Record<string, { value: number }>;
-      bu.focus.value = rig.focus(t);
-      bu.aperture.value = rig.aperture;
-      bu.maxblur.value = rig.maxBlur;
+      // depth of field + grade
+      finalMat.uniforms.uFocus.value = rig.focus(t);
+      finalMat.uniforms.uFade.value = smoothstep(0.15, 1.6, t);
+      finalMat.uniforms.uSeed.value = (frame * 7.31) % 97;
 
-      // grade
-      grade.uniforms.uFade.value = 0.45 + 0.55 * smoothstep(0, 1.5, t);
-      grade.uniforms.uSeed.value = (frame * 7.31) % 97;
-
-      composer.render();
+      renderer.setRenderTarget(rt);
+      renderer.clear();
+      renderer.render(scene, camera);
+      renderer.setRenderTarget(null);
+      renderer.render(postScene, postCam);
     };
 
     return {
       render,
       dispose: () => {
-        composer.dispose();
+        rt.dispose();
+        finalMat.dispose();
+        fsGeo.dispose();
         wallGeo.dispose();
         wallMat.dispose();
         boxGeo.dispose();

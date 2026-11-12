@@ -13,7 +13,8 @@ floating hubs onto the wall, and drifting dust particles.
 * Resolution **3840×2160 (4K UHD)**, **30 fps**, **570 frames = 19.000 s** (exact reference length)
 * Technology: **Three.js (WebGL 2)** driven imperatively from Remotion
   (`src/lib/useThreeScene.ts`), GLSL shaders for the procedural wall and panels,
-  `BokehPass` depth of field, custom grade pass (vignette, grain, fade-in).
+  a single-pass lens depth of field (scene + depth texture in one render target,
+  then one full-screen DOF + grade pass: exposure, vignette, grain, fade-in).
 * Every frame is a pure function of the frame number (seeded randomness), so
   renders are deterministic and parallel-safe.
 
@@ -66,7 +67,7 @@ src/
   lib/useThreeScene.ts     Remotion <-> Three.js bridge, seeded RNG/hash helpers
   datawall/
     CyberDataWall.tsx      composition component (variant v1 / v2)
-    buildDataWall.ts       scene, shaders, laser fans, particles, post-processing
+    buildDataWall.ts       scene, shaders, laser fans, particles, DOF + grade pass
     cameraRigs.ts          low-angle drift camera + depth-of-field settings
     palettes.ts            Steel Blue (V1) and Amber Core (V2) palettes
 ```
