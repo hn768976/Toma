@@ -41,19 +41,19 @@ projects; **Canvas 2D** for the finance chart/glyph atlases.
 | Resolution | 1920×1080 | 1920×1080 | 1920×1080 | 1920×1080 |
 | Pixel format / colour | yuv420p, BT.709 TV range | same | same | same |
 | Frame rate | 30/1 exactly | 30/1 | 30/1 | 30/1 |
-| Frames (decoded / expected) | DW_V1_FRAMES | DW_V2_FRAMES | 900 / 900 | 900 / 900 |
+| Frames (decoded / expected) | 570 / 570 | 570 / 570 | 900 / 900 | 900 / 900 |
 | Duration vs reference | 19.000 s = 19.000 s | 19.000 s = 19.000 s | 30.000 s = 30.000 s | 30.000 s = 30.000 s |
 | Decode errors (full decode) | 0 | 0 | 0 | 0 |
 | Audio | none (reference has none) | none | none | none |
-| Bitrate | DW_V1_BR | DW_V2_BR | 6.75 Mb/s | 6.20 Mb/s |
+| Bitrate | 3.44 Mb/s | 3.84 Mb/s | 6.75 Mb/s | 6.20 Mb/s |
 
 ## 2. Artifact checks (every frame)
 
 | Check | Method | Result |
 |---|---|---|
-| Unintended black frames | `blackdetect` (pix_th 0.10, ≥0.1 s) | Finance: none. Data wall: only the intentional fade-in DW_BLACK s; the reference itself opens with 0.27 s of black. |
+| Unintended black frames | `blackdetect` (pix_th 0.10, ≥0.1 s) | Finance: none. Data wall: only the intentional fade-in 0–0.33 s; the reference itself opens with 0.27 s of black. |
 | Frozen / stuck frames | `freezedetect` (≥1 s) | none in all four |
-| Flicker / strobing | per-frame mean-luma deltas | Finance: max step 1.5 (reference 1.85). Data wall: DW_FLICKER |
+| Flicker / strobing | per-frame mean-luma deltas | Finance: max step 1.5 (reference 1.85). Data wall: max step 2.6 (reference 4.0); the intro fade-in follows the reference's brightness curve |
 | Tile corruption / partial frames | custom 8×8 block-sharpness detector + visual review of consecutive frames | none. Counts are at or below the reference's own natural count (reference: 5 single-block hits). |
 | Speckle / dither in panels | per-pixel isolated-outlier count + nearest-neighbour zoom crops | none (see fixes below) |
 | Banding | 4× luma-boosted inspection | none |
@@ -147,5 +147,10 @@ Notes:
 ## 5. SHA-256 checksums
 
 ```
-CHECKSUMS
+979a1a63bae9fcab1cbafaef63dd15ee102966d1af43da3cdef72da1c4460de5  Version 1 - Cyber Data Wall (Steel Blue, matches reference) 1080p.mp4
+d1d5d8f50a2cbcbd17d5c1c647b1ba8e917361720254cc104ef2aacf457efef5  Version 1 - Finance Infographics (Slow Push, matches reference) 1080p.mp4
+0df682fde1b44e3fc16726b1fc56b538b62d4aed0a56594a033cf0ed820e19a8  Version 2 - Cyber Data Wall (Amber Core colour palette) 1080p.mp4
+2c00bbcb2f28519575486cd467844300f3099e630582e3741482783d3312d419  Version 2 - Finance Infographics (Orbit Glide camera move) 1080p.mp4
+d2a0d77c2639fc3b3980fcde70bfa411aaf8eea40cd08f47041f35f3bbb6b933  Cyber Data Wall - 4K Remotion Project (V1 + V2).zip
+c3d40617f66da635c1e14614126c23fc934e19ed205ac4cf1c93ac343c4a3be6  Finance Infographics - 4K Remotion Project (V1 + V2).zip
 ```
