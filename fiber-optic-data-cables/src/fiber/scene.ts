@@ -46,27 +46,27 @@ const CAM_POS: Key[] = [
 	{t: 0, v: V(8.5, 2.2, 37)},
 	{t: 150, v: V(13.5, 4.2, 30.5)},
 	{t: 186, v: V(24, 7.5, 21)},
-	{t: 214, v: FINAL_A},
+	{t: 214, v: FINAL_A, hold: true},
 	{t: 300, v: FINAL_B},
 ];
 const CAM_TARGET: Key[] = [
 	{t: 0, v: V(17, 7.5, 0)},
 	{t: 150, v: V(19.5, 9.2, 0)},
 	{t: 186, v: V(17, 11, -4)},
-	{t: 214, v: aimAt(FINAL_A, SOURCE, -0.78, -0.42, 50)},
+	{t: 214, v: aimAt(FINAL_A, SOURCE, -0.78, -0.42, 50), hold: true},
 	{t: 300, v: aimAt(FINAL_B, SOURCE, -0.8, -0.45, 49)},
 ];
 const CAM_FOV = [
 	{t: 0, v: 36},
 	{t: 150, v: 36},
-	{t: 214, v: 50},
+	{t: 214, v: 50, hold: true},
 	{t: 300, v: 49},
 ];
 const CAM_ROLL = [
 	{t: 0, v: 0},
 	{t: 150, v: 0.02},
 	{t: 190, v: -0.08},
-	{t: 214, v: 0.05},
+	{t: 214, v: 0.05, hold: true},
 	{t: 300, v: 0.045},
 ];
 
@@ -225,7 +225,7 @@ export const createFiberScene =
 		const rim = new THREE.DirectionalLight(pal.rimLight, 1.4);
 		rim.position.set(-20, -2, -8);
 		scene.add(rim);
-		const srcLight = new THREE.PointLight(pal.rimLight, 12, 0, 2);
+		const srcLight = new THREE.PointLight(pal.rimLight, 4, 0, 2);
 		srcLight.position.set(4, 2, 0);
 		scene.add(srcLight);
 
@@ -428,14 +428,14 @@ export const createFiberScene =
 				[
 					{t: 0, v: 0.05},
 					{t: 150, v: 0.05},
-					{t: 214, v: 0.05},
+					{t: 214, v: 0.05, hold: true},
 					{t: 300, v: 0.05},
 				],
 				t,
 			);
 			const su = strands.material.uniforms;
 			su.uTime.value = t;
-			su.uIntensity.value = 0.6;
+			su.uIntensity.value = THREE.MathUtils.lerp(0.6, 0.42, smoothstep(180, 214, t));
 			su.uStubAmt.value = 1 - smoothstep(170, 210, t) * 0.8;
 			su.uFogDensity.value = THREE.MathUtils.lerp(0.012, 0.03, smoothstep(170, 214, t));
 			su.uFocus.value = focus;

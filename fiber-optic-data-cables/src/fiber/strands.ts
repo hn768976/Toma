@@ -164,7 +164,7 @@ export const buildStrandMesh = (
 				float profile = exp(-d * d * sharpness);
 				float core = exp(-d * d * sharpness * 5.0);
 				float energy = 1.0 / vBlur;
-				float rootFade = smoothstep(0.0, 0.22, vU);
+				float rootFade = smoothstep(0.0, 0.3, vU);
 				float tipFade = 1.0 - smoothstep(0.82, 1.0, vU);
 				float alongGlow = mix(0.55, 1.0, smoothstep(0.1, 0.7, vU));
 				// bright growth front while the fibre is extending

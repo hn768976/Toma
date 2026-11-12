@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
-export type Key = {t: number; v: THREE.Vector3};
+/** `hold` forces zero velocity at the key (camera settles there). */
+export type Key = {t: number; v: THREE.Vector3; hold?: boolean};
 
 /**
  * C1-continuous cubic Hermite interpolation through time-stamped keys
@@ -16,7 +17,7 @@ export const sampleTrack = (keys: Key[], t: number, out = new THREE.Vector3()) =
 	const k1 = keys[i + 1];
 	const dt = k1.t - k0.t;
 	const tangent = (j: number) => {
-		if (j <= 0 || j >= keys.length - 1) return new THREE.Vector3();
+		if (j <= 0 || j >= keys.length - 1 || keys[j].hold) return new THREE.Vector3();
 		const a = keys[j - 1];
 		const b = keys[j + 1];
 		return b.v.clone().sub(a.v).divideScalar(b.t - a.t);
@@ -38,8 +39,8 @@ export const sampleTrack = (keys: Key[], t: number, out = new THREE.Vector3()) =
 		.addScaledVector(m1, h11);
 };
 
-export const sampleScalar = (keys: {t: number; v: number}[], t: number) =>
+export const sampleScalar = (keys: {t: number; v: number; hold?: boolean}[], t: number) =>
 	sampleTrack(
-		keys.map((k) => ({t: k.t, v: new THREE.Vector3(k.v, 0, 0)})),
+		keys.map((k) => ({t: k.t, v: new THREE.Vector3(k.v, 0, 0), hold: k.hold})),
 		t,
 	).x;
