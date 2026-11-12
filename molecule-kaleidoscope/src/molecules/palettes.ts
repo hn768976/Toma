@@ -38,7 +38,7 @@ export const REFERENCE_PALETTE: MoleculePalette = {
   shadowStrength: 0.42,
   red: hex("#f0605b"),
   pale: hex("#c0e4ef"),
-  yellow: hex("#b6ad52"),
+  yellow: hex("#c3c955"),
   goo: hex("#ec6a5e"),
   rim: hex("#e0583e"),
   specular: 0.32,

@@ -8,7 +8,7 @@
  * Like the reference, one 5 s loop cycles through three poses:
  *   A  the opening layout (six molecules spread across the frame)
  *   B  two separated compact clusters, one per side, hollow in the middle
- *   C  a yellow-dominant branched pose
+ *   C  a pale-dominant pose (pale atoms around red cores)
  * Each move is a ~30-frame liquid morph: molecules glide to the next pose
  * while turning in 3D, fuse into each other mid-move and recolour.
  */
@@ -45,9 +45,9 @@ export const ATOM_RADIUS: Record<AtomKind, number> = {
   yellow: 0.058,
 };
 export const BOND_RADIUS = 0.024;
-export const BASE_BLEND = 0.028;
+export const BASE_BLEND = 0.02;
 /** Extra smooth-union radius at the peak of a move: the liquid fusing. */
-const MOVE_BLEND = 0.034;
+const MOVE_BLEND = 0.024;
 /**
  * Depth is flattened while molecules turn, so atoms passing over each other
  * stay within reach of the smooth union and fuse instead of occluding.
@@ -69,8 +69,8 @@ const MOLECULES: MoleculeDef[] = [
       [0.16, -0.165],
     ],
     atoms: [
-      { pos: [0.115, -0.077, 0.02], kinds: ["red", "red", "yellow"] },
-      { pos: [-0.052, -0.085, -0.025], kinds: ["pale", "yellow", "yellow"] },
+      { pos: [0.115, -0.077, 0.02], kinds: ["red", "red", "pale"] },
+      { pos: [-0.052, -0.085, -0.025], kinds: ["pale", "yellow", "pale"] },
       { pos: [-0.105, 0.073, 0.02], kinds: ["red", "red", "red"] },
       { pos: [0.041, 0.088, -0.02], kinds: ["yellow", "pale", "yellow"] },
     ],
@@ -93,10 +93,10 @@ const MOLECULES: MoleculeDef[] = [
       [0.16, 0.165],
     ],
     atoms: [
-      { pos: [0.115, 0.077, 0.02], kinds: ["red", "red", "yellow"] },
+      { pos: [0.115, 0.077, 0.02], kinds: ["red", "red", "pale"] },
       { pos: [-0.052, 0.085, -0.025], kinds: ["pale", "pale", "red"] },
-      { pos: [-0.105, -0.073, 0.02], kinds: ["red", "yellow", "yellow"] },
-      { pos: [0.041, -0.088, -0.02], kinds: ["yellow", "yellow", "yellow"] },
+      { pos: [-0.105, -0.073, 0.02], kinds: ["red", "yellow", "pale"] },
+      { pos: [0.041, -0.088, -0.02], kinds: ["yellow", "yellow", "pale"] },
     ],
     bonds: [
       [0, 1],
@@ -117,9 +117,9 @@ const MOLECULES: MoleculeDef[] = [
       [0.475, 0.0],
     ],
     atoms: [
-      { pos: [0.1045, 0, 0.0], kinds: ["pale", "pale", "yellow"] },
-      { pos: [-0.0935, 0, 0.0], kinds: ["yellow", "pale", "yellow"] },
-      { pos: [-0.005, -0.138, 0.035], kinds: ["red", "red", "yellow"] },
+      { pos: [0.1045, 0, 0.0], kinds: ["pale", "pale", "pale"] },
+      { pos: [-0.0935, 0, 0.0], kinds: ["yellow", "pale", "pale"] },
+      { pos: [-0.005, -0.138, 0.035], kinds: ["red", "red", "red"] },
       { pos: [-0.005, 0.138, -0.035], kinds: ["red", "red", "red"] },
     ],
     bonds: [
@@ -242,7 +242,7 @@ export const computeScene = (frame: number): SceneFrame => {
         (ATOM_RADIUS[kFrom] * (1 - p) + ATOM_RADIUS[kTo] * p) * (1 + 0.9 * z) * (1 + 0.05 * activity);
       balls.set([cx + q[0], cy + q[1], z, radius], nb * 4);
       // colours cross-fade through the middle of the move
-      const cp = Math.min(1, Math.max(0, (p - 0.35) / 0.3));
+      const cp = Math.min(1, Math.max(0, (p - 0.4) / 0.2));
       colourWeights[nb * 3 + KIND_INDEX[kFrom]] += 1 - cp;
       colourWeights[nb * 3 + KIND_INDEX[kTo]] += cp;
       nb++;
