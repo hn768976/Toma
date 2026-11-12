@@ -43,9 +43,9 @@ export type FrameParams = {
 
 const DOMAIN = 5.0; // field texture covers [-5, 5]^2 world units
 const FIELD_RES = 2048;
-const DELTA = 0.12; // contour spacing in field units
-const RIM_R = 0.0095; // rim tube radius in world units
-const STEP = 0.014; // horizontal ray-march step in world units
+const DELTA = 0.06; // contour spacing in field units
+const RIM_R = 0.0075; // rim tube radius in world units
+const STEP = 0.0095; // horizontal ray-march step in world units
 
 const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const cross = (a: Vec3, b: Vec3): Vec3 => [

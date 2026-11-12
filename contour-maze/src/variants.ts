@@ -42,8 +42,8 @@ export const LOOKS: Record<VariantName, Look> = {
       { pos: -0.45, color: hex("#8a2a06") },
       { pos: 0.0, color: hex("#c23a08") },
       { pos: 0.5, color: hex("#f2600c") },
-      { pos: 0.9, color: hex("#ffa020") },
-      { pos: 0.99, color: hex("#fff2d6") },
+      { pos: 0.95, color: hex("#ffb030") },
+      { pos: 0.995, color: hex("#fff2d6") },
       { pos: 1.04, color: hex("#f2f6ff") },
       { pos: 1.14, color: hex("#a9c0ff") },
     ],
@@ -64,8 +64,8 @@ export const LOOKS: Record<VariantName, Look> = {
       { pos: -0.45, color: hex("#05324a") },
       { pos: 0.0, color: hex("#007f96") },
       { pos: 0.5, color: hex("#13c4d6") },
-      { pos: 0.9, color: hex("#7ff0e4") },
-      { pos: 0.99, color: hex("#f2fff9") },
+      { pos: 0.95, color: hex("#7ff0e4") },
+      { pos: 0.995, color: hex("#f2fff9") },
       { pos: 1.04, color: hex("#ffe3f1") },
       { pos: 1.14, color: hex("#ff6fb4") },
     ],
@@ -106,7 +106,7 @@ const STREAKS: Streak[] = (() => {
   const total = DURATION_IN_FRAMES / FPS;
   for (let i = 0; i < 46; i++) {
     out.push({
-      level: Math.floor(5 + rnd() * 4), // contour level index (field value = level * 0.12), near the island
+      level: Math.floor(11 + rnd() * 6), // contour level index (field value = level * 0.06), near the island
       start: -1.5 + rnd() * (total + 1.0),
       dur: 1.4 + rnd() * 1.8,
       theta0: rnd() * Math.PI * 2,
@@ -129,11 +129,11 @@ export const frameParams = (frame: number, variant: VariantName): FrameParams =>
   // Camera: slow drift + yaw while it tilts from an oblique view to a
   // steeper, more top-down view (matching the reference move).
   // Ease-out: most of the camera travel happens early, then it settles.
-  const e = 1 - Math.pow(1 - progress, 2.2);
-  const yaw = lerp(-1.72, -1.6, e);
-  const pitch = lerp(0.9, 1.13, e);
-  const dist = lerp(2.6, 2.9, e);
-  const target: Vec3 = [lerp(0.1, 0.02, e), lerp(-0.02, -0.06, e), 0.26];
+  const e = 1 - Math.pow(1 - progress, 3.0);
+  const yaw = lerp(-1.98, -1.56, e);
+  const pitch = lerp(0.86, 1.12, e);
+  const dist = lerp(2.0, 2.55, e);
+  const target: Vec3 = [lerp(0.0, -0.08, e), lerp(0.12, 0.08, e), 0.22];
   const camPos: Vec3 = [
     target[0] + Math.cos(yaw) * Math.cos(pitch) * dist,
     target[1] + Math.sin(yaw) * Math.cos(pitch) * dist,
