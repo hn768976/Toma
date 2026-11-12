@@ -56,7 +56,7 @@ const FAR_FIN = fa(422, 222);
 const MouthShape: React.FC<{ mouth: Mouth; sw: number }> = ({ mouth, sw }) => {
   switch (mouth) {
     case 'smile':
-      return <path d="M -17 -4 Q 0 11 15 -6" stroke={C.navy} strokeWidth={sw} fill="none" strokeLinecap="round" />;
+      return <path d="M -17 -4 Q 0 11 15 -6" stroke={C.navy} strokeWidth={sw * 1.8} fill="none" strokeLinecap="round" />;
     case 'o':
       return <ellipse cx={0} cy={2} rx={8} ry={10} fill={C.navy} />;
     case 'ee':
@@ -147,7 +147,7 @@ export const NovaFrontParts: React.FC<{ s: FaceState; idPrefix: string }> = ({ s
       <Eye e={FAR_EYE} blink={s.blink} pupil={s.pupil} id={`${idPrefix}-fe`} sw={sw} />
       <Eye e={NEAR_EYE} blink={s.blink} pupil={s.pupil} id={`${idPrefix}-ne`} sw={sw} />
       {/* brows */}
-      <g transform={`translate(0 ${s.brow})`} stroke={C.navy} strokeWidth={sw} strokeLinecap="round" fill="none">
+      <g transform={`translate(0 ${s.brow})`} stroke={C.navy} strokeWidth={sw * 1.7} strokeLinecap="round" fill="none">
         <path d={`M ${NEAR_EYE.x - 24} ${NEAR_EYE.y - 46} Q ${NEAR_EYE.x - 2} ${NEAR_EYE.y - 58} ${NEAR_EYE.x + 20} ${NEAR_EYE.y - 48}`} />
         <path d={`M ${FAR_EYE.x - 12} ${FAR_EYE.y - 42} Q ${FAR_EYE.x + 2} ${FAR_EYE.y - 52} ${FAR_EYE.x + 16} ${FAR_EYE.y - 44}`} />
       </g>

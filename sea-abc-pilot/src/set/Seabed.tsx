@@ -5,6 +5,8 @@ import { fontFamily } from '../fonts';
 
 export const W = 1920;
 export const H = 1080;
+/** The wide-shot world is wider than the frame; the camera pans across it. */
+export const WORLD_W = 2400;
 const O = 3; // outline
 
 export const sandTop = (x: number) => 852 + 14 * Math.sin(x / 330 + 0.6);
@@ -14,17 +16,19 @@ export const Backdrop: React.FC<{ f: number }> = ({ f }) => {
   // flat far-reef silhouettes
   const hills =
     'M -40 900 L -40 770 Q 80 700 200 760 Q 300 690 430 750 Q 560 700 650 770 Q 760 720 900 790 ' +
-    'Q 1040 730 1150 780 Q 1280 700 1400 760 Q 1520 690 1660 750 Q 1800 700 1960 770 L 1960 900 Z';
+    'Q 1040 730 1150 780 Q 1280 700 1400 760 Q 1520 690 1660 750 Q 1800 700 1960 770 ' +
+    'Q 2100 710 2230 760 Q 2360 700 2520 770 Q 2600 740 2680 780 L 2680 900 Z';
   // light shafts (flat, low-opacity cream)
   const shafts = [
     { x: 260, w: 140, a: -14, ph: 0 },
     { x: 760, w: 90, a: -11, ph: 1.8 },
     { x: 1180, w: 160, a: -13, ph: 3.1 },
     { x: 1660, w: 100, a: -10, ph: 4.4 },
+    { x: 2120, w: 150, a: -12, ph: 5.3 },
   ];
   return (
     <g>
-      <rect x={-200} y={-200} width={W + 400} height={H + 400} fill={C.water} />
+      <rect x={-200} y={-200} width={WORLD_W + 400} height={H + 400} fill={C.water} />
       {shafts.map((s, i) => (
         <g key={i} transform={`rotate(${s.a + 1.6 * wave(f, 0.18, s.ph)} ${s.x} -40)`}>
           <polygon
@@ -42,15 +46,15 @@ export const Backdrop: React.FC<{ f: number }> = ({ f }) => {
 export const Sand: React.FC = () => {
   const bumps = (offset: number) => {
     let d = `M -60 ${H + 60} L -60 ${sandTop(-60) + offset}`;
-    for (let x = -60; x < W + 60; x += 110) {
+    for (let x = -60; x < WORLD_W + 240; x += 110) {
       const y0 = sandTop(x) + offset;
       const y1 = sandTop(x + 110) + offset;
       d += ` Q ${x + 55} ${(y0 + y1) / 2 - 22} ${x + 110} ${y1}`;
     }
-    return d + ` L ${W + 60} ${H + 60} Z`;
+    return d + ` L ${WORLD_W + 240} ${H + 60} Z`;
   };
   const rnd = seeded(7);
-  const specks = Array.from({ length: 70 }, () => ({ x: rnd() * W, y: 890 + rnd() * 190, r: 3 + rnd() * 5 }));
+  const specks = Array.from({ length: 90 }, () => ({ x: rnd() * WORLD_W, y: 890 + rnd() * 190, r: 3 + rnd() * 5 }));
   return (
     <g>
       <path d={bumps(-6)} fill={C.sandDark} />
@@ -214,7 +218,7 @@ export const Shell: React.FC<{ x: number; y: number; size?: number; rot?: number
   </g>
 );
 
-export const SLATE = { x: 1300, y: 170, w: 480, h: 320 };
+export const SLATE = { x: 1800, y: 150, w: 540, h: 360 };
 
 export const Slate: React.FC<{ f: number; letters?: number }> = ({ f, letters = 4 }) => {
   const { x, y, w, h } = SLATE;
@@ -240,14 +244,14 @@ export const Slate: React.FC<{ f: number; letters?: number }> = ({ f, letters = 
       {letterRow.slice(0, letters).map((L, i) => (
         <text
           key={L}
-          x={x + 92 + i * 99}
+          x={x + w * 0.19 + i * w * 0.206}
           y={y + h * 0.66}
           fontFamily={fontFamily}
           fontWeight={600}
-          fontSize={118}
+          fontSize={118 * (w / 480)}
           textAnchor="middle"
           fill={cols[i]}
-          transform={`rotate(${2.5 * wave(f, 0.5, i * 1.3)} ${x + 92 + i * 99} ${y + h * 0.5})`}
+          transform={`rotate(${2.5 * wave(f, 0.5, i * 1.3)} ${x + w * 0.19 + i * w * 0.206} ${y + h * 0.5})`}
         >
           {L}
         </text>
@@ -357,7 +361,7 @@ export const BubbleBurst: React.FC<{ f: number; start: number; x: number; y: num
 /** Drifting plankton specks for depth. */
 export const Plankton: React.FC<{ f: number }> = ({ f }) => {
   const rnd = seeded(21);
-  const items = Array.from({ length: 34 }, () => ({ x: rnd() * W, y: rnd() * 780, r: 2 + rnd() * 3, ph: rnd() * 6.28, sp: 0.1 + rnd() * 0.2 }));
+  const items = Array.from({ length: 44 }, () => ({ x: rnd() * WORLD_W, y: rnd() * 780, r: 2 + rnd() * 3, ph: rnd() * 6.28, sp: 0.1 + rnd() * 0.2 }));
   return (
     <g>
       {items.map((p, i) => (

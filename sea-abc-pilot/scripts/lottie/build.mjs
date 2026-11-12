@@ -35,7 +35,7 @@ const sc = (v, k) => [v[0] * k, v[1] * k];
 /* ------------------------------------------------------------------ */
 function buildClam() {
   resetInd();
-  const W = 520, H = 440, SW = 4;
+  const W = 520, H = 440, SW = 2.3; // shown at ~1.31x in the wide -> ~3px
   const hx = 260, hy = 300; // hinge line centre
 
   // scalloped fan for lid (in lid-local coords, hinge at 0,0, pointing up)
@@ -53,7 +53,7 @@ function buildClam() {
     ridges.push(
       group(`ridge${k}`, [
         shPath(poly([[Math.cos(a) * 40, Math.sin(a) * 30], [Math.cos(a) * 196, Math.sin(a) * 190]], false)),
-        stroke(C.cream, 7),
+        stroke(C.cream, 5),
       ]),
     );
   }
@@ -163,14 +163,14 @@ function buildClam() {
     bowlRidges.push(
       group(`bridge${k}`, [
         shPath(poly([[x + (hx - x) * 0.05, hy + 24], [hx + (x - hx) * 0.55, 418]], false)),
-        stroke(C.cream, 7),
+        stroke(C.cream, 5),
       ]),
     );
   }
   const bowlLayer = shapeLayer(
     'bowl',
     [
-      group('rimLip', [shPath(poly([[60, hy + 14], [460, hy + 14]], false)), stroke(C.navy, 3)]),
+      group('rimLip', [shPath(poly([[60, hy + 14], [460, hy + 14]], false)), stroke(C.navy, 2.3)]),
       ...bowlRidges,
       group('bowl', [shPath(bowl), stroke(C.navy, SW), fill(C.grape)]),
     ],
@@ -192,7 +192,7 @@ const P = (x, y) => [PC[0] + x, PC[1] + y];
 
 function puffLayers({ rootKs, puffKs, spikeKs, eyesKs, mouthKs, finR, tailR, dorsalR }) {
   resetInd();
-  const SW = 5.5;
+  const SW = 2.2; // shown at ~1.3-1.45x -> ~3px
   const root = nullLayer('root', { a: [...P(0, 70), 0], p: [...P(0, 70), 0], ...rootKs });
   const puff = nullLayer('puffer', { a: [...P(0, 0), 0], p: [...P(0, 0), 0], ...puffKs }, { parent: root.ind });
 
@@ -349,7 +349,7 @@ function buildPuffInflate() {
 function buildNovaCheer() {
   resetInd();
   const op = 90;
-  const SW = 4;
+  const SW = 2; // shown at ~1.52x -> ~3px
   const FX = 300, FY = 470; // feet / ground contact
 
   const root = nullLayer('root', {
@@ -443,7 +443,7 @@ function buildNovaCheer() {
   // horn: local coords, base at 0,0 pointing up (-y)
   const hornShape = smooth([[-21, 0], [-14, -60], [-6, -130], [0, -152], [6, -130], [14, -60], [21, 0], [0, 6]], true, 0.6);
   const stripes = [-36, -72, -104].map((y, k) =>
-    group(`stripe${k}`, [shPath(poly([[-17 + k * 3.5, y + 6], [16 - k * 3.5, y - 6]], false)), stroke(C.navy, 3.5)]),
+    group(`stripe${k}`, [shPath(poly([[-17 + k * 3.5, y + 6], [16 - k * 3.5, y - 6]], false)), stroke(C.navy, 2)]),
   );
   const horn = shapeLayer('horn', [
     ...stripes,
@@ -471,7 +471,7 @@ function buildNovaCheer() {
   }, P);
 
   const arc = (cx, cy, w) => shPath({ c: false, v: [[cx - w, cy + 8], [cx, cy - 14], [cx + w, cy + 8]], i: [[0, 0], [-w * 0.55, 0], [0, -10]], o: [[0, -10], [w * 0.55, 0], [0, 0]] });
-  const eyesHappy = shapeLayer('eyesHappy', [group('arcs', [arc(262, 296, 28), arc(356, 292, 30), stroke(C.navy, 7)])], {
+  const eyesHappy = shapeLayer('eyesHappy', [group('arcs', [arc(262, 296, 28), arc(356, 292, 30), stroke(C.navy, 4.5)])], {
     a: [310, 300, 0], p: [310, 300, 0],
     s: [[0, [100, 40, 100]], [6, [100, 40, 100], E.out], [9, [104, 110, 100]], [12, [100, 100, 100]]],
     o: [[0, 0, null], [6, 100, null], [65, 0]],
@@ -481,7 +481,7 @@ function buildNovaCheer() {
     group('b', [
       shPath(poly([[240, 238], [266, 230], [284, 236]], false)),
       shPath(poly([[332, 232], [358, 224], [380, 230]], false)),
-      stroke(C.navy, 5.5),
+      stroke(C.navy, 3.5),
     ]),
   ], {
     p: [[0, [0, 0, 0]], [5, [0, 8, 0]], [9, [0, -10, 0]], [14, [0, -6, 0]], [60, [0, -6, 0]], [66, [0, -12, 0]], [72, [0, -4, 0]]],
@@ -507,7 +507,7 @@ function buildNovaCheer() {
     }),
     group('m', [
       shPath([[0, smile], [5, smile, E.out], [9, big], [12, grin], [89, grin]]),
-      stroke(C.navy, 3), fill(C.navy),
+      stroke(C.navy, 2), fill(C.navy),
     ]),
   ], { p: [312, 362, 0] }, P);
 

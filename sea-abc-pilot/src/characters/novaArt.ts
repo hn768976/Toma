@@ -9,7 +9,7 @@ import { C } from '../theme';
 export const TEX_W = 560;
 export const TEX_H = 320;
 export const FACE_ANCHOR = { x: 548, y: 160 }; // texture coords of the head front
-export const STROKE = 5; // texture units; ~3px at Nova's on-screen size
+export const STROKE = 2; // texture units; Nova is drawn at 1.52x -> ~3px on screen
 
 export const BODY_PATH =
   'M 548 165 C 552 95 490 50 420 50 C 330 50 230 95 140 135 C 115 145 95 140 75 120 ' +

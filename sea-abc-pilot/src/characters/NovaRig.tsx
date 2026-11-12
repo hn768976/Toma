@@ -9,6 +9,7 @@ export const ROPE_POINTS = 20;
 const HALF = TEX_W / 2;
 const ANCHOR_X = FACE_ANCHOR.x - HALF; // 268 in local coords
 const WAVE_K = Math.PI * 2 * 0.85; // ~0.85 wavelengths along the body
+const FRONT_COUNTER = 0.14; // slight opposite bend in the front third (S-curve)
 
 export type NovaPose = {
   x: number;
@@ -29,7 +30,9 @@ export type NovaPose = {
 const ropeY = (x: number, p: NovaPose) => {
   const s = (HALF - x) / TEX_W; // 0 at head, 1 at tail
   const env = s * s; // amplitude grows from 0 at the head to max at the tail
-  return p.amp * env * Math.sin(p.phase - WAVE_K * s) + p.bend * env;
+  // counter-bend: a small bump of opposite sign over the front third (0 at the head itself)
+  const front = s < 0.4 ? Math.sin((Math.PI * s) / 0.4) : 0;
+  return p.amp * (env - FRONT_COUNTER * front) * Math.sin(p.phase - WAVE_K * s) + p.bend * env;
 };
 
 export const novaMatrix = (p: NovaPose): Mat =>
@@ -94,7 +97,7 @@ export const NovaRig: React.FC<{ pose: NovaPose; width: number; height: number; 
       });
       app.ticker.stop();
       if (cancelled) return;
-      const texture = await rasterise(novaBodySvg(), 1.5);
+      const texture = await rasterise(novaBodySvg(), 2.2); // ~1.3 texels per screen px at 1.52x size + 1.12 zoom
       const points: Point[] = [];
       for (let i = 0; i < ROPE_POINTS; i++) points.push(new Point(-HALF + (TEX_W * i) / (ROPE_POINTS - 1), 0));
       const rope = new MeshRope({ texture, points, textureScale: 0 });

@@ -8,8 +8,9 @@ import { C, LETTER_COLORS } from '../theme';
 
 const START = 150; // global frame where this shot begins
 const LX = [330, 750, 1170, 1590];
-const LY = 440;
-const BASELINE = 593; // letter baseline = squash pivot
+const LY = 430; // visual centre of the letters
+const FONT = 500; // 25% larger than the first pilot
+const BASELINE = 608; // letter baseline = squash pivot (cap height ~356)
 const LETTERS = ['A', 'B', 'C', 'D'];
 const POP = [165, 195, 255, 285]; // C is late: Puff steals its beat at 225
 const GAG = 225;
@@ -46,115 +47,149 @@ const bounceAt = (f: number, i: number) => {
   for (const b of GROUP_BOUNCES) {
     const t = f - b - i * 2;
     if (t < -2 || t > 12) continue;
-    y = track(t, [[-2, 0, ease.inOut], [0, 8, ease.rise], [4, -62, ease.inOut], [6, -64, ease.fall], [9, 0, ease.out], [12, 0]]);
-    st = track(t, [[-2, 1, ease.inOut], [0, 0.85, ease.snap], [3, 1.14, ease.inOut], [6, 0.98, ease.in], [9, 0.84, ease.out], [11, 1.04, ease.inOut], [12, 1]]);
+    y = track(t, [[-2, 0, ease.inOut], [0, 8, ease.rise], [4, -70, ease.inOut], [6, -72, ease.fall], [9, 0, ease.out], [12, 0]]);
+    st = track(t, [[-2, 1, ease.inOut], [0, 0.85, ease.snap], [3, 1.14, ease.inOut], [6, 0.98, ease.in], [9, 0.82, ease.out], [11, 1.04, ease.inOut], [12, 1]]);
   }
   return { y, st };
 };
 
+const RING_FRAMES = 8;
 const Letter: React.FC<{ f: number; i: number }> = ({ f, i }) => {
   const P = POP[i];
   if (f < P) return null;
+  const L = P + 5; // landing frame: peak of the 0 -> 1.15 -> 1 pop
   const s = popScale(f, P);
-  const popSt = track(f, [[P, 1.28, ease.out], [P + 5, 0.9, ease.inOut], [P + 9, 1.06, ease.inOut], [P + 13, 1]]);
+  // drops in from slightly above, stretched; squashes on landing, rebounds
+  const drop = track(f, [[P, -80, ease.in], [L, 0]]);
+  const popSt = track(f, [
+    [P, 1.3, ease.inOut], [L - 1, 1.12, ease.snap], [L + 2, 0.76, ease.out], [L + 5, 1.08, ease.inOut],
+    [L + 8, 0.97, ease.inOut], [L + 11, 1],
+  ]);
   const b = bounceAt(f, i);
   const st = popSt * b.st;
   const br = f > P + 17 ? breathe(f, i * 1.7) : 1;
   const rot = track(f, [[P, -14, ease.out], [P + 6, 6, ease.inOut], [P + 11, -3, ease.inOut], [P + 16, 0]]) + (f > P + 16 ? 1.5 * wave(f, 0.5, i) : 0);
   const color = LETTER_COLORS[i % LETTER_COLORS.length];
-  const ring = f - P;
+  const idleBob = f > P + 17 ? 4 * wave(f, 0.5, i * 1.3) : 0;
+  // bold ring burst on landing: 4px, letter colour, scales out + fades over 8 frames
+  const rt = f - L;
+  const ring = rt >= 0 && rt <= RING_FRAMES ? rt / RING_FRAMES : null;
   return (
-    <>
-      {ring < 12 ? (
-        <svg width={1920} height={1080} style={{ position: 'absolute', inset: 0 }}>
-          <circle
-            cx={LX[i]}
-            cy={LY + 10}
-            r={120 + 140 * ease.out(ring / 12)}
-            fill="none"
-            stroke={color}
-            strokeWidth={14 * (1 - ease.out(ring / 12)) + 1}
-            opacity={1 - ease.in(ring / 12)}
-          />
-        </svg>
+    // SVG text (not HTML text + CSS scale): avoids a Chrome raster ghosting glitch on huge glyphs
+    <svg width={1920} height={1080} style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
+      {ring !== null ? (
+        <circle
+          cx={LX[i]}
+          cy={LY}
+          r={170 + 140 * ease.out(ring)}
+          fill="none"
+          stroke={color}
+          strokeWidth={4}
+          opacity={1 - ease.in(ring)}
+        />
       ) : null}
-      {/* SVG text (not HTML text + CSS scale): avoids a Chrome raster ghosting glitch on huge glyphs */}
-      <svg width={1920} height={1080} style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
-        <g
-          transform={`translate(${LX[i]} ${BASELINE + b.y + 4 * wave(f, 0.5, i * 1.3) * (f > P + 17 ? 1 : 0)}) rotate(${rot}) scale(${(s * br) / Math.sqrt(st)} ${s * br * Math.sqrt(st)})`}
-          fontFamily={fontFamily}
-          fontWeight={600}
-          fontSize={400}
-          textAnchor="middle"
-        >
-          <text x={0} y={14} fill="rgba(29,43,83,0.16)">
-            {LETTERS[i]}
-          </text>
-          <text x={0} y={0} fill={color}>
-            {LETTERS[i]}
-          </text>
-        </g>
-      </svg>
-    </>
+      <g
+        transform={`translate(${LX[i]} ${BASELINE + drop + b.y + idleBob}) rotate(${rot}) scale(${(s * br) / Math.sqrt(st)} ${s * br * Math.sqrt(st)})`}
+        fontFamily={fontFamily}
+        fontWeight={600}
+        fontSize={FONT}
+        textAnchor="middle"
+      >
+        <text x={0} y={16} fill="rgba(29,43,83,0.16)">
+          {LETTERS[i]}
+        </text>
+        <text x={0} y={0} fill={color}>
+          {LETTERS[i]}
+        </text>
+      </g>
+    </svg>
   );
 };
 
-/* ---------- Nova's head + horn peeking from the bottom edge ---------- */
-const TIP_Y = 645;
+/* ---------- Nova's head + horn: one rigid unit peeking up from the bottom edge ---------- */
+const TIP_Y = BASELINE + 34; // horn tip lands just under the letter, centred on it
 const HORN_LEN = 330;
-const HORN_ANG = -66;
+const HORN_REST = -66; // deg
+const HEAD_R = 190;
+const HORN_BASE = { x: 34, y: -HEAD_R + 40 }; // seated in the forehead (horn draws behind the head)
+const TUCK = 78; // horn swung down along the head: never pokes above it while entering/leaving
 
+const tipLocal = (angDeg: number) => {
+  const a = (angDeg * Math.PI) / 180;
+  return { x: HORN_BASE.x + Math.cos(a) * HORN_LEN, y: HORN_BASE.y + Math.sin(a) * HORN_LEN };
+};
+const REST_TIP = tipLocal(HORN_REST);
+const HIDDEN = -440; // lift that puts the whole head (and tucked horn) below frame
+
+// Tip x: exact under each letter on its beat, held 4 frames, then glides to the next.
 const tipXKeys: Key[] = [
-  [150, LX[0] - 20], [183, LX[0] - 20, ease.inOut], [192, LX[1] - 6, ease.inOut], [196, LX[1] - 20],
-  [213, LX[1] - 20, ease.inOut], [222, LX[2] - 6, ease.inOut], [226, LX[2] - 20],
-  [273, LX[2] - 20, ease.inOut], [282, LX[3] - 6, ease.inOut], [286, LX[3] - 20],
+  [150, LX[0]], [169, LX[0], ease.inOut], [181, LX[1]],
+  [199, LX[1], ease.inOut], [211, LX[2]],
+  [259, LX[2], ease.inOut], [271, LX[3]],
 ];
 
-const jab = (f: number, b: number): Key[] => [
-  [b - 6, 0, ease.inOut], [b - 2, -30, ease.snap], [b, 16, ease.inOut], [b + 3, -4, ease.inOut], [b + 6, 0],
+// per-beat: pull back (b-6 .. b-2), jab (b-2 .. b), exact hold (b .. b+4), dip while gliding
+const beatLift = (b: number): Key[] => [
+  [b - 6, 0, ease.inOut], [b - 2, -45, ease.snap], [b, 0, ease.hold], [b + 4, 0, ease.inOut], [b + 10, -18, ease.inOut], [b + 16, 0, ease.inOut],
+];
+const beatAng = (b: number): Key[] => [
+  [b - 6, 0, ease.inOut], [b - 2, 10, ease.snap], [b, 0, ease.hold], [b + 4, 0, ease.inOut],
 ];
 
-const liftAt = (f: number) => {
-  // entrance (on beat 165), jabs on 195/225/255/285, recoil from the spiky Puff, exit after D
-  const keys: Key[] = [
-    [150, -440], [157, -440, ease.inOut], [160, -470, ease.snap], [165, 16, ease.inOut], [169, -5, ease.inOut], [173, 0],
-    ...jab(f, 195),
-    [219, 0, ease.inOut], [223, -30, ease.snap], [225, 16, ease.inOut], [228, 0],
-    [232, 0, ease.snap], [235, -170, ease.inOut], [246, -150, ease.inOut], [250, -170, ease.inOut],
-    [253, -30, ease.snap], [255, 16, ease.inOut], [258, -4, ease.inOut], [261, 0],
-    ...jab(f, 285),
-    [294, 0, ease.inOut], [297, 18, ease.in], [305, -520],
-  ];
-  return track(f, keys);
+const LIFT: Key[] = [
+  // entrance: whole head rises with the horn tucked, horn swings up, jabs on 165
+  [150, HIDDEN], [154, HIDDEN, ease.out], [158, -30, ease.inOut], [159, -30, ease.inOut], [163, -45, ease.snap], [165, 0, ease.hold],
+  [169, 0, ease.inOut], [175, -18, ease.inOut], [181, 0, ease.inOut],
+  ...beatLift(195),
+  // 225: jabs at the C slot where Puff pops up...
+  [219, 0, ease.inOut], [223, -45, ease.snap], [225, 0, ease.hold], [229, 0, ease.out], [231, 14, ease.in],
+  // ...Puff inflates: flinch, horn tucks, the whole head slides down out of frame together
+  [237, HIDDEN, ease.hold], [245, HIDDEN, ease.out], [250, -30, ease.inOut], [253, -45, ease.snap], [255, 0, ease.hold],
+  [259, 0, ease.inOut], [265, -18, ease.inOut], [271, 0, ease.inOut],
+  ...beatLift(285),
+  // exit after D: small anticipation up, then down out of frame with the horn tucked
+  [292, 0, ease.inOut], [295, 16, ease.in], [301, HIDDEN],
+];
+const ANG: Key[] = [
+  [150, TUCK], [158, TUCK, ease.inOut], [163, 10, ease.snap], [165, 0, ease.hold], [169, 0],
+  ...beatAng(195),
+  [219, 0, ease.inOut], [223, 10, ease.snap], [225, 0, ease.hold], [229, 0, ease.inOut], [231, -6, ease.snap], [234, TUCK],
+  [246, TUCK, ease.inOut], [250, 40, ease.inOut], [253, 10, ease.snap], [255, 0, ease.hold], [259, 0],
+  ...beatAng(285),
+  [292, 0, ease.inOut], [295, TUCK, ease.inOut], [301, TUCK],
+];
+
+/** Exposed for checks: where the horn tip is at frame f (screen coords). */
+export const hornTipAt = (f: number) => {
+  const tipX = track(f, tipXKeys);
+  const lift = track(f, LIFT);
+  const lean = (tipX - track(f - 3, tipXKeys)) * 0.035;
+  const ang = HORN_REST + track(f, ANG) + lean;
+  const cx = tipX - REST_TIP.x;
+  const cy = TIP_Y - REST_TIP.y - lift;
+  const t = tipLocal(ang);
+  return { x: cx + t.x, y: cy + t.y, cx, cy, ang, lift };
 };
 
 const NovaPeek: React.FC<{ f: number }> = ({ f }) => {
-  const tipX = track(f, tipXKeys);
-  const lagX = track(f - 3, tipXKeys);
-  const lift = liftAt(f);
-  const lean = (tipX - lagX) * 0.035; // secondary tilt while sliding
-  const ang = HORN_ANG + lean + track(lift, [[-40, 6], [0, 0], [16, -4]]) + 1.2 * wave(f, 0.6);
-  const a = (ang * Math.PI) / 180;
-  const baseX = tipX - Math.cos(a) * HORN_LEN;
-  const baseY = TIP_Y - Math.sin(a) * HORN_LEN - lift;
-  const headR = 190;
-  const cx = baseX - 34;
-  const cy = baseY + headR - 14;
-  const blink = blinkAt(f, [208, 268]);
-  const sq = 1 + track(lift, [[-40, -0.05], [0, 0], [16, 0.04]]);
-  const ouch = f >= 232 && f < 252;
+  const { cx, cy, ang, lift } = hornTipAt(f);
+  if (cy - HEAD_R > 1090) return null; // fully below frame (horn is tucked then, so also hidden)
+  const blink = blinkAt(f, [208, 277]);
+  const sq = 1 + track(lift, [[-45, -0.05], [0, 0], [16, 0.04]]);
+  const ouch = f >= 231 && f < 250;
+  const idle = f > 181 && f < 189 ? 3 * wave(f, 1) : 0; // never fully still between beats
   return (
     <svg width={1920} height={1080} style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
-      <g transform={`translate(${cx} ${cy + headR}) scale(${1 / sq} ${sq}) translate(${-cx} ${-(cy + headR)})`}>
-        <g transform={`translate(${baseX} ${baseY}) rotate(${ang})`}>
+      <g transform={`translate(${cx} ${cy + HEAD_R + idle}) scale(${1 / sq} ${sq}) translate(0 ${-HEAD_R})`}>
+        <g transform={`translate(${HORN_BASE.x} ${HORN_BASE.y}) rotate(${ang})`}>
           <Horn length={HORN_LEN} width={78} sw={SW} />
         </g>
-        <circle cx={cx} cy={cy} r={headR} fill={C.coral} stroke={C.navy} strokeWidth={SW} />
-        <ellipse cx={cx - 70} cy={cy - 140} rx={12} ry={8} fill={C.coralDark} />
-        <ellipse cx={cx + 90} cy={cy - 150} rx={9} ry={6} fill={C.coralDark} />
-        {/* eye tops peeking over the frame edge, looking up at the letter */}
-        {[cx - 62, cx + 52].map((ex, k) => {
-          const ey = cy - 92;
+        <circle cx={0} cy={0} r={HEAD_R} fill={C.coral} stroke={C.navy} strokeWidth={SW} />
+        <ellipse cx={-70} cy={-140} rx={12} ry={8} fill={C.coralDark} />
+        <ellipse cx={90} cy={-150} rx={9} ry={6} fill={C.coralDark} />
+        {/* eyes looking up at the letter */}
+        {[-62, 52].map((ex, k) => {
+          const ey = -92;
           const rx = k === 0 ? 34 : 38;
           const ry = 42;
           const lid = ouch ? 0.55 : blink;
@@ -169,10 +204,15 @@ const NovaPeek: React.FC<{ f: number }> = ({ f }) => {
                   fill={C.coral}
                   stroke={C.navy}
                   strokeWidth={SW}
-                  clipPath="none"
                 />
               ) : null}
-              <path d={`M ${ex - rx * 0.7} ${ey - ry - 18 - (ouch ? -6 : 0)} Q ${ex} ${ey - ry - 30} ${ex + rx * 0.7} ${ey - ry - 20}`} stroke={C.navy} strokeWidth={5} fill="none" strokeLinecap="round" />
+              <path
+                d={`M ${ex - rx * 0.7} ${ey - ry - 18 + (ouch ? 6 : 0)} Q ${ex} ${ey - ry - 30} ${ex + rx * 0.7} ${ey - ry - 20}`}
+                stroke={C.navy}
+                strokeWidth={5}
+                fill="none"
+                strokeLinecap="round"
+              />
             </g>
           );
         })}
@@ -205,7 +245,7 @@ const PuffGag: React.FC<{ f: number }> = ({ f }) => {
             const x0 = LX[2] + zx - 160 - k * 10;
             const y0 = LY + zy + 130 + o;
             return (
-              <line key={k} x1={x0} y1={y0} x2={x0 - 260 * t * Math.cos((dirDeg * Math.PI) / 180)} y2={y0 - 260 * t * Math.sin((dirDeg * Math.PI) / 180)} stroke={C.navy} strokeWidth={8} strokeLinecap="round" opacity={fade} />
+              <line key={k} x1={x0} y1={y0} x2={x0 - 260 * t * Math.cos((dirDeg * Math.PI) / 180)} y2={y0 - 260 * t * Math.sin((dirDeg * Math.PI) / 180)} stroke={C.navy} strokeWidth={6} strokeLinecap="round" opacity={fade} />
             );
           })}
         </svg>
@@ -214,7 +254,7 @@ const PuffGag: React.FC<{ f: number }> = ({ f }) => {
         style={{
           position: 'absolute',
           left: LX[2] - PUFF_SIZE / 2 + zx,
-          top: LY - PUFF_SIZE / 2 + 10 + rise + zy,
+          top: LY - PUFF_SIZE / 2 + rise + zy,
           width: PUFF_SIZE,
           height: PUFF_SIZE,
           transformOrigin: '50% 70%',
