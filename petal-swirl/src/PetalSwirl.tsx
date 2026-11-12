@@ -1,5 +1,5 @@
 import { ThreeCanvas } from "@remotion/three";
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import * as THREE from "three";
 import { z } from "zod";
@@ -14,7 +14,7 @@ type Props = z.infer<typeof petalSwirlSchema>;
 
 /**
  * Layout traced from the reference frame (768 x 432 px). Each entry is
- * [x px, y px, radius px, height above ground, spin direction, phase].
+ * [x px, y px, radius px, height above ground, (unused), orientation].
  */
 type DiscSpec = [number, number, number, number, 1 | -1, number];
 
@@ -74,7 +74,14 @@ const BACK: DiscSpec[] = (() => {
 const CAM_Z = 30;
 const VIEW_H = 9; // world units visible at ground level
 const PX = 432 / VIEW_H;
-const LOOP_FLUTES = 3; // flute periods travelled per loop -> seamless loop
+// The reference undulates in place with a 90-frame period (3 cycles per
+// 270-frame clip), so the loop is seamless.
+const SWAY_CYCLES = 3;
+const SWAY_VARIANTS = 3;
+// Tint multipliers from the deepest layer to the top layer.
+const DEPTH_TINTS = ["#b9bccb", "#cdd0dc", "#e2e4ec", "#f2f3f6", "#ffffff"];
+const depthBucket = (h: number) =>
+  Math.max(0, Math.min(DEPTH_TINTS.length - 1, Math.floor(((h + 3.6) / 6.5) * DEPTH_TINTS.length))); // discs use 3 phase-offset geometries so they don't move in lockstep
 
 const Disc: React.FC<{
   spec: DiscSpec;
@@ -82,15 +89,14 @@ const Disc: React.FC<{
   hole: THREE.BufferGeometry;
   material: THREE.Material;
   holeMaterial: THREE.Material;
-  progress: number;
-}> = ({ spec, geometry, hole, material, holeMaterial, progress }) => {
-  const [px, py, rpx, h, dir, phase] = spec;
+}> = ({ spec, geometry, hole, material, holeMaterial }) => {
+  const [px, py, rpx, h, , phase] = spec;
   const persp = (CAM_Z - h) / CAM_Z; // keep traced screen size at height h
   const x = ((px - 384) / PX) * persp;
   const y = (-(py - 216) / PX) * persp;
   const r = (rpx / PX) * persp;
-  const rot =
-    phase + dir * ((Math.PI * 2) / DEFAULT_SHAPE.flutes) * LOOP_FLUTES * progress;
+  // Static orientation: the reference discs do not rotate, they sway in place.
+  const rot = phase;
   return (
     <group position={[x, y, h]} rotation={[0, 0, rot]} scale={[r, r, r]}>
       <mesh geometry={geometry} material={material} castShadow receiveShadow />
@@ -109,7 +115,7 @@ const Lights: React.FC<{ palette: Props["palette"] }> = ({ palette }) => {
     const l = new THREE.DirectionalLight(p.key, p.keyIntensity);
     l.position.set(-7, 9, 14);
     l.castShadow = true;
-    l.shadow.mapSize.set(2048, 2048);
+    l.shadow.mapSize.set(3072, 3072);
     const c = l.shadow.camera as THREE.OrthographicCamera;
     c.left = -13;
     c.right = 13;
@@ -117,10 +123,10 @@ const Lights: React.FC<{ palette: Props["palette"] }> = ({ palette }) => {
     c.bottom = -9;
     c.near = 1;
     c.far = 50;
-    l.shadow.radius = 14;
-    l.shadow.blurSamples = 20;
-    l.shadow.bias = -0.0008;
-    l.shadow.normalBias = 0.02;
+    l.shadow.radius = 20;
+    l.shadow.blurSamples = 24;
+    l.shadow.bias = -0.002;
+    l.shadow.normalBias = 0.05;
     return l;
   }, [p.key, p.keyIntensity]);
   return (
@@ -142,18 +148,33 @@ export const PetalSwirl: React.FC<Props> = ({ palette }) => {
   const p = PALETTES[palette];
   const progress = frame / durationInFrames;
 
-  const geometry = useMemo(() => buildDiscGeometry(), []);
-  const hole = useMemo(() => buildHoleGeometry(), []);
-  const material = useMemo(
+  const sway = progress * SWAY_CYCLES * Math.PI * 2;
+  const geometries = useMemo(
     () =>
-      new THREE.MeshStandardMaterial({
-        color: p.disc,
-        roughness: 0.52,
+      Array.from({ length: SWAY_VARIANTS }, (_, k) =>
+        buildDiscGeometry(DEFAULT_SHAPE, sway + (k * Math.PI * 2) / SWAY_VARIANTS),
+      ),
+    [sway],
+  );
+  useEffect(() => () => geometries.forEach((g) => g.dispose()), [geometries]);
+  const hole = useMemo(() => buildHoleGeometry(), []);
+  // Satin, slightly pearlescent finish like the reference. Deeper discs get
+  // a slightly darker, cooler tint (as in the reference, where the lower
+  // layers read grey-lavender), bucketed into a few shared materials.
+  const materials = useMemo(
+    () =>
+      DEPTH_TINTS.map((t) => new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color(p.disc).multiply(new THREE.Color(t)),
+        roughness: 0.42,
         metalness: 0,
+        clearcoat: 0.45,
+        clearcoatRoughness: 0.35,
+        sheen: 0.25,
+        sheenColor: new THREE.Color(p.sheen),
         vertexColors: true,
         side: THREE.DoubleSide,
-      }),
-    [p.disc],
+      })),
+    [p.disc, p.sheen],
   );
   const holeMaterial = useMemo(
     () => new THREE.MeshStandardMaterial({ color: p.hole, roughness: 0.8 }),
@@ -189,11 +210,10 @@ export const PetalSwirl: React.FC<Props> = ({ palette }) => {
           <Disc
             key={i}
             spec={spec}
-            geometry={geometry}
+            geometry={geometries[i % SWAY_VARIANTS]}
             hole={hole}
-            material={material}
+            material={materials[depthBucket(spec[3])]}
             holeMaterial={holeMaterial}
-            progress={progress}
           />
         ))}
       </ThreeCanvas>

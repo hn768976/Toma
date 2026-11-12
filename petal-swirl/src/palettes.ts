@@ -9,6 +9,7 @@ export type Palette = {
   keyIntensity: number;
   fill: string;
   fillIntensity: number;
+  sheen: string;
   exposure: number;
 };
 
@@ -16,16 +17,17 @@ export const PALETTES: Record<"pearl" | "blush", Palette> = {
   // Version 1: matches the reference - pearl white discs, cool lavender
   // shadows and a soft warm key light.
   pearl: {
-    background: "#7d7f93",
-    disc: "#f3f3f1",
+    background: "#868a9c",
+    disc: "#f3f4f5",
     hole: "#9a9ba8",
-    sky: "#dde4fb",
-    ground: "#b3ada5",
-    hemiIntensity: 1.5,
-    key: "#fff3e2",
-    keyIntensity: 1.8,
-    fill: "#aabcff",
+    sky: "#e3e8f8",
+    ground: "#a9adb8",
+    hemiIntensity: 1.25,
+    key: "#fff8ee",
+    keyIntensity: 1.95,
+    fill: "#b8c6ea",
     fillIntensity: 0.4,
+    sheen: "#fff6e8",
     exposure: 1.0,
   },
   // Version 2: alternative palette - blush rose discs under a golden
@@ -41,6 +43,7 @@ export const PALETTES: Record<"pearl" | "blush", Palette> = {
     keyIntensity: 1.65,
     fill: "#c99ad6",
     fillIntensity: 0.45,
+    sheen: "#ffe6ea",
     exposure: 1.0,
   },
 };

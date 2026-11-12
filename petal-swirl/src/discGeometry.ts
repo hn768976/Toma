@@ -3,10 +3,11 @@ import * as THREE from "three";
 /**
  * Procedural fluted "swirl rosette" disc.
  *
- * The surface is a polar grid. Each radial flute follows a spiral
- * (phi = theta + twist * u^0.85), the rim is scalloped in sync with the
- * flutes and lifts slightly like a shallow bowl. Normals are computed
- * analytically with central differences so there is no seam at theta = 0.
+ * The surface is a polar grid. Flutes start near-radial at the hole and
+ * bend into a gentle swirl toward the rim; the rim lifts like a shallow bowl
+ * with a soft irregular ruffle. `sway` (radians) animates the flutes in
+ * place - no net rotation - matching the reference's 90-frame undulation.
+ * Normals use central differences so there is no seam at theta = 0.
  */
 export type DiscShape = {
   flutes: number;
@@ -18,10 +19,10 @@ export type DiscShape = {
 
 export const DEFAULT_SHAPE: DiscShape = {
   flutes: 22,
-  twist: 1.25,
-  depth: 0.016,
+  twist: -0.85, // negative = flutes curve clockwise outward, as in the reference
+  depth: 0.015,
   bowl: 0.08,
-  scallop: 0.028,
+  scallop: 0.014,
 };
 
 const smoothstep = (a: number, b: number, x: number) => {
@@ -35,27 +36,40 @@ const surface = (
   u: number,
   theta: number,
   s: DiscShape,
+  sway: number,
   out: THREE.Vector3,
 ): THREE.Vector3 => {
-  const phi = theta + s.twist * Math.pow(u, 0.85);
+  // Near-radial at the hole, bending into a gentle swirl toward the rim.
+  const bend = s.twist * Math.pow(smoothstep(0.1, 1.0, u), 1.4);
+  // In-place sway (no net rotation): the whole swirl leans back and forth
+  // while neighbouring flutes pinch together and apart in antiphase.
+  const lean = 0.07 * Math.sin(sway) * Math.pow(u, 1.2);
+  const pinch =
+    0.03 * Math.sin(sway + 0.8) * Math.cos((s.flutes / 2) * theta) * u * u;
+  const phi = theta + bend + lean + pinch;
   const wave = Math.sin(s.flutes * phi);
-  // Slightly sharpened crest profile so ridges read as folds.
-  const crest = Math.sign(wave) * Math.pow(Math.abs(wave), 0.9);
+  const crest = wave;
   const rim = 1 + s.scallop * Math.pow(u, 5) * Math.sin(s.flutes * phi + 0.6);
   const rho = Math.max(u, HOLE) * rim;
-  const amp = s.depth * smoothstep(HOLE, 0.38, u) * (0.55 + 0.45 * u);
+  // Flutes are shallow and fade out toward the centre hole.
+  const amp = s.depth * smoothstep(0.08, 0.6, u) * (0.6 + 0.4 * u);
   // Shallow bowl + soft dimple into the centre hole.
   const base = s.bowl * u * u - 0.05 * Math.exp(-Math.pow(u / 0.07, 2));
-  // Rim undulates up and down with the flutes like a soft ruffle.
-  const ruffle = 0.03 * Math.pow(u, 6) * Math.sin(s.flutes * phi + 1.2);
+  // Soft, irregular ruffle on the rim that undulates with the sway.
+  const ruffle =
+    Math.pow(u, 6) *
+    (0.018 * Math.sin(s.flutes * phi + 1.2) +
+      0.022 * Math.sin(5 * theta + 2.0 + 0.9 * Math.sin(sway)) +
+      0.012 * Math.sin(8 * theta + 0.7 - 0.9 * Math.cos(sway)));
   const z = base + amp * crest + ruffle;
   return out.set(rho * Math.cos(theta), rho * Math.sin(theta), z);
 };
 
 export const buildDiscGeometry = (
   shape: DiscShape = DEFAULT_SHAPE,
-  radialSegments = 64,
-  angularSegments = 330,
+  sway = 0,
+  radialSegments = 96,
+  angularSegments = 528,
 ): THREE.BufferGeometry => {
   const rows = radialSegments + 1;
   const cols = angularSegments + 1;
@@ -79,11 +93,11 @@ export const buildDiscGeometry = (
     for (let j = 0; j < cols; j++) {
       const theta = (j / angularSegments) * Math.PI * 2;
       const k = (i * cols + j) * 3;
-      surface(u, theta, shape, p);
-      surface(Math.max(0, u - eps), theta, shape, pu0);
-      surface(u + eps, theta, shape, pu1);
-      surface(u, theta - eps, shape, pt0);
-      surface(u, theta + eps, shape, pt1);
+      surface(u, theta, shape, sway, p);
+      surface(Math.max(0, u - eps), theta, shape, sway, pu0);
+      surface(u + eps, theta, shape, sway, pu1);
+      surface(u, theta - eps, shape, sway, pt0);
+      surface(u, theta + eps, shape, sway, pt1);
       du.subVectors(pu1, pu0);
       dt.subVectors(pt1, pt0);
       n.crossVectors(du, dt).normalize();
