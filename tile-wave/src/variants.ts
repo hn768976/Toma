@@ -23,9 +23,9 @@ export const LOOK: Look = {
   // Pillars raised above the surface (crater rim / snap-shut pop).
   upStops: [
     { height: 0.0, color: "#fff4f3" },
-    { height: 0.6, color: "#f3c0e2" },
-    { height: 1.5, color: "#e08edc" },
-    { height: 3.0, color: "#b866da" },
+    { height: 1.0, color: "#f6d4ea" },
+    { height: 2.0, color: "#e08edc" },
+    { height: 3.2, color: "#b866da" },
   ],
   background: "#fff6f4",
   shadowTint: "#a95cc4",
@@ -58,7 +58,7 @@ export const cameraFor = (variant: VariantName) => (frame: number): CameraState 
     return {
       position: orbit(target, 43, 1.1, 2.88),
       target,
-      roll: 2.36,
+      roll: 2.24,
       fov: 40,
       shiftX: 0.18,
     };

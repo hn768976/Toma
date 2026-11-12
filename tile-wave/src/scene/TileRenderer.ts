@@ -21,9 +21,10 @@ export type CameraState = {
 };
 
 const MAX_STOPS = 8;
-const TILE_SIZE = 0.995; // plates butt together: the resting surface reads as one flat sheet
+const TILE_SIZE = 1.0; // plates butt together: the resting surface reads as one flat sheet
 const TILE_THICKNESS = 0.16;
 const CURL = 0.55; // bend per radian of tilt
+const BLADE_STRETCH = 10.0; // extra length (in tiles) of a fully drawn-out blade
 
 const VERT = /* glsl */ `
 attribute vec4 aCurl; // (gx, gy) local slope direction, curl amount, stretch
@@ -268,8 +269,11 @@ export class TileRenderer {
       this.mesh.setMatrixAt(k, d.matrix);
       // Tiles curl as they tip: the bend follows the tilt (sign included).
       const t = Math.abs(p.tilt);
-      const stretch = 1 + Math.min(0.85, (1 / Math.cos(Math.min(t, 1.2)) - 1) * 1.3 + 0.25 * Math.min(1, t / 0.15));
-      this.curl.setXYZW(k, p.gx, p.gy, CURL * p.tilt, stretch);
+      const stretch =
+        1 + Math.min(0.85, (1 / Math.cos(Math.min(t, 1.2)) - 1) * 1.3 + 0.25 * Math.min(1, t / 0.15)) + BLADE_STRETCH * p.blade;
+      // Long blades curl gently (bend scaled down by the stretch so the tip lifts, not the whole blade).
+      const curl = (CURL * p.tilt) / (1 + 0.6 * BLADE_STRETCH * p.blade);
+      this.curl.setXYZW(k, p.gx, p.gy, curl, stretch);
     }
     this.mesh.instanceMatrix.needsUpdate = true;
     this.curl.needsUpdate = true;

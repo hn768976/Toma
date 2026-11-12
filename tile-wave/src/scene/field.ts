@@ -12,50 +12,50 @@ export const MAX_DEPTH = 4.0; // depth of the valley floor, in tile units
 
 type Seg = { ax: number; ay: number; bx: number; by: number; depth: number; width: number };
 
-// Staircase path in grid coordinates (u along the valley, v across it).
-// Main branch runs through the centre; a shallower side branch splits off
-// towards the lower-left, like the reference.
-const MAIN: [number, number][] = [
-  [-44, 4],
-  [-30, 4],
-  [-30, -1],
-  [-23, -1],
-  [-23, -8],
-  [-15, -8],
-  [-15, -3],
-  [-8, -3],
-  [-8, 4],
-  [-1, 4],
-  [-1, -1],
-  [6, -1],
-  [6, 6],
-  [13, 6],
-  [13, 0],
-  [20, 0],
-  [20, -6],
-  [27, -6],
-  [27, 1],
-  [36, 1],
-  [36, -3],
-  [48, -3],
-];
+// Deterministic PRNG for the path layout.
+const mulberry32 = (seed: number) => () => {
+  seed |= 0;
+  seed = (seed + 0x6d2b79f5) | 0;
+  let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
 
-const BRANCH: [number, number][] = [
-  [-23, -6],
-  [-23, -13],
-  [-30, -13],
-  [-30, -19],
-  [-40, -19],
-];
+// "Lightning-bolt" path in grid coordinates (u along the valley, v across
+// it): short runs of 3-5 tiles along u alternate with 3-5 tile jogs in v that
+// switch direction (zig-zag), so every step follows the tile grid.
+const lightning = (u0: number, v0: number, u1: number, seed: number, dirU: 1 | -1, driftV: number) => {
+  const rnd = mulberry32(seed);
+  const pts: [number, number][] = [[u0, v0]];
+  let u = u0;
+  let v = v0;
+  let side = 1;
+  while (dirU > 0 ? u < u1 : u > u1) {
+    u += dirU * (4 + Math.floor(rnd() * 3));
+    pts.push([u, v]);
+    const jog = 3 + Math.floor(rnd() * 3);
+    const centre = v0 + driftV * Math.abs(u - u0);
+    // Zig-zag about the drift line, never wandering more than ~4 tiles off it.
+    if (Math.abs(v + side * jog - centre) > 4.5) side = -side;
+    v += side * jog;
+    side = -side;
+    pts.push([u, v]);
+  }
+  return pts;
+};
 
-// Path control points are authored at unit scale and enlarged here.
-const PATH_SCALE = 1.4;
+// Along-band / across-band coordinates in grid space.
+export const alongBand = (x: number, _y: number) => x;
+export const acrossBand = (_x: number, y: number) => y;
+
+const MAIN = lightning(-80, 0, 80, 7, 1, 0);
+// Shallower side branch splitting off towards the lower-left, like the reference.
+const BRANCH = lightning(-26, -2, -60, 11, -1, 0.5);
 
 const toSegs = (pts: [number, number][], depth: number, width: number): Seg[] => {
   const out: Seg[] = [];
-  const k = PATH_SCALE;
   for (let i = 0; i < pts.length - 1; i++) {
-    out.push({ ax: pts[i][0] * k, ay: pts[i][1] * k, bx: pts[i + 1][0] * k, by: pts[i + 1][1] * k, depth, width });
+    out.push({ ax: pts[i][0], ay: pts[i][1], bx: pts[i + 1][0], by: pts[i + 1][1], depth, width });
   }
   return out;
 };
@@ -108,6 +108,7 @@ export type Cell = {
   jitter: number; // small per-cell depth variation
   rnd: number; // per-cell random amplitude for the rim / pop motion
   rnd2: number;
+  colRnd: number; // per-column random: which columns form long blades
 };
 
 export const CELLS: Cell[] = (() => {
@@ -140,10 +141,11 @@ export const CELLS: Cell[] = (() => {
         widthMul: n.widthMul,
         // Random per-cell jitter, a little lag away from the axis, and a
         // travelling delay along the path (the lower-left end leads).
-        delay: hash(i, j, 1) * 0.05 + n.best * 0.008 + (x + half) * 0.0011,
+        delay: hash(i, j, 1) * 0.05 + n.best * 0.008 + (alongBand(x, y) + half) * 0.0011 + Math.abs(alongBand(x, y)) * 0.0022,
         jitter: hash(i, j, 2) - 0.5,
         rnd: hash(i, j, 3),
         rnd2: hash(i, j, 4),
+        colRnd: hash(i, 77, 9),
       });
     }
   }
@@ -168,15 +170,17 @@ export const opening = (phase: number) => {
     const u = (p - 0.7) / 0.1;
     return -0.3 * Math.sin(Math.PI * Math.pow(u, 0.6)) * (1 - 0.5 * u);
   }
-  return 0;
+  // Rest: a faint residual slit that fades out just before the next rise.
+  const r = (p - 0.8) / 0.2;
+  return 0.03 * Math.sin(Math.PI * Math.min(1, r * 1.4));
 };
 
 // Phase offset so frame 0 starts on a freshly opening slit (as the reference does).
 export const PHASE_OFFSET = 0.12;
 
-const W_MAX = 4.4; // half width of the fully open valley, in cells
+const W_MAX = 5.0; // half width of the fully open valley, in cells
 const RIM_LIFT = 2.6; // how far the crater-rim tiles rise while open
-const POP_LIFT = 3.0; // flick height when the valley snaps shut
+const POP_LIFT = 1.2; // flick height when the valley snaps shut
 const TILT_GAIN = 1.15; // exaggerates the slope -> tiles stand up as fins
 const MAX_TILT = 1.1; // radians (~63 deg)
 
@@ -197,27 +201,64 @@ export type Pose = {
   tilt: number; // radians; positive tips the tile's top face towards the axis
   gx: number;
   gy: number;
+  blade: number; // 0..1: how far the tile is drawn out into a long blade
+};
+
+// While the valley closes, tiles around the path are drawn out into long,
+// shingled blades across the band (as in the reference), then relax.
+const bladeEnv = (p: number) => {
+  const q = ((p % 1) + 1) % 1;
+  // Closing: blades grow as the valley narrows, then relax during the rest.
+  const closing = smoothstep(0.5, 0.68, q) * (1 - smoothstep(0.84, 0.96, q));
+  // Opening slit: the first tiles to tip are drawn out too.
+  const w = q > 0.5 ? q - 1 : q;
+  const opening = Math.exp(-Math.pow((w - 0.03) / 0.07, 2)) * 0.8;
+  return Math.max(closing, opening);
+};
+const BLADE_REACH = 7.0; // cells from the axis that form blades
+const BLADE_TILT = 0.22; // radians
+
+// Blades all point straight across the band (as in the reference); tiles
+// blend from their local slope direction towards that as they are drawn out.
+const bladeDir = (c: Cell, blade: number): [number, number] => {
+  const side = c.gy !== 0 ? Math.sign(c.gy) : c.rnd < 0.5 ? -1 : 1;
+  const ax = 0;
+  const ay = side;
+  const k = Math.min(1, blade * 2.5);
+  const x = c.gx + (ax - c.gx) * k;
+  const y = c.gy + (ay - c.gy) * k;
+  const l = Math.hypot(x, y) || 1;
+  return [x / l, y / l];
 };
 
 /** Pose of a tile at `frame`: height plus a tilt about the axis across the slope. */
 export const cellPose = (c: Cell, frame: number): Pose => {
   const phase = frame / CYCLE_FRAMES + PHASE_OFFSET - c.delay;
   const a = opening(phase);
+  const reachB = Math.max(0, 1 - c.dist / BLADE_REACH) * c.strength;
+  // Rows stay in step: a gentle per-row variation only.
+  // Whole columns across the band are drawn out together, so neighbouring
+  // tiles overlap into one long shingled strip; the columns between stay flat.
+  const colSel = smoothstep(0.55, 0.7, c.colRnd);
+  const blade = bladeEnv(phase) * Math.pow(reachB, 0.7) * colSel * (0.75 + 0.25 * c.rnd2);
   if (a < 0) {
-    // Snap-shut flick: tiles near the path pop up and flip over, then settle.
+    // Snap-shut: tiles near the path lift and roll over together, then settle.
     const reach = Math.max(0, 1 - c.dist / 7.5);
     const amt = -a * reach * c.strength;
     return {
-      h: amt * POP_LIFT * (0.25 + 1.1 * c.rnd * c.rnd),
-      tilt: amt * (2.2 + 2.5 * c.rnd2) * (c.rnd < 0.5 ? -1 : 1),
-      gx: c.gx,
-      gy: c.gy,
+      h: amt * POP_LIFT * (0.35 + 0.3 * c.rnd),
+      tilt: BLADE_TILT * blade + amt * (0.6 + 0.3 * c.rnd2),
+      gx: bladeDir(c, blade)[0],
+      gy: bladeDir(c, blade)[1],
+      blade,
     };
   }
   const base = profile(c.dist, a, c.strength);
+  const [bx, by] = bladeDir(c, blade);
   const slope = (profile(c.dist + 0.5, a, c.strength) - profile(c.dist - 0.5, a, c.strength));
   const depthNoise = base < 0 ? 1 + 0.07 * c.jitter : 0.3 + 0.9 * Math.pow(c.rnd, 1.4);
   const h = base * depthNoise;
-  const tilt = Math.max(-MAX_TILT, Math.min(MAX_TILT, Math.atan(slope * TILT_GAIN) * (0.85 + 0.3 * c.rnd2)));
-  return { h, tilt, gx: c.gx, gy: c.gy };
+  const slopeTilt = Math.atan(slope * TILT_GAIN) * (0.85 + 0.3 * c.rnd2);
+  const tilt = Math.max(-MAX_TILT, Math.min(MAX_TILT, slopeTilt + BLADE_TILT * blade));
+  return { h, tilt, gx: bx, gy: by, blade };
 };
