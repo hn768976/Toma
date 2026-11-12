@@ -61,7 +61,7 @@ const LOOK = {
   targetX: 0,
   targetZ: 0,
   // Rendering
-  exposure: 1.35,
+  exposure: 1.5,
   focusRange: 12,
   maxBlur: 18, // px at 2160p
 };
