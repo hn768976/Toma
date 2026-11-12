@@ -34,7 +34,7 @@ const LOOK = {
   maxRadius: 0.5,
   minLength: 0.25, // flat pins: tiny heads on short stubs
   maxLength: 1.5, // stalk length of fully raised pins
-  stalkRatio: 0.95, // stalk radius relative to head radius
+  stalkRatio: 1.0, // stalk radius relative to head radius
   minStalk: 0.035,
   // Height field
   wavelength: 20,
@@ -61,7 +61,7 @@ const LOOK = {
   targetX: 0,
   targetZ: 0,
   // Rendering
-  exposure: 1.5,
+  exposure: 1.62,
   focusRange: 12,
   maxBlur: 18, // px at 2160p
 };
@@ -82,7 +82,7 @@ const fieldFrom = (L: Look): FieldParams => ({
 
 const COLORS = {
   plate: "#bcc2cd",
-  background: "#cdd3dc", // also the haze colour of the far field
+  background: "#dde2e8", // also the haze colour of the far field
   pin: "#f6f6f4",
   sky: "#ffffff",
   ground: "#5d6578",
@@ -203,8 +203,12 @@ const buildScene = (canvas: HTMLCanvasElement, width: number, height: number): S
   // Pins: a spherical head on a thin stalk. Per-instance matrices place,
   // scale and lift them every frame.
   const count = GRID * GRID;
+  // The stalk has exactly the head's radius, ends at the head's equator and
+  // uses the same 20 segments, phase-aligned (thetaStart = -PI/2) with the
+  // sphere's equator ring, so their vertices coincide and the head/stalk
+  // junction is seamless at any viewing angle (no faceted intersection seam).
   const headGeo = new THREE.SphereGeometry(1, 20, 14);
-  const stalkGeo = new THREE.CylinderGeometry(1, 1, 1, 10, 1, true);
+  const stalkGeo = new THREE.CylinderGeometry(1, 1, 1, 20, 1, true, -Math.PI / 2);
   stalkGeo.translate(0, 0.5, 0); // base at y = 0, top at y = 1
   const material = new THREE.MeshStandardMaterial({
     color: COLORS.pin,
