@@ -209,11 +209,11 @@ export const createFiberRenderer = (variant: FiberVariant, fps: number, duration
     const hazeCount = 60;
     const hazeSpots = Array.from({ length: hazeCount }, () => ({
       sx: R(-HALF_W * 1.3, HALF_W * 1.3),
-      sy: rng() < 0.7 ? R(-HALF_H * 1.1, -HALF_H * 0.35) : R(HALF_H * 0.45, HALF_H * 1.1),
+      sy: R(-HALF_H * 1.1, HALF_H * 1.1),
       depth: R(30, 45),
-      size: R(2.5, 4.5),
+      size: R(3.5, 6.0),
       slot: Math.floor(rng() * 1000),
-      energy: R(0.05, 0.12),
+      energy: R(0.035, 0.085),
       drift: R(-0.1, 0.1),
     }));
     const reflGeo = createBokehGeometry(reflSources.length + headCount + hazeCount, rng);
@@ -225,8 +225,8 @@ export const createFiberRenderer = (variant: FiberVariant, fps: number, duration
 
     // ---------------------------------------------------------- colour waves
     const seq = variant.sequence;
-    const WAVE_RATE = 1.0; // themes per second passing a fixed point
-    const WAVE_LEN = 9; // focal-plane units per theme
+    const WAVE_RATE = 2.0; // theme slots per second (0.5 s per slot)
+    const WAVE_LEN = 22; // focal-plane units per slot: colour sweeps gently from left to right
     const themeColor = (phase: number, slot: number, out: number[]) => {
       const k = Math.floor(phase);
       const fr = phase - k;
@@ -244,7 +244,7 @@ export const createFiberRenderer = (variant: FiberVariant, fps: number, duration
       }
       return out;
     };
-    const phaseAt = (sx: number, t: number) => t * WAVE_RATE - sx / WAVE_LEN + 0.3;
+    const phaseAt = (sx: number, t: number) => t * WAVE_RATE - sx / WAVE_LEN;
     const reveal = (sx: number, sy: number, t: number, delay = 0) => {
       // light enters from the lower-left during the first ~1.5 s
       const g = (sx / HALF_W + (sy / HALF_H) * 0.6 + 1.6) / 3.2;
@@ -348,9 +348,10 @@ export const createFiberRenderer = (variant: FiberVariant, fps: number, duration
           reflGeo.spacings[r] = 0;
           themeColor(phaseAt(sx, t), hz.slot, col);
           const vis = reveal(sx, hz.sy, t);
-          reflGeo.colors[r * 3] = col[0];
-          reflGeo.colors[r * 3 + 1] = col[1];
-          reflGeo.colors[r * 3 + 2] = col[2];
+          // blue-grey ambient haze tinted by the current light colour
+          reflGeo.colors[r * 3] = col[0] * 0.5 + 0.45 * 0.5;
+          reflGeo.colors[r * 3 + 1] = col[1] * 0.5 + 0.5 * 0.5;
+          reflGeo.colors[r * 3 + 2] = col[2] * 0.5 + 0.65 * 0.5;
           reflGeo.energies[r] = hz.energy * vis;
           r++;
         }
@@ -386,7 +387,7 @@ export const createFiberRenderer = (variant: FiberVariant, fps: number, duration
         ru.uLod.value = 5;
         ru.uDisc.value = 0;
         ru.uGain.value = 1;
-        ru.uStretch.value = 1.7;
+        ru.uStretch.value = 1.25;
 
         const fadeIn = smoothstep(0.0, 1.5, t);
         pipeline.render(scene, camera, {

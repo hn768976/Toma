@@ -86,9 +86,9 @@ export const referenceVariant: DnaVariant = {
     const k = u * 0.55 + u * u * 0.45; // push accelerates into the shot
     return rigToCamera(mixRig(V1_START, V1_END, k));
   },
-  exposure: 3.3,
-  bloomNear: 0.75,
-  bloomWide: 0.5,
+  exposure: 2.6,
+  bloomNear: 0.65,
+  bloomWide: 0.42,
 };
 
 const V2_START: Rig = { target: [4.5, -0.3, 0], dist: 7.0, yaw: 150, elev: -22, roll: 18, fov: 40, focusOffset: 0, aperture: 0.55 };
@@ -98,5 +98,8 @@ const V2_END: Rig = { target: [9, -0.7, 0], dist: 5.6, yaw: 100, elev: -8, roll:
 export const orbitVariant: DnaVariant = {
   ...referenceVariant,
   id: "v2",
+  exposure: 3.3,
+  bloomNear: 0.75,
+  bloomWide: 0.5,
   camera: (t, duration) => rigToCamera(mixRig(V2_START, V2_END, easeInOut(t / duration))),
 };
