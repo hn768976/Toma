@@ -246,6 +246,6 @@ export const glowFragment = /* glsl */ `
     float g = exp(-d * d * 3.2) * (1.0 - smoothstep(0.85, 1.0, d));
     // dither so stacked soft glows don't band in 8-bit output
     float n = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
-    gl_FragColor = vec4(max(uColor * g * uIntensity + n / 255.0 * step(0.002, g), 0.0), 1.0);
+    gl_FragColor = vec4(max(uColor * g * uIntensity + n * 2.0 / 255.0 * step(0.002, g), 0.0), 1.0);
   }
 `;

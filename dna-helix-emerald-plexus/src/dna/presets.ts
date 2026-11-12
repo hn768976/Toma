@@ -70,25 +70,25 @@ const helix: HelixStyle = {
 };
 
 const field = (box: FieldStyle["box"], clearRadius?: number): FieldStyle => ({
-  nodes: 620,
+  nodes: 850,
   clearRadius,
   box,
   k: 3,
-  maxDist: 2.0,
+  maxDist: 1.5,
   lineColor: hex("#cfd6cf"),
-  lineAlpha: 0.4,
+  lineAlpha: 0.26,
   lineWidth: 1.3,
   nodeKind: 2,
   nodeColor: hex("#f2f6f2"),
-  nodeSize: [18, 26],
-  nodeAlpha: 0.9,
+  nodeSize: [24, 34],
+  nodeAlpha: 1,
   facetChance: 0,
   facetAlpha: 0,
-  dust: 1400,
+  dust: 2200,
   dustBox: box,
   dustColors: [hex("#8fd08a"), hex("#c8d8c8"), hex("#5fbf5a"), hex("#d8e85a"), hex("#c8d040")],
-  dustSize: [3, 6],
-  dustAlpha: [0.3, 0.75],
+  dustSize: [3.5, 7],
+  dustAlpha: [0.4, 0.9],
 });
 
 /**
@@ -100,18 +100,18 @@ const field = (box: FieldStyle["box"], clearRadius?: number): FieldStyle => ({
 const trackingRig = (t: number, dur: number): Rig => {
   const u = t / dur;
   const s = soft(u);
-  const camX = lerp(0.9, -0.85, s);
+  const camX = lerp(1.18, -0.85, s);
   const camY = lerp(-0.3, 0.6, s);
   return {
-    camPos: [camX, camY, 3.95],
+    camPos: [camX, camY, lerp(3.35, 3.95, smooth(u / 0.55))],
     target: [camX + 0.05, camY + 0.15, 0],
     fov: 40,
     roll: 0,
     helixPos: [0, 0, 0],
     helixSpin: 2.2 + 0.2 * t,
     helixTilt: [lerp(0.12, -0.42, smooth(u * 1.15 - 0.1)), lerp(0.14, -0.3, s)],
-    focus: 3.2,
-    glow: lerp(1, 0.6, smooth((u - 0.35) / 0.65)),
+    focus: lerp(3.65, 4.1, smooth(u / 0.55)),
+    glow: lerp(0.6, 1, smooth(u / 0.3)) * lerp(1, 0.6, smooth((u - 0.4) / 0.6)),
   };
 };
 
@@ -142,11 +142,11 @@ const orbitRig = (t: number, dur: number): Rig => {
 
 const glow = {
   color: hex("#1c8f22"),
-  intensity: 0.15,
-  size: 3.4,
+  intensity: 0.17,
+  size: 3.0,
   spacing: 0.45,
-  offset: [-0.35, 0.2] as const,
-  yRange: [-0.6, 2.2] as const,
+  offset: [-0.45, 0.1] as const,
+  yRange: [0.0, 2.0] as const,
 };
 const glowOrbit = { ...glow, offset: [0, 0] as const, yRange: [-3.5, 3.5] as const, intensity: 0.13 };
 
@@ -165,7 +165,7 @@ export const PRESETS = {
     helix,
     field: field({ x: [1.3, 12], y: [-6, 7], z: [-10, 0.4] }),
     glow,
-    dof: { aperture: 50, fieldApertureScale: 1.0, maxCoc: 90, ringAmount: 0.1, refDepth: 4.0 },
+    dof: { aperture: 62, fieldApertureScale: 0.85, maxCoc: 90, ringAmount: 0.1, refDepth: 4.0 },
     gain: { points: 1, lines: 1, facets: 1 },
     twinkle: 0.4,
     rig: trackingRig,
