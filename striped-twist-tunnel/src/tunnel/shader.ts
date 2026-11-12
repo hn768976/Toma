@@ -186,7 +186,7 @@ void main() {
   vec2 cell = floor(frag / fleckCell);
   vec2 fc = (cell + vec2(hash12(cell), hash12(cell + 17.0))) * fleckCell;
   float fr = fleckCell / 9.0;
-  float fleck = step(0.985, hash12(cell + 3.1)) * smoothstep(2.2 * fr, 0.8 * fr, length(frag - fc));
+  float fleck = step(0.9925, hash12(cell + 3.1)) * smoothstep(2.2 * fr, 0.8 * fr, length(frag - fc));
   col = mix(col, uPaper * 1.08, fleck * 0.45);
 
   // Film grain and a gentle vignette.

@@ -16,8 +16,8 @@ const hex = (h: string): Rgb => {
 
 /** Version 1 – matches the reference: navy-black ink on warm off-white paper. */
 export const MONOCHROME: TunnelLook = {
-  ink: hex("#0c1f24"),
-  paper: hex("#d6d9d4"),
+  ink: hex("#11292f"),
+  paper: hex("#eceee8"),
   deep: hex("#97a5b0"),
   deepInk: hex("#2c3e48"),
   fog: hex("#a4b2bc"),

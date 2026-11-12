@@ -23,15 +23,15 @@ export type StripedTunnelProps = z.infer<typeof stripedTunnelSchema>;
 
 // Geometry / camera tuned against the reference.
 const BASE_SCENE = {
-  segTwist: -1.8, // strong twist between rings -> folded, curved silhouettes
-  segGrowth: 2.9, // each ring sits 2.9x deeper ...
-  segShrink: 1.0, // ... at the same size, so it looks ~0.35x smaller
+  segTwist: -1.95, // strong twist between rings -> folded, curved silhouettes
+  segGrowth: 3.6, // each ring sits 3.6x deeper ...
+  segShrink: 1.0, // ... at the same size, so it looks ~0.28x smaller
   z0: 1.0,
   circumradius: 1.6,
-  pairsPerFace: 11,
+  pairsPerFace: 8,
   fov: 0.6,
-  lookYaw: 0.035, // vanishing point slightly left of centre (as in reference)
-  lookPitch: 0.0, // ... and slightly below centre
+  lookYaw: -0.025, // vanishing point slightly left of centre (as in reference)
+  lookPitch: 0.012, // ... and slightly below centre
   roll: 0.0,
   baseRot: 0.35,
   depthNear: 0.3, // ring index where the blue-grey depth tint starts
