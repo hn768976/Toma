@@ -112,7 +112,7 @@ void main() {
 
   // sheet glows from within (back-lit), dims where it turns away
   float sheetLum = 0.18 + 1.0 * smoothstep(0.25, 0.95, dif1 * 0.55 + dif2 * 0.75);
-  vec3 sheet = mix(uBase, uBaseHi, smoothstep(0.75, 1.2, sheetLum) * 0.75) * sheetLum * 1.12;
+  vec3 sheet = mix(uBase, uBaseHi, smoothstep(0.75, 1.2, sheetLum) * 0.75) * sheetLum * 1.2;
 
   vec3 rib = mix(uRibbon, uRibbonAlt, clamp(uProgress * 1.3 - 0.25 + 0.3 * sin(h * 1.3 + t * 0.2), 0.0, 1.0));
   float ribLum = 0.05 + 1.5 * pow(clamp(dif1 * 0.9 + dif2 * 0.35, 0.0, 1.0), 2.4);

@@ -19,7 +19,7 @@ export const LiquidGlitterSilk: React.FC<LiquidGlitterSilkProps> = ({ palette })
   const progress = frame / (durationInFrames - 1);
 
   const ease = Easing.inOut(Easing.sin);
-  const rotation = interpolate(progress, [0, 1], [-0.25, 0.72], { easing: ease });
+  const rotation = interpolate(progress, [0, 1], [0.4, 1.45], { easing: ease });
   const zoom = interpolate(progress, [0, 1], [4.0, 3.4], { easing: ease });
   const panX = interpolate(progress, [0, 1], [0.1, 0.55], { easing: ease });
   const panY = interpolate(progress, [0, 1], [0.0, -0.35], { easing: ease });

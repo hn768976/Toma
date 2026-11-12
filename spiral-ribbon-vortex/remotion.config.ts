@@ -16,7 +16,9 @@ Config.setVideoImageFormat("jpeg");
 Config.setJpegQuality(95);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
-Config.setCrf(16);
+// Tag output as standard limited-range BT.709 (yuv420p) instead of full-range JPEG colour.
+Config.setColorSpace("bt709");
+Config.setCrf(18);
 Config.setOverwriteOutput(true);
 // Optional: use a pre-installed Chrome / Chrome Headless Shell instead of the
 // one Remotion downloads automatically (useful on offline / locked-down hosts).

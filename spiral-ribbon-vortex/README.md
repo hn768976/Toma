@@ -11,7 +11,7 @@ tails, recreated from the reference clip as real **3D geometry in Three.js**
 
 * Resolution: **3840 × 2160 (4K UHD)** compositions
 * Frame rate: **30 fps**, 270 frames = **9.000 s** (reference: 270 frames @ 29.97 fps)
-* Codec: H.264 (yuv420p, CRF 16) — set in `remotion.config.ts`
+* Codec: H.264 (yuv420p, CRF 18, BT.709) — set in `remotion.config.ts`
 
 ## Requirements
 

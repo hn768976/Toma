@@ -11,7 +11,7 @@ inside Remotion.
 
 * Resolution: **3840 × 2160 (4K UHD)** compositions
 * Frame rate: **30 fps**, 240 frames = **8.000 s** (reference: 240 frames @ 29.97 fps)
-* Codec: H.264 (yuv420p, CRF 16) — set in `remotion.config.ts`
+* Codec: H.264 (yuv420p, CRF 18, BT.709) — set in `remotion.config.ts`
 
 ## Requirements
 
