@@ -13,8 +13,10 @@ floating hubs onto the wall, and drifting dust particles.
 * Resolution **3840×2160 (4K UHD)**, **30 fps**, **570 frames = 19.000 s** (exact reference length)
 * Technology: **Three.js (WebGL 2)** driven imperatively from Remotion
   (`src/lib/useThreeScene.ts`), GLSL shaders for the procedural wall and panels,
-  a single-pass lens depth of field (scene + depth texture in one render target,
-  then one full-screen DOF + grade pass: exposure, vignette, grain, fade-in).
+  a lens depth of field (scene + depth texture rendered once, a quarter-resolution
+  box-filtered copy for large blur radii, then one full-screen DOF + grade pass:
+  exposure, vignette, grain, fade-in). Each render target is written once and
+  read afterwards, which keeps software WebGL free of partially-updated tiles.
 * Every frame is a pure function of the frame number (seeded randomness), so
   renders are deterministic and parallel-safe.
 

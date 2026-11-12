@@ -301,6 +301,7 @@ void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
 const finalFrag = /* glsl */ `
 #include <packing>
 uniform sampler2D tColor;
+uniform sampler2D tSmall;
 uniform sampler2D tDepth;
 uniform float uNear;
 uniform float uFar;
@@ -326,32 +327,59 @@ vec3 toSRGB(vec3 c) {
 void main() {
   float depth = viewDepth(vUv);
   float coc = clamp(abs(depth - uFocus) * uAperture, 0.0, uMaxBlur) * 0.45;
-  // rotate the sample spiral per pixel with a static interleaved-gradient noise,
-  // so large blurs over fine detail do not break into a structured dot pattern
-  float ign = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
-  float rot = ign * 6.2831853;
-  vec3 acc = vec3(0.0);
-  float wsum = 0.0;
+  // Small blurs gather from the full-resolution image; large blurs gather from a
+  // quarter-resolution, box-filtered copy so fine detail cannot alias into
+  // speckle when the 56 taps are spread far apart.
+  float cocPx = coc * uResY;
+  float useSmall = smoothstep(4.0, 9.0, cocPx);
+  vec3 accF = vec3(0.0);
+  vec3 accS = vec3(0.0);
+  float wF = 0.0;
+  float wS = 0.0;
   const int N = 56;
   for (int i = 0; i < N; i++) {
     float r = sqrt((float(i) + 0.5) / float(N));
-    float a = float(i) * 2.39996323 + rot;
+    float a = float(i) * 2.39996323;
     vec2 off = vec2(cos(a), sin(a)) * r * coc;
     off.x /= uAspect;
-    vec3 c = texture2D(tColor, vUv + off).rgb;
-    float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-    float w = 1.0 + 2.5 * max(l - 0.45, 0.0); // brighter bokeh highlights
-    acc += c * w;
-    wsum += w;
+    if (useSmall < 1.0) {
+      vec3 c = texture2D(tColor, vUv + off).rgb;
+      float w = 1.0 + 2.5 * max(dot(c, vec3(0.2126, 0.7152, 0.0722)) - 0.45, 0.0);
+      accF += c * w;
+      wF += w;
+    }
+    if (useSmall > 0.0) {
+      vec3 c = texture2D(tSmall, vUv + off).rgb;
+      float w = 1.0 + 2.5 * max(dot(c, vec3(0.2126, 0.7152, 0.0722)) - 0.45, 0.0); // brighter bokeh highlights
+      accS += c * w;
+      wS += w;
+    }
   }
-  vec3 col = (coc < 0.0002 ? texture2D(tColor, vUv).rgb : acc / wsum) * uExposure;
+  vec3 blurred = mix(wF > 0.0 ? accF / wF : vec3(0.0), wS > 0.0 ? accS / wS : vec3(0.0), useSmall);
+  vec3 col = (coc < 0.0002 ? texture2D(tColor, vUv).rgb : blurred) * uExposure;
   vec2 q = vUv - 0.5;
   q.x *= 1.35;
   col *= mix(1.0, smoothstep(0.85, 0.2, length(q)), uVignette);
+  // the reference falls off into darkness on the right-hand side
+  col *= mix(1.0, 0.6, smoothstep(0.5, 1.0, vUv.x));
   col = toSRGB(col);
   col += (h(vUv * 1733.0 + uSeed) - 0.5) * uGrain;
   col *= uFade;
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+}
+`;
+
+// 4x4 box downsample (four bilinear taps) into the quarter-resolution target
+const downFrag = /* glsl */ `
+uniform sampler2D tColor;
+uniform vec2 uTexel;
+varying vec2 vUv;
+void main() {
+  vec3 c = texture2D(tColor, vUv + uTexel * vec2(-1.0, -1.0)).rgb;
+  c += texture2D(tColor, vUv + uTexel * vec2(1.0, -1.0)).rgb;
+  c += texture2D(tColor, vUv + uTexel * vec2(-1.0, 1.0)).rgb;
+  c += texture2D(tColor, vUv + uTexel * vec2(1.0, 1.0)).rgb;
+  gl_FragColor = vec4(c * 0.25, 1.0);
 }
 `;
 
@@ -554,9 +582,26 @@ export const makeDataWallBuilder =
       minFilter: THREE.LinearFilter,
       magFilter: THREE.LinearFilter,
     });
+    // quarter-resolution, box-filtered copy used for large blur radii
+    const rtSmall = new THREE.WebGLRenderTarget(
+      Math.max(1, Math.round((width * pixelRatio) / 4)),
+      Math.max(1, Math.round((height * pixelRatio) / 4)),
+      { type: THREE.HalfFloatType, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false },
+    );
+    const downMat = new THREE.ShaderMaterial({
+      uniforms: {
+        tColor: { value: rt.texture },
+        uTexel: { value: new THREE.Vector2(1 / (width * pixelRatio), 1 / (height * pixelRatio)) },
+      },
+      vertexShader: finalVert,
+      fragmentShader: downFrag,
+      depthTest: false,
+      depthWrite: false,
+    });
     const finalMat = new THREE.ShaderMaterial({
       uniforms: {
         tColor: { value: rt.texture },
+        tSmall: { value: rtSmall.texture },
         tDepth: { value: rt.depthTexture },
         uNear: { value: camera.near },
         uFar: { value: camera.far },
@@ -579,6 +624,8 @@ export const makeDataWallBuilder =
     const fsGeo = new THREE.PlaneGeometry(2, 2);
     const postScene = new THREE.Scene();
     postScene.add(new THREE.Mesh(fsGeo, finalMat));
+    const downScene = new THREE.Scene();
+    downScene.add(new THREE.Mesh(fsGeo, downMat));
     const postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
     const tmpQ = new THREE.Quaternion();
@@ -656,6 +703,8 @@ export const makeDataWallBuilder =
       renderer.setRenderTarget(rt);
       renderer.clear();
       renderer.render(scene, camera);
+      renderer.setRenderTarget(rtSmall);
+      renderer.render(downScene, postCam);
       renderer.setRenderTarget(null);
       renderer.render(postScene, postCam);
     };
@@ -664,6 +713,8 @@ export const makeDataWallBuilder =
       render,
       dispose: () => {
         rt.dispose();
+        rtSmall.dispose();
+        downMat.dispose();
         finalMat.dispose();
         fsGeo.dispose();
         wallGeo.dispose();

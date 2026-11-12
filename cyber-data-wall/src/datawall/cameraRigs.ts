@@ -44,6 +44,6 @@ export const LOW_ANGLE_DRIFT: CameraRig = {
     camera.up.set(0, 1, 0);
     camera.lookAt(target);
     // roll so the racks descend to the right
-    camera.rotateZ(THREE.MathUtils.degToRad(lerp(-24, -22, k) + Math.sin(t * 0.21) * 0.3));
+    camera.rotateZ(THREE.MathUtils.degToRad(lerp(-28, -26, k) + Math.sin(t * 0.21) * 0.3));
   },
 };
