@@ -77,6 +77,11 @@ void main() {
   vec3 N = normalize(vNormal);
   vec3 toCam = cameraPosition - vWorld;
   float dist = length(toCam);
+  // The camera retreats, so tubes enter from behind the lens: dissolve them in
+  // over the last few units (the lens blur smooths the dither) so nothing pops.
+  float nearFade = smoothstep(0.9, 4.4, dist);
+  float ign = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+  if (nearFade < ign) discard;
   vec3 V = toCam / dist;
   float ndv = abs(dot(N, V));
   float fres = pow(1.0 - ndv, 2.6);
