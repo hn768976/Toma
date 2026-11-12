@@ -51,7 +51,7 @@ const VORTICES: VortexInstance[] = [
     },
     position: [1.3, -0.7, 0],
     rotation: [0.42, -0.62, 2.0],
-    spinAmp: 0.15,
+    spinAmp: 0.3,
     spinPhase: 0,
     mirror: true,
   },
@@ -165,7 +165,7 @@ const Vortex: React.FC<{ v: VortexInstance; loop: number; groove: THREE.Texture 
           vertexColors
           map={groove}
           side={THREE.DoubleSide}
-          roughness={0.74}
+          roughness={0.5}
           metalness={0.05}
         />
       </mesh>

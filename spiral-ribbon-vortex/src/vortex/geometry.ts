@@ -58,8 +58,9 @@ export const buildLayeredSpiral = (spec: SpiralSpec, segments = 520) => {
   for (let k = 0; k < spec.layers; k++) {
     const layerT = k / Math.max(1, spec.layers - 1);
     const rScale = 1 - 0.13 * layerT + 0.008 * (rand(k) - 0.5);
-    const zShift = -0.22 * spec.width * layerT;
-    const w = spec.width * (0.55 + 0.45 * rand(k + 9));
+    const zShift = -0.1 * spec.width * layerT;
+    // close widths -> layer edges nearly coincide (no spiky silhouettes)
+    const w = spec.width * (0.82 + 0.18 * rand(k + 9));
     const shade = (k % 2 === 0 ? 1.0 : 0.9) * (0.92 + 0.12 * rand(k + 31));
 
     for (let i = 0; i <= segments; i++) {
