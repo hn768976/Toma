@@ -8,7 +8,7 @@ popping in and out with glitchy horizontal streaks and a lens depth of field.
 | Composition id | Version | Camera |
 |---|---|---|
 | `FinanceInfographics-V1-SlowPush-4K` | Version 1 | Near locked-off slow push-in, matches the reference |
-| `FinanceInfographics-V2-OrbitGlide-4K` | Version 2 | Alternative camera movement: ~90° orbital glide with dolly-in and banking roll, revealing the 3D parallax of the cards |
+| `FinanceInfographics-V2-OrbitGlide-4K` | Version 2 | Alternative camera movement: an elevated orbital glide that arcs around one side of a world-anchored field of cards while dollying in and banking, so the cards are always seen at an angle with strong parallax |
 
 * Resolution **3840×2160 (4K UHD)**, **30 fps**, **900 frames = 30.000 s** (exact reference length)
 * Technology: **Three.js (WebGL 2)** with instanced GLSL sprites

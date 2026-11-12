@@ -10,6 +10,8 @@ export type FinanceRig = {
   /** Max CoC as a fraction of frame height. */
   maxCoc: number;
   focus: (t: number) => number;
+  /** When set, elements spawn in this world-space box instead of in front of the camera. */
+  worldVolume?: { centre: (t: number) => THREE.Vector3; half: [number, number, number] };
   apply: (camera: THREE.PerspectiveCamera, t: number, duration: number) => void;
 };
 
@@ -21,7 +23,7 @@ export const SLOW_PUSH: FinanceRig = {
   name: "Slow Push",
   fov: 50,
   seed: 11,
-  blurK: 0.0068,
+  blurK: 0.0052,
   maxCoc: 0.03,
   focus: () => 9,
   apply: (camera, t) => {
@@ -43,16 +45,20 @@ export const SLOW_PUSH: FinanceRig = {
 export const ORBIT_GLIDE: FinanceRig = {
   name: "Orbit Glide",
   fov: 46,
-  seed: 11,
-  blurK: 0.0068,
+  seed: 23,
+  worldVolume: {
+    centre: (t) => new THREE.Vector3(0, 0, -4 - t * 0.12),
+    half: [9, 6, 7],
+  },
+  blurK: 0.0052,
   maxCoc: 0.03,
   focus: (t) => lerp(10, 8.5, Math.min(1, t / 30)),
   apply: (camera, t, duration) => {
     const k = Math.min(1, Math.max(0, t / duration));
     const e = k * k * (3 - 2 * k);
-    // the camera stays elevated (looking down onto the cards) for the whole shot,
-    // so no frame ever lines up with V1's straight-on view
-    const yaw = THREE.MathUtils.degToRad(lerp(-50, 42, e));
+    // the camera arcs around one side of the field and stays elevated, so no
+    // frame ever lines up with V1's straight-on view
+    const yaw = THREE.MathUtils.degToRad(lerp(-70, -22, e));
     const elev = THREE.MathUtils.degToRad(lerp(24, 16, e) + Math.sin(t * 0.4) * 1.2);
     const radius = lerp(15, 11, e);
     const pivot = new THREE.Vector3(0, 0, -4 - t * 0.12);

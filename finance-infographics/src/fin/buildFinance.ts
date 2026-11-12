@@ -264,7 +264,7 @@ void main() {
   float band = floor(yb);
   float tick = floor(uFrame / 3.0) + floor(h21(vec2(band, 3.0)) * 3.0);
   float hb = h21(vec2(band, tick));
-  float thr = 0.72 - uBurst * 0.25;
+  float thr = 0.66 - uBurst * 0.25;
   if (hb > thr) {
     float x0 = h21(vec2(band + 0.37, tick)) * 1.2 - 0.2;
     float len = 0.05 + 0.55 * pow(h21(vec2(band, tick + 2.7)), 2.0);
@@ -284,14 +284,14 @@ void main() {
   float b2 = floor(yb2);
   float t2 = floor(uFrame / 5.0);
   float hb2 = h21(vec2(b2 + 91.0, t2));
-  if (hb2 > 0.8 - uBurst * 0.3) {
+  if (hb2 > 0.72 - uBurst * 0.3) {
     float x0 = h21(vec2(b2, t2 + 1.0)) - 0.3;
     float len = 0.3 + 0.7 * h21(vec2(b2, t2 + 2.0));
     float inside = smoothstep(x0, x0 + 0.15, vUv.x) * smoothstep(x0 + len, x0 + len - 0.15, vUv.x);
     float v = fract(yb2);
     float prof = smoothstep(0.0, 0.3, v) * smoothstep(1.0, 0.7, v);
     float rows = 0.5 + 0.5 * h21(vec2(floor(vUv.y / (uPx * 2.0)), t2));
-    float a = inside * prof * rows * 0.22;
+    float a = inside * prof * rows * 0.26;
     vec3 col = h21(vec2(b2, t2 + 3.0)) < 0.5 ? uDark : uLight;
     outc = outc + vec4(col * a, a) * (1.0 - outc.a);
   }
@@ -366,8 +366,27 @@ export const makeFinanceBuilder =
       return c;
     };
 
-    const spawnAt = (t: number, r: () => number, dMin: number, dMax: number, spreadX = 1.12, spreadY = 1.08): Spawn => {
+    const spawnAt = (t: number, r: () => number, dMin: number, dMax: number, spreadX = 1.12, spreadY = 1.08, allowWorld = true): Spawn => {
       const c = camFor(t);
+      if (rig.worldVolume && allowWorld) {
+        // world-anchored field: cards live in a fixed volume around the orbit
+        // pivot, so the moving camera really sees them from changing angles
+        const wv = rig.worldVolume;
+        const centre = wv.centre(t);
+        let pos = centre.clone();
+        for (let tries = 0; tries < 12; tries++) {
+          pos = new THREE.Vector3(
+            centre.x + (r() * 2 - 1) * wv.half[0],
+            centre.y + (r() * 2 - 1) * wv.half[1],
+            centre.z + (r() * 2 - 1) * wv.half[2],
+          );
+          const ndc = pos.clone().project(c);
+          const dist = pos.distanceTo(c.position);
+          if (Math.abs(ndc.x) < 1.1 && Math.abs(ndc.y) < 1.1 && ndc.z < 1 && dist > dMin) break;
+        }
+        const dist = Math.max(pos.distanceTo(c.position), dMin);
+        return { pos, sizeH: 2 * dist * tanHalf };
+      }
       // depth distribution biased toward the mid-ground
       const u = r();
       const d = lerp(dMin, dMax, Math.pow(u, 1.6));
@@ -402,7 +421,7 @@ export const makeFinanceBuilder =
     const cr = rng(rig.seed);
     type ChartInst = { pos: THREE.Vector3; w: number; h: number; uv: number[]; birth: number; death: number; seed: number; kind: number; alpha: number };
     const charts: ChartInst[] = [];
-    const chartRate = 26; // spawns per second
+    const chartRate = 20; // spawns per second
     for (let t = -4; t < duration; t += -Math.log(1 - cr() * 0.999) / chartRate) {
       const sp = sprites[Math.floor(cr() * sprites.length)];
       const s = spawnAt(t, cr, 3.2, 17);
@@ -424,7 +443,7 @@ export const makeFinanceBuilder =
       }
       const near = s.pos.distanceTo(camFor(t).position);
       if (near < 5) frac *= 1.6;
-      const h = frac * s.sizeH * 0.95;
+      const h = frac * s.sizeH * 0.82;
       const birth = snapToBurst(t, cr);
       const life = 1.1 + cr() * 2.6;
       const death = snapToBurst(birth + life, cr);
@@ -449,7 +468,7 @@ export const makeFinanceBuilder =
     const inkDark = srgb(palette.inkDark);
     const inkMid = srgb(palette.inkMid);
     const inkLight = srgb(palette.inkLight);
-    const labelRate = 170; // spawns per second
+    const labelRate = 210; // spawns per second
     for (let t = -4; t < duration; t += -Math.log(1 - lr() * 0.999) / labelRate) {
       const tier = lr();
       // screen-height fraction for the glyph height
@@ -476,7 +495,7 @@ export const makeFinanceBuilder =
         ink = lr() < 0.5 ? inkMid : inkLight;
         alpha = 0.8;
       }
-      const s = near ? spawnAt(t, lr, 3.6, 5.0, 0.9, 0.9) : spawnAt(t, lr, 3.0, 17, 1.15, 1.1);
+      const s = near ? spawnAt(t, lr, 3.6, 5.0, 0.9, 0.9, false) : spawnAt(t, lr, 3.0, 17, 1.15, 1.1);
       const size = frac * s.sizeH;
       // label string template
       const pct = lr() < 0.3;

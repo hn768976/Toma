@@ -3,7 +3,7 @@ import type { FinancePalette } from "./buildFinance";
 /** Bright studio-grey look of the reference with classic infographic colours. */
 export const STUDIO_GREY: FinancePalette = {
   name: "Studio Grey",
-  bgCenter: "#f1f1f1",
+  bgCenter: "#ebebeb",
   bgEdge: "#a0a0a0",
   inkDark: "#2b2b2b",
   inkMid: "#555555",
