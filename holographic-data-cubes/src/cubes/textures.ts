@@ -51,6 +51,12 @@ function makeCanvas(w: number, h: number) {
   return { c, g };
 }
 
+/** Soft glow around glyphs so read-outs look projected, not printed. */
+function soften(g: CanvasRenderingContext2D) {
+  g.shadowColor = "rgba(255,255,255,0.9)";
+  g.shadowBlur = 5;
+}
+
 function finish(c: HTMLCanvasElement, renderer: THREE.WebGLRenderer) {
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = THREE.ClampToEdgeWrapping;
@@ -74,7 +80,8 @@ export function makeCodeTexture(renderer: THREE.WebGLRenderer, seed: number) {
   const rng = makeRng(seed);
   const lineH = 32;
   const rows = H / lineH;
-  g.font = `600 21px ${FONT}`;
+  g.font = `500 21px ${FONT}`;
+  soften(g);
   g.textBaseline = "middle";
   let k = rng.int(0, SNIPPETS.length - 1);
   for (let i = 0; i < rows; i++) {
@@ -96,7 +103,8 @@ export function makeDataTexture(renderer: THREE.WebGLRenderer, seed: number) {
   const { c, g } = makeCanvas(W, H);
   const rng = makeRng(seed);
   const lineH = 32;
-  g.font = `600 19px ${FONT}`;
+  g.font = `500 19px ${FONT}`;
+  soften(g);
   g.textBaseline = "middle";
   const hex = "0123456789ABCDEF";
   for (let i = 0; i < H / lineH; i++) {

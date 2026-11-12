@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { makeRng, randomUnit, range, Rng } from "./rng";
 
 /** Centre line of one dendrite, used to drive the travelling impulses. */
-export type BranchPath = { pts: Float32Array; count: number; length: number };
+export type BranchPath = { pts: Float32Array; count: number; length: number; depth: number };
 
 export type Neuron = {
   center: THREE.Vector3;
@@ -19,9 +19,9 @@ export type Steer = (worldPoint: THREE.Vector3, dir: THREE.Vector3) => void;
 type Detail = { maxDepth: number; step: number; radial: number; primaries: number };
 
 const DETAIL: Detail[] = [
-  { maxDepth: 3, step: 0.5, radial: 7, primaries: 8 }, // hero / near the lens
-  { maxDepth: 3, step: 0.8, radial: 5, primaries: 7 },
-  { maxDepth: 2, step: 1.2, radial: 4, primaries: 6 },
+  { maxDepth: 3, step: 0.4, radial: 12, primaries: 8 }, // hero / near the lens
+  { maxDepth: 3, step: 0.65, radial: 8, primaries: 7 },
+  { maxDepth: 2, step: 1.0, radial: 5, primaries: 6 },
 ];
 
 const tmpA = new THREE.Vector3();
@@ -158,7 +158,7 @@ function grow(
     flat[i * 3 + 1] = pts[i].y;
     flat[i * 3 + 2] = pts[i].z;
   }
-  paths.push({ pts: flat, count: n, length });
+  paths.push({ pts: flat, count: n, length, depth });
 
   if (depth >= detail.maxDepth) return;
   const children =

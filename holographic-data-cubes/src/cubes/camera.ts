@@ -72,33 +72,30 @@ export class CameraTrack {
 }
 
 /**
- * Shot 1 — the single data cube (cube centred on the origin, size 10):
- * tumble-in from far away, front view, tilt up to the bar blocks on its
- * roof, then a dive into the roof that hides the cut.
+ * One continuous move (every cube is centred on the origin, edge 10):
+ *  0–2 s    tumble in from far away
+ *  2–5 s    front view of the data cube, slow push
+ *  5–10 s   tilt up to the bar blocks growing on its roof
+ *  10–12 s  swing down the front of the (now empty) cube to a low angle
+ *  12–19 s  pull back / drift while the neighbouring cubes appear
+ *  19–21 s  re-angle to a rolled top view, then hold with a slow drift
+ *  25–27 s  pull away, tumbling, while everything fades
  */
-export const TRACK_A = new CameraTrack([
+export const TRACK = new CameraTrack([
   [0.0, 5, -5, 0, 60, -1.1, 0.5, 0.9, 33],
   [1.0, 3, -2, 0, 34, -0.75, 0.3, 0.45, 33],
-  [1.5, 1, -0.3, 0, 26, -0.5, 0.0, 0.14, 28],
-  [2.0, 1.0, -0.9, 0, 27, -0.34, 0.03, 0.04, 22],
-  [2.5, 1.2, -0.7, 0, 25, -0.33, 0.03, 0.0, 22],
-  [4.0, 1.2, -0.2, 0, 22.5, -0.3, 0.02, 0.0, 22],
-  [4.9, 1.0, 0.2, 0, 21.5, -0.2, 0.04, 0.0, 22],
+  [1.5, 1, -0.3, 0, 27, -0.5, 0.0, 0.14, 28],
+  [2.0, 0.8, 0.0, 0, 31, -0.34, 0.03, 0.04, 22],
+  [2.5, 0.9, 0.1, 0, 30, -0.33, 0.03, 0.0, 22],
+  [4.0, 1.0, 0.3, 0, 28, -0.3, 0.02, 0.0, 22],
+  [4.9, 0.9, 0.6, 0, 27, -0.2, 0.04, 0.0, 22],
   [5.5, 0.8, 3.6, 0, 18, 0.05, 0.24, 0.0, 28],
   [6.2, 1.0, 6.6, 0, 14.0, 0.3, 0.29, 0.0, 33],
   [10.2, 1.0, 6.7, 0, 13.2, 0.4, 0.27, 0.0, 33],
-  [10.7, 0.5, 6.0, 0, 7.5, 0.5, 0.7, 0.05, 33],
-  [11.1, 0.5, 5.0, 0, 3.0, 0.55, 0.95, 0.1, 33],
-]);
-
-/**
- * Shot 2 — the lattice (core cube centred on the origin): close on the
- * roof, pull back below the cube, drift while the neighbours appear,
- * re-angle to a rolled top view, then a fast fly-away.
- */
-export const TRACK_B = new CameraTrack([
-  [11.0, 0, 4.5, 0, 8.5, 0.0, 0.8, 0.1, 58],
-  [11.5, 0, 3.0, 0, 11, 0.15, 0.3, 0.04, 58],
+  [10.6, 0.5, 5.0, 0, 12.0, 0.3, 0.45, 0.02, 40],
+  [10.9, 0, 3.5, 0, 11.5, 0.1, 0.3, 0.03, 50],
+  [11.3, 0, 1.5, 0, 11.5, 0.0, -0.35, 0.02, 58],
+  [11.7, 0, 0.8, 0, 14, 0.55, -0.3, -0.02, 58],
   [12.3, 0, 0.6, 0, 15.5, 0.74, -0.27, -0.03, 58],
   [13.2, 0, 0.5, 0, 17, 0.72, -0.3, -0.04, 58],
   [13.95, 0.3, 0.4, 0, 19, 0.12, -0.2, -0.02, 58],
@@ -109,9 +106,8 @@ export const TRACK_B = new CameraTrack([
   [20.8, 0, 0, 0, 20, 0.3, 1.12, -0.52, 58],
   [21.8, 0, 0, 0, 19.5, 0.55, 0.92, -0.47, 58],
   [25.3, 0, 0, 0, 20.5, 0.68, 0.88, -0.42, 58],
-  [26.0, 0, 0, 0, 55, 0.9, 0.75, -0.7, 58],
-  [26.6, 0, 0, 0, 115, 1.15, 0.62, -1.05, 58],
-  [27.6, 0, 0, 0, 230, 1.4, 0.5, -1.5, 58],
+  [25.7, 0, 0, 0, 29, 0.8, 0.8, -0.55, 58],
+  [26.0, 0, 0, 0, 37, 0.95, 0.7, -0.75, 58],
+  [26.5, 0, 0, 0, 43, 1.4, 0.45, -1.2, 58],
+  [27.3, 0, 0, 0, 48, 1.9, 0.3, -1.7, 58],
 ]);
-
-export const CUT_TIME = 11.0;

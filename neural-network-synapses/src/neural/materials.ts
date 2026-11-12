@@ -225,7 +225,7 @@ void main() {
   // Radii as a fraction of frame height.
   float core = iData.y * uProj / dist * 0.5;
   float coc = min(uAperture * abs(1.0 / uFocus - 1.0 / dist), uMaxCoc);
-  coc *= dist > uFocus ? 0.3 : 0.6;
+  coc *= dist > uFocus ? 0.7 : 0.8;
   float rad = core + coc;
   // Energy spreads over the bokeh disc (softened so discs stay readable).
   float spread = pow(core * core / (rad * rad), 0.62);

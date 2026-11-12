@@ -12,21 +12,22 @@ export type NeuralProps = { palette: Palette };
 const NEAR = 0.25;
 const FAR = 150;
 const FOG_DENSITY = 0.027;
-const FOCUS = 15;
-const APERTURE = 0.2;
+const FOCUS = 11.5;
+const APERTURE = 0.26;
 const MAX_COC = 0.05;
 
 /**
  * Hero cell bodies. Each one is positioned so that it sits at the given
  * screen position/distance at time `t` (seconds); because the camera travels
  * backwards it first appears huge and blurred beside the lens and then
- * recedes into focus, as in the reference (0s, 2.4-4.5s, 8.9-10.5s, 12s-end).
+ * recedes into focus, as in the reference (0s, 2.4-4.5s, 5s, 8.9-10.5s, 11.3s-end).
  */
 const HEROES = [
-  { t: 0.4, x: -0.06, y: 0.12, d: 10.5, flashes: [] as number[][] },
+  { t: 0.0, x: 0.42, y: 0.05, d: 9, flashes: [] as number[][] },
   { t: 2.5, x: -0.22, y: -0.06, d: 9.5, flashes: [[3.15, 0.6, 0.4]] },
+  { t: 5.0, x: 0.42, y: -0.36, d: 9, flashes: [] as number[][] },
   { t: 9.15, x: 0.5, y: 0.3, d: 7.5, flashes: [[8.75, 0.6, 0.25]] },
-  { t: 12.4, x: -0.42, y: -0.3, d: 11, flashes: [[12.7, 0.5, 0.2]] },
+  { t: 11.67, x: -0.45, y: -0.18, d: 8, flashes: [[12.2, 0.5, 0.2]] },
 ];
 
 function flashAt(t: number, flashes: number[][]) {
@@ -179,6 +180,15 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
   // ---------------------------------------------------------------- impulses
   const signals: Signal[] = [];
   const srng = makeRng(77123);
+  // Impulses favour the thick dendrites close to the cell body, so they read
+  // as clusters around each neuron rather than an even scatter.
+  const pickPath = (n: Neuron) => {
+    for (let tries = 0; tries < 6; tries++) {
+      const i = Math.floor(srng() * n.paths.length);
+      if (n.paths[i].depth <= 1 || srng() < 0.15) return i;
+    }
+    return 0;
+  };
   neurons.forEach((n, ni) => {
     const lateral = pathDistance(n.center);
     if (lateral > 40) return;
@@ -186,14 +196,14 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
     for (let k = 0; k < count; k++) {
       signals.push({
         neuron: ni,
-        path: Math.floor(srng() * n.paths.length),
+        path: pickPath(n),
         u0: srng(),
         speed: range(srng, 0.5, 2.6) * (srng() < 0.5 ? -1 : 1),
-        period: range(srng, 1.4, 4.2),
+        period: range(srng, 2.2, 5),
         phase: srng(),
         duty: range(srng, 0.35, 0.8),
-        size: range(srng, 0.11, 0.19),
-        gain: range(srng, 1.8, 4.2),
+        size: range(srng, 0.1, 0.17),
+        gain: range(srng, 1.8, 3.4),
       });
     }
   });
@@ -250,10 +260,10 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
     focus: FOCUS,
     aperture: APERTURE,
     maxCoc: MAX_COC,
-    farScale: 0.4,
+    farScale: 0.6,
     bloomStrength: 1.2,
     bloomThreshold: 1.0,
-    exposure: 1.55,
+    exposure: 1.9,
     tint: new THREE.Vector3(...palette.tint),
     lift: new THREE.Vector3(...palette.lift),
     vignette: 0.55,
@@ -271,6 +281,8 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
       const path = n.paths[s.path];
       let u = (s.u0 + (s.speed * t) / path.length) % 1;
       if (u < 0) u += 1;
+      // Stay on the inner part of the dendrite (near the soma).
+      if (path.depth === 0) u *= 0.6;
       const f = u * (path.count - 1);
       const i0 = Math.min(path.count - 2, Math.floor(f));
       const k = f - i0;
@@ -289,7 +301,8 @@ export const neuralScene: SceneFactory<NeuralProps> = ({
       let wave = (w1 * 0.65 + w2 * 0.35) * 0.5 + 0.5;
       wave = Math.min(1, Math.max(0, (wave - 0.46) / 0.25));
       wave = wave * wave * (3 - 2 * wave);
-      const ends = Math.min(1, u * 12, (1 - u) * 12);
+      const span = path.depth === 0 ? 0.6 : 1;
+      const ends = Math.min(1, u * 12, (span - u) * 12);
       iPos[o * 3] = x;
       iPos[o * 3 + 1] = y;
       iPos[o * 3 + 2] = z;
