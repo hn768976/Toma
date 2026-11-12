@@ -55,24 +55,25 @@ float fieldF(vec2 p) {
   float outer = 1.0 - 0.72 * (reff - R0);
   float waves = 0.20 * sin(q.x * 1.35 + q.y * 0.55 + 0.6 + t * 0.10)
               + 0.14 * sin(-q.x * 0.75 + q.y * 1.70 - 1.3 - t * 0.08)
-              + 0.10 * sin(q.x * 2.60 - q.y * 2.20 + 2.2 + t * 0.13)
-              + 0.06 * sin(q.x * 3.70 + q.y * 3.10 - 0.9 - t * 0.15);
+              + 0.07 * sin(q.x * 2.60 - q.y * 2.20 + 2.2 + t * 0.13)
+              + 0.03 * sin(q.x * 3.70 + q.y * 3.10 - 0.9 - t * 0.15);
   outer += waves * smoothstep(0.65, 1.5, reff);
 
-  // Inside: a gentle dome whose nested, meandering contours follow the lobed
-  // outline (the blue maze), with a small spiral at the very centre.
+  // Inside: a flat plateau. Meandering lines cross the next contour levels
+  // (the blue maze); a clean single-arm spiral sits at the very centre.
   vec2 sc = q - c;
-  float meander = sin(sc.x * 6.0 + 2.0 * sin(sc.y * 4.2 + t * 0.30))
-                + 0.7 * sin(sc.y * 5.4 - 1.0 + 1.6 * sin(sc.x * 3.6 - t * 0.24));
-  float inside = 1.0 + 0.6 * (R0 - reff) + 0.035 * meander * smoothstep(R0 * 0.9, R0 * 0.5, reff);
   float rs = length(sc);
   float ts = atan(sc.y, sc.x);
-  float spiral = exp(-rs * rs / 0.025) * sin(ts - rs * 42.0 + t * 0.6);
-  inside += 0.075 * spiral;
+  float meander = (sin(sc.x * 8.5 + 2.4 * sin(sc.y * 5.2 + t * 0.30))
+                + 0.7 * sin(sc.y * 7.4 - 1.0 + 1.9 * sin(sc.x * 4.6 - t * 0.24))) / 1.7;
+  float spiralMask = exp(-rs * rs / 0.03);
+  float spiral = sin(ts - rs * 19.0 + t * 0.5);
+  // Slight rise towards the middle + meanders -> nested, wandering maze lines.
+  float inside = 1.27 + 0.12 * (R0 - reff) + 0.1 * mix(meander, spiral, spiralMask);
 
-  // Bright step at the island edge -> the tall white outline wall.
+  // Step at the island edge -> the tall white outline wall.
   float k = smoothstep(R0 + 0.02, R0 - 0.02, reff);
-  float base = mix(outer, inside + 0.08, k);
+  float base = mix(outer, inside, k);
   return base;
 }
 `;
@@ -118,7 +119,7 @@ uniform float uFloorHi;
 uniform vec3 uLightDir;
 ${FIELD_GLSL}
 
-const float HMAX = 0.42;
+const float HMAX = 0.58;
 
 float sampleF(vec2 p) {
   return texture(uField, p / (2.0 * uDomain) + 0.5).r;
@@ -141,7 +142,9 @@ vec3 palette(float v) {
 }
 
 float wallH(float v) {
-  return 0.30 + 0.06 * smoothstep(0.8, 1.15, v);
+  // Outer terrain walls are tall, the island outline is tallest, and the
+  // maze walls inside the island are low so its blue floor shows through.
+  return 0.42 + 0.14 * smoothstep(0.9, 1.05, v) - 0.34 * smoothstep(1.1, 1.16, v);
 }
 
 float streakAmt(float lvl, vec2 p) {
@@ -163,7 +166,9 @@ float streakAmt(float lvl, vec2 p) {
 
 // Rim tops glow in the next-lighter palette colour (orange walls -> yellow rims).
 vec3 rimColor(float b, float s) {
-  vec3 c = palette(min(b + 0.1, 1.03)) * 2.1;
+  // Terrain rims: next-lighter colour (orange -> yellow). Island rims: own colour.
+  vec3 c = palette(b > 1.0 ? b - 0.04 : min(b + 0.12, 1.03)) * 2.7;
+  if (b > 1.15) c = mix(palette(b), vec3(1.0), 0.45) * 2.4; // maze: white-blue neon
   return mix(c, uStreakCol * 3.2, s);
 }
 
@@ -224,8 +229,8 @@ void main() {
           if (dot(nrm, rd) > 0.0) nrm = -nrm;
           float lam = 0.75 + 0.25 * max(dot(nrm, uLightDir), 0.0);
           float glow = pow(hz, 1.6);
-          vec3 face = base * (0.2 + 0.85 * glow) * lam;
-          face = mix(face, uStreakCol * (0.2 + 1.6 * glow), s * 0.85);
+          vec3 face = base * (0.16 + 1.15 * glow) * lam;
+          face = mix(face, uStreakCol * (0.2 + 1.6 * glow), s * 0.85 * glow * glow);
           float rimAmt = 1.0 - smoothstep(uRimR * 0.7, uRimR * 1.8 + aa, -e * hl);
           col += T * mix(face, rimColor(b, s), rimAmt);
           T = 0.0;

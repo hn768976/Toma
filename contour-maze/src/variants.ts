@@ -49,12 +49,12 @@ export const LOOKS: Record<VariantName, Look> = {
     ],
     streakColor: hex("#d8e6ff"),
     fogColor: hex("#2a0b03"),
-    floorLo: 0.16,
-    floorHi: 0.2,
+    floorLo: 0.08,
+    floorHi: 0.13,
     exposure: 1.0,
-    bloomA: 0.28,
-    bloomB: 0.2,
-    bloomThreshold: 1.0,
+    bloomA: 0.45,
+    bloomB: 0.35,
+    bloomThreshold: 0.8,
   },
   // Version 2: alternative palette - deep-sea teal/cyan terrain with a hot
   // magenta/rose core and golden light streaks (complementary inversion).
@@ -71,12 +71,12 @@ export const LOOKS: Record<VariantName, Look> = {
     ],
     streakColor: hex("#ffd27a"),
     fogColor: hex("#010812"),
-    floorLo: 0.16,
-    floorHi: 0.2,
+    floorLo: 0.08,
+    floorHi: 0.13,
     exposure: 1.0,
-    bloomA: 0.28,
-    bloomB: 0.2,
-    bloomThreshold: 1.0,
+    bloomA: 0.45,
+    bloomB: 0.35,
+    bloomThreshold: 0.8,
   },
 };
 
@@ -106,19 +106,18 @@ const STREAKS: Streak[] = (() => {
   const total = DURATION_IN_FRAMES / FPS;
   for (let i = 0; i < 46; i++) {
     out.push({
-      level: Math.floor(-9 + rnd() * 23), // field level index (level * 0.07)
+      level: Math.floor(5 + rnd() * 4), // contour level index (field value = level * 0.12), near the island
       start: -1.5 + rnd() * (total + 1.0),
       dur: 1.4 + rnd() * 1.8,
       theta0: rnd() * Math.PI * 2,
       omega: (rnd() < 0.5 ? -1 : 1) * (0.35 + rnd() * 0.6),
-      halfLen: 0.18 + rnd() * 0.35,
+      halfLen: 0.07 + rnd() * 0.12,
       peak: 0.75 + rnd() * 0.25,
     });
   }
   return out;
 })();
 
-const smooth = (x: number) => x * x * (3 - 2 * x);
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 export const frameParams = (frame: number, variant: VariantName): FrameParams => {
@@ -129,11 +128,12 @@ export const frameParams = (frame: number, variant: VariantName): FrameParams =>
 
   // Camera: slow drift + yaw while it tilts from an oblique view to a
   // steeper, more top-down view (matching the reference move).
-  const e = smooth(progress) * 0.35 + progress * 0.65;
-  const yaw = lerp(-1.98, -1.72, e);
-  const pitch = lerp(0.6, 0.98, e);
-  const dist = lerp(2.25, 2.95, e);
-  const target: Vec3 = [lerp(0.04, -0.06, e), lerp(0.06, -0.05, e), 0.0];
+  // Ease-out: most of the camera travel happens early, then it settles.
+  const e = 1 - Math.pow(1 - progress, 2.2);
+  const yaw = lerp(-1.72, -1.6, e);
+  const pitch = lerp(0.9, 1.13, e);
+  const dist = lerp(2.6, 2.9, e);
+  const target: Vec3 = [lerp(0.1, 0.02, e), lerp(-0.02, -0.06, e), 0.26];
   const camPos: Vec3 = [
     target[0] + Math.cos(yaw) * Math.cos(pitch) * dist,
     target[1] + Math.sin(yaw) * Math.cos(pitch) * dist,
