@@ -18,6 +18,8 @@ export type StrandStyle = {
   sparkleChance: number;
   sparkleColor: RGB;
   sparkleSize: Range;
+  /** draw strand particles as small hollow ring dots (lens look) */
+  ringDots?: boolean;
 };
 
 export type RungStyle = {
@@ -28,6 +30,8 @@ export type RungStyle = {
   colorB: RGB;
   size: Range;
   alpha: Range;
+  /** draw rung particles as small hollow ring dots */
+  ringDots?: boolean;
   /** fraction of the rung length left empty at each end (strand overlap) */
   inset: number;
   /** optional glowing core line along the rung */

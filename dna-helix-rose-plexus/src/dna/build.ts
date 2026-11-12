@@ -139,7 +139,7 @@ export const buildHelix = (h: HelixStyle, seed: number): LayerSet => {
           jitterColor(rng, rng.pick(h.strand.colors), 0.25),
           r(rng, h.strand.size),
           r(rng, h.strand.alpha),
-          0,
+          h.strand.ringDots ? 4 : 0,
           rng.next(),
         );
       }
@@ -172,7 +172,7 @@ export const buildHelix = (h: HelixStyle, seed: number): LayerSet => {
         jitterColor(rng, c, 0.3),
         r(rng, h.rung.size),
         r(rng, h.rung.alpha),
-        0,
+        h.rung.ringDots ? 4 : 0,
         rng.next(),
       );
     }

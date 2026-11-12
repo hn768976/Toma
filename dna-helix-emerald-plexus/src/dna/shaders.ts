@@ -13,7 +13,7 @@ export const pointVertex = /* glsl */ `
   attribute vec3 color;
   attribute float size;
   attribute float alpha;
-  attribute float kind;   // 0 sparkle, 1 bokeh-capable dust, 2 node marker, 3 soft blob
+  attribute float kind;   // 0 sparkle, 1 bokeh-capable dust, 2 node marker, 3 soft blob, 4 ring dot
   attribute float phase;
 
   uniform float uTime;
@@ -58,6 +58,8 @@ export const pointVertex = /* glsl */ `
     // Out-of-focus dust becomes a ring; sparkles mostly stay soft discs.
     float ringiness = kind > 0.5 && kind < 1.5 ? 1.0 : 0.35;
     vRing = smoothstep(5.0 * uPxScale, 16.0 * uPxScale, coc) * ringiness * uRingAmount;
+    // ring dots: small hollow "lens" particles even when in focus
+    if (kind > 3.5) vRing = max(vRing, 0.8);
     vKind = kind;
   }
 `;
@@ -74,10 +76,10 @@ export const pointFragment = /* glsl */ `
     float d = length(c) * 2.0;
     if (d > 1.0) discard;
     float shape;
-    if (vKind > 2.5) {
+    if (vKind > 2.5 && vKind < 3.5) {
       // soft out-of-focus blob
       shape = pow(1.0 - d, 1.6) * 0.9;
-    } else if (vKind > 1.5) {
+    } else if (vKind > 1.5 && vKind < 2.5) {
       // plexus node marker: thin ring + bright centre dot
       float ring = smoothstep(0.58, 0.68, d) * (1.0 - smoothstep(0.76, 0.86, d));
       float dot = exp(-d * d * 60.0);

@@ -25,13 +25,13 @@ type Palette = {
 const ROSE: Palette = {
   bg: {
     dark: hex("#252920"),
-    mid: hex("#5a6152"),
+    mid: hex("#525a4b"),
     light: hex("#8a9280"),
-    center: [0.5, 0.86],
-    radius: [0.66, 0.78],
+    center: [0.52, 0.9],
+    radius: [0.62, 0.7],
     vignette: 0.32,
   },
-  strand: [hex("#f2907c"), hex("#ffac96"), hex("#e27a6e"), hex("#f69c86")],
+  strand: [hex("#e88a78"), hex("#f29c86"), hex("#d97a6c"), hex("#ee947e")],
   sparkle: hex("#fff3ea"),
   plexus: hex("#5ea6ea"),
   facet: hex("#5aa4ec"),
@@ -70,44 +70,46 @@ const helixStyle = (p: Palette): HelixStyle => ({
   pitch: 5.0,
   yMin: -6.5,
   yMax: 6.5,
-  rungsPerTurn: 10,
+  rungsPerTurn: 12,
   strandOffset: Math.PI,
   strand: {
-    density: 400,
-    jitter: 0.032,
+    density: 230,
+    jitter: 0.03,
     colors: p.strand,
-    size: [6.5, 10],
-    alpha: [0.55, 0.9],
-    sparkleChance: 0.015,
+    size: [10, 14],
+    alpha: [0.5, 0.75],
+    sparkleChance: 0.0,
     sparkleColor: p.sparkle,
     sparkleSize: [5, 9],
+    ringDots: true,
   },
   rung: {
-    count: 170,
-    jitter: 0.022,
+    count: 230,
+    jitter: 0.02,
     colorA: p.strand[0],
     colorB: p.strand[1],
-    size: [4.5, 7.5],
-    alpha: [0.5, 0.85],
-    inset: 0.04,
+    size: [9, 12],
+    alpha: [0.55, 0.8],
+    inset: 0.0,
+    ringDots: true,
   },
   plexus: {
-    nodesPerUnit: 230,
-    jitter: 0.13,
-    rungNodes: 60,
-    rungJitter: 0.065,
+    nodesPerUnit: 260,
+    jitter: 0.1,
+    rungNodes: 70,
+    rungJitter: 0.055,
     k: 3,
-    maxDist: 0.28,
+    maxDist: 0.22,
     color: p.plexus,
-    alpha: 0.27,
-    width: 1.5,
-    facetChance: 0.55,
-    facetAlpha: 0.11,
+    alpha: 0.19,
+    width: 1.6,
+    facetChance: 0.7,
+    facetAlpha: 0.1,
     facetColor: p.facet,
     nodeColor: p.node,
     nodeSize: [2.5, 4.5],
     nodeAlpha: 0.35,
-    haze: { perUnit: 50, perRung: 12, jitter: 0.12, size: [40, 80], alpha: 0.11, color: p.facet },
+    haze: { perUnit: 90, perRung: 22, jitter: 0.13, size: [50, 100], alpha: 0.11, color: p.facet },
   },
 });
 
@@ -125,11 +127,11 @@ const fieldStyle = (p: Palette): FieldStyle => ({
   nodeAlpha: 0.5,
   facetChance: 0.12,
   facetAlpha: 0.025,
-  dust: 1100,
+  dust: 1900,
   dustBox: { x: [-11, 13], y: [-8, 8], z: [-14, 3.4] },
   dustColors: p.dust,
-  dustSize: [4, 8],
-  dustAlpha: [0.6, 1],
+  dustSize: [3, 7],
+  dustAlpha: [0.7, 1],
 });
 
 /**
@@ -139,7 +141,7 @@ const fieldStyle = (p: Palette): FieldStyle => ({
  */
 const roseRig = (t: number, dur: number): Rig => {
   const u = t / dur;
-  const camX = lerp(0.56, 0.5, smooth(u));
+  const camX = lerp(0.74, 0.68, smooth(u));
   const camZ = lerp(4.15, 4.05, u);
   const camY = lerp(0.1, -0.05, u);
   return {
@@ -148,7 +150,7 @@ const roseRig = (t: number, dur: number): Rig => {
     fov: 35,
     roll: 0,
     helixPos: [0, 0, 0],
-    helixSpin: -0.41 + 0.24 * t,
+    helixSpin: -0.17 + 0.24 * t,
     helixTilt: [0.04, -0.06],
     focus: 3.3,
   };
@@ -163,8 +165,8 @@ const base = (name: string, p: Palette): Preset => ({
   blobs: [
     { from: [-2.6, -0.9, 2.45], to: [-1.7, -0.45, 2.6], t0: 12.0, t1: 15.2, color: p.blob, size: 34, alpha: 0.55 },
   ],
-  dof: { aperture: 30, fieldApertureScale: 1.7, maxCoc: 120, ringAmount: 1, refDepth: 3.8 },
-  gain: { points: 0.92, lines: 1.1, facets: 1.2 },
+  dof: { aperture: 30, fieldApertureScale: 2.6, maxCoc: 120, ringAmount: 1, refDepth: 3.8 },
+  gain: { points: 0.85, lines: 1.0, facets: 1.2 },
   twinkle: 0.35,
   rig: roseRig,
 });
