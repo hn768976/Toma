@@ -81,6 +81,16 @@ const SWAY_CYCLES = 3;
 const SWAY_VARIANTS = 1;
 // Tint multipliers from the deepest layer to the top layer.
 const DEPTH_TINTS = ["#b2b4c0", "#c8cad4", "#dddee5", "#f0f0f3", "#ffffff"];
+// Per-disc tint overrides for the traced front layer (index into FRONT),
+// measured from the reference frame: some front discs sit in the light,
+// others read noticeably greyer and cooler.
+const FRONT_TINTS: Record<number, string> = {
+  3: "#b8bdc9", // top right: in shade, grey-blue
+  6: "#ccccd3", // left edge
+  7: "#d8d9da", // bottom left
+  8: "#ffffff", // bottom centre: lit
+};
+const FRONT_TINT_IDS = Object.keys(FRONT_TINTS).map(Number);
 const depthBucket = (h: number) =>
   Math.max(0, Math.min(DEPTH_TINTS.length - 1, Math.floor(((h + 3.6) / 6.5) * DEPTH_TINTS.length)));
 
@@ -164,7 +174,7 @@ export const PetalSwirl: React.FC<Props> = ({ palette }) => {
   // layers read grey-lavender), bucketed into a few shared materials.
   const materials = useMemo(
     () =>
-      DEPTH_TINTS.map((t) => new THREE.MeshPhysicalMaterial({
+      [...DEPTH_TINTS, ...FRONT_TINT_IDS.map((k) => FRONT_TINTS[k])].map((t) => new THREE.MeshPhysicalMaterial({
         color: new THREE.Color(p.disc).multiply(new THREE.Color(t)),
         roughness: 0.42,
         metalness: 0,
@@ -213,7 +223,11 @@ export const PetalSwirl: React.FC<Props> = ({ palette }) => {
             spec={spec}
             geometry={geometries[i % SWAY_VARIANTS]}
             hole={hole}
-            material={materials[depthBucket(spec[3])]}
+            material={
+              FRONT_TINT_IDS.indexOf(i - BACK.length) >= 0
+                ? materials[DEPTH_TINTS.length + FRONT_TINT_IDS.indexOf(i - BACK.length)]
+                : materials[depthBucket(spec[3])]
+            }
             holeMaterial={holeMaterial}
           />
         ))}

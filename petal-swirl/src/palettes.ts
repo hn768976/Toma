@@ -17,16 +17,16 @@ export const PALETTES: Record<"pearl" | "blush", Palette> = {
   // Version 1: matches the reference - pearl white discs, cool lavender
   // shadows and a soft warm key light.
   pearl: {
-    background: "#8e919f",
+    background: "#8b929f",
     disc: "#f4f4f3",
     hole: "#c4c6ce",
     sky: "#e1e6f6",
     ground: "#b9b9bd",
     hemiIntensity: 1.85,
     key: "#fcfae6",
-    keyIntensity: 2.0,
-    fill: "#c4cbe0",
-    fillIntensity: 0.3,
+    keyIntensity: 2.3,
+    fill: "#bcc8e2",
+    fillIntensity: 0.5,
     sheen: "#fbf5c8",
     exposure: 0.93,
   },
