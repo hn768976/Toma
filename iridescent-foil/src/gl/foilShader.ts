@@ -133,7 +133,7 @@ void main() {
   // gathered in the shadowed areas.
   float env = clamp(broad + kKey + kRim + kTop, 0.0, 1.5);
   float shade = dot(col, vec3(0.3, 0.5, 0.2));
-  float shadowW = 0.35 + 0.65 * smoothstep(0.55, 0.08, shade);
+  float shadowW = 0.12 + 0.88 * smoothstep(0.50, 0.06, shade);
   float patchy = smoothstep(-0.45, 0.5, snoise(p * 1.8 + vec2(7.0, -t * 0.05)));
   // Flakes live in the material's own (pre-warp) flow coordinates, so they
   // travel with the foil instead of sliding over it.
@@ -154,7 +154,7 @@ void main() {
     vec2 d = rot2(-fl * 0.9) * (gf - c);           // back to material axes
     d.y *= aspect;                                 // keep flakes round on screen
     float flake = smoothstep(0.17, 0.0, length(d));
-    float present = step(1.0 - (0.22 + 0.5 * patchy), rnd.z);
+    float present = step(1.0 - (0.30 + 0.5 * patchy), rnd.z);
     // gentle twinkle: wide glint lobe so flakes shimmer rather than pop
     vec3 fn = normalize(N + (hash32(gid + 17.0 + fl) - 0.5) * 1.2);
     float glint = pow(max(dot(reflect(-V, fn), normalize(vec3(0.3, 0.3, 0.9))), 0.0), 4.0);
@@ -168,10 +168,10 @@ void main() {
   col += uKey * glowA * 0.75 * (1.0 - 0.75 * ease);
   col += mix(uRim, uCore, 0.65) * glowB * 1.2 * (1.0 - smoothstep(0.30, 0.55, P) * 0.75);
   // blown-out white/cyan hotspot on the left edge over the opening ~4 s
-  float hotFade = 1.0 - smoothstep(0.55, 0.78, P);
-  float hotCore = exp(-9.0 * length((s - vec2(-0.03, 0.50 - 0.1 * ease)) * vec2(2.0, 0.7)));
+  float hotFade = 1.0 - smoothstep(0.30, 0.55, P);   // gone by ~frame 110
+  float hotCore = exp(-13.0 * length((s - vec2(-0.04, 0.50 - 0.1 * ease)) * vec2(2.2, 0.7)));
   float hotBand = exp(-4.0 * length((s - vec2(-0.02, 0.50 - 0.1 * ease)) * vec2(2.2, 0.55)));
-  col += uRim * hotBand * 2.6 * hotFade;
+  col += uRim * hotBand * 2.0 * hotFade;
   col += uCore * hotCore * 3.2 * hotFade;
 
   // --- tone map + vignette -----------------------------------------------------
