@@ -23,19 +23,21 @@ export type StripedTunnelProps = z.infer<typeof stripedTunnelSchema>;
 
 // Geometry / camera tuned against the reference.
 const BASE_SCENE = {
-  segTwist: -1.6, // strong twist between rings -> folded, curved silhouettes
-  segGrowth: 2.1, // each ring sits 2.1x deeper ...
-  segShrink: 1.0, // ... at the same size, so it looks ~0.48x smaller
+  segTwist: -1.8, // strong twist between rings -> folded, curved silhouettes
+  segGrowth: 2.9, // each ring sits 2.9x deeper ...
+  segShrink: 1.0, // ... at the same size, so it looks ~0.35x smaller
   z0: 1.0,
   circumradius: 1.6,
   pairsPerFace: 11,
   fov: 0.6,
-  lookYaw: 0.1, // vanishing point slightly left of centre (as in reference)
-  lookPitch: 0.05, // ... and slightly below centre
+  lookYaw: 0.035, // vanishing point slightly left of centre (as in reference)
+  lookPitch: 0.0, // ... and slightly below centre
   roll: 0.0,
   baseRot: 0.35,
   depthNear: 0.3, // ring index where the blue-grey depth tint starts
   depthFar: 3.2,
+  fogNear: 1.6, // ring index where the end-of-tunnel fog starts
+  fogFar: 3.8,
 };
 
 type GlState = {
@@ -83,7 +85,7 @@ const initGl = (canvas: HTMLCanvasElement): GlState => {
   const names = [
     "uResolution", "uPhase", "uTime", "uSegTwist", "uSegGrowth", "uSegShrink", "uZ0", "uCircumradius", "uPairsPerFace",
     "uFov", "uLook", "uRoll", "uBaseRot", "uInk", "uPaper", "uDeep",
-    "uDeepInk", "uDepthNear", "uDepthFar", "uGrain",
+    "uDeepInk", "uFog", "uDepthNear", "uDepthFar", "uFogNear", "uFogFar", "uGrain",
   ];
   const uniforms: GlState["uniforms"] = {};
   for (const n of names) uniforms[n] = gl.getUniformLocation(program, n);
@@ -138,6 +140,9 @@ export const StripedTunnel: React.FC<StripedTunnelProps> = ({
       gl.uniform3fv(u.uDeepInk, look.deepInk);
       gl.uniform1f(u.uDepthNear, SCENE.depthNear);
       gl.uniform1f(u.uDepthFar, SCENE.depthFar);
+      gl.uniform3fv(u.uFog, look.fog);
+      gl.uniform1f(u.uFogNear, SCENE.fogNear);
+      gl.uniform1f(u.uFogFar, SCENE.fogFar);
       gl.uniform1f(u.uGrain, look.grain);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       gl.finish();

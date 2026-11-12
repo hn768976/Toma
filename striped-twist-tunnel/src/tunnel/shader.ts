@@ -45,8 +45,11 @@ uniform vec3  uInk;
 uniform vec3  uPaper;
 uniform vec3  uDeep;
 uniform vec3  uDeepInk;
+uniform vec3  uFog;          // colour the far end of the tunnel dissolves into
 uniform float uDepthNear;    // ring index where depth tint starts
 uniform float uDepthFar;     // ring index where depth tint is full
+uniform float uFogNear;      // ring index where the end fog starts
+uniform float uFogFar;       // ring index where the end fog is complete
 uniform float uGrain;
 
 const float PI = 3.14159265359;
@@ -156,25 +159,35 @@ void main() {
     vec3 paper = mix(uPaper, uDeep, depthMix);
     vec3 ink = mix(uInk, uDeepInk, depthMix);
 
-    vec3 L = normalize(vec3(-0.3, 0.45, -1.0));
+    // Per-wall shading: each face is lit according to its orientation.
+    vec3 L = normalize(vec3(-0.45, 0.55, -0.7));
     float lambert = clamp(dot(hitN, L), 0.0, 1.0);
-    float light = mix(0.8, 1.04, lambert);
-    // Soft occlusion towards the corners/creases of each ring.
+    float light = mix(0.74, 1.07, lambert);
+    // Soft occlusion into the creases / corners of each ring.
     float creaseDist = min(hitU, 1.0 - hitU);
-    float ao = mix(0.86, 1.0, smoothstep(0.0, 0.18, creaseDist));
-    ao *= mix(0.9, 1.0, smoothstep(0.0, 0.25, hitV));
+    float ao = mix(0.8, 1.0, smoothstep(0.0, 0.22, creaseDist));
+    ao *= mix(0.86, 1.0, smoothstep(0.0, 0.3, hitV));
 
     col = mix(paper, ink, stripe) * light * ao;
 
-    // Paper texture locked to the surface: fibres and faint speckles.
+    // Paper fibre texture locked to the surface.
     vec2 surf = vec2(u * 40.0, (hitRing + hitV) * 30.0);
     float fib = valueNoise(surf * vec2(1.0, 0.5)) * 0.5 + valueNoise(surf * 3.7) * 0.5;
     col *= 1.0 + (fib - 0.5) * 0.07;
-    float speck = step(0.9975, hash12(floor(surf * 6.0)));
-    col = mix(col, uPaper, speck * 0.25 * stripe);
+
+    // The far end of the tunnel dissolves into a soft, light fog.
+    col = mix(col, uFog, smoothstep(uFogNear, uFogFar, ringDepth));
   } else {
-    col = mix(uDeep, uDeepInk, 0.5);
+    col = uFog;
   }
+
+  // Tiny round dust flecks (1-2 px at 1080p), fixed on screen like film dust.
+  float fleckCell = 9.0 * uResolution.y / 1080.0;
+  vec2 cell = floor(frag / fleckCell);
+  vec2 fc = (cell + vec2(hash12(cell), hash12(cell + 17.0))) * fleckCell;
+  float fr = fleckCell / 9.0;
+  float fleck = step(0.985, hash12(cell + 3.1)) * smoothstep(2.2 * fr, 0.8 * fr, length(frag - fc));
+  col = mix(col, uPaper * 1.08, fleck * 0.45);
 
   // Film grain and a gentle vignette.
   float g = hash12(frag + fract(uTime * 7.31) * 911.0) - 0.5;

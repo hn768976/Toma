@@ -5,6 +5,7 @@ export type TunnelLook = {
   paper: Rgb;
   deep: Rgb;
   deepInk: Rgb;
+  fog: Rgb;
   grain: number;
 };
 
@@ -15,10 +16,11 @@ const hex = (h: string): Rgb => {
 
 /** Version 1 – matches the reference: navy-black ink on warm off-white paper. */
 export const MONOCHROME: TunnelLook = {
-  ink: hex("#0e1a22"),
-  paper: hex("#dcdcd6"),
-  deep: hex("#8593a3"),
-  deepInk: hex("#16232d"),
+  ink: hex("#0c1f24"),
+  paper: hex("#d6d9d4"),
+  deep: hex("#97a5b0"),
+  deepInk: hex("#2c3e48"),
+  fog: hex("#a4b2bc"),
   grain: 0.018,
 };
 
@@ -27,6 +29,7 @@ export const SAFFRON_INDIGO: TunnelLook = {
   ink: hex("#1b1446"),
   paper: hex("#f2b544"),
   deep: hex("#c0436a"),
-  deepInk: hex("#241450"),
+  deepInk: hex("#3a1d5e"),
+  fog: hex("#d77a6e"),
   grain: 0.018,
 };

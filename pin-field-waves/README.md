@@ -36,7 +36,7 @@ npm run render:v1:4k   # optional: full 4K master of Version 1
 npm run render:v2:4k   # optional: full 4K master of Version 2
 ```
 
-Output: H.264, yuv420p, CRF 16, MP4 (configured in `remotion.config.ts`).
+Output: H.264 (High), yuv420p limited range tagged BT.709, CRF 16, MP4 (configured in `remotion.config.ts`).
 
 ## Layout
 

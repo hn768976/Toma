@@ -10,6 +10,9 @@ Config.setJpegQuality(95);
 Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
+// Convert to limited-range BT.709 and tag it, so players don't misread the
+// range (JPEG frames otherwise produce full-range "yuvj420p" output).
+Config.setColorSpace("bt709");
 Config.setCrf(16);
 // WebGL content: use ANGLE with SwiftShader so rendering works on machines
 // without a GPU (CI, containers). Override with --gl=angle on a GPU machine.

@@ -12,7 +12,7 @@ Everything is procedural: there are no external image/video/font assets.
 
 | ID | Description |
 |----|-------------|
-| `StripedTunnel-V1-4K` | Version 1 – matches the reference: navy-black ink on warm off-white paper, blue-grey depth tint, paper texture and grain. 1.5 s seamless loop (×6). |
+| `StripedTunnel-V1-4K` | Version 1 – matches the reference: teal-navy ink on off-white paper, per-wall shading, blue-grey depth tint fading into a soft light fog at the far end, paper texture, dust and grain. 1.5 s seamless loop (×6). |
 | `StripedTunnel-V2-4K` | Version 2 – identical geometry and motion with an **alternative colour palette**: deep indigo ink on saffron, fading to magenta-rose in the depths. |
 
 The reference clip is 270 frames at 29.97 fps (9.009 s); at exactly 30 fps the same
@@ -37,7 +37,7 @@ npm run render:v1:4k   # optional: full 4K master of Version 1
 npm run render:v2:4k   # optional: full 4K master of Version 2
 ```
 
-Output: H.264, yuv420p, CRF 16, MP4 (configured in `remotion.config.ts`).
+Output: H.264 (High), yuv420p limited range tagged BT.709, CRF 16, MP4 (configured in `remotion.config.ts`).
 
 ## Layout
 
