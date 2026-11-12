@@ -186,8 +186,8 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
   for (let i = 0; i < 380; i++) {
     sparks.push({
       x: range(rng, -12, 12), y: range(rng, 0.05, 2.6), z: range(rng, -9, 9),
-      vx: range(rng, -0.03, 0.03), vy: range(rng, 0.0, 0.03), vz: range(rng, -0.03, 0.03),
-      size: range(rng, 0.012, 0.028), sharp: 3, color: dustC, a: range(rng, 0.1, 0.35),
+      vx: range(rng, -0.08, 0.08), vy: range(rng, 0.02, 0.07), vz: range(rng, -0.08, 0.08),
+      size: range(rng, 0.012, 0.03), sharp: 3, color: dustC, a: range(rng, 0.15, 0.45),
       twAmp: 0.6, twFreq: range(rng, 0.5, 2), twPhase: range(rng, 0, 6.28),
     });
   }
@@ -221,7 +221,8 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
     bloom: { strength: 0.45, radius: 0.5, threshold: 0.2 },
     grade: { exposure: 1.0, vignette: 0.55, vignetteColor: col(pal.vignette) },
     animate: (t, stage) => {
-      const u = easeInOutCubic(Math.min(1, t / 10.0333));
+      // eased push-in plus a constant slow drift so the camera is never static
+      const u = 0.75 * easeInOutCubic(Math.min(1, t / 10.0333)) + 0.25 * (t / 10.0333);
       const radius = 6.4 - 0.6 * u;
       const el = THREE.MathUtils.degToRad(17 + 2.5 * u);
       const az = THREE.MathUtils.degToRad(68 - 3 * u);
