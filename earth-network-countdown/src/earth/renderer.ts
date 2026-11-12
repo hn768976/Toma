@@ -335,7 +335,7 @@ export class EarthRenderer {
       const a = vis * nd.bright * tw * s.networkGain * (0.9 + 0.8 * warm);
       pushCapsule(
         nc[i * 4], nc[i * 4 + 1], nc[i * 4], nc[i * 4 + 1],
-        mixc(pal.netCool, pal.netWarm, warm), a, 2.0 * S * nd.size, 6 * S * nd.size, 0.12,
+        mixc(pal.netCool, pal.netWarm, warm), a, 2.0 * S * nd.size, 6 * S * nd.size, 0.22,
       );
     }
     // stars (hidden behind the planet)

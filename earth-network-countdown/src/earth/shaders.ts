@@ -54,7 +54,7 @@ void main() {
   float clusters = smoothstep(0.42, 0.72, fbm(p * 6.0 + vec3(4.0)));
   float fine = pow(vnoise(p * 300.0), 9.0) * 2.6 + pow(vnoise(p * 130.0 + 3.0), 7.0) * 1.4;
   float coast = 1.0 - smoothstep(0.0, 0.05, h - 0.525);
-  float city = land * clamp(fine * (0.25 + 1.4 * clusters) + coast * clusters * 0.35 * pow(vnoise(p * 70.0), 2.0), 0.0, 1.0);
+  float city = land * clamp(fine * (0.25 + 2.2 * clusters) + coast * clusters * 0.5 * pow(vnoise(p * 70.0), 2.0) + clusters * clusters * 0.12, 0.0, 1.0);
   float ice = smoothstep(1.15, 1.3, abs(lat));
   o = vec4(max(land, ice * 0.6), city * (1.0 - ice), terr, 1.0);
 }`;
@@ -136,7 +136,7 @@ void main() {
     col += uCity * cityI * 1.4;
     // limb brightening
     float rim = pow(1.0 - mu, 4.0);
-    col += rimCol * rim * (0.45 + 2.2 * warm);
+    col += rimCol * rim * (0.25 + 2.2 * warm);
     col += mix(rimCol, vec3(0.85, 0.9, 1.0), 0.35) * pow(1.0 - mu, 22.0) * (0.9 + 2.0 * warm);
     col += uRimWarm * pow(1.0 - mu, 16.0) * warm * 3.5;
   } else {
@@ -149,7 +149,7 @@ void main() {
   // sun: core, halos, anamorphic streak and rays
   float si = uSunI;
   float core = exp(-pow(sunDist / (0.018 * W), 2.0)) * 3.2 + exp(-sunDist / (0.03 * W)) * 1.3;
-  float halo = exp(-sunDist / (0.07 * W)) * 0.85 + exp(-sunDist / (0.2 * W)) * 0.08;
+  float halo = exp(-sunDist / (0.07 * W)) * 0.85 + exp(-sunDist / (0.11 * W)) * 0.16 + exp(-sunDist / (0.2 * W)) * 0.08;
   float streak = exp(-abs(toSun.y) / (0.0016 * H)) * exp(-abs(toSun.x) / (0.28 * W)) * 1.3
                + exp(-abs(toSun.y) / (0.007 * H)) * exp(-abs(toSun.x) / (0.16 * W)) * 0.4;
   float ang = atan(toSun.y, toSun.x);
@@ -241,8 +241,9 @@ void main() {
     float band = floor(uv.y * bands + h2(vec2(uSeed, 2.0)) * 3.0);
     float r = h2(vec2(band, uSeed));
     if (r < uGlitch * 0.35) {
-      suv.x += (h2(vec2(band, uSeed + 7.0)) - 0.5) * 0.04 * uGlitch;
-      huv = suv;
+      float off = (h2(vec2(band, uSeed + 7.0)) - 0.5) * 0.04 * uGlitch;
+      suv.x += off;
+      huv.x += off * 0.35; // the HUD only jitters; it never gets smeared
       split = 0.003 * uGlitch;
       if (h2(vec2(band, uSeed + 13.0)) < 0.3) {
         float edge = h2(vec2(band, uSeed + 19.0));

@@ -34,7 +34,7 @@ export const buildNetwork = (seed: number): Network => {
   // Clustered surface nodes (hubs) + a uniform sprinkle.
   const hubs: Vec3[] = [];
   for (let i = 0; i < 70; i++) hubs.push(randomUnit(rnd));
-  for (let i = 0; i < 6000; i++) {
+  for (let i = 0; i < 9000; i++) {
     let p: Vec3;
     if (rnd() < 0.35) {
       const h = hubs[Math.floor(rnd() * hubs.length)];
@@ -54,9 +54,9 @@ export const buildNetwork = (seed: number): Network => {
   const surfaceCount = nodes.length;
 
   // Floating "upper atmosphere" nodes that make shards reaching into space.
-  for (let i = 0; i < 1100; i++) {
+  for (let i = 0; i < 1500; i++) {
     const p = randomUnit(rnd);
-    const alt = 1.01 + Math.pow(rnd(), 2.5) * 0.09;
+    const alt = 1.008 + Math.pow(rnd(), 2.5) * 0.045;
     nodes.push({
       p: scale(p, alt),
       size: 0.5 + rnd() * 1.1,
@@ -71,7 +71,7 @@ export const buildNetwork = (seed: number): Network => {
   const N = nodes.length;
   for (let i = 0; i < N; i++) {
     const isAir = i >= surfaceCount;
-    const maxD = isAir ? 0.1 : 0.08;
+    const maxD = isAir ? 0.07 : 0.05;
     const k = isAir ? 3 : 2 + Math.floor(rnd() * 2);
     const cand: { j: number; d: number }[] = [];
     for (let j = 0; j < N; j++) {
