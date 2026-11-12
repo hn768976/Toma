@@ -68,31 +68,31 @@ const mixRig = (a: Rig, b: Rig, t: number): Rig => ({
   aperture: lerp(a.aperture, b.aperture, t),
 });
 
-const RAINBOW = [0.0, 0.03, 0.08, 0.14, 0.3, 0.42, 0.5, 0.56, 0.62, 0.75, 0.83, 0.9, 0.95];
+const RAINBOW = [0.0, 0.05, 0.09, 0.14, 0.25, 0.33, 0.45, 0.5, 0.53, 0.57, 0.62, 0.78, 0.92];
 
-const V1_START: Rig = { target: [2.4, 0.35, 0], dist: 6.6, yaw: 74, elev: -10, roll: -21, fov: 44, focusOffset: 0.6, aperture: 0.5 };
-const V1_END: Rig = { target: [0.5, 0.45, 0], dist: 4.8, yaw: 46, elev: -12, roll: -31, fov: 44, focusOffset: -0.7, aperture: 0.34 };
+const V1_START: Rig = { target: [2.4, 0.35, 0], dist: 5.3, yaw: 74, elev: -10, roll: -21, fov: 44, focusOffset: 0.3, aperture: 0.95 };
+const V1_END: Rig = { target: [0.6, 0.35, 0], dist: 4.4, yaw: 52, elev: -12, roll: -19, fov: 44, focusOffset: -0.5, aperture: 0.75 };
 
 /** Version 1 — matches the reference: slow oblique push that swings down the helix axis. */
 export const referenceVariant: DnaVariant = {
   id: "v1",
   seed: 7,
   rungHues: RAINBOW,
-  rungSaturation: 1,
-  backboneColor: [0.35, 0.3, 1.0],
+  rungSaturation: 0.88,
+  backboneColor: [0.5, 0.6, 1.0],
   spin: (t) => -1.05 * t,
   camera: (t, duration) => {
     const u = t / duration;
     const k = u * 0.55 + u * u * 0.45; // push accelerates into the shot
     return rigToCamera(mixRig(V1_START, V1_END, k));
   },
-  exposure: 2.6,
-  bloomNear: 0.5,
-  bloomWide: 0.35,
+  exposure: 3.3,
+  bloomNear: 0.75,
+  bloomWide: 0.5,
 };
 
-const V2_START: Rig = { target: [3, -0.5, 0], dist: 7.5, yaw: 150, elev: -22, roll: 18, fov: 40, focusOffset: 0, aperture: 0.4 };
-const V2_END: Rig = { target: [9, -1.1, 0], dist: 6.0, yaw: 100, elev: -8, roll: 4, fov: 40, focusOffset: 0, aperture: 0.4 };
+const V2_START: Rig = { target: [4.5, -0.3, 0], dist: 7.0, yaw: 150, elev: -22, roll: 18, fov: 40, focusOffset: 0, aperture: 0.55 };
+const V2_END: Rig = { target: [9, -0.7, 0], dist: 5.6, yaw: 100, elev: -8, roll: 4, fov: 40, focusOffset: 0, aperture: 0.55 };
 
 /** Version 2 — same rainbow DNA, new camera: low-angle orbit travelling against the helix. */
 export const orbitVariant: DnaVariant = {

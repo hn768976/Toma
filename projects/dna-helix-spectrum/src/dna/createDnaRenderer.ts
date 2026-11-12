@@ -64,8 +64,8 @@ export const createDnaRenderer = (variant: DnaVariant, fps: number, durationInFr
       geo.colors[p * 3] = r * tint;
       geo.colors[p * 3 + 1] = g * tint;
       geo.colors[p * 3 + 2] = b;
-      geo.sizes[p] = 0.026;
-      geo.energies[p] = 1.6;
+      geo.sizes[p] = 0.018;
+      geo.energies[p] = 1.3;
       geo.rnds[p] = (k * 0.6180339887) % 1;
       geo.spacings[p] = BACKBONE_SPACING;
     }
