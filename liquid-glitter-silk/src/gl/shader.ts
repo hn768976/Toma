@@ -83,7 +83,7 @@ void main() {
   // ---- fake depth of field: focus band across the frame ----------------------
   // Upper-left and lower-right corners drift out of focus.
   float focusDist = abs(dot(uv - vec2(0.05, 0.02), normalize(vec2(0.55, -1.0))));
-  float defocus = smoothstep(0.12, 0.5, focusDist);
+  float defocus = smoothstep(0.2, 0.6, focusDist);
   defocus = max(defocus, smoothstep(0.55, 0.95, length(uv * vec2(0.8, 1.2))));
 
   // ---- surface ---------------------------------------------------------------
@@ -95,8 +95,12 @@ void main() {
   float hyp = field(p + vec2(0.0, e), t);
   float hym = field(p - vec2(0.0, e), t);
   vec2 grad = vec2(hxp - hxm, hyp - hym) / (2.0 * e);
-  // curvature (Laplacian) in units of the fold scale: < 0 on crests
-  float lap = (hxp + hxm + hyp + hym - 4.0 * h) / (e * e) * 0.06;
+  // curvature (Laplacian) in units of the fold scale: < 0 on crests.
+  // Uses a wider stencil than the normal: a 2 px second difference is
+  // dominated by float rounding noise and shows up as hairline scratches.
+  float e2 = px * mix(10.0, 70.0, defocus);
+  float lap = (field(p + vec2(e2, 0.0), t) + field(p - vec2(e2, 0.0), t)
+             + field(p + vec2(0.0, e2), t) + field(p - vec2(0.0, e2), t) - 4.0 * h) / (e2 * e2) * 0.06;
   float hscale = 0.55;
   vec3 N = normalize(vec3(-grad * hscale, 1.0));
   vec3 V = vec3(0.0, 0.0, 1.0);
@@ -150,17 +154,17 @@ void main() {
 
   // ---- glitter flakes flowing with the surface -------------------------------------
   // isotropic cells in camera space (no warp stretch -> round sparkles)
-  vec2 gq = p * (uRes.y / uCam.y) * 0.13;           // ~8 px cells at 2160p
+  vec2 gq = p * (uRes.y / uCam.y) * 0.17;           // ~6 px cells at 2160p
   vec2 cell = floor(gq);
   vec2 f = fract(gq) - 0.5;
   float r1 = hash12(cell);
   vec2 off = hash22(cell + 17.0) - 0.5;
   float d = length(f - off * 0.5);
-  float flakeR = mix(0.12, 0.3, hash12(cell + 5.3)) * mix(1.0, 2.6, defocus);
+  float flakeR = mix(0.09, 0.36, pow(hash12(cell + 5.3), 1.6)) * mix(1.0, 2.6, defocus);
   float shape = exp(-d * d / (flakeR * flakeR) * 2.2);
   // each flake catches the light at its own phase as the surface moves
   float tw = 0.5 + 0.5 * sin(r1 * 40.0 + t * (1.5 + r1 * 3.0) + dot(N.xy, vec2(23.0, 17.0)));
-  float sparkle = pow(tw, 6.0) * step(0.4, r1) * shape * mix(0.6, 1.6, hash12(cell + 9.1));
+  float sparkle = pow(tw, 5.0) * step(0.22, r1) * shape * mix(0.6, 1.9, hash12(cell + 9.1));
   vec3 gcol = mix(uGlitterB, uGlitterA, ribbonMask);
   float glitAmt = mix(2.0, 0.5, defocus) * (0.45 + 1.1 * away + 0.7 * ribbonMask);
   col += gcol * sparkle * glitAmt;

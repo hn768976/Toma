@@ -14,7 +14,7 @@ export const PALETTE = {
   bgTop: "#8550cc",
   bgBottom: "#a05cbc",
   fog: "#8a56cc",
-  tail: "#ffb066",
+  tail: "#ffa844",
   mid: "#e7a2dc",
   core: "#8a5ae6",
 } as const;
@@ -29,6 +29,8 @@ type VortexInstance = {
   /** spin amplitude (radians) of the looping oscillation about the axis */
   spinAmp: number;
   spinPhase: number;
+  /** mirror the coil (flip its winding direction) */
+  mirror?: boolean;
 };
 
 const VORTICES: VortexInstance[] = [
@@ -40,16 +42,18 @@ const VORTICES: VortexInstance[] = [
       tighten: 0.085,
       depthPerRad: 0.3,
       width: 2.6,
-      thetaStart: -4.2,
-      thetaEnd: 7 * Math.PI,
+      thetaStart: -5.6,
+      thetaEnd: 9 * Math.PI,
       layers: 6,
       colors: [PALETTE.tail, PALETTE.mid, PALETTE.core],
-      colorStops: [3.6, 7.6],
+      colorStops: [1.0, 8.2],
+      warmSide: 5.8,
     },
     position: [1.3, -0.7, 0],
-    rotation: [0.42, -0.62, 0.75],
-    spinAmp: 0.4,
+    rotation: [0.42, -0.62, 2.0],
+    spinAmp: 0.15,
     spinPhase: 0,
+    mirror: true,
   },
   // Secondary vortex, left and a little further back, with its own orange tail.
   {
@@ -59,10 +63,10 @@ const VORTICES: VortexInstance[] = [
       tighten: 0.085,
       depthPerRad: 0.3,
       width: 2.4,
-      thetaStart: -4.0,
-      thetaEnd: 7 * Math.PI,
+      thetaStart: -5.6,
+      thetaEnd: 9 * Math.PI,
       layers: 6,
-      colors: [PALETTE.tail, "#dca4e2", PALETTE.core],
+      colors: ["#f4b6d2", "#cfa0ec", PALETTE.core],
       colorStops: [1.2, 5.2],
     },
     position: [-4.3, 0.9, -2.6],
@@ -86,7 +90,7 @@ const VORTICES: VortexInstance[] = [
     },
     position: [5.0, -0.2, -5.0],
     rotation: [0.25, -0.5, 4.0],
-    spinAmp: 0.15,
+    spinAmp: 0.3,
     spinPhase: 1.9,
   },
   // Low-left far vortex.
@@ -105,7 +109,7 @@ const VORTICES: VortexInstance[] = [
     },
     position: [-4.6, -4.4, -6.0],
     rotation: [-0.2, 0.4, 1.1],
-    spinAmp: 0.12,
+    spinAmp: 0.25,
     spinPhase: 3.1,
   },
   // Huge backdrop coil far behind everything so no flat background shows.
@@ -154,6 +158,7 @@ const Vortex: React.FC<{ v: VortexInstance; loop: number; groove: THREE.Texture 
     <group
       position={v.position as [number, number, number]}
       rotation={v.rotation as [number, number, number]}
+      scale={v.mirror ? [-1, 1, 1] : [1, 1, 1]}
     >
       <mesh geometry={geometry} rotation={[0, 0, spin]}>
         <meshStandardMaterial
@@ -174,10 +179,9 @@ const Lights: React.FC<{ loop: number }> = ({ loop }) => {
   return (
     <>
       <ambientLight intensity={0.85} color="#ffffff" />
-      <hemisphereLight args={["#f8dcff", "#a85ad6", 1.25]} />
+      <hemisphereLight args={["#f8dcff", "#a052d0", 1.15]} />
       <directionalLight position={[-6, 8, 9]} intensity={key} color="#ffe6ef" />
       <directionalLight position={[7, -3, 4]} intensity={0.8} color="#a08cff" />
-      <pointLight position={[1.4, -0.8, -2.5]} intensity={16} distance={16} decay={1.6} color="#b9a0ff" />
     </>
   );
 };
@@ -206,7 +210,7 @@ const LayerCanvas: React.FC<{
         gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = 1.08;
+          gl.toneMappingExposure = 0.97;
           gl.setClearColor(0x000000, 0);
         }}
       >

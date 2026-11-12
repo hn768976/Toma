@@ -18,6 +18,11 @@ export type SpiralSpec = {
   colors: readonly [string, string, string];
   /** theta at which tail -> mid and mid -> core transitions are centred */
   colorStops: readonly [number, number];
+  /**
+   * Optional: tint one side of the outer turns with the tail colour. The value
+   * is the angle (radians, in the coil's local frame) the warm side faces.
+   */
+  warmSide?: number;
 };
 
 const smooth = (a: number, b: number, x: number) => {
@@ -71,13 +76,27 @@ export const buildLayeredSpiral = (spec: SpiralSpec, segments = 520) => {
       const a = smooth(spec.colorStops[0] - 1.3, spec.colorStops[0] + 1.3, theta);
       const b = smooth(spec.colorStops[1] - 2.2, spec.colorStops[1] + 2.2, theta);
       tmp.copy(cTail).lerp(cMid, a).lerp(cCore, b);
+      if (spec.warmSide !== undefined) {
+        // warm (tail-coloured) flank on one side of the first ~1.5 turns
+        const side = smooth(-0.35, 0.75, Math.cos(theta - spec.warmSide));
+        const outer = 1 - smooth(Math.PI * 1.6, Math.PI * 3.4, theta);
+        tmp.lerp(cTail, side * outer * 0.95);
+      }
       tmp.multiplyScalar(shade);
+
+      // Taper every layer to a point at both ends, so the stack ends in clean
+      // curved tips instead of staggered, saw-toothed cut edges.
+      const span = spec.thetaEnd - spec.thetaStart;
+      const taper =
+        smooth(0, 1, (theta - spec.thetaStart) / Math.min(1.4, span * 0.1)) *
+        smooth(0, 1, (spec.thetaEnd - theta) / Math.min(1.4, span * 0.1));
+      const wt = w * (0.04 + 0.96 * taper);
 
       for (let j = 0; j <= across; j++) {
         const v = j / across;
         // slight inward curl of each strip across its width
         const curl = 1 - 0.035 * Math.sin(v * Math.PI);
-        positions.push(cx * curl, cy * curl, zc + (v - 0.5) * w);
+        positions.push(cx * curl, cy * curl, zc + (v - 0.5) * wt);
         colors.push(tmp.r, tmp.g, tmp.b);
         uvs.push(u * (spec.thetaEnd - spec.thetaStart) * 0.5, v + k * 0.37);
       }

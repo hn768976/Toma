@@ -25,8 +25,8 @@ export const CAMERA_MOVES = {
     const s = pingPong(loop);
     return {
       // closer framing (narrow lens) and a ~1.3x push-in that returns
-      position: mix3([0.6, 0.35, 5.6], [1.5, -0.35, 4.2], s),
-      target: mix3([1.2, 0.2, -1.2], [1.7, -0.25, -2.0], s),
+      position: mix3([0.2, 0.55, 6.3], [1.1, -0.15, 3.9], s),
+      target: mix3([1.0, 0.3, -1.2], [1.35, -0.05, -2.2], s),
       fov: 36,
       roll: 0.06 * Math.sin(loop * Math.PI * 2),
     };
