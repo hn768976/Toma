@@ -14,6 +14,8 @@ import {
   COMPOSITE_FS,
   DOWN_FS,
   FIELD_FS,
+  MAX_PATH,
+  MAX_SPIRALS,
   MAX_STOPS,
   MAX_STREAKS,
   SCENE_FS,
@@ -39,6 +41,10 @@ export type FrameParams = {
   bloomA: number;
   bloomB: number;
   bloomThreshold: number;
+  path: Vec3[]; // core ribbon: [x, y, half-width] per point
+  spirals: Vec3[]; // [x, y, amplitude]
+  hazeColor: Vec3;
+  haze: number;
 };
 
 const DOMAIN = 5.0; // field texture covers [-5, 5]^2 world units
@@ -132,6 +138,14 @@ export class ContourRenderer {
     gl.uniform1f(loc(gl, this.pField, "uDomain"), DOMAIN);
     gl.uniform1f(loc(gl, this.pField, "uTime"), f.time);
     gl.uniform1f(loc(gl, this.pField, "uProgress"), f.progress);
+    const path = new Float32Array(MAX_PATH * 3);
+    const pts = f.path.slice(0, MAX_PATH);
+    pts.forEach((v, i) => path.set(v, i * 3));
+    gl.uniform3fv(loc(gl, this.pField, "uPath"), path);
+    gl.uniform1i(loc(gl, this.pField, "uPathCount"), pts.length);
+    const spir = new Float32Array(MAX_SPIRALS * 3);
+    f.spirals.slice(0, MAX_SPIRALS).forEach((v, i) => spir.set(v, i * 3));
+    gl.uniform3fv(loc(gl, this.pField, "uSpiral"), spir);
     drawFullscreen(gl);
 
     // 2. Ray-march the contour walls.
@@ -177,6 +191,8 @@ export class ContourRenderer {
     gl.uniform1f(loc(gl, s, "uFloorLo"), f.floorLo);
     gl.uniform1f(loc(gl, s, "uFloorHi"), f.floorHi);
     gl.uniform3fv(loc(gl, s, "uLightDir"), norm([-0.4, -0.7, 0.6]));
+    gl.uniform3fv(loc(gl, s, "uHazeCol"), f.hazeColor);
+    gl.uniform1f(loc(gl, s, "uHaze"), f.haze);
     drawFullscreen(gl);
 
     // 3. Bloom: bright-pass downsample to 1/4, blur; then 1/8, blur.

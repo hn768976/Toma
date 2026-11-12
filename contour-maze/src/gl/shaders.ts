@@ -8,77 +8,86 @@
 export const MAX_STREAKS = 32;
 export const MAX_STOPS = 8;
 
-// Analytic field, shared by the bake pass and the hit refinement.
+// Analytic field, evaluated by the bake pass.
+//
+// The glowing core is a thick, winding ribbon swept along a path (a hook / S
+// shape that unrolls from a compact blob). Outside it, F falls off with the
+// distance to that ribbon, so the walls are offset copies of the core outline
+// that bunch up close to it and relax into broad, wavy terraces further out.
+// Inside it, a warped egg-crate pattern plus two spirals draws the maze.
+export const MAX_PATH = 40;
+export const MAX_SPIRALS = 3;
 const FIELD_GLSL = /* glsl */ `
 uniform float uTime;
 uniform float uProgress;
+uniform vec3 uPath[${MAX_PATH}];   // xy = point, z = ribbon half-width
+uniform int uPathCount;
+uniform vec3 uSpiral[${MAX_SPIRALS}]; // xy = centre, z = amplitude
 
-float gauss(vec2 q, vec2 c, float s) {
-  vec2 d = q - c;
-  return exp(-dot(d, d) / (s * s));
+// Signed distance to the ribbon (negative inside).
+float ribbonSd(vec2 q) {
+  float sd = 1e5;
+  for (int i = 0; i < ${MAX_PATH} - 1; i++) {
+    if (i + 1 >= uPathCount) break;
+    vec3 a = uPath[i];
+    vec3 b = uPath[i + 1];
+    vec2 ab = b.xy - a.xy;
+    float h = clamp(dot(q - a.xy, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
+    sd = min(sd, length(q - a.xy - ab * h) - mix(a.z, b.z, h));
+  }
+  return sd;
 }
 
 float fieldF(vec2 p) {
   float t = uTime;
-  float pr = uProgress;
   // Gentle domain warp keeps every contour organic and flowing.
   vec2 w = vec2(
     sin(p.y * 1.10 + t * 0.30) + 0.6 * sin(p.x * 1.70 - p.y * 0.60 + t * 0.23),
     sin(p.x * 0.90 - t * 0.26) + 0.6 * sin(p.y * 1.50 + p.x * 0.70 + t * 0.19)
   );
-  vec2 q = p + 0.12 * w;
-  // Second, finer warp: makes the terrain contours fold and meander.
+  vec2 q = p + 0.07 * w;
+  // Finer warp: folds the far terraces into meanders / U-turn fingers.
   vec2 w2 = vec2(
-    sin(q.y * 3.3 + 1.7 * sin(q.x * 1.9 + t * 0.21) + t * 0.27),
-    sin(q.x * 3.1 - 1.5 * sin(q.y * 2.3 - t * 0.18) - t * 0.24)
+    sin(q.y * 2.6 + 1.7 * sin(q.x * 1.6 + t * 0.21) + t * 0.27),
+    sin(q.x * 2.4 - 1.5 * sin(q.y * 1.9 - t * 0.18) - t * 0.24)
   );
 
-  // Island frame: the centre stays put; the shape bends from a compact blob
-  // into a hook / S over the first half of the shot (uProgress is eased).
-  vec2 c = mix(vec2(0.0, 0.05), vec2(-0.03, 0.02), pr);
-  float ang = mix(1.30, 1.45, pr);
-  float stretch = mix(1.0, 1.25, pr);
-  vec2 d = q - c;
-  vec2 dr = vec2(cos(ang) * d.x + sin(ang) * d.y, -sin(ang) * d.x + cos(ang) * d.y);
-  dr.x /= stretch;
-  dr.y *= mix(1.0, 1.15, pr);
-  // Bend the island (arms curl) with a low-frequency warp in its own frame.
-  dr += mix(0.08, 0.17, pr) * vec2(sin(dr.y * 3.1 + 0.7 + t * 0.2), sin(dr.x * 2.7 - 0.4 - t * 0.17));
-  float r = length(dr);
-  float th = atan(dr.y, dr.x);
+  // Lobes and fingers along the outline.
+  float sd0 = ribbonSd(q);
+  float lobe = sin(q.x * 4.3 + 1.9 * sin(q.y * 3.1) + t * 0.12)
+             * sin(q.y * 3.9 - 1.3 * sin(q.x * 2.7) - t * 0.1);
+  float sd = sd0 - 0.075 * lobe / (1.0 + 4.0 * max(sd0, 0.0));
 
-  // Lobed island outline: r = R0 * (1 + wig(theta)).
-  const float R0 = 0.52;
-  float wig = 0.16 * sin(2.0 * th - 0.4 + t * 0.11)
-            + 0.24 * sin(3.0 * th + 0.8 + t * 0.15)
-            + 0.13 * sin(5.0 * th - 1.1 - t * 0.21)
-            + 0.08 * sin(8.0 * th + 2.3 + t * 0.27);
-  // Effective radius: offset curves of the island whose wiggles relax with distance.
-  float relax = exp(-max(r - R0, 0.0) / 1.4);
-  float reff = r - R0 * wig * relax;
+  // Outside: log fall-off -> tight offset walls hugging the core, broad
+  // terraces far away, plus slow waves and meanders that grow with distance.
+  float so = max(sd, 0.0);
+  float outer = 1.0 - 0.26 * log(1.0 + so / 0.26);
+  float far = smoothstep(0.25, 1.2, so);
+  outer += far * (0.16 * sin(q.x * 1.25 + q.y * 0.50 + 0.6 + t * 0.10)
+                + 0.11 * sin(-q.x * 0.70 + q.y * 1.55 - 1.3 - t * 0.08));
+  outer += 0.075 * far * dot(w2, vec2(0.8, 0.6));
 
-  // Outside: offset contours of the island that relax into long waves. The
-  // terraces start wide and become denser over the shot.
-  float slopeOut = mix(0.36, 0.58, pr);
-  float outer = 1.0 - slopeOut * (reff - R0);
-  float waves = 0.20 * sin(q.x * 1.35 + q.y * 0.55 + 0.6 + t * 0.10)
-              + 0.14 * sin(-q.x * 0.75 + q.y * 1.70 - 1.3 - t * 0.08)
-              + 0.05 * sin(q.x * 2.60 - q.y * 2.20 + 2.2 + t * 0.13);
-  outer += 0.75 * waves * smoothstep(0.65, 1.5, reff);
-  // Meanders (U-turn fingers) grow with distance from the island.
-  outer += mix(0.08, 0.12, pr) * dot(w2, vec2(0.8, 0.6)) * smoothstep(0.58, 1.0, reff);
+  // Inside: a raised maze floor.
+  float si = max(-sd, 0.0);
+  vec2 mq = q * 4.6 + 1.4 * vec2(sin(q.y * 3.9 + t * 0.15), sin(q.x * 3.4 - t * 0.13));
+  float m = sin(mq.x) * sin(mq.y + 0.6 * sin(mq.x * 0.5));
+  float spir = 0.0;
+  float smask = 0.0;
+  for (int i = 0; i < ${MAX_SPIRALS}; i++) {
+    vec3 sp = uSpiral[i];
+    if (sp.z <= 0.0) continue;
+    vec2 d = q - sp.xy;
+    float rho = length(d);
+    float g = exp(-rho * rho / 0.022) * sp.z;
+    spir += g * sin(atan(d.y, d.x) - rho * 30.0 + t * 0.7);
+    smask = max(smask, g);
+  }
+  // Nested offsets of the outline that wind and finger into each other.
+  float edge = smoothstep(0.02, 0.15, si);
+  float inside = max(1.06 + 0.7 * si + edge * (0.08 * m * (1.0 - smask) + 0.1 * spir), 1.05);
 
-  // Inside: nested, scaled copies of the island outline (normalised radius
-  // rn = 1 on the outline, 0 at the centre) that wind into a spiral core.
-  float rn = clamp(r / (R0 * (1.0 + wig)), 0.0, 1.2);
-  float spiralMask = 1.0 - smoothstep(0.22, 0.5, rn);
-  float spiral = sin(th - rn * 17.0 + t * 0.5);
-  float inside = 1.02 + 0.25 * (1.0 - rn) + 0.045 * spiral * spiralMask;
-
-  // Step at the island edge -> the white outline wall.
-  float k = smoothstep(R0 + 0.02, R0 - 0.02, reff);
-  float base = mix(outer, inside, k);
-  return base;
+  float k = smoothstep(0.012, -0.012, sd);
+  return mix(outer, inside, k);
 }
 `;
 
@@ -121,6 +130,8 @@ uniform float uFogStart;
 uniform float uFloorLo;
 uniform float uFloorHi;
 uniform vec3 uLightDir;
+uniform vec3 uHazeCol;
+uniform float uHaze;
 ${FIELD_GLSL}
 
 const float HMAX = 0.58;
@@ -145,10 +156,26 @@ vec3 palette(float v) {
   return c;
 }
 
+// The core is a raised plateau (floor at HP) whose maze walls are short.
+const float HP = 0.34;
+const float CORE_F = 1.035;
 float wallH(float v) {
-  // Outer terrain walls are tall, the island outline is tallest, and the
-  // maze walls inside the island are low so its blue floor shows through.
-  return 0.42 - 0.05 * smoothstep(1.1, 1.16, v);
+  // Terrain ribbons step down away from the core (a terraced hill); the core
+  // outline stands just above the plateau, the maze walls on it are short.
+  if (v > 1.05) return HP + 0.05;
+  if (v > 1.0) return HP + 0.07;
+  return HP * (0.42 + 0.53 * smoothstep(0.1, 1.0, v));
+}
+
+vec3 shadeFloor(vec2 p) {
+  float F = sampleF(p);
+  float lv = floor(F / uDelta) * uDelta;
+  vec2 g = gradT(p);
+  float fr = fract(F / uDelta);
+  float d = min(fr, 1.0 - fr) * uDelta / max(length(g), 1e-3);
+  float ao = smoothstep(0.0, 0.10, d);
+  float bright = mix(uFloorLo, uFloorHi, smoothstep(1.0, 1.12, lv));
+  return palette(lv) * bright * (0.4 + 0.6 * ao);
 }
 
 float streakAmt(float lvl, vec2 p) {
@@ -163,7 +190,7 @@ float streakAmt(float lvl, vec2 p) {
       th = atan(d.y, d.x);
     }
     float da = abs(mod(th - k.y + 3.14159265, 6.2831853) - 3.14159265);
-    s = max(s, k.w * (1.0 - smoothstep(k.z * 0.55, k.z, da)));
+    s = max(s, k.w * (1.0 - smoothstep(k.z * 0.9, k.z, da)));
   }
   return s;
 }
@@ -171,9 +198,9 @@ float streakAmt(float lvl, vec2 p) {
 // Rim tops glow in the next-lighter palette colour (orange walls -> yellow rims).
 vec3 rimColor(float b, float s) {
   // Terrain rims: next-lighter colour (orange -> yellow). Island rims: own colour.
-  vec3 c = palette(b > 1.0 ? b - 0.04 : min(b + 0.12, 1.03)) * 2.7;
-  if (b > 1.15) c = mix(palette(b), vec3(1.0), 0.45) * 2.4; // maze: white-blue neon
-  return mix(c, uStreakCol * 4.0, s);
+  vec3 c = palette(b > 1.0 ? b - 0.04 : min(b + 0.07, 0.965)) * 2.7;
+  if (b > 1.05) c = mix(palette(b), vec3(1.0), 0.45) * 2.4; // maze: white-blue neon
+  return mix(c, uStreakCol * 3.0, s);
 }
 
 void main() {
@@ -233,8 +260,8 @@ void main() {
           if (dot(nrm, rd) > 0.0) nrm = -nrm;
           float lam = 0.75 + 0.25 * max(dot(nrm, uLightDir), 0.0);
           float glow = pow(hz, 1.6);
-          vec3 face = base * (0.12 + 0.90 * glow) * lam;
-          face = mix(face, uStreakCol * (0.3 + 1.9 * glow), s * 0.85 * glow * glow);
+          vec3 face = base * (0.2 + 0.85 * glow) * lam;
+          face = mix(face, uStreakCol * (0.5 + 1.6 * glow), s * glow * glow * glow);
           float rimAmt = 1.0 - smoothstep(uRimR * 0.7, uRimR * 1.8 + aa, -e * hl);
           col += T * mix(face, rimColor(b, s), rimAmt);
           T = 0.0;
@@ -253,23 +280,28 @@ void main() {
       }
       if (hit) break;
     }
+    // Landing on the core plateau.
+    if (F1 >= CORE_F && ro.z + rd.z * t1 <= HP) {
+      float tp = clamp((HP - ro.z) / rd.z, t0, t1);
+      col += T * shadeFloor((ro + rd * tp).xy);
+      T = 0.0;
+      tHit = tp;
+      hit = true;
+      break;
+    }
     t0 = t1;
     F0 = F1;
     L0 = L1;
   }
 
   if (!hit) {
-    vec3 pf = ro + rd * tBot;
-    float F = sampleF(pf.xy);
-    float lv = floor(F / uDelta) * uDelta;
-    vec2 g = gradT(pf.xy);
-    float fr = fract(F / uDelta);
-    float d = min(fr, 1.0 - fr) * uDelta / max(length(g), 1e-3);
-    float ao = smoothstep(0.0, 0.10, d);
-    float bright = mix(uFloorLo, uFloorHi, smoothstep(1.0, 1.12, lv));
-    col += T * palette(lv) * bright * (0.4 + 0.6 * ao);
+    col += T * shadeFloor((ro + rd * tBot).xy);
     tHit = tBot;
   }
+
+  // Warm glow that hangs around the core and builds over the shot.
+  float Fh = sampleF((ro + rd * tHit).xy);
+  col += uHazeCol * uHaze * pow(smoothstep(0.5, 1.0, Fh), 2.0) * (1.0 - smoothstep(1.0, 1.04, Fh));
 
   // Atmospheric falloff into the distance.
   float fog = 1.0 - exp(-max(tHit - uFogStart, 0.0) * 0.45);
