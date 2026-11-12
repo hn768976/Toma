@@ -77,11 +77,12 @@ const PX = 432 / VIEW_H;
 // The reference undulates in place with a 90-frame period (3 cycles per
 // 270-frame clip), so the loop is seamless.
 const SWAY_CYCLES = 3;
-const SWAY_VARIANTS = 3;
+// All discs sway in unison, as in the reference.
+const SWAY_VARIANTS = 1;
 // Tint multipliers from the deepest layer to the top layer.
-const DEPTH_TINTS = ["#b9bccb", "#cdd0dc", "#e2e4ec", "#f2f3f6", "#ffffff"];
+const DEPTH_TINTS = ["#c0c1cb", "#d2d3db", "#e5e5ea", "#f4f4f5", "#ffffff"];
 const depthBucket = (h: number) =>
-  Math.max(0, Math.min(DEPTH_TINTS.length - 1, Math.floor(((h + 3.6) / 6.5) * DEPTH_TINTS.length))); // discs use 3 phase-offset geometries so they don't move in lockstep
+  Math.max(0, Math.min(DEPTH_TINTS.length - 1, Math.floor(((h + 3.6) / 6.5) * DEPTH_TINTS.length)));
 
 const Disc: React.FC<{
   spec: DiscSpec;
@@ -103,7 +104,7 @@ const Disc: React.FC<{
       <mesh
         geometry={hole}
         material={holeMaterial}
-        position={[0, 0, -0.045]}
+        position={[0, 0, -0.02]}
       />
     </group>
   );
@@ -123,8 +124,8 @@ const Lights: React.FC<{ palette: Props["palette"] }> = ({ palette }) => {
     c.bottom = -9;
     c.near = 1;
     c.far = 50;
-    l.shadow.radius = 20;
-    l.shadow.blurSamples = 24;
+    l.shadow.radius = 34;
+    l.shadow.blurSamples = 32;
     l.shadow.bias = -0.002;
     l.shadow.normalBias = 0.05;
     return l;
@@ -169,7 +170,7 @@ export const PetalSwirl: React.FC<Props> = ({ palette }) => {
         metalness: 0,
         clearcoat: 0.45,
         clearcoatRoughness: 0.35,
-        sheen: 0.25,
+        sheen: 0.45,
         sheenColor: new THREE.Color(p.sheen),
         vertexColors: true,
         side: THREE.DoubleSide,

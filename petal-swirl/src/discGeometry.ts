@@ -19,8 +19,8 @@ export type DiscShape = {
 
 export const DEFAULT_SHAPE: DiscShape = {
   flutes: 22,
-  twist: -0.85, // negative = flutes curve clockwise outward, as in the reference
-  depth: 0.015,
+  twist: -0.62, // negative = flutes curve clockwise outward, as in the reference
+  depth: 0.012,
   bowl: 0.08,
   scallop: 0.014,
 };
@@ -47,14 +47,14 @@ const surface = (
   const pinch =
     0.03 * Math.sin(sway + 0.8) * Math.cos((s.flutes / 2) * theta) * u * u;
   const phi = theta + bend + lean + pinch;
-  const wave = Math.sin(s.flutes * phi);
-  const crest = wave;
+  // Slightly sharpened sine: crisper pleat ridges, as in the reference.
+  const crest = Math.asin(0.9 * Math.sin(s.flutes * phi)) / Math.asin(0.9);
   const rim = 1 + s.scallop * Math.pow(u, 5) * Math.sin(s.flutes * phi + 0.6);
   const rho = Math.max(u, HOLE) * rim;
-  // Flutes are shallow and fade out toward the centre hole.
-  const amp = s.depth * smoothstep(0.08, 0.6, u) * (0.6 + 0.4 * u);
+  // Flutes run almost to the centre hole, converging there.
+  const amp = s.depth * smoothstep(0.035, 0.35, u) * (0.55 + 0.45 * u);
   // Shallow bowl + soft dimple into the centre hole.
-  const base = s.bowl * u * u - 0.05 * Math.exp(-Math.pow(u / 0.07, 2));
+  const base = s.bowl * u * u - 0.018 * Math.exp(-Math.pow(u / 0.09, 2));
   // Soft, irregular ruffle on the rim that undulates with the sway.
   const ruffle =
     Math.pow(u, 6) *
