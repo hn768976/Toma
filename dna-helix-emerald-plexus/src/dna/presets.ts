@@ -38,13 +38,13 @@ const helix: HelixStyle = {
     size: [3.5, 6],
     alpha: [0.5, 0.95],
     inset: 0.05,
-    bar: { color: hex("#3fdc44"), alpha: 0.8, width: 3.6, glowWidth: 14, glowAlpha: 0.18, continuous: true },
+    bar: { color: hex("#3fdc44"), alpha: 0.85, width: 6.5, glowWidth: 24, glowAlpha: 0.22, continuous: true },
     hot: {
       color: hex("#d6ff3c"),
-      clusters: [1, 3],
-      count: 40,
-      spread: 0.14,
-      size: [5, 9],
+      clusters: [2, 4],
+      count: 60,
+      spread: 0.16,
+      size: [8, 13],
       alpha: [0.6, 1],
     },
   },
@@ -64,7 +64,7 @@ const helix: HelixStyle = {
     nodeColor: hex("#ffffff"),
     nodeSize: [2.6, 4.6],
     nodeAlpha: 0.7,
-    stray: { count: 260, maxDist: 2.2, color: hex("#38d040"), alpha: 0.38, width: 1.1 },
+    stray: { count: 420, maxDist: 2.2, color: hex("#38d040"), alpha: 0.45, width: 1.2 },
     haze: { perUnit: 16, perRung: 4, jitter: 0.15, size: [40, 80], alpha: 0.035, color: hex("#2fa236") },
   },
 };
@@ -76,11 +76,11 @@ const field = (box: FieldStyle["box"], clearRadius?: number): FieldStyle => ({
   k: 3,
   maxDist: 1.5,
   lineColor: hex("#cfd6cf"),
-  lineAlpha: 0.26,
+  lineAlpha: 0.33,
   lineWidth: 1.3,
   nodeKind: 2,
   nodeColor: hex("#f2f6f2"),
-  nodeSize: [24, 34],
+  nodeSize: [26, 36],
   nodeAlpha: 1,
   facetChance: 0,
   facetAlpha: 0,
@@ -100,7 +100,7 @@ const field = (box: FieldStyle["box"], clearRadius?: number): FieldStyle => ({
 const trackingRig = (t: number, dur: number): Rig => {
   const u = t / dur;
   const s = soft(u);
-  const camX = lerp(1.18, -0.85, s);
+  const camX = lerp(1.18, -0.66, s);
   const camY = lerp(-0.3, 0.6, s);
   return {
     camPos: [camX, camY, lerp(3.35, 3.95, smooth(u / 0.55))],
@@ -110,8 +110,8 @@ const trackingRig = (t: number, dur: number): Rig => {
     helixPos: [0, 0, 0],
     helixSpin: 2.2 + 0.2 * t,
     helixTilt: [lerp(0.12, -0.42, smooth(u * 1.15 - 0.1)), lerp(0.14, -0.3, s)],
-    focus: lerp(3.65, 4.1, smooth(u / 0.55)),
-    glow: lerp(0.6, 1, smooth(u / 0.3)) * lerp(1, 0.6, smooth((u - 0.4) / 0.6)),
+    focus: lerp(4.0, 4.35, smooth(u / 0.55)),
+    glow: lerp(1, 0.62, smooth((u - 0.4) / 0.6)),
   };
 };
 
@@ -142,8 +142,8 @@ const orbitRig = (t: number, dur: number): Rig => {
 
 const glow = {
   color: hex("#1c8f22"),
-  intensity: 0.17,
-  size: 3.0,
+  intensity: 0.21,
+  size: 3.2,
   spacing: 0.45,
   offset: [-0.45, 0.1] as const,
   yRange: [0.0, 2.0] as const,
@@ -165,8 +165,8 @@ export const PRESETS = {
     helix,
     field: field({ x: [1.3, 12], y: [-6, 7], z: [-10, 0.4] }),
     glow,
-    dof: { aperture: 62, fieldApertureScale: 0.85, maxCoc: 90, ringAmount: 0.1, refDepth: 4.0 },
-    gain: { points: 1, lines: 1, facets: 1 },
+    dof: { aperture: 70, fieldApertureScale: 0.7, maxCoc: 90, ringAmount: 0.1, refDepth: 4.0 },
+    gain: { points: 1.12, lines: 1.1, facets: 1 },
     twinkle: 0.4,
     rig: trackingRig,
   },
