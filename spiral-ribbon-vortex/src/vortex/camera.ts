@@ -24,9 +24,10 @@ export const CAMERA_MOVES = {
   referenceDrift: (loop: number): CameraPose => {
     const s = pingPong(loop);
     return {
-      position: mix3([0.2, 0.3, 5.9], [1.1, -0.45, 4.7], s),
-      target: mix3([0.3, 0.1, -1], [1.1, -0.65, -1.6], s),
-      fov: 46,
+      // closer framing (narrow lens) and a ~1.3x push-in that returns
+      position: mix3([0.6, 0.35, 5.6], [1.5, -0.35, 4.2], s),
+      target: mix3([1.2, 0.2, -1.2], [1.7, -0.25, -2.0], s),
+      fov: 36,
       roll: 0.06 * Math.sin(loop * Math.PI * 2),
     };
   },
@@ -37,14 +38,14 @@ export const CAMERA_MOVES = {
   orbitPlunge: (loop: number): CameraPose => {
     // ease-in-out over the clip (one-way move, not a loop)
     const e = loop < 0.5 ? 4 * loop ** 3 : 1 - (-2 * loop + 2) ** 3 / 2;
-    const ang = mix(-0.75, 0.35, e);
-    const dist = mix(10.5, 3.6, e);
+    const ang = mix(-0.5, 0.35, e);
+    const dist = mix(9.0, 3.6, e);
     const c = [1.15, -0.55, -1.2] as const;
     return {
-      position: [c[0] + Math.sin(ang) * dist, c[1] + mix(-2.0, 0.2, e), c[2] + Math.cos(ang) * dist],
+      position: [c[0] + Math.sin(ang) * dist, c[1] + mix(-1.1, 0.2, e), c[2] + Math.cos(ang) * dist],
       target: [c[0], c[1], mix(c[2], -5.5, e)],
       fov: mix(40, 62, e),
-      roll: mix(-0.25, 0.9, e),
+      roll: mix(-0.2, 0.9, e),
     };
   },
 } as const;

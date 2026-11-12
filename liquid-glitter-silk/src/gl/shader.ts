@@ -20,6 +20,8 @@ uniform float uTime;       // seconds
 uniform float uProgress;   // 0..1 over the composition
 uniform vec3  uCam;        // x: rotation (rad), y: zoom, z: unused
 uniform vec2  uCamOffset;  // pan in field units
+uniform float uExposure;   // animated exposure (brightness arc of the reference)
+uniform float uSheetBias;  // >0 grows the glowing sheet area at the expense of ribbons
 
 uniform vec3 uBase;        // broad glowing sheet colour (lime)
 uniform vec3 uBaseHi;      // sheet highlight tint
@@ -58,7 +60,8 @@ vec2 warp(vec2 p, float t) {
 // low-frequency warp bends into sweeping hooks and curls.
 float field(vec2 p, float t) {
   vec2 q = warp(p, t);
-  float s = dot(q, vec2(0.42, 1.0)) * 1.7 + t * 0.12;
+  // frequency grows towards +x, so the pleats converge into one sweeping fold
+  float s = dot(q, vec2(0.42, 1.0)) * 1.55 * exp(0.16 * q.x) + t * 0.12;
   // asymmetric crest profile (soft back, steeper front) like draped fabric
   float folds = sin(s) + 0.38 * sin(2.0 * s + 1.1) + 0.12 * sin(3.0 * s + 2.3);
   // fold amplitude breathes across the surface so some folds die out
@@ -86,10 +89,14 @@ void main() {
   // ---- surface ---------------------------------------------------------------
   float px = uCam.y / uRes.y;                        // one pixel in field units
   float e = px * mix(2.0, 70.0, defocus);            // wide stencil = blurred shading
-  float h  = field(p, t);
-  float hx = field(p + vec2(e, 0.0), t) - field(p - vec2(e, 0.0), t);
-  float hy = field(p + vec2(0.0, e), t) - field(p - vec2(0.0, e), t);
-  vec2 grad = vec2(hx, hy) / (2.0 * e);
+  float h   = field(p, t);
+  float hxp = field(p + vec2(e, 0.0), t);
+  float hxm = field(p - vec2(e, 0.0), t);
+  float hyp = field(p + vec2(0.0, e), t);
+  float hym = field(p - vec2(0.0, e), t);
+  vec2 grad = vec2(hxp - hxm, hyp - hym) / (2.0 * e);
+  // curvature (Laplacian) in units of the fold scale: < 0 on crests
+  float lap = (hxp + hxm + hyp + hym - 4.0 * h) / (e * e) * 0.06;
   float hscale = 0.55;
   vec3 N = normalize(vec3(-grad * hscale, 1.0));
   vec3 V = vec3(0.0, 0.0, 1.0);
@@ -103,7 +110,7 @@ void main() {
   vec2 tilt = N.xy;
   float slope = 1.0 - N.z;
   float m = dot(tilt, normalize(vec2(0.55, 0.85))) + 0.10 * sin(h * 2.3 + t * 0.15);
-  float ribbonMask = smoothstep(-0.02, 0.22, m);
+  float ribbonMask = smoothstep(-0.02 + uSheetBias, 0.22 + uSheetBias, m);
 
   vec3 L1 = normalize(vec3(-0.35, 0.65, 0.68));   // key, upper-left
   vec3 L2 = normalize(vec3(0.70, -0.30, 0.65));   // fill / back glow, lower-right
@@ -125,36 +132,43 @@ void main() {
   vec3 col = mix(sheet, ribbon, ribbonMask);
 
   // surfaces turned far away from both lights fall into deep shadow
-  float away = smoothstep(0.15, -0.55, dot(tilt, normalize(vec2(-0.2, 0.6))) * 0.9 + (N.z - 0.5));
-  col = mix(col, uShadow, away * 0.85);
+  float away = smoothstep(-0.05, -0.65, dot(tilt, normalize(vec2(-0.2, 0.6))) * 0.9 + (N.z - 0.5));
+  col = mix(col, uShadow, away * 0.8);
 
   // ---- specular sheen ----------------------------------------------------------
   vec3 R = reflect(-V, N);
-  float sp1 = pow(max(dot(R, L1), 0.0), 60.0);
-  float sp2 = pow(max(dot(R, L2), 0.0), 24.0);
-  float specAmt = mix(0.6, 1.2, ribbonMask) * (1.0 - 0.6 * defocus);
-  col += uSpec * (sp1 * 1.4 + sp2 * 0.5) * specAmt;
+  float sp1 = pow(max(dot(R, L1), 0.0), 140.0);
+  float sp2 = pow(max(dot(R, L2), 0.0), 40.0);
+  float specAmt = mix(0.8, 1.4, ribbonMask) * (1.0 - 0.6 * defocus);
+  col += uSpec * (sp1 * 3.0 + sp2 * 0.9) * specAmt;
+  // crisp white highlight lines riding every pleat crest
+  float crest = smoothstep(0.35, 1.2, -lap) * smoothstep(0.05, 0.35, dif1 + dif2 * 0.6);
+  col += mix(uSpec, vec3(1.0), 0.5) * crest * 1.3 * (1.0 - 0.8 * defocus);
   // broad satin sheen sweeping along the ribbon flanks
   float sheen = pow(max(dot(R, normalize(vec3(-0.2, 0.75, 0.62))), 0.0), 9.0);
   col += mix(uSpec, uRibbon + 0.4, 0.5) * sheen * 0.55 * ribbonMask * (1.0 - 0.5 * defocus);
 
   // ---- glitter flakes flowing with the surface -------------------------------------
-  vec2 gq = warp(p, t) * (uRes.y / uCam.y) * 0.15;   // ~7 px cells at 2160p
+  // isotropic cells in camera space (no warp stretch -> round sparkles)
+  vec2 gq = p * (uRes.y / uCam.y) * 0.13;           // ~8 px cells at 2160p
   vec2 cell = floor(gq);
   vec2 f = fract(gq) - 0.5;
   float r1 = hash12(cell);
   vec2 off = hash22(cell + 17.0) - 0.5;
-  float d = length(f - off * 0.6);
-  float flakeR = mix(0.2, 0.8, defocus);
+  float d = length(f - off * 0.5);
+  float flakeR = mix(0.12, 0.3, hash12(cell + 5.3)) * mix(1.0, 2.6, defocus);
   float shape = exp(-d * d / (flakeR * flakeR) * 2.2);
   // each flake catches the light at its own phase as the surface moves
   float tw = 0.5 + 0.5 * sin(r1 * 40.0 + t * (1.5 + r1 * 3.0) + dot(N.xy, vec2(23.0, 17.0)));
-  float sparkle = pow(tw, 5.0) * step(0.35, r1) * shape;
+  float sparkle = pow(tw, 6.0) * step(0.4, r1) * shape * mix(0.6, 1.6, hash12(cell + 9.1));
   vec3 gcol = mix(uGlitterB, uGlitterA, ribbonMask);
-  float glitAmt = mix(1.8, 0.45, defocus) * (0.6 + 0.9 * away + 0.4 * ribbonMask);
+  float glitAmt = mix(2.0, 0.5, defocus) * (0.45 + 1.1 * away + 0.7 * ribbonMask);
   col += gcol * sparkle * glitAmt;
 
   // ---- grade --------------------------------------------------------------------
+  col *= uExposure;
+  float lumaC = dot(col, vec3(0.299, 0.587, 0.114));
+  col = mix(vec3(lumaC), col, 0.8);                  // tame saturation slightly
   float vig = smoothstep(1.25, 0.35, length(uv * vec2(0.9, 1.15)));
   col *= mix(0.55, 1.0, vig);
   col = col / (1.0 + col * 0.22);                    // soft shoulder

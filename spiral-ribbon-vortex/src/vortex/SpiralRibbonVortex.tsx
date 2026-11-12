@@ -11,12 +11,12 @@ export type SpiralRibbonVortexProps = {
 };
 
 export const PALETTE = {
-  bgTop: "#7d4fd0",
-  bgBottom: "#9a5fc4",
-  fog: "#8458d2",
-  tail: "#ff9a3c",
+  bgTop: "#8550cc",
+  bgBottom: "#a05cbc",
+  fog: "#8a56cc",
+  tail: "#ffb066",
   mid: "#e7a2dc",
-  core: "#7c62f0",
+  core: "#8a5ae6",
 } as const;
 
 type Layer = "near" | "far";
@@ -42,13 +42,13 @@ const VORTICES: VortexInstance[] = [
       width: 2.6,
       thetaStart: -4.2,
       thetaEnd: 7 * Math.PI,
-      layers: 10,
+      layers: 6,
       colors: [PALETTE.tail, PALETTE.mid, PALETTE.core],
       colorStops: [3.6, 7.6],
     },
     position: [1.3, -0.7, 0],
     rotation: [0.42, -0.62, 0.75],
-    spinAmp: 0.2,
+    spinAmp: 0.4,
     spinPhase: 0,
   },
   // Secondary vortex, left and a little further back, with its own orange tail.
@@ -61,13 +61,13 @@ const VORTICES: VortexInstance[] = [
       width: 2.4,
       thetaStart: -4.0,
       thetaEnd: 7 * Math.PI,
-      layers: 9,
+      layers: 6,
       colors: [PALETTE.tail, "#dca4e2", PALETTE.core],
       colorStops: [1.2, 5.2],
     },
     position: [-4.3, 0.9, -2.6],
-    rotation: [-0.3, 0.7, 3.6],
-    spinAmp: -0.16,
+    rotation: [-0.3, 0.7, 1.6],
+    spinAmp: -0.3,
     spinPhase: 0.7,
   },
   // Distant vortex, top-right background (layered streaks behind the tail).
@@ -174,7 +174,7 @@ const Lights: React.FC<{ loop: number }> = ({ loop }) => {
   return (
     <>
       <ambientLight intensity={0.85} color="#ffffff" />
-      <hemisphereLight args={["#f8dcff", "#8a6ff0", 1.25]} />
+      <hemisphereLight args={["#f8dcff", "#a85ad6", 1.25]} />
       <directionalLight position={[-6, 8, 9]} intensity={key} color="#ffe6ef" />
       <directionalLight position={[7, -3, 4]} intensity={0.8} color="#a08cff" />
       <pointLight position={[1.4, -0.8, -2.5]} intensity={16} distance={16} decay={1.6} color="#b9a0ff" />

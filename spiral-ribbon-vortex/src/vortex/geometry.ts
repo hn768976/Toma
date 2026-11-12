@@ -52,7 +52,7 @@ export const buildLayeredSpiral = (spec: SpiralSpec, segments = 520) => {
 
   for (let k = 0; k < spec.layers; k++) {
     const layerT = k / Math.max(1, spec.layers - 1);
-    const rScale = 1 - 0.1 * layerT + 0.006 * (rand(k) - 0.5);
+    const rScale = 1 - 0.13 * layerT + 0.008 * (rand(k) - 0.5);
     const zShift = -0.22 * spec.width * layerT;
     const w = spec.width * (0.55 + 0.45 * rand(k + 9));
     const shade = (k % 2 === 0 ? 1.0 : 0.9) * (0.92 + 0.12 * rand(k + 31));
@@ -61,7 +61,7 @@ export const buildLayeredSpiral = (spec: SpiralSpec, segments = 520) => {
       const u = i / segments;
       const theta = spec.thetaStart + (spec.thetaEnd - spec.thetaStart) * u;
       // tail (theta<0) flares outwards faster than the inner coil
-      const tailBoost = theta < 0 ? Math.exp(0.22 * theta * theta) : 1; // C1-smooth flare
+      const tailBoost = theta < 0 ? Math.exp(0.11 * theta * theta) : 1; // C1-smooth, gentle flare (stays curved)
       const r = spec.r0 * Math.exp(-spec.tighten * theta) * rScale * tailBoost;
       const zc = -spec.depthPerRad * theta + zShift;
       const cx = Math.cos(theta) * r;
@@ -113,11 +113,11 @@ export const buildGrooveTexture = () => {
   for (let y = 0; y < h; y++) {
     const v = y / h;
     let g = 0.86;
-    g += 0.07 * Math.sin(v * Math.PI * 2 * 4 + 0.7);
-    g += 0.035 * Math.sin(v * Math.PI * 2 * 13 + 2.1);
+    g += 0.06 * Math.sin(v * Math.PI * 2 * 2 + 0.7);
+    g += 0.015 * Math.sin(v * Math.PI * 2 * 7 + 2.1);
     g += 0.02 * (rand(y) - 0.5);
     // occasional dark seam between pleats
-    if (rand(y * 3 + 1) > 0.97) g -= 0.07;
+    if (rand(y * 3 + 1) > 0.985) g -= 0.04;
     const c = Math.round(Math.min(1, Math.max(0, g)) * 255);
     for (let x = 0; x < w; x++) {
       const o = (y * w + x) * 4;
