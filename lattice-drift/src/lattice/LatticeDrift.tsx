@@ -8,6 +8,7 @@ import { CameraPose, CameraRig } from "./CameraRig";
 import { FIELD_RADIUS, LOOP_PERIOD_Z, Palette } from "./constants";
 import { generatePieces } from "./pieces";
 import { StripeGround } from "./StripeGround";
+import { ContactShadows } from "./ContactShadows";
 
 export type LatticeVariant = "reference" | "crane";
 
@@ -80,7 +81,9 @@ const Lights: React.FC<{ palette: Palette }> = ({ palette }) => {
       palette.keyLight,
       palette.keyIntensity,
     );
-    l.position.set(-4, 30, 9);
+    // Key from the upper left of frame: lit tops and left faces, shaded
+    // right faces, and soft shadows falling down-right across the floor.
+    l.position.set(-7, 22, 13);
     l.target.position.set(0, 0, 0);
     l.castShadow = true;
     l.shadow.mapSize.set(2048, 2048);
@@ -96,10 +99,11 @@ const Lights: React.FC<{ palette: Palette }> = ({ palette }) => {
     l.shadow.normalBias = 0.0;
     // Variance shadow maps give the broad, soft contact shadows of the
     // reference's area-light look.
-    l.shadow.radius = 10;
+    l.shadow.radius = 8;
     l.shadow.blurSamples = 16;
+    l.shadow.intensity = palette.shadowIntensity;
     return l;
-  }, [palette.keyLight, palette.keyIntensity]);
+  }, [palette.keyLight, palette.keyIntensity, palette.shadowIntensity]);
 
   return (
     <>
@@ -142,21 +146,31 @@ export const LatticeDrift: React.FC<LatticeDriftProps> = ({
         dpr={1}
         gl={{ antialias: true, preserveDrawingBuffer: true }}
       >
-        <color attach="background" args={[palette.background]} />
+        <color
+          attach="background"
+          args={[variant === "crane" ? palette.haze : palette.background]}
+        />
         {variant === "crane" ? (
-          <fog attach="fog" args={[palette.background, 13, 27]} />
+          // Aerial perspective: distant rows fade into a pale haze.
+          <fog attach="fog" args={[palette.haze, 9, 30]} />
         ) : null}
         <CameraRig pose={pose} />
         <Lights palette={palette} />
         <StripeGround palette={palette} angle={90 * DEG} />
+        <ContactShadows
+          pieces={pieces}
+          tint={palette.contactTint}
+          strength={palette.contactStrength}
+        />
         <Bars pieces={pieces} time={time} palette={palette} />
       </ThreeCanvas>
-      {/* The reference is slightly darker towards the top-left. */}
+      {/* Soft light falloff: a brighter pool slightly right of centre and
+          darker corners, as in the reference. */}
       <AbsoluteFill
         style={{
           pointerEvents: "none",
           background:
-            "linear-gradient(135deg, rgba(40,52,58,0.10) 0%, rgba(40,52,58,0) 55%, rgba(255,255,255,0.04) 100%)",
+            "radial-gradient(ellipse 85% 85% at 58% 58%, rgba(255,250,240,0.06) 0%, rgba(30,40,46,0) 45%, rgba(30,40,46,0.26) 100%)",
         }}
       />
     </AbsoluteFill>

@@ -2,7 +2,10 @@
 
 A straight-on view of a wall of square tiles. Each tile slides in and out of
 the wall, so blocks of tiles keep forming and dissolving. The look is soft
-cool-white with blue-grey side faces and shadows. The motion is a seamless
+cool-white. A raking key light from the upper left lights the top and left
+walls of raised tiles and casts soft shadows down and to the right. A
+per-tile ambient-occlusion shader adds the tinted shading in every recess and
+on the side walls, which gives the wall its depth. The motion is a seamless
 14-second loop, like the reference.
 
 | Composition ID             | Size        | FPS | Frames | Duration | Notes |
@@ -59,5 +62,5 @@ src/
   wall/
     constants.ts       timing, grid size, both palettes
     depth.ts           loop-periodic depth field for every tile
-    CubeWall.tsx       camera, lights, instanced tiles, vignette
+    CubeWall.tsx       camera, lights, instanced tiles + AO shader, vignette
 ```

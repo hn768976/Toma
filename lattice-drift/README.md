@@ -2,7 +2,11 @@
 
 An isometric field of upright white "Π" frames (two posts and a top beam, with
 occasional top or floor rails and turned frames), laid out in rows on a cool
-grey pinstriped floor under soft overcast light. The camera drifts steadily
+grey pinstriped floor. A warm key light from the upper left gives lit and
+shaded faces with soft cast shadows. Baked contact occlusion under every foot
+and rail, plus bars that darken towards the floor, ground the structures and
+give depth. A soft vignette adds light falloff, and the perspective version
+adds aerial haze. The camera drifts steadily
 across the field while a few frames shrink away and grow back. Like the
 reference, the clip is a seamless loop: the field repeats every 5.5 units
 along Z, and the camera travels exactly that far in 270 frames.
@@ -65,6 +69,7 @@ src/
     pieces.ts              procedural, Z-periodic frame field
     Bars.tsx               one InstancedMesh for every bar, pulse animation
     StripeGround.tsx       procedural pinstripe floor texture
+    ContactShadows.tsx     baked floor ambient occlusion (soft contact shadows)
     CameraRig.tsx          applies per-frame camera poses
     LatticeDrift.tsx       scene, lights, the two camera moves
 ```

@@ -52,6 +52,34 @@ export const Bars: React.FC<{
 
   const geometry = useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
 
+  // Bars darken softly towards the floor (ambient occlusion / bounce from
+  // the grey floor), which grounds them and makes their height readable.
+  const material = useMemo(() => {
+    const m = new THREE.MeshStandardMaterial({
+      color: palette.bar,
+      roughness: 0.6,
+      metalness: 0,
+      dithering: true,
+    });
+    m.onBeforeCompile = (shader) => {
+      shader.uniforms.uAoTint = { value: new THREE.Color(palette.barAoTint) };
+      shader.vertexShader =
+        "varying float vWorldY;\n" +
+        shader.vertexShader.replace(
+          "#include <project_vertex>",
+          "#include <project_vertex>\n  vWorldY = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).y;",
+        );
+      shader.fragmentShader =
+        "uniform vec3 uAoTint;\nvarying float vWorldY;\n" +
+        shader.fragmentShader.replace(
+          "#include <opaque_fragment>",
+          "#include <opaque_fragment>\n  float hAo = smoothstep(0.0, 0.6, vWorldY);\n  gl_FragColor.rgb *= mix(uAoTint, vec3(1.0), 0.35 + 0.65 * hAo);",
+        );
+    };
+    m.customProgramCacheKey = () => "bar-height-ao";
+    return m;
+  }, [palette.bar, palette.barAoTint]);
+
   useLayoutEffect(() => {
     const mesh = ref.current;
     if (!mesh) return;
@@ -86,12 +114,7 @@ export const Bars: React.FC<{
       receiveShadow
       frustumCulled={false}
     >
-      <meshStandardMaterial
-        color={palette.bar}
-        roughness={0.72}
-        metalness={0}
-        dithering
-      />
+      <primitive object={material} attach="material" />
     </instancedMesh>
   );
 };

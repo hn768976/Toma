@@ -33,6 +33,11 @@ export type Palette = {
   side: string;
   sideEmissive: string;
   sideEmissiveIntensity: number;
+  // Ambient occlusion tint/strength in recesses and on side walls.
+  aoColor: string;
+  aoStrength: number;
+  sideDepthShade: number; // side-wall brightness deep in the wall (0..1)
+  shadowIntensity: number; // 0..1 darkness of the key light's cast shadows
   vignette: number; // 0..1 strength of the CSS overlay vignette
   vignetteColor: string;
 };
@@ -44,20 +49,24 @@ export const REFERENCE_PALETTE: Palette = {
   tile: "#ffffff",
   background: "#eef1f8",
   keyLight: "#ffffff",
-  keyIntensity: 1.35,
+  keyIntensity: 1.6,
   fillLight: "#f4f6ff",
-  fillIntensity: 75,
+  fillIntensity: 100,
   hemiSky: "#dfe8ff",
   hemiGround: "#2a6aa8",
   hemiIntensity: 0.55,
   ambient: "#7eaad8",
-  ambientIntensity: 0.55,
+  ambientIntensity: 0.75,
   roughness: 0.85,
   metalness: 0,
   side: "#ffffff",
   sideEmissive: "#000000",
   sideEmissiveIntensity: 0,
-  vignette: 0.07,
+  aoColor: "#5878b6",
+  aoStrength: 0.55,
+  sideDepthShade: 0.45,
+  shadowIntensity: 0.55,
+  vignette: 0.12,
   vignetteColor: "#4e5f86",
 };
 
@@ -69,19 +78,23 @@ export const INDIGO_EMBER_PALETTE: Palette = {
   tile: "#2a2f5c",
   background: "#0b0c1c",
   keyLight: "#b9c4ff",
-  keyIntensity: 1.0,
+  keyIntensity: 1.6,
   fillLight: "#9d86ff",
-  fillIntensity: 70,
+  fillIntensity: 120,
   hemiSky: "#5a63b8",
   hemiGround: "#120f2a",
   hemiIntensity: 0.6,
   ambient: "#2b2f63",
-  ambientIntensity: 0.4,
+  ambientIntensity: 0.6,
   roughness: 0.45,
   metalness: 0.2,
   side: "#ff8a4c",
   sideEmissive: "#ff5a2a",
   sideEmissiveIntensity: 1.25,
+  aoColor: "#07060f",
+  aoStrength: 0.85,
+  sideDepthShade: 0.25,
+  shadowIntensity: 0.7,
   vignette: 0.55,
   vignetteColor: "#04040c",
 };

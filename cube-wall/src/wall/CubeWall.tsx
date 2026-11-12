@@ -36,9 +36,9 @@ const Lights: React.FC<{ palette: Palette }> = ({ palette }) => {
       palette.keyLight,
       palette.keyIntensity,
     );
-    // Mostly frontal, slightly from the upper left: soft blue shadows fall
-    // to the right of / below raised tiles, as in the reference.
-    l.position.set(-3, 3, 20);
+    // Raking key from the upper left: lit tops/left walls, shaded
+    // right/bottom walls and soft shadows down-right of raised tiles.
+    l.position.set(-10, 9, 16);
     l.target.position.set(0, 0, 0);
     l.castShadow = true;
     l.shadow.mapSize.set(2048, 2048);
@@ -50,10 +50,11 @@ const Lights: React.FC<{ palette: Palette }> = ({ palette }) => {
     cam.near = 1;
     cam.far = 60;
     l.shadow.bias = -0.0005;
-    l.shadow.radius = 3;
+    l.shadow.radius = 7;
     l.shadow.blurSamples = 16;
+    l.shadow.intensity = palette.shadowIntensity;
     return l;
-  }, [palette.keyLight, palette.keyIntensity]);
+  }, [palette.keyLight, palette.keyIntensity, palette.shadowIntensity]);
 
   return (
     <>
@@ -78,6 +79,85 @@ const Lights: React.FC<{ palette: Palette }> = ({ palette }) => {
   );
 };
 
+// Screen-space-free ambient occlusion for a height-field of tiles. Every
+// frame each tile receives how far its 4 edge neighbours and 4 diagonal
+// neighbours stand proud of it; the fragment shader turns that into a soft,
+// tinted occlusion gradient along the occluded edges/corners of the front
+// face, and darkens side walls the deeper they go into the wall. This is
+// what gives the recesses their soft blue depth, as in the reference.
+const AO_VERTEX_HEAD = /* glsl */ `
+attribute vec4 aNb;
+attribute vec4 aNd;
+varying vec4 vNb;
+varying vec4 vNd;
+varying vec3 vLocal;
+`;
+
+const AO_FRAGMENT_HEAD = /* glsl */ `
+uniform vec3 uAoColor;
+uniform float uAoStrength;
+uniform float uSideDepthShade;
+varying vec4 vNb;
+varying vec4 vNd;
+varying vec3 vLocal;
+float occ(float h, float d) {
+  float w = 0.09 + 0.45 * h;
+  float s = smoothstep(0.0, 0.45, h);
+  float f = 1.0 - smoothstep(0.0, w, d);
+  return s * f * f;
+}
+`;
+
+const FRONT_AO = /* glsl */ `
+  float ao = 1.0;
+  ao *= 1.0 - uAoStrength * occ(vNb.x, vLocal.x + 0.5);
+  ao *= 1.0 - uAoStrength * occ(vNb.y, 0.5 - vLocal.x);
+  ao *= 1.0 - uAoStrength * occ(vNb.z, vLocal.y + 0.5);
+  ao *= 1.0 - uAoStrength * occ(vNb.w, 0.5 - vLocal.y);
+  ao *= 1.0 - 0.7 * uAoStrength * occ(vNd.x, length(vLocal.xy - vec2(-0.5, -0.5)));
+  ao *= 1.0 - 0.7 * uAoStrength * occ(vNd.y, length(vLocal.xy - vec2(0.5, -0.5)));
+  ao *= 1.0 - 0.7 * uAoStrength * occ(vNd.z, length(vLocal.xy - vec2(-0.5, 0.5)));
+  ao *= 1.0 - 0.7 * uAoStrength * occ(vNd.w, length(vLocal.xy - vec2(0.5, 0.5)));
+  gl_FragColor.rgb *= mix(uAoColor, vec3(1.0), ao);
+`;
+
+const SIDE_AO = /* glsl */ `
+  // Side walls: bright at the lip, sinking into soft shade deeper in.
+  float sd = smoothstep(-0.85, 0.0, vLocal.z);
+  gl_FragColor.rgb *= mix(uAoColor, vec3(1.0), mix(uSideDepthShade, 1.0, sd));
+`;
+
+const makeTileMaterial = (face: number, palette: Palette) => {
+  const front = face === 4;
+  const m = new THREE.MeshStandardMaterial({
+    color: front ? palette.tile : palette.side,
+    emissive: front ? "#000000" : palette.sideEmissive,
+    emissiveIntensity: front ? 0 : palette.sideEmissiveIntensity,
+    roughness: palette.roughness,
+    metalness: palette.metalness,
+    dithering: true,
+  });
+  m.onBeforeCompile = (shader) => {
+    shader.uniforms.uAoColor = { value: new THREE.Color(palette.aoColor) };
+    shader.uniforms.uAoStrength = { value: palette.aoStrength };
+    shader.uniforms.uSideDepthShade = { value: palette.sideDepthShade };
+    shader.vertexShader =
+      AO_VERTEX_HEAD +
+      shader.vertexShader.replace(
+        "#include <begin_vertex>",
+        "#include <begin_vertex>\n  vNb = aNb;\n  vNd = aNd;\n  vLocal = position;",
+      );
+    shader.fragmentShader =
+      AO_FRAGMENT_HEAD +
+      shader.fragmentShader.replace(
+        "#include <opaque_fragment>",
+        "#include <opaque_fragment>\n" + (front ? FRONT_AO : SIDE_AO),
+      );
+  };
+  m.customProgramCacheKey = () => (front ? "tile-front-ao" : "tile-side-ao");
+  return m;
+};
+
 const Tiles: React.FC<{ palette: Palette; seed: number; time: number }> = ({
   palette,
   seed,
@@ -85,53 +165,76 @@ const Tiles: React.FC<{ palette: Palette; seed: number; time: number }> = ({
 }) => {
   const ref = useRef<THREE.InstancedMesh>(null);
   const params = useMemo(() => makeTileParams(seed), [seed]);
+  const count = COLS * ROWS;
   const geometry = useMemo(() => {
     // Deep boxes: their back half always stays buried inside the wall.
     const g = new THREE.BoxGeometry(1 - TILE_GAP, 1 - TILE_GAP, 2);
     g.translate(0, 0, -1);
+    g.setAttribute(
+      "aNb",
+      new THREE.InstancedBufferAttribute(new Float32Array(count * 4), 4),
+    );
+    g.setAttribute(
+      "aNd",
+      new THREE.InstancedBufferAttribute(new Float32Array(count * 4), 4),
+    );
     return g;
-  }, []);
+  }, [count]);
+  const materials = useMemo(
+    () => [0, 1, 2, 3, 4, 5].map((face) => makeTileMaterial(face, palette)),
+    [palette],
+  );
 
   useLayoutEffect(() => {
     const mesh = ref.current;
     if (!mesh) return;
+    const depth = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      depth[i] = tileDepth(i % COLS, Math.floor(i / COLS), time, params[i]);
+    }
+    const at = (c: number, r: number, own: number) =>
+      c < 0 || r < 0 || c >= COLS || r >= ROWS
+        ? 0
+        : Math.max(0, depth[r * COLS + c] - own);
+    const nb = geometry.getAttribute("aNb") as THREE.InstancedBufferAttribute;
+    const nd = geometry.getAttribute("aNd") as THREE.InstancedBufferAttribute;
     const m = new THREE.Matrix4();
-    let i = 0;
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
-        const x = col - COLS / 2 + 0.5;
-        const y = row - ROWS / 2 + 0.5;
-        m.makeTranslation(x, y, tileDepth(col, row, time, params[i]));
+        const i = row * COLS + col;
+        const d = depth[i];
+        m.makeTranslation(col - COLS / 2 + 0.5, row - ROWS / 2 + 0.5, d);
         mesh.setMatrixAt(i, m);
-        i++;
+        nb.setXYZW(
+          i,
+          at(col - 1, row, d),
+          at(col + 1, row, d),
+          at(col, row - 1, d),
+          at(col, row + 1, d),
+        );
+        nd.setXYZW(
+          i,
+          at(col - 1, row - 1, d),
+          at(col + 1, row - 1, d),
+          at(col - 1, row + 1, d),
+          at(col + 1, row + 1, d),
+        );
       }
     }
     mesh.instanceMatrix.needsUpdate = true;
+    nb.needsUpdate = true;
+    nd.needsUpdate = true;
     mesh.computeBoundingSphere();
-  }, [params, time]);
+  }, [params, time, geometry, count]);
 
   return (
     <instancedMesh
       ref={ref}
-      args={[geometry, undefined, COLS * ROWS]}
+      args={[geometry, materials, count]}
       castShadow
       receiveShadow
       frustumCulled={false}
-    >
-      {/* BoxGeometry face groups: +x, -x, +y, -y, +z (front), -z (back). */}
-      {[0, 1, 2, 3, 4, 5].map((face) => (
-        <meshStandardMaterial
-          key={face}
-          attach={`material-${face}`}
-          color={face === 4 ? palette.tile : palette.side}
-          emissive={face === 4 ? "#000000" : palette.sideEmissive}
-          emissiveIntensity={face === 4 ? 0 : palette.sideEmissiveIntensity}
-          roughness={palette.roughness}
-          metalness={palette.metalness}
-          dithering
-        />
-      ))}
-    </instancedMesh>
+    />
   );
 };
 

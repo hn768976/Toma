@@ -9,7 +9,7 @@ export const HEIGHT = 2160;
 
 // Lattice geometry, in grid units.
 export const BAR = 0.16; // square cross-section of every bar
-export const POST_HEIGHT = 0.8; // height of the upright posts
+export const POST_HEIGHT = 1.05; // height of the upright posts
 export const ROW_PITCH = 0.5; // spacing of the frame rows along Z
 // The camera drifts exactly this far along Z over the clip and the field
 // repeats with this period along Z, so the last frame flows into the first.
@@ -27,19 +27,29 @@ export type Palette = {
   keyIntensity: number;
   hemiIntensity: number;
   ambientIntensity: number;
+  shadowIntensity: number; // 0..1 darkness of the key light's cast shadows
+  barAoTint: string; // colour bars fade towards at their feet
+  contactTint: string; // colour of the baked floor occlusion
+  contactStrength: number;
+  haze: string; // aerial-perspective colour for the perspective version
 };
 
 // Sampled from the reference: warm off-white bars on a cool grey-blue floor
 // with fine diagonal pinstripes.
 export const REFERENCE_PALETTE: Palette = {
   background: "#98a3a7",
-  groundA: "#a6b1b4",
-  groundB: "#78858a",
-  bar: "#f6f6f4",
+  groundA: "#b6c4c8",
+  groundB: "#899aa0",
+  bar: "#fbfbf9",
   sky: "#f2f6f7",
-  groundBounce: "#7f8c90",
-  keyLight: "#fffdf8",
-  keyIntensity: 1.45,
-  hemiIntensity: 1.75,
-  ambientIntensity: 0.22,
+  groundBounce: "#76838a",
+  keyLight: "#fff9f0",
+  keyIntensity: 2.25,
+  hemiIntensity: 1.4,
+  ambientIntensity: 0.2,
+  shadowIntensity: 0.72,
+  barAoTint: "#6d7c86",
+  contactTint: "#1f2c34",
+  contactStrength: 0.8,
+  haze: "#c3cccf",
 };
