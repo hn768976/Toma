@@ -778,7 +778,9 @@ export const createDataCubeScene =
 
     const hemi = new THREE.HemisphereLight("#5fb6ff", "#05080c", 0.06);
     scene.add(hemi);
-    const key = new THREE.DirectionalLight("#7cc8ff", 0.35);
+    // V2 cranes over the city toward the key light: its specular glint on the
+    // block tops read as a stray blue orb, so that variant keeps env light only
+    const key = new THREE.DirectionalLight("#7cc8ff", variant === "reference" ? 0.35 : 0.0);
     key.position.set(-12, 14, -10);
     scene.add(key);
     const rimL = new THREE.DirectionalLight("#2a6fb0", 0.3);
