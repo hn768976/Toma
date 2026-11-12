@@ -218,7 +218,10 @@ void main() {
       float fxl = fract(fx / 0.055);
       float aab = fwidth(fx / 0.055) + 1e-4;
       float barShape = smoothstep(0.12 - aab, 0.12 + aab, fxl) * smoothstep(0.88 + aab, 0.88 - aab, fxl);
-      col = mix(col, uLine * (0.7 + 0.5 * b), barOn * barShape * on);
+      // when a bar slice gets close to a pixel wide, fade to its average coverage
+      // so the barcode texture does not shimmer as the camera drifts
+      float coverage = mix(barShape, 0.76, smoothstep(0.18, 0.5, aab));
+      col = mix(col, uLine * (0.7 + 0.5 * b), barOn * coverage * on);
       col = mix(col, uLine * 0.75, frameLine * on);
     } else if (kind < 1.5) {
       // luminous light block, split into sub-cells
@@ -371,20 +374,20 @@ const makeFanEvents = (
     const hy = lerp(region.y0, region.y1, r());
     // hub floats in front of the wall, above the area it connects to
     const hub = new THREE.Vector3(hx, hy, 3 + r() * 5);
-    const n = 7 + Math.floor(r() * 10);
+    const n = 6 + Math.floor(r() * 5);
     const targets: THREE.Vector3[] = [];
-    const spread = 5 + r() * 7;
+    const spread = 3.5 + r() * 3.5;
     for (let i = 0; i < n; i++) {
       targets.push(
         new THREE.Vector3(
           hx + lerp(-spread, spread * 0.7, r()),
-          hy - lerp(2, 9, r()),
+          hy - lerp(2, 7, r()),
           0.45,
         ),
       );
     }
     events.push({ start: t, dur, hub, targets });
-    t += 0.5 + r() * 1.1;
+    t += dur + 0.15 + r() * 0.6; // one fan at a time, like the reference
   }
   return events;
 };
@@ -607,10 +610,10 @@ export const makeDataWallBuilder =
           const len = dir.length() * grow;
           dir.normalize();
           tmpQ.setFromUnitVectors(zAxis, dir);
-          const radius = 0.0065 * (1 + 0.6 * hash(k, ev.start));
+          const radius = 0.0042 * (1 + 0.5 * hash(k, ev.start));
           tmpM.compose(ev.hub, tmpQ, new THREE.Vector3(radius, radius, len));
           beams.setMatrixAt(bi, tmpM);
-          tmpC.copy(laserColor).multiplyScalar(env * flick * 1.1);
+          tmpC.copy(laserColor).multiplyScalar(env * flick * 0.75);
           beams.setColorAt(bi, tmpC);
           bi++;
           if (grow >= 1 && ni < maxBeams) {
