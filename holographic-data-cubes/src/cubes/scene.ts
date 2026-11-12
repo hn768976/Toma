@@ -11,7 +11,7 @@ import { makeCodeTexture, makeDataTexture } from "./textures";
 export type DataCubesProps = { palette: Palette };
 
 const CUBE = 10; // edge length of every data cube
-const PITCH = 12.2; // lattice spacing in shot 2
+const PITCH = 11.6; // lattice spacing in shot 2
 const easeOut = (x: number) => 1 - Math.pow(1 - clamp01(x), 3);
 
 const WAVE_VERT = /* glsl */ `
@@ -131,20 +131,20 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
   const waveFade = new Fader();
   const roofFade = new Fader(); // floating read-outs above the roof
   const beamAFade = new Fader();
-  setA.add(kit.holoCube(CUBE, cubeAFade, { seed: 1, glints: 22 }));
+  setA.add(kit.holoCube(CUBE, cubeAFade, { seed: 1, glints: 22, fill: 0.006 }));
 
   // Scrolling code wall and a narrower numeric column.
   {
-    const code = kit.panel(codeTex[0], 4.4, 8.6, innerFade, { opacity: 0.42, uSpan: 0.8 });
-    code.position.set(-0.6, 0.6, -1.0);
+    const code = kit.panel(codeTex[0], 4.4, 8.6, innerFade, { opacity: 0.27, uSpan: 0.8 });
+    code.position.set(-0.6, 0.6, -3.6);
     setA.add(code);
     addScroll(code, 0.028);
     const nums = kit.panel(dataTex, 2.4, 1.3, innerFade, { opacity: 0.8, uSpan: 0.9 });
-    nums.position.set(2.9, 3.6, -2.2);
+    nums.position.set(2.9, 3.6, -3.6);
     setA.add(nums);
     addScroll(nums, 0.05);
     const nums2 = kit.panel(dataTex, 2.0, 1.0, innerFade, { opacity: 0.6, uSpan: 0.8, vStart: 0.4 });
-    nums2.position.set(0.2, 4.1, -3.4);
+    nums2.position.set(0.2, 4.1, -4.2);
     setA.add(nums2);
     addScroll(nums2, 0.04);
     // Mini 2D bar charts hanging under the numeric columns.
@@ -164,8 +164,8 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
         setA.add(bar);
       }
     };
-    mkBars(1.75, 2.75, -2.2, 9, 41);
-    mkBars(-0.6, 3.45, -3.4, 7, 43);
+    mkBars(1.75, 2.75, -3.6, 9, 41);
+    mkBars(-0.6, 3.45, -4.2, 7, 43);
   }
 
   // Dotted wave surface near the floor of the cube.
@@ -177,7 +177,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
     for (let j = 0; j < NZ; j++) {
       for (let i = 0; i < NX; i++) {
         pos[k++] = -4.6 + (9.2 * i) / (NX - 1);
-        pos[k++] = -2.5;
+        pos[k++] = -2.1;
         pos[k++] = -4.4 + (8.8 * j) / (NZ - 1);
       }
     }
@@ -192,7 +192,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
         uPixelH: { value: pixelHeight },
         uFog: kit.fog,
         uColor: { value: pal.dots },
-        uOpacity: { value: 1.15 },
+        uOpacity: { value: 0.95 },
       },
       transparent: true,
       blending: THREE.AdditiveBlending,
@@ -200,7 +200,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
       depthWrite: false,
       toneMapped: false,
     });
-    waveFade.add(mat, 1.15);
+    waveFade.add(mat, 0.95);
     const pts = new THREE.Points(geo, mat);
     pts.frustumCulled = false;
     setA.add(pts);
@@ -237,7 +237,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
     updaters.push((t) => {
       for (let n = 0; n < NX * NZ; n++) {
         node[n * 3] = bx[n];
-        node[n * 3 + 1] = -0.9 + 0.75 * wobble(bx[n] * 0.8, bz[n] * 0.9, t * 0.9 + 4.0);
+        node[n * 3 + 1] = -0.4 + 0.75 * wobble(bx[n] * 0.8, bz[n] * 0.9, t * 0.9 + 4.0);
         node[n * 3 + 2] = bz[n];
       }
       for (let p = 0; p < pairs.length; p++) {
@@ -265,7 +265,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
       const g = new THREE.Group();
       const geo = new THREE.BoxGeometry(1, 1, 1);
       geo.translate(0, 0.5, 0);
-      g.add(kit.faces(geo, fader, { color: pal.accent, opacity: 0.022, edge: 1.5 }));
+      g.add(kit.faces(geo, fader, { color: pal.accent, opacity: 0.034, edge: 1.0 }));
       g.add(kit.lines(boxEdges(1, 1, 1, 0, 0.5, 0), fader, { color: pal.accent, width: 1.3, opacity: 0.75 }));
       g.position.set(x, CUBE / 2, z);
       setA.add(g);
@@ -299,7 +299,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
   scene.add(setB);
   const coreFade = new Fader();
   const beamBFade = new Fader();
-  setB.add(kit.holoCube(CUBE, coreFade, { seed: 2, glints: 18 }));
+  setB.add(kit.holoCube(CUBE, coreFade, { seed: 2, glints: 18, fill: 0.006 }));
   const beamB = kit.beam(1.2, 120, beamBFade, 0.11);
   setB.add(beamB);
 
@@ -330,117 +330,111 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
 
   type Cell = {
     fader: Fader;
-    group: THREE.Group;
     t0: number; // fade-in start
     t1: number; // fade-out start
-    rot: THREE.Vector3;
-    spin: THREE.Vector3;
   };
+  type Widget = "terrain" | "boxes" | "bars" | "pie";
+  /**
+   * Neighbour cubes: strict grid positions (i, j, k) around the core cube,
+   * all sharing its orientation — only the camera ever rolls.
+   */
+  const LAYOUT: Array<{ at: [number, number, number]; widgets: Widget[]; sheets: number }> = [
+    { at: [-1, 0, 0], widgets: [], sheets: 3 },
+    { at: [1, 0, 0], widgets: ["boxes", "bars"], sheets: 1 },
+    { at: [0, 1, 0], widgets: [], sheets: 2 },
+    { at: [-1, 1, 0], widgets: [], sheets: 2 },
+    { at: [0, -1, 0], widgets: ["terrain"], sheets: 1 },
+    { at: [1, -1, 0], widgets: ["terrain"], sheets: 1 },
+    { at: [-1, -1, 0], widgets: ["terrain"], sheets: 1 },
+    { at: [-1, -1, 1], widgets: ["terrain"], sheets: 2 },
+    { at: [0, 0, -1], widgets: ["pie"], sheets: 2 },
+    { at: [1, 0, -1], widgets: ["bars", "pie"], sheets: 1 },
+  ];
   const cells: Cell[] = [];
-  {
-    const rng = makeRng(2024);
-    const forced = new Set(["-1,0,0", "1,0,0", "0,-1,0", "0,1,0", "-1,-1,1", "-1,1,0", "1,-1,0", "1,1,-1", "0,0,-1"]);
-    for (let i = -1; i <= 1; i++) {
-      for (let j = -1; j <= 1; j++) {
-        for (let k = -1; k <= 1; k++) {
-          const key = `${i},${j},${k}`;
-          const keep = false;
-          if ((i === 0 && j === 0 && k === 0) || key === "0,0,1" || key === "0,-1,1") continue;
-          if (!forced.has(key) && !keep) continue;
-          const fader = new Fader();
-          const g = new THREE.Group();
-          const seed = 100 + (i + 1) * 9 + (j + 1) * 3 + (k + 1);
-          // Loose arrangement: jittered positions, each cube slightly tumbled.
-          g.position.set(
-            i * PITCH + rng.range(-1.1, 1.1),
-            j * PITCH + rng.range(-1.1, 1.1),
-            k * PITCH + rng.range(-1.1, 1.1),
-          );
-          const rot = new THREE.Vector3(rng.range(-0.12, 0.12), rng.range(-0.22, 0.22), rng.range(-0.12, 0.12));
-          const spin = new THREE.Vector3(rng.range(-0.006, 0.006), rng.range(-0.01, 0.01), rng.range(-0.006, 0.006));
-          g.add(kit.holoCube(CUBE, fader, { seed, glints: 8, grid: 2 }));
-          const r = makeRng(seed * 7 + 1);
-          // Every cube carries one or two scrolling code sheets…
-          const sheets = r.int(1, 3);
-          for (let s = 0; s < sheets; s++) {
-            const w = r.range(2.8, 4.6);
-            const h = r.range(3, 7.5);
-            const p = kit.panel(r.pick(codeTex), w, h, fader, {
-              opacity: r.range(0.3, 0.55),
-              uSpan: 0.95,
-              vStart: r.next(),
-            });
-            const face = r.int(0, 2);
-            const off = r.range(-4.2, 4.2);
-            if (face === 0) {
-              p.position.set(r.range(-2.5, 2.5), r.range(-1.2, 1.2), off);
-            } else if (face === 1) {
-              p.rotation.y = Math.PI / 2;
-              p.position.set(off, r.range(-1.2, 1.2), r.range(-2.5, 2.5));
-            } else {
-              p.rotation.x = -Math.PI / 2;
-              p.position.set(r.range(-2.5, 2.5), off, r.range(-1.2, 1.2));
-            }
-            g.add(p);
-            addScroll(p, r.range(0.008, 0.03));
-          }
-          // …plus one seeded data widget.
-          const widget = r.int(0, 4);
-          if (widget === 0 || key === "0,-1,0" || key === "-1,-1,1") {
-            const tr = terrainLines(8, 7, 9, 8, 2.6, seed);
-            const tg = new THREE.Group();
-            tg.add(kit.lines(tr.lines, fader, { width: 1.1, opacity: 0.42 }));
-            tg.add(kit.sparkles(tr.nodes, fader, { size: 0.012, sizeJitter: 0.3, opacity: 0.8, star: 0.4, seed }));
-            tg.position.y = r.range(-3.5, -1.5);
-            g.add(tg);
-          } else if (widget === 1 || key === "1,0,0") {
-            // nested wire boxes
-            g.add(kit.lines(boxEdges(3.4, 5.2, 3.0, 0.4, -1.6, 0), fader, { width: 1.1, opacity: 0.5 }));
-            g.add(kit.lines(boxEdges(1.6, 2.6, 1.6, -1.6, -3.0, 1.2), fader, { width: 1.0, opacity: 0.4 }));
-            g.add(kit.lines(boxEdges(6.0, 0.2, 5.0, 0.2, -4.2, 0), fader, { width: 1.0, opacity: 0.3 }));
-          } else if (widget === 2) {
-            // 2D bar chart on a horizontal sheet
-            const n = 6;
-            const cg = new THREE.Group();
-            for (let b = 0; b < n; b++) {
-              const geo = new THREE.PlaneGeometry(0.55, 1);
-              geo.translate(0, 0.5, 0);
-              const bar = kit.faces(geo, fader, { color: pal.accent, opacity: 0.16 + 0.34 * r.next() });
-              bar.position.x = (b - n / 2) * 0.72;
-              const base = r.range(1.0, 2.6);
-              const sp = r.range(0.5, 1.4);
-              const ph = r.range(0, 6.28);
-              updaters.push((t) => {
-                bar.scale.y = base * (0.8 + 0.25 * Math.sin(t * sp + ph));
-              });
-              cg.add(bar);
-            }
-            cg.rotation.x = -Math.PI / 2;
-            cg.position.set(r.range(-1, 1.5), r.range(2.5, 4.4), r.range(-1, 1));
-            g.add(cg);
-          } else if (widget === 3) {
-            // pie chart
-            const pg = new THREE.Group();
-            let a0 = 0;
-            for (const [frac, op] of [[0.58, 0.22], [0.27, 0.45], [0.15, 0.1]]) {
-              pg.add(kit.faces(new THREE.CircleGeometry(1.5, 48, a0, frac * Math.PI * 2), fader, { color: pal.accent, opacity: op }));
-              a0 += frac * Math.PI * 2;
-            }
-            pg.rotation.x = -Math.PI / 2;
-            pg.position.set(r.range(-2.5, 2.5), r.range(3.0, 4.5), r.range(-2.5, 2.5));
-            const spin = r.range(-0.25, 0.25);
-            updaters.push((t) => {
-              pg.rotation.z = t * spin;
-            });
-            g.add(pg);
-          }
-          setB.add(g);
-          const dist = Math.hypot(i, j, k);
-          cells.push({ fader, group: g, t0: 13.2 + (dist - 1) * 0.7 + r.range(0, 0.5), t1: 25.35 + r.range(0, 0.35), rot, spin });
+  LAYOUT.forEach(({ at: [i, j, k], widgets, sheets }) => {
+    const fader = new Fader();
+    const g = new THREE.Group();
+    g.position.set(i * PITCH, j * PITCH, k * PITCH);
+    const seed = 100 + (i + 1) * 9 + (j + 1) * 3 + (k + 1);
+    g.add(kit.holoCube(CUBE, fader, { seed, glints: 8, grid: 0, fill: 0.0045 }));
+    const r = makeRng(seed * 7 + 1);
+    // Scrolling code sheets on planes parallel to the cube faces.
+    for (let n = 0; n < sheets; n++) {
+      const w = r.range(3.0, 4.8);
+      const h = r.range(3.5, 7.5);
+      const p = kit.panel(r.pick(codeTex), w, h, fader, {
+        opacity: r.range(0.2, 0.34),
+        uSpan: 0.95,
+        vStart: r.next(),
+      });
+      const face = n === 0 ? 0 : r.int(0, 2);
+      const off = r.range(-4.2, 4.2);
+      if (face === 0) {
+        p.position.set(r.range(-2.3, 2.3), r.range(-1.0, 1.0), off);
+      } else if (face === 1) {
+        p.rotation.y = Math.PI / 2;
+        p.position.set(off, r.range(-1.0, 1.0), r.range(-2.3, 2.3));
+      } else {
+        p.rotation.x = -Math.PI / 2;
+        p.position.set(r.range(-2.3, 2.3), off, r.range(-1.0, 1.0));
+      }
+      g.add(p);
+      addScroll(p, r.range(0.008, 0.03));
+    }
+    for (const widget of widgets) {
+      if (widget === "terrain") {
+        const tr = terrainLines(8.6, 7.6, 9, 8, 2.6, seed);
+        const tg = new THREE.Group();
+        tg.add(kit.lines(tr.lines, fader, { width: 1.3, opacity: 0.4 }));
+        tg.add(kit.sparkles(tr.nodes, fader, { size: 0.012, sizeJitter: 0.3, opacity: 0.8, star: 0.4, seed }));
+        tg.position.y = r.range(-3.2, -1.6);
+        g.add(tg);
+      } else if (widget === "boxes") {
+        g.add(kit.lines(boxEdges(3.4, 5.2, 3.0, 0.4, -1.6, 0), fader, { width: 1.3, opacity: 0.5 }));
+        g.add(kit.lines(boxEdges(1.6, 2.6, 1.6, -1.6, -3.0, 1.2), fader, { width: 1.2, opacity: 0.4 }));
+        g.add(kit.lines(boxEdges(6.0, 0.2, 5.0, 0.2, -4.2, 0), fader, { width: 1.2, opacity: 0.3 }));
+      } else if (widget === "bars") {
+        // Bar chart lying on a sheet just under the cube's roof.
+        const n = 6;
+        const cg = new THREE.Group();
+        for (let b = 0; b < n; b++) {
+          const geo = new THREE.PlaneGeometry(0.62, 1);
+          geo.translate(0, 0.5, 0);
+          const bar = kit.faces(geo, fader, { color: pal.accent, opacity: 0.1 + 0.16 * r.next() });
+          bar.position.x = (b - n / 2) * 0.8;
+          const base = r.range(1.2, 3.0);
+          const sp = r.range(0.5, 1.4);
+          const ph = r.range(0, 6.28);
+          updaters.push((t) => {
+            bar.scale.y = base * (0.8 + 0.25 * Math.sin(t * sp + ph));
+          });
+          cg.add(bar);
         }
+        cg.rotation.x = -Math.PI / 2;
+        cg.rotation.z = -Math.PI / 2;
+        cg.position.set(r.range(-0.5, 1.5), 4.3, r.range(0.5, 2.5));
+        g.add(cg);
+      } else {
+        // Pie chart on the same kind of sheet.
+        const pg = new THREE.Group();
+        let a0 = 0;
+        for (const [frac, op] of [[0.58, 0.2], [0.27, 0.4], [0.15, 0.09]]) {
+          pg.add(kit.faces(new THREE.CircleGeometry(1.5, 48, a0, frac * Math.PI * 2), fader, { color: pal.accent, opacity: op }));
+          a0 += frac * Math.PI * 2;
+        }
+        pg.rotation.x = -Math.PI / 2;
+        pg.position.set(r.range(-2.5, 2.5), 4.4, r.range(-3.0, -1.0));
+        const spin = r.range(-0.25, 0.25);
+        updaters.push((t) => {
+          pg.rotation.z = t * spin;
+        });
+        g.add(pg);
       }
     }
-  }
+    setB.add(g);
+    const dist = Math.hypot(i, j, k);
+    cells.push({ fader, t0: 13.2 + (dist - 1) * 0.9 + r.range(0, 0.5), t1: 25.5 + r.range(0, 0.3) });
+  });
 
   // ───────────────────────── per-time update ────────────────────────────
   const update = (t: number) => {
@@ -480,8 +474,7 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
     core.rotation.set(loose * 1.2, loose * 3.6 + t * 0.05, loose * 2.6);
     core.scale.setScalar(0.55 + 0.45 * assemble);
     for (const c of cells) {
-      c.fader.set(ss(c.t0, c.t0 + 0.8, t) * (1 - ss(c.t1, c.t1 + 0.45, t)));
-      c.group.rotation.set(c.rot.x + t * c.spin.x, c.rot.y + t * c.spin.y, c.rot.z + t * c.spin.z);
+      c.fader.set(0.82 * ss(c.t0, c.t0 + 0.8, t) * (1 - ss(c.t1, c.t1 + 0.45, t)));
     }
 
     bgFade.set(ss(0.0, 1.2, t) * (1 - ss(26.2, 26.9, t)));
@@ -499,13 +492,13 @@ export const dataCubesFactory: SceneFactory<DataCubesProps> = ({
     [4.9, 6.3],
     [10.25, 12.2],
     [19.2, 21.2],
-    [25.3, 27.1],
+    [24.9, 27.1],
   ];
   const postParams = {
     focus: 20,
     aperture: 0,
     maxCoc: 0.02,
-    bloomStrength: 0.92,
+    bloomStrength: 0.86,
     bloomThreshold: 0.04,
     exposure: 1.0,
     tint: pal.tint,

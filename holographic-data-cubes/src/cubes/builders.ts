@@ -341,21 +341,27 @@ export class Kit {
     return mesh as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
   }
 
-  /** Wireframe glass cube: double edge frame, faint faces, face grid, glints. */
-  holoCube(size: number, fader: Fader, o: { seed: number; glints?: number; grid?: number } ) {
+  /**
+   * Glass data cube: milky translucent faces (they add up where cubes
+   * overlap), a doubled outline (outer edges + inset inner frame), an
+   * optional faint face grid and a few glints.
+   */
+  holoCube(size: number, fader: Fader, o: { seed: number; glints?: number; grid?: number; fill?: number }) {
     const g = new THREE.Group();
-    g.add(this.faces(new THREE.BoxGeometry(size, size, size), fader, { opacity: 0.003, edge: 6.0 }));
-    g.add(this.lines(faceGridLines(size, o.grid ?? 4), fader, { width: 1.3, opacity: 0.05 }));
-    g.add(this.lines(boxEdges(size * 0.955, size * 0.955, size * 0.955), fader, { width: 1.3, opacity: 0.22 }));
-    g.add(this.lines(boxEdges(size, size, size), fader, { width: 2.1, opacity: 0.8 }));
-    // Glints sit on face-grid intersections.
+    g.add(this.faces(new THREE.BoxGeometry(size, size, size), fader, { opacity: o.fill ?? 0.011, edge: 2.2 }));
     const div = o.grid ?? 4;
+    if (div > 1) {
+      g.add(this.lines(faceGridLines(size, div), fader, { width: 1.3, opacity: 0.05 }));
+    }
+    g.add(this.lines(boxEdges(size * 0.94, size * 0.94, size * 0.94), fader, { width: 1.5, opacity: 0.34 }));
+    g.add(this.lines(boxEdges(size, size, size), fader, { width: 2.2, opacity: 0.8 }));
+    // Glints sit on a 4x4 lattice of points on the faces.
     const pts: number[] = [];
     const count = o.glints ?? 14;
     for (let i = 0; i < count; i++) {
       const r = (k: number) => Math.abs(Math.sin((i + 1) * (k * 3.7 + 1.3) + o.seed * 9.17) * 4373.13) % 1;
-      const a = -size / 2 + (size * Math.floor(r(1) * (div + 1))) / div;
-      const b = -size / 2 + (size * Math.floor(r(2) * (div + 1))) / div;
+      const a = -size / 2 + (size * Math.floor(r(1) * 5)) / 4;
+      const b = -size / 2 + (size * Math.floor(r(2) * 5)) / 4;
       const s = r(3) < 0.5 ? -size / 2 : size / 2;
       const axis = Math.floor(r(4) * 3);
       if (axis === 0) pts.push(s, a, b);
