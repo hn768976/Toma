@@ -62,7 +62,7 @@ export const LOOK: CircuitLook = {
   gradeHighlights: [0.93, 0.99, 1.05],
   gradeSaturation: 0.85,
   gradeLift: -0.03,
-  gradeGamma: 1.3,
+  gradeGamma: 1.24,
   vignette: 0.35,
   grain: 0.018,
 };
