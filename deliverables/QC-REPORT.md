@@ -31,13 +31,13 @@
 | Duration | 6.733 s | 6.733 s | 13.367 s | 13.367 s |
 | Pixel format / colour | yuv420p, BT.709 limited | yuv420p, BT.709 limited | yuv420p, BT.709 limited | yuv420p, BT.709 limited |
 | H.264 level | 4.1 | 4.1 | 4.0 | 4.1 |
-| Avg / peak 1-s bitrate | 33.4 / 40.7 Mbit/s | 33.3 / 41.7 Mbit/s | 5.9 / 6.7 Mbit/s | 5.5 / 6.2 Mbit/s |
-| Size | 28.1 MB | 28.1 MB | 9.8 MB | 9.1 MB |
+| Avg / peak 1-s bitrate | 33.4 / 40.7 Mbit/s | 33.2 / 41.8 Mbit/s | 5.9 / 6.7 Mbit/s | 5.5 / 6.2 Mbit/s |
+| Size | 28.1 MB | 27.9 MB | 9.8 MB | 9.1 MB |
 | Full decode with `-xerror` | no errors | no errors | no errors | no errors |
 | Black frames (`blackdetect`) | 0 | 0 | 0 | 0 |
 | Frozen frames (`freezedetect`) | 0 | 0 | 0 | 0 |
 | Flicker (alternating luma jumps above 3) | 0 | 0 | 0 | 0 |
-| Max frame-to-frame mean-luma change | 1.41 | 1.36 | 0.79 | 0.65 |
+| Max frame-to-frame mean-luma change | 1.60 | 1.41 | 0.79 | 0.65 |
 | Audio | none (references have none) | none | none | none |
 
 **Duration note:** the references are 29.97 fps clips of 202 frames (6.740 s) and 401 frames (13.380 s). At exactly 30 fps those lengths are not whole frame counts, so an exact match isn't possible. The compositions keep the **identical frame count**, which is the nearest whole-frame duration: 6.733 s (−6.7 ms) and 13.367 s (−13.3 ms). Both differences are under half a frame.
@@ -81,12 +81,40 @@ An independent agent compared each render with its reference: frame-matched cont
 | 2 | Satin hard crease seams (pleat-mask `max()` kink) | Smooth mask union; confirmed gone |
 | 2 | Foil highlights too soft, glitter faint, weak left hotspot | Thin rim lines, brighter shadow glitter, saturated cyan-white band |
 | 3 | Foil glitter "boiling" frame to frame | Glitter locked to the material's flow coordinates |
+| 4 | Foil mid-clip brightness dip masked by the left band | Band fades by about frame 110 |
 | 3 | Bitrate above the H.264 level limit | VBV cap |
 
-FINAL_VERIFICATION_PLACEHOLDER
+Final verdict from the last round:
+
+| Output | Fidelity to reference | Artefacts | Notes |
+|---|---|---|---|
+| Foil V1 | **7/10** (up from 4) | none | Palette, streak angle (45–55°), form scale, glitter behaviour and brightness arc match. The dip lands at frames ~111–116 against the reference's 111. |
+| Foil V2 (Gold/Sapphire) | n/a: alternative | none | Clearly distinct palette with identical geometry, motion and quality |
+| Satin V1 | **6.5/10** (up from 4) | none | Neutral steel colour matches the reference closely; speed about 0.85× the reference; the horizontal → diagonal → large-fold arc is present |
+| Satin V2 (Low-angle dolly) | n/a: alternative | none | Clearly different camera with clean far field (no shimmer); material and palette preserved |
+
+**Remaining differences from the references:**
+
+| Output | Difference |
+|---|---|
+| Foil V1 | The streak bundle is softer than the reference's very crisp fine lines |
+| Foil V1 | The left white/cyan hotspot fades out around frame 110, while the reference keeps it to about frame 140 |
+| Foil V1 | Glitter is mostly magenta/lavender rather than green |
+| Foil V1 | Frames 110–150 run 6–10 luma darker |
+| Satin V1 | Fine pleats and rim highlights are softer than the reference's crisp specular lines |
+| Satin V1 | The last ~1.5 s clips more highlight (about 16–22% against 10%) |
+| Satin V1 | Corners are not quite as brown-black as the reference |
+| All | None of these are artefacts |
+
+The references are stock footage of physically simulated, path-traced cloth. These shaders approximate them procedurally in real time, so a pixel-exact match is not achievable. The iStock watermark in the references was not reproduced.
 
 ## 4. Integrity (SHA-256)
 
 ```
-CHECKSUMS_PLACEHOLDER
+5afb2d9e7c101e45f95b3ebfbd2a925ffab55c51dcc9dcf7532249e237cd9043  IridescentFoil-V1-Reference-1080p.mp4
+4b00164fb7d15603ccd055ca532ffb859c0811f00ad04853fe385086575c4a94  IridescentFoil-V2-GoldSapphire-1080p.mp4
+b16af0e4e22a335efa41d91343418194c84683ac807172a4b5debaa71fc8669f  SilverSatin-V1-Reference-1080p.mp4
+ec4c44a82c55038207e9671420e075faf621515d742e7e106d2cb66a2d950a38  SilverSatin-V2-LowAngleDolly-1080p.mp4
+8608c6824f5fc2d2fe99b93d44f39007a5e5a7c8479f702fc91d41e4b46f844e  iridescent-foil-remotion-4k-project.zip
+abd6cbcfc00c5aa3cba409b8fac931ef9f692048c154d5ceb885046343566f4d  silver-satin-remotion-4k-project.zip
 ```
