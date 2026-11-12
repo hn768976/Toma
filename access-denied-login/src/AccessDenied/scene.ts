@@ -12,7 +12,7 @@ type RGB = [number, number, number];
  * Layout (panel lives in the world XY plane, z = 0, facing +z).
  * Panel spans u ∈ [-5, 5], v ∈ [-1.2, 1.2] (world units).
  * ===================================================================== */
-const PW = 4.3;
+const PW = 4.5;
 const PH = 1.3;
 
 const BLUE: RGB = [182, 192, 255];
@@ -29,15 +29,14 @@ const hash = (n: number) => {
 /** deterministic on/off flicker */
 const flick = (t: number, seed: number, rate: number, on: number) => hash(Math.floor(t * rate) * 7.13 + seed * 3.7) < on;
 const glyphs = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#$%&@";
-const scramble = (t: number, seed: number) => glyphs[Math.floor(hash(Math.floor(t * 24) + seed * 13.1) * glyphs.length)];
 
 /* --------------------------------------------------------------- timeline (seconds) */
 const T = {
-  cursorIn: 0.35,
-  boxOpenA: 0.72,
-  boxOpenB: 1.05,
-  loginA: 0.95,
-  loginB: 1.55,
+  cursorIn: 0.3,
+  boxOpenA: 0.45,
+  boxOpenB: 0.66,
+  loginA: 0.6,
+  loginB: 0.95,
   fpIn: 2.35,
   ringA: 2.75,
   ringB: 3.3,
@@ -81,14 +80,17 @@ const activeU = (t: number) => {
 
 export const cameraAt = (t: number, variant: Variant): Cam => {
   if (variant === "v1") {
-    // Reference: left side of the panel near the lens, strong dutch roll, slow push-in, gentle drift.
+    // Reference: extreme oblique view, left end of the panel near the lens and running off frame,
+    // strong dutch roll, very shallow focus around the right-centre, slow push-in then gentle drift.
     const push = easeInOut(t / 6.5);
     const drift = smoothstep(7.5, 20.7, t);
-    const target: V3 = [lerp(0.7, -0.15, push) + 0.3 * drift, lerp(0.75, 0.45, push) - 0.1 * drift, 0];
-    const yaw = lerp(30, 27, push) - 2 * drift;
-    const pitch = lerp(7, 6, push) + 1.5 * drift;
-    const dist = lerp(12.6, 9.3, push) + 0.4 * drift + 0.1 * Math.sin(t * 0.6);
-    return { pos: orbit(target, -yaw, pitch, dist), target, roll: -0.33 + 0.012 * Math.sin(t * 0.4), fov: 38, focus: [0.6, 0, 0] };
+    const redCam = easeInOut(clamp((t - 7.4) / 1.4));
+    const target: V3 = [lerp(0.95, 0.45, push) + 0.95 * redCam + 0.25 * drift, lerp(0.55, 0.35, push) - 0.1 * drift, 0];
+    const yaw = lerp(41, 39, push) - 2 * drift;
+    const pitch = lerp(8, 7, push) + 1.5 * drift;
+    const dist = lerp(11.6, 9.2, push) - 0.7 * redCam + 0.3 * drift + 0.08 * Math.sin(t * 0.6);
+    const fu = t < 7.7 ? 0.9 : lerp(0.9, 1.5, smoothstep(7.7, 9, t));
+    return { pos: orbit(target, -yaw, pitch, dist), target, roll: -0.33 + 0.012 * Math.sin(t * 0.4), fov: 38, focus: [fu, 0, 0] };
   }
   // V2: mirrored low-angle view (right side nearest), continuous arcing dolly + rack focus on the active element.
   const a = t / (DURATION_FRAMES / FPS);
@@ -198,7 +200,7 @@ export type Assets = { world: World; dof: DofRenderer; grain: HTMLCanvasElement;
 
 export const createAssets = (q: number): Assets => {
   const dof = new DofRenderer(q);
-  const netStyles = [0.22, 0.5, 0.85].map((a) => dof.style(rgba(NET, a), 3));
+  const netStyles = [0.25, 0.6, 0.95].map((a) => dof.style(rgba(NET, a), 3.8));
   return {
     world: buildWorld(),
     dof,
@@ -218,7 +220,7 @@ export const renderScene = (ctx: CanvasRenderingContext2D, A: Assets, t: number,
   const cs = cameraAt(t, variant);
   const cam = new Camera(W4K, H4K, cs.pos, cs.target, cs.fov, cs.roll);
   const focusZ = cam.depth(cs.focus);
-  const APER = variant === "v1" ? 58 : 66;
+  const APER = variant === "v1" ? 84 : 70;
   const blurAt = (z: number) => Math.min(200, APER * Math.abs(1 - focusZ / z) * (focusZ / 6) + 0.8);
 
   const red = smoothstep(T.redA, T.redB, t);
@@ -254,7 +256,7 @@ export const renderScene = (ctx: CanvasRenderingContext2D, A: Assets, t: number,
   const pw = dof.pw;
   const ph = dof.ph;
   const fadeIn = smoothstep(0.0, 0.6, t);
-  const bgC = mixRgb([12, 12, 34], [34, 4, 10], red);
+  const bgC = mixRgb([10, 10, 30], [16, 4, 14], red);
   const bgE = mixRgb([1, 1, 5], [5, 0, 2], red);
   const g = ctx.createRadialGradient(pw * 0.45, ph * 0.45, 0, pw * 0.45, ph * 0.45, pw * 0.7);
   g.addColorStop(0, rgba(mixRgb([0, 0, 0], bgC, fadeIn), 1));
@@ -263,7 +265,10 @@ export const renderScene = (ctx: CanvasRenderingContext2D, A: Assets, t: number,
   ctx.fillRect(0, 0, pw, ph);
 
   /* ---------- dark panel body (occludes what lies behind it) */
-  const boxOpen = easeInOut(clamp((t - T.boxOpenA) / (T.boxOpenB - T.boxOpenA)));
+  const boxOpen =
+    t < 7.7
+      ? easeInOut(clamp((t - T.boxOpenA) / (T.boxOpenB - T.boxOpenA))) * (1 - easeInOut(clamp((t - 7.35) / 0.3)))
+      : easeInOut(clamp((t - 7.72) / 0.3));
   const halfW = PW * Math.max(0.002, boxOpen);
   {
     const corners: V3[] = [
@@ -308,8 +313,8 @@ export const renderScene = (ctx: CanvasRenderingContext2D, A: Assets, t: number,
   /* ---------- panel border (segmented so every piece gets its own depth blur) */
   if (boxOpen > 0) {
     const colB = mixRgb(BLUE, RED_DIM, red);
-    const flickA = t > T.blueOutA && t < T.redB ? (flick(t, 5, 20, 0.6) ? 1 : 0.35) : 1;
-    const baseA = (0.85 * (1 - red) + 0.5 * red) * flickA;
+    const flickA = t > T.blueOutA && t < T.redB ? (flick(t, 5, 20, 0.6) ? 1 : 0.65) : 1;
+    const baseA = (0.75 * (1 - red) + 0.5 * red) * flickA;
     const thick = 0.075;
     const seg = 0.25;
     const edge = (u0: number, v0: number, u1: number, v1: number, inner: boolean) => {
@@ -352,16 +357,17 @@ export const renderScene = (ctx: CanvasRenderingContext2D, A: Assets, t: number,
     const word = "Login";
     const out = smoothstep(T.loginOut, T.ringB, t);
     for (let i = 0; i < word.length; i++) {
-      const ti = T.loginA + i * 0.1;
+      const ti = T.loginA + i * 0.06;
       if (t < ti) continue;
-      if (out > 0 && hash(i * 3.3 + Math.floor(t * 20)) < out) continue;
-      const ch = t < ti + 0.14 ? scramble(t, i) : word[i];
+      const la = smoothstep(ti, ti + 0.14, t) * (1 - out);
+      if (la <= 0.01) continue;
+      const ch = word[i];
       const u = -1.6 + i * 1.02;
       glowOnPlane(u, 0, 0, 1, (c, glow) => {
         c.font = `${glow ? 196 : 190}px "Share Tech Mono"`;
         c.textAlign = "center";
         c.textBaseline = "middle";
-        c.fillStyle = rgba(glow ? BLUE : BLUE_HI, glow ? 0.5 : 0.92);
+        c.fillStyle = rgba(glow ? BLUE : BLUE_HI, (glow ? 0.45 : 0.82) * la);
         c.fillText(ch, 0, 4);
       });
     }
@@ -378,21 +384,24 @@ export const renderScene = (ctx: CanvasRenderingContext2D, A: Assets, t: number,
     const drawFp = (c: CanvasRenderingContext2D, glow: boolean) => {
       c.scale(sc * LK, sc * LK);
       c.lineCap = "round";
-      c.lineWidth = glow ? 0.05 : 0.026;
-      c.strokeStyle = rgba(BLUE_HI, (glow ? 0.4 : 0.9) * fpA * (1 + pulse));
+      c.lineWidth = glow ? 0.05 : lerp(0.026, 0.034, fill);
+      c.strokeStyle = rgba(BLUE_HI, (glow ? 0.3 : lerp(0.85, 0.6, fill)) * fpA * (1 + 0.6 * pulse));
       c.beginPath();
+      if (fill > 0 && !glow) {
+        c.fillStyle = rgba(BLUE_HI, 0.3 * fill * fpA);
+        c.ellipse(0, -0.02, 0.4, 0.52, 0, 0, Math.PI * 2);
+        c.fill();
+        c.beginPath();
+        for (let k = 1; k <= 8; k++) c.ellipse(0, -0.02, 0.05 * k, 0.065 * k, 0, 0, Math.PI * 2);
+        c.stroke();
+        return;
+      }
       for (const r of world.fpRidges) {
         c.moveTo(r.cx + Math.cos(r.a0) * r.rx, r.cy - 0.33 + Math.sin(r.a0) * r.ry);
         c.ellipse(r.cx, r.cy - 0.33 + r.ry * 0.0, r.rx, r.ry, 0, r.a0, r.a1);
       }
       c.stroke();
-      if (fill > 0 && !glow) {
-        // the docked icon reads as a soft filled thumb
-        c.fillStyle = rgba(BLUE_HI, 0.1 * fill * fpA);
-        c.beginPath();
-        c.ellipse(0, -0.02, 0.36, 0.48, 0, 0, Math.PI * 2);
-        c.fill();
-      }
+
     };
     glowOnPlane(fu, 0.02, 0, 1, drawFp);
     if (pulse > 0.05) onPlane(fu, 0.02, 0.0, 30, (c) => drawFp(c, true));
@@ -429,7 +438,7 @@ export const renderScene = (ctx: CanvasRenderingContext2D, A: Assets, t: number,
         c.fillText(glyphs[Math.floor(hash(k * 9.1) * 26)], 0, 6);
       }
       if (asDot > 0) {
-        c.fillStyle = rgba(BLUE_HI, asDot * (glow ? 0.5 : 0.97));
+        c.fillStyle = rgba(BLUE_HI, asDot * (glow ? 0.4 : 0.78));
         c.beginPath();
         c.ellipse(0, 0, 26 * asDot, 30 * asDot, 0, 0, Math.PI * 2);
         c.fill();
@@ -440,7 +449,11 @@ export const renderScene = (ctx: CanvasRenderingContext2D, A: Assets, t: number,
   /* ---------- ACCESS DENIED */
   if (t > T.redA) {
     const word = "ACCESS DENIED";
-    const adv = (ch: string) => (ch === "I" ? 0.36 : ch === " " ? 0.5 : 0.62);
+    const adv = (ch: string) => (ch === "I" ? 0.34 : ch === " " ? 0.46 : 0.58);
+    const BLINKS = [13.7, 15.0, 16.7, 18.0, 19.7];
+    const blinkOff = BLINKS.some((b) => t >= b && t < b + 0.17);
+    const inA = smoothstep(7.95, 8.3, t) * (t < 8.25 && !flick(t, 3, 18, 0.65) ? 0.35 : 1);
+    const wordA = blinkOff ? 0 : inA;
     const total = word.split("").reduce((acc, ch) => acc + adv(ch), 0);
     const xs: number[] = [];
     let acc = -total / 2;
@@ -450,19 +463,14 @@ export const renderScene = (ctx: CanvasRenderingContext2D, A: Assets, t: number,
     }
     for (let i = 0; i < word.length; i++) {
       if (word[i] === " ") continue;
-      const appear = T.redA + hash(i * 2.7) * 0.5;
-      if (t < appear) continue;
-      const settled = t > appear + 0.25;
-      if (!settled && !flick(t, i, 24, 0.55)) continue;
-      // occasional glitch dropout later on
-      if (settled && t > 10 && flick(t, i + 40, 12, 0.025)) continue;
+      if (wordA <= 0.01) continue;
       const u = xs[i];
-      const ch = settled ? word[i] : scramble(t, i + 7);
+      const ch = word[i];
       glowOnPlane(u, -0.02, 0, 1, (c, glow) => {
         c.font = `600 ${glow ? 142 : 136}px Rajdhani`;
         c.textAlign = "center";
         c.textBaseline = "middle";
-        c.fillStyle = rgba(glow ? NET : RED, glow ? 0.3 : 0.82);
+        c.fillStyle = rgba(glow ? NET : RED, (glow ? 0.22 : 0.66) * wordA);
         c.fillText(ch, 0, 8);
       });
     }
@@ -537,15 +545,14 @@ export const renderScene = (ctx: CanvasRenderingContext2D, A: Assets, t: number,
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = "lighter";
     const hz = ctx.createRadialGradient(pw * 0.25, ph * 0.6, 0, pw * 0.25, ph * 0.6, pw * 0.6);
-    hz.addColorStop(0, rgba([110, 8, 12], 0.45 * red));
+    hz.addColorStop(0, rgba([110, 8, 14], 0.18 * red));
     hz.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = hz;
     ctx.fillRect(0, 0, pw, ph);
     ctx.restore();
   }
-  dof.bloom(ctx, ctx.canvas, 0.55, 5);
+  dof.bloom(ctx, ctx.canvas, 0.38, 5);
   applyVignette(ctx, 0.7);
-  applyGrain(ctx, A.grain, q, frame, 0.06);
   // opening fade from black
   if (t < 0.5) {
     ctx.save();
@@ -555,5 +562,6 @@ export const renderScene = (ctx: CanvasRenderingContext2D, A: Assets, t: number,
     ctx.fillRect(0, 0, pw, ph);
     ctx.restore();
   }
+  applyGrain(ctx, A.grain, q, frame, 0.09);
   void randUnit;
 };

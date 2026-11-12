@@ -145,7 +145,7 @@ const buildStrand = (
   const pts: StrandPoint[] = [];
   const rs = rnd() * 10;
   for (let s = 0.02; s < L; s += 0.085 + rnd() * 0.05) {
-    const k = 3;
+    const k = 4;
     const rMod = 0.62 + 0.42 * Math.sin(s * 1.15 + rs) + 0.18 * Math.sin(s * 3.1 + rs * 2);
     const endTaper = 0.35 + 0.65 * smoothstep(0, 0.9, s) * smoothstep(0, 0.6, L - s);
     for (let i = 0; i < k; i++) {
@@ -198,7 +198,7 @@ export const buildWorld = (seed = 7): World => {
   const right0 = norm(cross(fwd0, [0, 1, 0]));
   const up0 = cross(right0, fwd0);
   const E0 = TARGET_KEYS[2].p;
-  const heroStart = add(E0, add(add(scale(right0, -5.2), scale(up0, -4.2)), scale(fwd0, 1.5)));
+  const heroStart = add(E0, add(add(scale(right0, -6.8), scale(up0, -2.4)), scale(fwd0, 1.2)));
   strands.push(buildStrand(rnd, heroStart, E0, -4.6, 4.0, { ease: "linear", lateral: 0.9 }));
 
   const c2 = cameraAt(2.0);
@@ -235,8 +235,8 @@ export const buildWorld = (seed = 7): World => {
   // --- Final convergence: every head / junction is drawn toward one point for the big collision
   const finalPoint = TARGET_KEYS[TARGET_KEYS.length - 2].p;
   for (const st of strands) {
-    st.converge = 0.35;
-    st.convergeTo = add(finalPoint, scale(randUnit(rnd), 1.4 + rnd() * 1.2));
+    st.converge = 0.15;
+    st.convergeTo = add(finalPoint, scale(randUnit(rnd), 1.8 + rnd() * 1.4));
   }
   collisions.push({ t: 25.6, p: finalPoint, strands: [0, 0], big: true });
 
@@ -344,7 +344,7 @@ export const createAssets = (palette: Palette, q: number): SceneAssets => {
     const row: number[] = [];
     const col = mixRgb(P.strand, P.strandWarm, w / (WARM_LEVELS - 1));
     for (let a = 0; a < ALPHA_LEVELS; a++) {
-      const alpha = (0.18 + 0.25 * a) * (1 + 0.2 * w);
+      const alpha = (0.15 + 0.22 * a) * (1 + 0.2 * w);
       row.push(dof.style(rgba(col, Math.min(1, alpha)), 2.6));
     }
     lines.push(row);
@@ -360,7 +360,7 @@ export const createAssets = (palette: Palette, q: number): SceneAssets => {
   return { world, halo, glow, core, grain, dof, styles: { lines, dots, bokeh, spark, dustWarm }, palette };
 };
 
-const APERTURE = 40; // 4K px of blur for an object at infinity
+const APERTURE = 50; // 4K px of blur for an object at infinity
 const MAX_BLUR = 230;
 
 /** Render the scene at time t (seconds) onto ctx (pixel size W4K*q). */
@@ -413,7 +413,7 @@ export const renderScene = (ctx: CanvasRenderingContext2D, A: SceneAssets, t: nu
     if (dt < -0.25 || dt > 2.5) continue;
     const env = dt < 0 ? smoothstep(-0.25, 0, dt) : Math.exp(-dt * (c.big ? 1.6 : 3.2));
     const p = c.big ? add(world.finalPoint, [0, 0, 0]) : c.p;
-    orbs.push({ p, I: env * (c.big ? 3.4 : 2.4), size: c.big ? 2.0 : 1.4, seed: 3 });
+    orbs.push({ p, I: env * (c.big ? 1.15 : 2.2), size: c.big ? 1.3 : 1.4, seed: 3 });
   }
 
   /* -------- strands */
@@ -583,18 +583,30 @@ export const renderScene = (ctx: CanvasRenderingContext2D, A: SceneAssets, t: nu
   ctx.restore();
 
   /* -------- global warm wash, bloom, grade */
-  const wash = clamp(warmSum * 0.018, 0, 0.55);
+  const finale = smoothstep(22.8, 25.4, t) * (1 - smoothstep(25.7, 26.6, t));
+  const wash = clamp(warmSum * 0.018, 0, 0.55) + 0.55 * finale;
   if (wash > 0.003) {
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = "screen";
-    ctx.fillStyle = rgba(P.wash, wash * 0.45);
+    ctx.fillStyle = rgba(P.wash, Math.min(0.32, wash * 0.45));
     ctx.fillRect(0, 0, pw, ph);
+    if (finale > 0) {
+      // soft warm glow drifting across the frame during the climax
+      const fx = pw * (0.35 + 0.2 * Math.sin(t * 0.7));
+      const fy = ph * (0.45 + 0.1 * Math.cos(t * 0.5));
+      const fg = ctx.createRadialGradient(fx, fy, 0, fx, fy, pw * 0.7);
+      fg.addColorStop(0, rgba(P.halo, 0.35 * finale));
+      fg.addColorStop(0.5, rgba(P.haloOuter, 0.14 * finale));
+      fg.addColorStop(1, rgba(P.haloOuter, 0));
+      ctx.fillStyle = fg;
+      ctx.fillRect(0, 0, pw, ph);
+    }
     ctx.restore();
   }
   dof.bloom(ctx, ctx.canvas, 0.45, 6);
   applyVignette(ctx, 0.62);
-  applyGrain(ctx, A.grain, q, frame, 0.05);
+  applyGrain(ctx, A.grain, q, frame, 0.085);
   void LOOP_T;
   void lerp;
 };

@@ -17,10 +17,10 @@ export type Palette = {
 /** Version 1 — matches the reference: navy/indigo space, silver-lavender plexus, molten-orange orbs. */
 export const ORIGINAL: Palette = {
   name: "original",
-  bgCenter: "#141b40",
-  bgMid: "#090d22",
+  bgCenter: "#111a3c",
+  bgMid: "#070b1e",
   bgEdge: "#020308",
-  bgAccent: "rgba(60,32,80,0.28)",
+  bgAccent: "rgba(48,28,70,0.22)",
   strand: [196, 205, 242],
   strandWarm: [255, 196, 160],
   halo: [255, 128, 66],
@@ -33,8 +33,8 @@ export const ORIGINAL: Palette = {
 /** Version 2 — "Aurora": deep teal abyss, mint-cyan plexus, magenta/violet plasma orbs. */
 export const AURORA: Palette = {
   name: "aurora",
-  bgCenter: "#08323a",
-  bgMid: "#051c23",
+  bgCenter: "#062830",
+  bgMid: "#03161c",
   bgEdge: "#010406",
   bgAccent: "rgba(18,80,70,0.28)",
   strand: [178, 255, 232],
