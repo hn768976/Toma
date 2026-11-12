@@ -10,42 +10,39 @@ export type CamPose = {
 	fov: number;
 };
 
-export const SPEED = 2.35; // metres per second down the aisle
-const FPS = 30;
+/** Total forward travel over the shot (m). The end bank of racks roughly doubles in size, as in the reference. */
+export const TRAVEL = 2.7;
 
 const smooth = (x: number) => x * x * (3 - 2 * x);
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 
 /**
- * Version 1: steady eye-level dolly down the centre of the aisle with the
- * gentle hand-held sway seen in the reference.
+ * Version 1: slow, steady push down the centre of the aisle towards the
+ * racks at the far end (no sway), matching the reference.
  * Version 2: low-angle crane — starts 30 cm above the glossy floor looking up
- * at the racks, rises to eye level while weaving left/right and banking into
- * each turn.
+ * at the racks from the left of the aisle, arcs across to the right while
+ * rising to eye level and banking, ending square-on to the end racks.
  */
 export const cameraPose = (mode: CameraMode, t: number, durationFrames: number): CamPose => {
-	const s = t / FPS;
-	const z = -s * SPEED;
+	const p = clamp01(t / (durationFrames - 1));
+	// near-constant speed with a very soft start/stop (avoids a hard cut-in feel)
+	const travel = THREE.MathUtils.lerp(p, smooth(p), 0.15);
+	const z = -travel * TRAVEL;
 	if (mode === 'reference-dolly') {
 		return {
-			pos: new THREE.Vector3(
-				0.06 * Math.sin(s * 0.9) + 0.025 * Math.sin(s * 2.3 + 1.0),
-				1.32 + 0.025 * Math.sin(s * 1.7 + 0.4),
-				z,
-			),
-			yaw: 0.022 * Math.sin(s * 0.75 + 0.5) + 0.008 * Math.sin(s * 1.9),
-			pitch: 0.015 + 0.01 * Math.sin(s * 1.1 + 2.0),
-			roll: 0.012 * Math.sin(s * 0.8 + 1.3),
+			pos: new THREE.Vector3(0, 1.3, z),
+			yaw: 0,
+			pitch: 0.01,
+			roll: 0,
 			fov: 62,
 		};
 	}
-	const k = smooth(clamp01(t / durationFrames));
-	const weave = Math.sin(s * 0.62);
+	const k = smooth(p);
 	return {
-		pos: new THREE.Vector3(0.38 * weave, 0.3 + 1.45 * k, z * 0.92),
-		yaw: -0.07 * Math.cos(s * 0.62),
-		pitch: THREE.MathUtils.lerp(0.32, -0.03, k),
-		roll: -0.11 * weave,
-		fov: THREE.MathUtils.lerp(70, 60, k),
+		pos: new THREE.Vector3(THREE.MathUtils.lerp(-0.55, 0.25, k), THREE.MathUtils.lerp(0.28, 1.45, k), z),
+		yaw: THREE.MathUtils.lerp(-0.12, 0.02, k),
+		pitch: THREE.MathUtils.lerp(0.34, 0.02, k),
+		roll: THREE.MathUtils.lerp(-0.14, 0.0, smooth(k)),
+		fov: THREE.MathUtils.lerp(72, 60, k),
 	};
 };

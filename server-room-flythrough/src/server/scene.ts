@@ -8,9 +8,12 @@ import {createRackMaterial, RACK_H, RACK_W} from './rackShader';
 
 const AISLE_HALF = 1.2; // rack faces at x = ±1.2 m
 const CEILING = 2.95;
-const LEN = 110; // length of aisle geometry (m), camera travels ~32 m
-const BAY = RACK_W * 4; // structural bay: pillar + ceiling light every 4 racks
-const END_DIST = 6.2; // far end of the aisle, held at constant distance (seamless loop look)
+const ROW_START = 5; // side rack rows start behind the camera...
+const ROW_END = -4.7; // ...and stop here, opening onto a cross-aisle
+const LEN = ROW_START - ROW_END;
+const BAY = RACK_W * 4; // structural bay: pillar every 4 racks
+const END_Z = -6.0; // bank of racks facing the camera across the cross-aisle
+const LIGHT_PITCH = 1.0; // ceiling light bars / gantry frames
 
 const FloorShader = {
 	name: 'GlossyFloor',
@@ -45,19 +48,21 @@ const FloorShader = {
 			vec2 uv = vUv.xy / vUv.w;
 			// streaky, slightly rough reflection: blur mostly along screen-vertical
 			vec3 acc = vec3(0.0); float ws = 0.0;
-			for (int i = -6; i <= 6; i++) {
-				float fi = float(i);
-				float w = exp(-fi * fi * 0.08);
-				acc += texture2D(tDiffuse, uv + vec2(fi * 0.0005, fi * 0.009)).rgb * w;
-				ws += w;
+			for (int i = -5; i <= 5; i++) {
+				for (int j = -1; j <= 1; j++) {
+					float fi = float(i);
+					float w = exp(-fi * fi * 0.1);
+					acc += texture2D(tDiffuse, uv + vec2(float(j) * 0.0025, fi * 0.006)).rgb * w;
+					ws += w;
+				}
 			}
 			vec3 refl = acc / ws;
 			vec2 tile = vWorld.xz / 0.6;
 			vec2 g = abs(fract(tile) - 0.5);
 			vec2 fw = fwidth(tile);
 			float seam = 1.0 - clamp((0.5 - max(g.x, g.y)) / max(max(fw.x, fw.y) * 1.5, 1e-4), 0.0, 1.0);
-			float tileVar = 0.9 + 0.2 * h2(floor(tile));
-			vec3 col = uTint * 0.12 * tileVar + refl * 0.48 * tileVar * (1.0 - seam * 0.2);
+			float tileVar = 0.97 + 0.06 * h2(floor(tile));
+			vec3 col = uTint * 0.08 + refl * 0.42 * tileVar * (1.0 - seam * 0.06);
 			gl_FragColor = vec4(col, 1.0);
 		}
 	`,
@@ -91,17 +96,17 @@ export const createServerScene =
 	(pal: ServerPalette, mode: CameraMode, durationFrames: number, debug: ServerDebug = {}): SceneFactory =>
 	({canvas, width, height}) => {
 		const renderer = createRenderer(canvas, width, height);
-		renderer.toneMappingExposure = 1.05;
+		renderer.toneMappingExposure = 0.95;
 		const scene = new THREE.Scene();
 		scene.background = new THREE.Color(pal.fog);
-		scene.fog = new THREE.FogExp2(new THREE.Color(pal.fog), 0.05);
+		scene.fog = new THREE.FogExp2(new THREE.Color(pal.fog), 0.03);
 		scene.environment = makeEnvironment(renderer, pal);
 		const camera = new THREE.PerspectiveCamera(62, width / height, 0.03, 200);
 		camera.rotation.order = 'YXZ';
 
 		scene.add(new THREE.AmbientLight('#7fa6b8', 0.25));
-		const zStart = 8;
-		const zMid = zStart - LEN / 2;
+		const zStart = ROW_START;
+		const zMid = (ROW_START + ROW_END) / 2;
 
 		// ---------- rack faces (procedural shader planes)
 		const rackMats: THREE.ShaderMaterial[] = [];
@@ -158,27 +163,30 @@ export const createServerScene =
 		}
 
 		// ---------- ceiling: dark slab, beams and bright light bars
-		const ceil = new THREE.Mesh(new THREE.PlaneGeometry(AISLE_HALF * 2 + 0.4, LEN), blackMat);
+		const ceil = new THREE.Mesh(new THREE.PlaneGeometry(12, 16), blackMat);
 		ceil.rotation.x = Math.PI / 2;
-		ceil.position.set(0, CEILING, zMid);
+		ceil.position.set(0, CEILING, -1.5);
 		scene.add(ceil);
-		const lightMat = new THREE.MeshBasicMaterial({color: new THREE.Color(pal.ceilingLight).multiplyScalar(1.9)});
-		const nLights = nPillars * 2;
-		const lights = new THREE.InstancedMesh(new THREE.BoxGeometry(1.9, 0.04, 0.2), lightMat, nLights);
-		for (let i = 0; i < nLights; i++) {
-			m4.makeTranslation(0, CEILING - 0.08, zStart - i * (BAY / 2) - BAY / 4);
+		const lightMat = new THREE.MeshBasicMaterial({color: new THREE.Color(pal.ceilingLight).multiplyScalar(1.5)});
+		const zLights: number[] = [];
+		for (let z = ROW_START - 0.5; z > END_Z + 0.4; z -= LIGHT_PITCH) zLights.push(z);
+		const lights = new THREE.InstancedMesh(new THREE.BoxGeometry(1.7, 0.035, 0.13), lightMat, zLights.length);
+		const gantry = new THREE.InstancedMesh(new THREE.BoxGeometry(AISLE_HALF * 2, 0.07, 0.06), darkMetal, zLights.length);
+		zLights.forEach((z, i) => {
+			m4.makeTranslation(0, CEILING - 0.12, z);
 			lights.setMatrixAt(i, m4);
-		}
-		const beams = new THREE.InstancedMesh(new THREE.BoxGeometry(AISLE_HALF * 2, 0.12, 0.1), darkMetal, nPillars);
-		for (let i = 0; i < nPillars; i++) {
-			m4.makeTranslation(0, CEILING - 0.06, zStart - i * BAY);
-			beams.setMatrixAt(i, m4);
-		}
-		scene.add(lights, beams);
+			m4.makeTranslation(0, CEILING - 0.05, z - LIGHT_PITCH / 2);
+			gantry.setMatrixAt(i, m4);
+		});
+		scene.add(lights, gantry);
 		for (const side of [-1, 1]) {
-			const rail = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.1, LEN), darkMetal);
-			rail.position.set(side * (AISLE_HALF - 0.1), CEILING - 0.05, zMid);
+			const rail = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, ROW_START - END_Z), darkMetal);
+			rail.position.set(side * (AISLE_HALF - 0.08), CEILING - 0.07, (ROW_START + END_Z) / 2);
 			scene.add(rail);
+			// thick pillar where each side row ends at the cross-aisle
+			const endPillar = new THREE.Mesh(new THREE.BoxGeometry(0.22, CEILING, 0.25), darkMetal);
+			endPillar.position.set(side * (AISLE_HALF + 0.02), CEILING / 2, ROW_END - 0.1);
+			scene.add(endPillar);
 		}
 
 		// ---------- far end: racks facing the camera across a cross-aisle
@@ -186,29 +194,29 @@ export const createServerScene =
 		const endMat = createRackMaterial(pal, 'x', 1);
 		rackMats.push(endMat);
 		const endWall = new THREE.Mesh(new THREE.PlaneGeometry(9.1, RACK_H), endMat);
-		endWall.position.set(0.0, RACK_H / 2, -END_DIST);
+		endWall.position.set(0.0, RACK_H / 2, END_Z);
 		endGroup.add(endWall);
 		const endTop = new THREE.Mesh(new THREE.PlaneGeometry(9.1, CEILING - RACK_H), blackMat);
-		endTop.position.set(0, RACK_H + (CEILING - RACK_H) / 2, -END_DIST - 0.01);
+		endTop.position.set(0, RACK_H + (CEILING - RACK_H) / 2, END_Z - 0.01);
 		endGroup.add(endTop);
 		const endStrip = new THREE.Mesh(new THREE.BoxGeometry(9.1, 0.02, 0.02), stripMat);
-		endStrip.position.set(0, RACK_H + 0.03, -END_DIST + 0.02);
+		endStrip.position.set(0, RACK_H + 0.03, END_Z + 0.02);
 		endGroup.add(endStrip);
 		const tubeMat = new THREE.MeshBasicMaterial({color: new THREE.Color(pal.ceilingLight).multiplyScalar(2.6)});
 		for (const x of [-0.42, 0.42]) {
 			const tube = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.8, 0.035), tubeMat);
-			tube.position.set(x, 1.05, -END_DIST + 0.08);
+			tube.position.set(x, 1.05, END_Z + 0.08);
 			endGroup.add(tube);
 		}
 		for (const x of [-RACK_W * 2, -RACK_W, 0, RACK_W, RACK_W * 2].map((v) => v + RACK_W / 2)) {
 			const p = new THREE.Mesh(postGeo, darkMetal);
-			p.position.set(x, RACK_H / 2, -END_DIST + 0.02);
+			p.position.set(x, RACK_H / 2, END_Z + 0.02);
 			endGroup.add(p);
 		}
 		scene.add(endGroup);
 
 		// ---------- glossy floor
-		const floorGeo = new THREE.PlaneGeometry(AISLE_HALF * 2 + 6, LEN);
+		const floorGeo = new THREE.PlaneGeometry(12, ROW_START - END_Z + 2);
 		let floor: THREE.Mesh;
 		if (debug.reflections === false) {
 			floor = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({color: pal.floorTint, roughness: 0.3}));
@@ -223,11 +231,11 @@ export const createServerScene =
 			});
 		}
 		floor.rotation.x = -Math.PI / 2;
-		floor.position.set(0, 0, zMid);
+		floor.position.set(0, 0, (ROW_START + END_Z) / 2 - 1);
 		scene.add(floor);
 
 		const post = createPostChain(renderer, scene, camera, width, height, {
-			strength: 0.55,
+			strength: 0.42,
 			radius: 0.12,
 			threshold: 0.85,
 		}, {msaa: debug.msaa ?? 0, smaa: debug.smaa ?? true});
@@ -245,11 +253,10 @@ export const createServerScene =
 			camera.fov = pose.fov;
 			camera.updateProjectionMatrix();
 			camera.updateMatrixWorld();
-			endGroup.position.z = pose.pos.z;
 			for (const m of rackMats) {
 				m.uniforms.uTime.value = t;
 				m.uniforms.uCamZ.value = pose.pos.z;
-				m.uniforms.uGapStart.value = pose.pos.z - END_DIST + 1.6;
+				m.uniforms.uGapStart.value = ROW_END;
 			}
 			post.render(t);
 		};

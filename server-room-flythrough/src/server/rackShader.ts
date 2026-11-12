@@ -132,12 +132,11 @@ export const createRackMaterial = (pal: ServerPalette, axis: 'z' | 'x', side: nu
 							float bay = boxMask(vec2(fx - 0.5, fy - 0.5), vec2(0.42, 0.36), fwBay);
 							base += bay * vec3(0.022, 0.03, 0.036);
 							vec3 id = vec3(ri * 31.0 + ci, block * 2.0 + row, uSide);
-							float led = boxMask(vec2(fx - 0.82, fy - 0.5), vec2(0.07, 0.16), fwBay);
+							float led = boxMask(vec2(fx - 0.82, fy - 0.5), vec2(0.08, 0.07), fwBay);
 							float on = blink(id, 0.08 + 0.4 * h3(id + 1.0));
 							emit += led * on * ledColor(h3(id + 5.0) * 0.8) * 4.2;
-							// light bar on some bays (bright white strips as in the reference)
-							float strip = boxMask(vec2(fx - 0.45, fy - 0.5), vec2(0.3, 0.06), fwBay);
-							emit += strip * step(0.82, h3(id + 8.0)) * on * uWhite * 1.2;
+							float led2 = boxMask(vec2(fx - 0.62, fy - 0.5), vec2(0.08, 0.07), fwBay);
+							emit += led2 * step(0.5, h3(id + 8.0)) * blink(id + 9.0, 0.2) * ledColor(h3(id + 10.0) * 0.75) * 3.6;
 						}
 						float st = boxMask(vec2((lx - 0.06) * 20.0, by - 0.5), vec2(0.35, 0.12), vec2(fwB.x * 20.0, fwB.y));
 						emit += st * ledColor(h3(vec3(ri, block, 11.0))) * 2.5 * blink(vec3(ri, block, 12.0), 0.05);
@@ -155,8 +154,8 @@ export const createRackMaterial = (pal: ServerPalette, axis: 'z' | 'x', side: nu
 							float led = boxMask(vec2(fx - 0.5, by - 0.2), vec2(0.22, 0.05), fwBay);
 							float on = blink(id, 0.15 + 0.6 * h3(id + 2.0));
 							emit += led * on * ledColor(h3(id + 6.0) * 0.9) * 4.5;
-							float glow = boxMask(vec2(fx - 0.5, by - 0.6), vec2(0.3, 0.18), fwBay);
-							emit += glow * step(0.72, h3(id + 9.0)) * uWhite * 1.1;
+							float led2 = boxMask(vec2(fx - 0.5, by - 0.38), vec2(0.22, 0.05), fwBay);
+							emit += led2 * step(0.6, h3(id + 9.0)) * blink(id + 4.0, 0.3) * uWhite * 3.0;
 						}
 					} else if (t < 0.76) {
 						// dense status-LED matrix (the sparkly white clusters in the reference)
@@ -168,7 +167,7 @@ export const createRackMaterial = (pal: ServerPalette, axis: 'z' | 'x', side: nu
 							vec2 f = fract(g);
 							vec2 fwG = vec2(fwB.x / 0.92 * cols, fwB.y * rows);
 							vec3 id = vec3(ri * 89.0 + ci.x, block * 4.0 + ci.y, uSide + 8.0);
-							float led = boxMask(f - 0.5, vec2(0.2, 0.17), fwG);
+							float led = boxMask(f - 0.5, vec2(0.12, 0.18), fwG);
 							float on = step(0.35, h3(id + 4.0)) * blink(id, 0.06 + 0.5 * h3(id + 7.0));
 							emit += led * on * ledColor(h3(id + 2.0) * 0.85) * 4.5;
 						}
@@ -192,8 +191,14 @@ export const createRackMaterial = (pal: ServerPalette, axis: 'z' | 'x', side: nu
 						// 1U servers with a wide lit front bezel
 						float fy = fract(by * 2.0);
 						vec3 id = vec3(ri, block * 2.0 + floor(by * 2.0), uSide + 6.0);
-						float bezel = boxMask(vec2(lx - 0.55, fy - 0.5), vec2(0.38, 0.12), vec2(fwB.x, fwB.y * 2.0));
-						emit += bezel * uWhite * (0.3 + 0.8 * h3(id)) * blink(id, 0.02);
+						float cols = 12.0;
+						float gx = (lx - 0.2) / 0.75 * cols;
+						if (gx > 0.0 && gx < cols) {
+							float cx = floor(gx);
+							vec3 did = id + vec3(cx * 13.0, 0.0, 0.0);
+							float d = boxMask(vec2(fract(gx) - 0.5, fy - 0.5), vec2(0.13, 0.14), vec2(fwB.x / 0.75 * cols, fwB.y * 2.0));
+							emit += d * step(0.4, h3(did)) * blink(did, 0.1 + 0.3 * h3(did + 1.0)) * ledColor(h3(did + 2.0) * 0.8) * 3.4;
+						}
 						float led = boxMask(vec2((lx - 0.08) * 30.0, fy - 0.5), vec2(0.4, 0.15), vec2(fwB.x * 30.0, fwB.y * 2.0));
 						emit += led * ledColor(h3(id + 1.0)) * 3.0 * blink(id + 2.0, 0.1);
 					}

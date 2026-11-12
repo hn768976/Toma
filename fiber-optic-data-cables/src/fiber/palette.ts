@@ -23,8 +23,8 @@ export type FiberPalette = {
 /** Version 1 — matches the reference: electric blue fibres on deep navy. */
 export const REFERENCE_BLUE: FiberPalette = {
 	name: 'Reference Blue',
-	bgTop: '#071329',
-	bgMid: '#12305f',
+	bgTop: '#0b1d40',
+	bgMid: '#1a407e',
 	bgBottom: '#050d1d',
 	bgGlow: '#1b7d9e',
 	strandEdge: '#1257d6',
@@ -37,7 +37,7 @@ export const REFERENCE_BLUE: FiberPalette = {
 	envRim: '#2fa8ff',
 	keyLight: '#a9cfff',
 	rimLight: '#3aa0ff',
-	boot: '#2e7fe8',
+	boot: '#2463b8',
 	glowPort: '#e6f6ff',
 	lift: [0.0, 0.004, 0.012],
 	gain: [0.97, 1.0, 1.04],
@@ -46,8 +46,8 @@ export const REFERENCE_BLUE: FiberPalette = {
 /** Version 2 — alternative palette: molten amber/copper fibres on deep plum. */
 export const AMBER_PLUM: FiberPalette = {
 	name: 'Amber Plum',
-	bgTop: '#14060f',
-	bgMid: '#3d1233',
+	bgTop: '#1e0918',
+	bgMid: '#521a45',
 	bgBottom: '#0c040a',
 	bgGlow: '#b8481c',
 	strandEdge: '#d9400f',

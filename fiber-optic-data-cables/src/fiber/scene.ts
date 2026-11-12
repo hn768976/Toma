@@ -225,13 +225,13 @@ export const createFiberScene =
 		const rim = new THREE.DirectionalLight(pal.rimLight, 1.4);
 		rim.position.set(-20, -2, -8);
 		scene.add(rim);
-		const srcLight = new THREE.PointLight(pal.rimLight, 4, 0, 2);
+		const srcLight = new THREE.PointLight(pal.rimLight, 0, 0, 2);
 		srcLight.position.set(4, 2, 0);
 		scene.add(srcLight);
 
 		// ---------------- glowing fibres
 		const specs: StrandSpec[] = [];
-		for (let i = 0; i < 140; i++) {
+		for (let i = 0; i < 100; i++) {
 			const p0 = V(rng.range(-3, 2), rng.range(-1.2, 1.0), rng.range(-3.5, 3.5));
 			const L = rng.range(30, 64);
 			const th = Math.pow(rng.next(), 1.1) * 0.95 + 0.03;
@@ -239,12 +239,12 @@ export const createFiberScene =
 			specs.push({
 				p0,
 				p1: p0.clone().add(V(0.38 * L, 0.02 * L, dz * 0.25)),
-				p2: p0.clone().add(V(0.72 * L * Math.cos(th * 0.6), 0.42 * L * Math.sin(th), dz * 0.65)),
+				p2: p0.clone().add(V(0.7 * L * Math.cos(th * 0.8), 0.5 * L * Math.sin(th), dz * 0.65)),
 				p3: p0.clone().add(V(L * Math.cos(th), L * Math.sin(th), dz)),
-				delay: 38 + rng.next() * 78 + th * 16,
+				delay: 14 + rng.next() * 70 + th * 14,
 				duration: rng.range(30, 58),
-				width: rng.range(0.06, 0.14),
-				bright: rng.range(0.45, 1.35),
+				width: rng.range(0.08, 0.17),
+				bright: rng.range(0.6, 1.5),
 				seed: rng.next(),
 			});
 		}
@@ -260,7 +260,7 @@ export const createFiberScene =
 				p1: p0.clone().add(V(0.35 * L, 0, dz * 0.3)),
 				p2: p0.clone().add(V(0.7 * L, 0.4 * L * Math.sin(th), dz * 0.7)),
 				p3: p0.clone().add(V(L * Math.cos(th), L * Math.sin(th), dz)),
-				delay: 44 + rng.next() * 60,
+				delay: 22 + rng.next() * 60,
 				duration: rng.range(18, 36),
 				width: rng.range(0.03, 0.06),
 				bright: rng.range(0.25, 0.6),
@@ -300,7 +300,7 @@ export const createFiberScene =
 
 		const cableGeos: THREE.BufferGeometry[] = [];
 		const addCable = (spec: StrandSpec, radius: number) => {
-			const tube = new THREE.TubeGeometry(new BezierCurve(spec), 110, radius, 9, false);
+			const tube = new THREE.TubeGeometry(new BezierCurve(spec), 110, radius, 14, false);
 			const n = tube.attributes.position.count;
 			const grow = new Float32Array(n * 2);
 			for (let i = 0; i < n; i++) grow.set([spec.delay, spec.duration], i * 2);
@@ -316,25 +316,30 @@ export const createFiberScene =
 
 		type HeroDef = {kind: ConnectorKind; sx: number; sy: number; d: number; dir: [number, number, number]; scale: number; delay: number; twist: number};
 		const heroDefs: HeroDef[] = [
-			{kind: 'rj45Clear', sx: 0.0, sy: -0.06, d: 7, dir: [0.3, -0.15, 1], scale: 1.3, delay: 160, twist: 0.1},
-			{kind: 'usbc', sx: 0.55, sy: 0.04, d: 7.5, dir: [1, 0.12, 0.35], scale: 1.3, delay: 162, twist: 0.0},
-			{kind: 'rj45Blue', sx: 0.8, sy: -0.27, d: 8, dir: [0.9, 0.05, 0.6], scale: 1.3, delay: 164, twist: 0.0},
-			{kind: 'usbc', sx: 0.32, sy: 0.92, d: 6.2, dir: [0.45, 1, 0.35], scale: 1.3, delay: 158, twist: 0.4},
-			{kind: 'usbcGlow', sx: -0.9, sy: -0.66, d: 9, dir: [-0.15, -0.25, 1], scale: 1.1, delay: 166, twist: 1.2},
-			{kind: 'usbcGlow', sx: -0.6, sy: 0.3, d: 16, dir: [-0.1, 0.2, 1], scale: 1.0, delay: 155, twist: 0.4},
-			{kind: 'usbcGlow', sx: -0.8, sy: -0.06, d: 18, dir: [0, 0, 1], scale: 1.0, delay: 152, twist: 1.0},
-			{kind: 'usbcGlow', sx: -0.38, sy: -0.42, d: 20, dir: [0.1, -0.1, 1], scale: 1.0, delay: 153, twist: 0.3},
-			{kind: 'usba', sx: -0.15, sy: 0.56, d: 13, dir: [0.2, 0.6, 0.8], scale: 1.0, delay: 157, twist: 0.2},
-			{kind: 'usbc', sx: 0.12, sy: -0.8, d: 10, dir: [0.4, -0.6, 0.7], scale: 1.0, delay: 165, twist: 0.6},
-			{kind: 'rj45Clear', sx: -0.46, sy: -0.15, d: 24, dir: [0, 0, 1], scale: 1.0, delay: 151, twist: 0.0},
-			{kind: 'usbcGlow', sx: -0.25, sy: 0.14, d: 28, dir: [0, 0, 1], scale: 1.0, delay: 150, twist: 0.2},
+			{kind: 'rj45Clear', sx: 0.02, sy: -0.04, d: 6.0, dir: [0.25, -0.12, 1], scale: 2.3, delay: 144, twist: 0.1},
+			{kind: 'usbc', sx: 0.6, sy: 0.08, d: 7.5, dir: [1, 0.12, 0.35], scale: 1.4, delay: 147, twist: 0.0},
+			{kind: 'usbc', sx: 0.72, sy: 0.58, d: 8, dir: [0.75, 0.6, 0.4], scale: 1.4, delay: 146, twist: 0.3},
+			{kind: 'rj45Blue', sx: 0.82, sy: -0.3, d: 8, dir: [0.9, 0.05, 0.6], scale: 1.4, delay: 149, twist: 0.0},
+			{kind: 'usbc', sx: 0.32, sy: 0.92, d: 6.2, dir: [0.45, 1, 0.35], scale: 1.3, delay: 143, twist: 0.4},
+			{kind: 'usbcGlow', sx: -0.88, sy: -0.64, d: 9, dir: [-0.15, -0.25, 1], scale: 1.1, delay: 150, twist: 1.2},
+			{kind: 'usbcGlow', sx: -0.6, sy: 0.3, d: 16, dir: [-0.1, 0.2, 1], scale: 1.0, delay: 140, twist: 0.4},
+			{kind: 'usbcGlow', sx: -0.8, sy: -0.06, d: 18, dir: [0, 0, 1], scale: 1.0, delay: 137, twist: 1.0},
+			{kind: 'usbcGlow', sx: -0.38, sy: -0.42, d: 20, dir: [0.1, -0.1, 1], scale: 1.0, delay: 138, twist: 0.3},
+			{kind: 'usba', sx: -0.15, sy: 0.56, d: 13, dir: [0.2, 0.6, 0.8], scale: 1.0, delay: 142, twist: 0.2},
+			{kind: 'usbc', sx: 0.12, sy: -0.8, d: 10, dir: [0.4, -0.6, 0.7], scale: 1.0, delay: 150, twist: 0.6},
+			{kind: 'rj45Clear', sx: -0.46, sy: -0.15, d: 24, dir: [0, 0, 1], scale: 1.0, delay: 136, twist: 0.0},
+			{kind: 'usbcGlow', sx: -0.25, sy: 0.14, d: 28, dir: [0, 0, 1], scale: 1.0, delay: 135, twist: 0.2},
 		];
+
 		for (const h of heroDefs) {
 			const tip = camNdc(h.sx, h.sy, h.d);
 			const dir = camDir(...h.dir);
 			const plugLen = 2.35 * h.scale;
 			const end = tip.clone().addScaledVector(dir, -plugLen);
-			const p0 = V(rng.range(-2, 2), rng.range(-1, 1), rng.range(-3, 3));
+			const fromAbove = h.sy > 0.3 && h.sx > 0;
+			const p0 = fromAbove
+				? tip.clone().add(camDir(-0.35, 1, -0.9).multiplyScalar(28))
+				: V(rng.range(-2, 2), rng.range(-1, 1), rng.range(-3, 3));
 			const len = end.distanceTo(p0);
 			const spec: StrandSpec = {
 				p0,
@@ -366,7 +371,7 @@ export const createFiberScene =
 				p1: p0.clone().lerp(end, 0.33),
 				p2: p0.clone().lerp(end, 0.66),
 				p3: end,
-				delay: rng.range(148, 170),
+				delay: rng.range(133, 158),
 				duration: rng.range(30, 42),
 				width: 0,
 				bright: 0,
@@ -385,7 +390,7 @@ export const createFiberScene =
 		scene.add(cableMesh);
 
 		const post = createPostChain(renderer, scene, camera, width, height, {
-			strength: 0.6,
+			strength: 0.5,
 			radius: 0.4,
 			threshold: 0.25,
 		}, {msaa: debug.msaa ?? 0, smaa: debug.smaa ?? true});
@@ -435,7 +440,7 @@ export const createFiberScene =
 			);
 			const su = strands.material.uniforms;
 			su.uTime.value = t;
-			su.uIntensity.value = THREE.MathUtils.lerp(0.6, 0.42, smoothstep(180, 214, t));
+			su.uIntensity.value = THREE.MathUtils.lerp(0.78, 0.45, smoothstep(180, 214, t));
 			su.uStubAmt.value = 1 - smoothstep(170, 210, t) * 0.8;
 			su.uFogDensity.value = THREE.MathUtils.lerp(0.012, 0.03, smoothstep(170, 214, t));
 			su.uFocus.value = focus;
@@ -446,7 +451,7 @@ export const createFiberScene =
 			tu.uAperture.value = aperture;
 			tu.uProj.value = (projScale * Math.tan(THREE.MathUtils.degToRad(36 / 2))) / Math.tan(THREE.MathUtils.degToRad(pose.fov / 2));
 			cable.uniforms.uTime.value = t;
-			cableMesh.visible = debug.cables !== false && t >= 147;
+			cableMesh.visible = debug.cables !== false && t >= 131;
 
 			for (const h of heroes) {
 				const g = growth(t, h.spec.delay, h.spec.duration);
@@ -467,7 +472,7 @@ export const createFiberScene =
 			// background light: teal glow low-left early, softer light up-centre later
 			const k = smoothstep(150, 214, t);
 			bg.mat.uniforms.uGlowPos.value.set(THREE.MathUtils.lerp(-0.02, 0.15, k), THREE.MathUtils.lerp(0.28, 0.35, k));
-			bg.mat.uniforms.uGlowAmt.value = THREE.MathUtils.lerp(0.55, 0.25, k) * (0.9 + 0.1 * Math.sin(t * 0.05));
+			bg.mat.uniforms.uGlowAmt.value = THREE.MathUtils.lerp(0.75, 0.3, k) * (0.9 + 0.1 * Math.sin(t * 0.05));
 			bg.mat.uniforms.uLightPos.value.set(THREE.MathUtils.lerp(0.42, 0.3, k), THREE.MathUtils.lerp(0.62, 0.7, k));
 
 			post.render(t);

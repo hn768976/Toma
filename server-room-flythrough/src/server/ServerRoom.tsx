@@ -10,7 +10,7 @@ export const ServerRoom: React.FC<{
 	camera: CameraMode;
 	motionBlurSamples?: number;
 	debug?: ServerDebug;
-}> = ({palette, camera, motionBlurSamples = 2, debug}) => {
+}> = ({palette, camera, motionBlurSamples = 1, debug}) => {
 	const {durationInFrames} = useVideoConfig();
 	const key = JSON.stringify(debug ?? {});
 	const factory = useMemo(
