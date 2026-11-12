@@ -166,7 +166,7 @@ float lookInk(vec2 P, vec2 F) {
     const nV = Math.round(dens * int(r, 4, 14));
     for (let i = 0; i < nV; i++) {
       const len = range(r, 0.15, 1.1) * F.H;
-      const pts = wanderPath(r, X(F, range(r, -BLEED, 1 + BLEED)), Y(F, range(r, -0.1, 0.9)), Math.PI / 2 + gauss(r) * 0.002, len, 3 * u, 0.0002);
+      const pts = wanderPath(r, X(F, range(r, -BLEED, 1 + BLEED)), Y(F, range(r, -0.1, 0.9)), Math.PI / 2 + gauss(r) * 0.006, len, 3 * u, 0.0015);
       const dotted = false;
       brokenStroke(ctx, r, pts, range(r, 0.5, 1.3) * u, range(r, 0.08, 0.35), dotted ? 0.55 : 0.15);
     }

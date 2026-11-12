@@ -45,7 +45,7 @@ float lookInk(vec2 P, vec2 F) {
   float soft = (0.7 + 0.3 * fbm(q * 9.0, uSeed + 13, 4)) * (0.55 + 0.6 * rough(P * 38.0, uSeed + 18, 4));
   float a3 = vnoise(mat2(0.26, 0.97, -0.97, 0.26) * P * vec2(360.0, 20.0), uSeed + 15);
   float scuff = smoothstep(0.72, 0.95, max(max(a1, a2), a3)) * smoothstep(0.45, 0.8, vnoise(P * 9.0, uSeed + 17));
-  float patchInk = cov * uP[0].y * soft * (0.7 + 0.35 * g) + cov * cov * scuff * 0.12;
+  float patchInk = cov * uP[0].y * soft * (0.7 + 0.35 * g) + cov * cov * scuff * 0.05;
   // soft bright smudges
   patchInk += smoothstep(0.55, 0.85, fbm(q * 5.0 + 11.0, uSeed + 16, 4)) * 0.18 * (0.5 + g);
   patchInk = max(patchInk, grit(cov * 0.1, g, 0.05) * 0.35);
@@ -98,7 +98,7 @@ float lookInk(vec2 P, vec2 F) {
       let y: number;
       let len: number;
       if (kind < 0.72) {
-        heading = Math.PI / 2 + gauss(r) * 0.025;
+        heading = Math.PI / 2 + gauss(r) * (chance(r, 0.6) ? 0.025 : 0.08);
         const inBand = chance(r, 0.7);
         const b = int(r, 0, 1);
         x = X(F, inBand ? bands[b] + gauss(r) * bandW[b] * 0.5 : fx());
@@ -116,7 +116,7 @@ float lookInk(vec2 P, vec2 F) {
         y = Y(F, range(r, 0.1, 0.9));
         len = range(r, 0.15, 0.5) * F.H;
       }
-      const pts = wanderPath(r, x, y, heading, len, 8 * u, 0.004);
+      const pts = wanderPath(r, x, y, heading, len, 8 * u, chance(r, 0.3) ? 0.012 : 0.004);
       const w = range(r, 0.5, 1.6) * u * (chance(r, 0.1) ? 1.8 : 1);
       const bright = chance(r, 0.4) ? range(r, 0.75, 1) : range(r, 0.2, 0.6);
       brokenStroke(ctx, r, pts, w, bright, 0.15);
@@ -133,7 +133,7 @@ float lookInk(vec2 P, vec2 F) {
     }
 
     // clusters of fine parallel scratches (brushed metal)
-    const nClusters = chance(r, 0.4) ? 1 : 0;
+    const nClusters = chance(r, 0.15) ? 1 : 0;
     for (let c = 0; c < nClusters; c++) {
       const cx = X(F, range(r, 0, 1));
       const cy = Y(F, range(r, 0, 1));
@@ -155,7 +155,7 @@ float lookInk(vec2 P, vec2 F) {
         const x = cx + ca * oy - sa * ox;
         const y = cy + sa * oy + ca * ox;
         const len = range(r, 0.01, 0.12) * F.H * (1 - Math.abs(px) * 0.6);
-        const a = ang + gauss(r) * 0.06;
+        const a = ang + gauss(r) * 0.15;
         const pts = wanderPath(r, x - (Math.cos(a) * len) / 2, y - (Math.sin(a) * len) / 2, a, len, 6 * u, 0.0008);
         brokenStroke(ctx, r, pts, range(r, 0.45, 1.0) * u, range(r, 0.25, 0.75), 0.2);
       }

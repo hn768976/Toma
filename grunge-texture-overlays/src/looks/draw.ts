@@ -73,12 +73,17 @@ export const curlyHair = (ctx: CanvasRenderingContext2D, r: Rng, F: Frame, x: nu
   // and a faint second pass gives it a slightly fuzzy edge.
   const n = 40;
   const pts: Pt[] = [[x, y]];
+  // Shape varies per hair: most are open S-bends or arcs, only some curl into a loop.
+  const loopy = chance(r, 0.2);
+  const keep = loopy ? 0.97 : range(r, 0.8, 0.92);
+  const k0 = loopy ? range(r, 1.2, 2) : range(r, 0.2, 0.8);
+  len *= range(r, 0.6, 1.3);
   let a = range(r, 0, Math.PI * 2);
-  let da = gauss(r) * curl * 1.8;
+  let da = gauss(r) * curl * 1.8 * k0;
   for (let i = 1; i <= n; i++) {
-    if (chance(r, 0.1)) da = gauss(r) * curl * 2.4; // kinks / changes of curl
+    if (chance(r, 0.1)) da = gauss(r) * curl * 2.4 * k0; // kinks / changes of curl
     da += gauss(r) * curl * 0.6;
-    da *= 0.97;
+    da *= keep;
     a += da;
     x += Math.cos(a) * (len / n);
     y += Math.sin(a) * (len / n);
