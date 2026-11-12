@@ -230,7 +230,10 @@ const dotVertex = /* glsl */ `
     float blurArea = a * b;
     // fade out smoothly toward grazing angles instead of popping at a threshold
     vAlpha = clamp(pow(sharpArea / blurArea, 0.55), 0.07, 1.0) * mix(0.6, 1.0, f)
-           * smoothstep(0.0, 0.3, facing);
+           * smoothstep(0.0, 0.3, facing)
+           // no dots deep in the funnel throat: the reference centres are dark
+           // voids, and these steep inner-wall dots flickered through the depth test
+           * smoothstep(0.24, 0.42, u);
   }
 `;
 
