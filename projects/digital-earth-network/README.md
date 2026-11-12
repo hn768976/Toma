@@ -9,13 +9,15 @@ a long camera pull-back from near the surface out to the full rotating globe.
 | `EarthNetwork-V1-Match` | V1: matches the reference | 3840×2160 | 30 | 892 | 29.733 s |
 | `EarthNetwork-V2-OrbitalCamera` | V2: alternative camera movement | 3840×2160 | 30 | 892 | 29.733 s |
 
-**V1** opens in deep space among floating data read-outs looking up off the
-horizon, tilts down as the limb of the Earth rises from the bottom of frame,
-then pulls back in one long move (passing city-light clusters over Europe)
-until the planet sits centred and slowly turning — as in the reference.
+**V1** opens in near-black deep space with crisp data read-outs streaming
+past the lens, tilts down as the (dutch-angled) limb of the Earth rises from
+the bottom of frame at ~1.5 s, then pulls back in one long move (passing
+orange city-light clusters over Europe) until the planet sits centred, lit
+from the right with its left side in shadow, turning slowly inside the
+drifting network — as in the reference.
 
 **V2 (camera movement)** keeps the same look, assets and network but replaces
-the move with a continuous ~120° orbital fly-around: the camera starts low and
+the move with a continuous ~120° orbital fly-around (keyed relative to the sun): the camera starts low and
 banked over the night side among the North-American city lights, sweeps across
 the terminator and up over the northern hemisphere while pulling out, and ends
 on a high three-quarter angle, still orbiting so the network parallaxes past.

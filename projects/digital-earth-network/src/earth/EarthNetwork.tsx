@@ -13,7 +13,8 @@ import {
 } from "remotion";
 import { smoothstep } from "../lib/spline";
 import { cameraAt, Variant } from "./camera";
-import { buildLabels, labelText } from "./labels";
+import { mulberry32 } from "../lib/random";
+import { buildLabels, labelText, Stream } from "./labels";
 import { buildScene, PALETTE, SUN, Textures } from "./scene";
 
 export type EarthNetworkProps = { variant: Variant };
@@ -109,19 +110,42 @@ export const EarthNetwork: React.FC<EarthNetworkProps> = ({ variant }) => {
 
   const labels = useMemo(() => {
     const hints: THREE.Vector3[] = [];
-    for (const ht of [0, 0.5, 1.0, 1.6, 2.4]) {
+    for (const ht of [0.5, 1.0, 1.6, 2.4]) {
       const c = cameraAt(variant, ht);
       const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(c.quaternion);
-      hints.push(c.position.clone().add(fwd.multiplyScalar(0.9 + ht * 0.25)));
+      hints.push(c.position.clone().add(fwd.multiplyScalar(1.1 + ht * 0.25)));
     }
     for (const ht of [3.5, 5, 6.5, 8]) {
       hints.push(cameraAt(variant, ht).position.clone().multiplyScalar(0.97));
     }
-    return buildLabels(hints);
+    // Streaming foreground labels: spawned ahead of the lens, flying toward
+    // and past it so the opening reads as travelling through the data.
+    const streams: Stream[] = [];
+    const rng = mulberry32(99);
+    for (let i = 0; i < 9; i++) {
+      const appear = (i / 9) * 3.0 + rng() * 0.2;
+      const c = cameraAt(variant, appear);
+      const q = c.quaternion;
+      const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
+      const right = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+      const up = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
+      const dist = 1.3 + rng() * 0.6;
+      const pos = c.position
+        .clone()
+        .add(fwd.clone().multiplyScalar(dist))
+        .add(right.clone().multiplyScalar((rng() - 0.5) * 1.1 * dist))
+        .add(up.clone().multiplyScalar((rng() - 0.5) * 0.6 * dist));
+      const speed = 0.35 + rng() * 0.25;
+      const p0 = pos.clone().sub(fwd.clone().multiplyScalar(-speed * appear));
+      streams.push({ pos: p0, vel: fwd.clone().multiplyScalar(-speed), appear });
+    }
+    return buildLabels(hints, variant === "v1" ? streams : []);
   }, [variant]);
 
   // Shell network turns slowly in the opposite direction for parallax.
-  const shellSpin = -0.012 * t;
+  const shellSpin = -0.02 * t;
+  // V1 opens almost black: the network fades up as the planet arrives.
+  const intro = variant === "v1" ? 0.2 + 0.8 * smoothstep(0.6, 3.2, t) : 1;
 
   useLayoutEffect(() => {
     if (!built || !canvasRef.current) return;
@@ -142,6 +166,7 @@ export const EarthNetwork: React.FC<EarthNetworkProps> = ({ variant }) => {
     built.earthGroup.rotation.set(0, cam.earthSpin, 0);
     built.shellGroup.rotation.set(0, shellSpin, 0);
     built.earthMat.uniforms.uCity.value = cam.cityGlow;
+    built.shellLineMat.uniforms.uOpacity.value = intro;
     built.earthMat.uniforms.uCloudShift.value = t * 0.0006;
     for (const m of built.pointMats) {
       m.uniforms.uPixelRatio.value = pixelRatio * (height / 1080);
@@ -167,7 +192,8 @@ export const EarthNetwork: React.FC<EarthNetworkProps> = ({ variant }) => {
   const overlay = labels.map((l) => {
     const life = smoothstep(l.appear, l.appear + 0.6, t) * (1 - smoothstep(l.vanish, l.vanish + 0.8, t));
     if (life <= 0) return null;
-    const world = tmp.copy(l.pos).applyMatrix4(shellRot);
+    const world = tmp.copy(l.pos).addScaledVector(l.vel, t);
+    if (l.vel.lengthSq() === 0) world.applyMatrix4(shellRot);
     if (occluded(cam.position, world)) return null;
     const viewP = world.clone().applyMatrix4(camera.matrixWorldInverse);
     const depth = -viewP.z;
@@ -177,7 +203,9 @@ export const EarthNetwork: React.FC<EarthNetworkProps> = ({ variant }) => {
     const x = (ndc.x * 0.5 + 0.5) * width;
     const y = (-ndc.y * 0.5 + 0.5) * height;
     const scale = Math.min(9, (1.6 / depth) * l.size);
-    const blur = Math.min(22, Math.abs(1 / depth - 1 / focusDist) * 9 * (height / 2160) * 2);
+    // shallow focus only once the planet is in frame; the opening read-outs stay crisp
+    const dof = variant === "v1" ? 0.12 + 0.88 * smoothstep(2.2, 4.5, t) : 1;
+    const blur = Math.min(22, Math.abs(1 / depth - 1 / focusDist) * 18 * dof * (height / 2160));
     const far = 1 - smoothstep(5.5, 8.5, depth);
     // flicker-in like a HUD element
     const flick = (life < 1 && t < l.vanish && Math.floor(t * 30 + l.id) % 3 === 0 ? 0.3 : 1) * life;

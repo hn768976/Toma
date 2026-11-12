@@ -9,9 +9,11 @@ the bands slide and pulse inside their lanes.
 | `DnaSequence-V1-Match` | V1: matches the reference | 3840×2160 | 30 | 751 | 25.033 s |
 | `DnaSequence-V2-FluorescentPalette` | V2: alternative colour palette | 3840×2160 | 30 | 751 | 25.033 s |
 
-**V1** reproduces the reference: steel-blue / white bars with grey-blue
-variants and rare red and cyan calls, near-black background, camera ~38°
-above the plane, lateral truck to the right with a gentle forward drift.
+**V1** reproduces the reference: steel-blue / white blocks with bright top
+edges, grey-blue variants, clusters of thin bands with rare red-orange calls,
+dotted lane separators, pure black between lanes, camera ~38° above the plane
+and slightly off-axis, lateral truck to the right (~1.45 % of frame width per
+second) with a gentle forward drift, bloom and slight chromatic fringing.
 
 **V2 (colour palette)** keeps the exact same camera, layout and motion but
 recolours the read-out with a four-dye fluorescent sequencer palette
@@ -26,7 +28,8 @@ colour remap changes the feel completely while preserving the concept.
   Every bar is an analytic rectangle; anti-aliasing and depth of field are
   computed by box-filtering each rectangle with the pixel footprint plus the
   circle of confusion, so focus falloff is noise-free and flicker-free.
-- CSS bloom pass (low-res copy, blurred and screened on top)
+- Second WebGL 2 pass: radial lens chromatic aberration (R/B split) and
+  mip-pyramid bloom, vignette and a gentle filmic shoulder
 - Deterministic integer hashing: identical output on every render worker
 
 ## Commands
@@ -46,7 +49,7 @@ GPU machine for much faster renders. No external assets are needed.
 ## Files
 ```
 src/Root.tsx               compositions (4K, 30 fps, 751 frames)
-src/dna/DnaSequence.tsx    component: WebGL 2 setup, camera keys, palettes, bloom
-src/dna/shader.ts          the GLSL ES 3.00 shader
+src/dna/DnaSequence.tsx    component: WebGL 2 setup (2 passes), camera keys, palettes
+src/dna/shader.ts          GLSL ES 3.00 shaders: gel plane + post pass
 src/lib/spline.ts          monotone cubic interpolation
 ```

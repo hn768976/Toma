@@ -37,10 +37,11 @@ uniform vec3 uColB;   // secondary bar colour
 uniform vec3 uColC;   // accent 1
 uniform vec3 uColD;   // accent 2
 uniform vec4 uMix;    // probabilities: (B, C, D, white-boost)
+uniform float uBlockAccent;
 
 const float LANE = 1.0;      // lane pitch
-const float LANE_FILL = 0.7; // bar width inside a lane
-const float CELL = 0.5;     // cell length along a lane
+const float LANE_FILL = 0.78; // bar width inside a lane
+const float CELL = 0.9;     // cell length along a lane
 
 uint hash(uint x) {
   x ^= x >> 16; x *= 0x7feb352du;
@@ -61,8 +62,9 @@ float cov(float x, float a, float b, float w) {
 
 vec3 barColor(int lane, int cell, int k, float bright) {
   float r = h1(lane, cell, 40 + k);
-  // big blocks take accent colours less often than thin bands
-  if (k == 0) r = 0.25 + 0.75 * r;
+  // big blocks keep an accent colour only with probability uBlockAccent;
+  // otherwise accents live on the thin bands (as in the reference)
+  if (k == 0 && r >= uMix.x && h1(lane, cell, 90) > uBlockAccent) r = 1.0;
   vec3 c = uColA;
   if (r < uMix.x) c = uColB;
   else if (r < uMix.x + uMix.y) c = uColC;
@@ -88,9 +90,9 @@ vec3 shadeCell(int lane, int cell, float lx, float lz, float wx, float wz) {
   float xCov = cov(lx, -halfFill, halfFill, wx);
   if (xCov <= 0.0) return acc;
   float pulse = 0.82 + 0.18 * sin(uTime * (0.6 + 1.6 * h1(lane, cell, 5)) + 6.283 * h1(lane, cell, 6));
-  if (kind < 0.44) {
+  if (kind < 0.5) {
     // big block
-    float len = mix(0.2, 0.56, h1(lane, cell, 2));
+    float len = mix(0.3, 0.74, h1(lane, cell, 2));
     float start = z0 + (CELL - len) * h1(lane, cell, 3);
     float bright = mix(0.28, 1.15, pow(h1(lane, cell, 4), 0.6)) * pulse;
     float c = cov(lz, start, start + len, wz) * xCov;
@@ -98,18 +100,20 @@ vec3 shadeCell(int lane, int cell, float lx, float lz, float wx, float wz) {
       // faint inner scan lines and lighter rim, which fade out as blur grows
       float detail = 1.0 - smoothstep(0.004, 0.03, wz);
       float scan = 0.92 + 0.08 * sin((lz - start) * 140.0);
-      float rim = 1.0 + 0.35 * (1.0 - smoothstep(0.0, 0.05, min(lz - start, start + len - lz)));
+      // bright far (top-of-frame) edge, softer near edge
+      float rim = 1.0 + 0.7 * (1.0 - smoothstep(0.0, 0.04, lz - start))
+                      + 0.2 * (1.0 - smoothstep(0.0, 0.05, start + len - lz));
       float shade = mix(1.0, scan * rim, detail);
       float side = mix(1.0, 0.85 + 0.15 * (1.0 - abs(lx) / halfFill), detail);
       acc += barColor(lane, cell, 0, bright) * c * shade * side;
     }
-  } else if (kind < 0.88) {
-    // 1-3 thin bands
-    int n = 1 + int(h1(lane, cell, 2) * 3.0);
-    for (int k = 0; k < 3; k++) {
+  } else if (kind < 0.95) {
+    // clusters of 1-4 thin bands
+    int n = 1 + int(h1(lane, cell, 2) * 4.0);
+    for (int k = 0; k < 4; k++) {
       if (k >= n) break;
-      float th = mix(0.018, 0.06, h1(lane, cell, 10 + k));
-      float pos = z0 + 0.06 + (CELL - 0.16) * (float(k) + h1(lane, cell, 20 + k)) / float(n);
+      float th = mix(0.016, 0.06, h1(lane, cell, 10 + k));
+      float pos = z0 + 0.04 + (CELL - 0.12) * (float(k) + 0.7 * h1(lane, cell, 20 + k)) / float(n);
       float bright = mix(0.35, 1.15, pow(h1(lane, cell, 30 + k), 0.7)) * pulse;
       float c = cov(lz, pos, pos + th, wz) * xCov;
       acc += barColor(lane, cell, k + 1, bright) * c;
@@ -132,7 +136,8 @@ void main() {
     // pixel footprint on the plane
     vec2 fp = vec2(length(vec2(dFdx(hit.x), dFdy(hit.x))), length(vec2(dFdx(hit.z), dFdy(hit.z))));
     fp = max(fp, vec2(1e-5));
-    float coc = uAperture * uPxScale * abs(1.0 - uFocusDist / tHit);
+    // behind the focus plane the blur grows more slowly, as with a real lens
+    float coc = uAperture * uPxScale * (tHit < uFocusDist ? (uFocusDist / tHit - 1.0) : 0.6 * (1.0 - uFocusDist / tHit));
     float blurPx = 1.0 + coc;
     float wx = fp.x * blurPx;
     float wz = fp.y * blurPx;
@@ -153,20 +158,29 @@ void main() {
       acc += shadeCell(lane, cell0, lx, lz, wx, wz);
       if (inCell < wz) acc += shadeCell(lane, cell0 - 1, lx, lz, wx, wz);
       if (CELL - inCell < wz) acc += shadeCell(lane, cell0 + 1, lx, lz, wx, wz);
-      // dotted separator ticks between lanes
-      float sx = lx - 0.5 * LANE;
-      float tickZ = hit.z + laneOffset(lane) * 0.5;
-      int tc = int(floor(tickZ / 0.09));
-      if (h1(lane, tc, 77) < 0.28) {
-        float tz = float(tc) * 0.09;
-        float c = cov(sx, -0.012, 0.012, wx) * cov(tickZ, tz + 0.02, tz + 0.05, wz);
-        acc += vec3(0.75, 0.82, 0.95) * c * 0.8;
+    }
+
+    // dotted separator ticks in some of the gaps between lanes
+    {
+      int g = int(floor(hit.x / LANE));
+      float sx = hit.x - (float(g) + 0.5) * LANE;
+      if (h1(g, 0, 88) < 0.55 && abs(sx) < 0.03 + wx) {
+        float tickZ = hit.z + laneOffset(g) * 0.6;
+        int tc = int(floor(tickZ / 0.075));
+        for (int dt = -1; dt <= 1; dt++) {
+          int ti = tc + dt;
+          if (h1(g, ti, 77) < 0.5) {
+            float tz = float(ti) * 0.075;
+            float c = cov(sx, -0.011, 0.011, wx) * cov(tickZ, tz + 0.02, tz + 0.042, wz);
+            acc += vec3(0.85, 0.9, 1.0) * c * 1.5;
+          }
+        }
       }
     }
 
     // very distant / very blurred: converge to the average texture brightness
-    float far = smoothstep(0.25, 1.1, wz / CELL);
-    vec3 avg = mix(uColA, uColB, 0.3) * 0.26;
+    float far = smoothstep(0.45, 1.6, wz / CELL);
+    vec3 avg = mix(uColA, uColB, 0.3) * 0.2;
     acc = mix(acc, avg * clamp(laneBgCov, 0.0, 1.0), far);
 
     col = uBg + uLaneBg * clamp(laneBgCov, 0.0, 1.0) + acc;
@@ -174,10 +188,37 @@ void main() {
     col *= exp(-max(tHit - 19.0, 0.0) * 0.035);
   }
 
-  // vignette
+  // stored at half scale so highlights up to 2.0 survive the 8-bit target
+  outColor = vec4(col * 0.5, 1.0);
+}
+`;
+
+// Post pass: lens chromatic aberration (radial R/B split), mip-pyramid bloom,
+// vignette and a gentle filmic shoulder.
+export const POST_FRAG = /* glsl */ `#version 300 es
+precision highp float;
+in vec2 vUv;
+out vec4 outColor;
+uniform sampler2D uScene;
+uniform float uCA;      // aberration strength (fraction of frame)
+uniform float uBloom;
+uniform vec3 uBloomTint;
+void main() {
+  vec2 d = vUv - 0.5;
+  vec2 off = d * length(d) * uCA;
+  vec3 base;
+  base.r = texture(uScene, vUv + off).r;
+  base.g = texture(uScene, vUv).g;
+  base.b = texture(uScene, vUv - off).b;
+  base *= 2.0;
+  vec3 glow = textureLod(uScene, vUv, 3.0).rgb * 0.55
+            + textureLod(uScene, vUv, 4.5).rgb * 0.3
+            + textureLod(uScene, vUv, 6.0).rgb * 0.15;
+  glow *= 2.0;
+  vec3 col = base + glow * uBloom * uBloomTint;
+  vec2 p = vUv * 2.0 - 1.0;
   float v = smoothstep(1.55, 0.35, length(p * vec2(0.85, 1.0)));
   col *= mix(0.45, 1.0, v);
-  // gentle filmic shoulder
   col = col / (1.0 + 0.18 * col);
   outColor = vec4(pow(col, vec3(1.0 / 1.08)), 1.0);
 }

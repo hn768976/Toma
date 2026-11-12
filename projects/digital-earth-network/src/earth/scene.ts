@@ -12,11 +12,11 @@ export type Palette = {
 };
 
 export const PALETTE: Palette = {
-  ocean: [0.1, 0.34, 0.72],
-  land: [0.34, 0.54, 0.82],
+  ocean: [0.1, 0.36, 0.64],
+  land: [0.4, 0.6, 0.8],
   cloud: [0.86, 0.94, 1.0],
   rim: [0.3, 0.62, 1.0],
-  city: [1.0, 0.3, 0.03],
+  city: [1.0, 0.28, 0.04],
   line: [0.72, 0.84, 1.0],
   haze: [0.05, 0.17, 0.48],
 };
@@ -28,8 +28,8 @@ export type Textures = {
   ocean: THREE.Texture;
 };
 
-/** Direction the light comes from (upper right, slightly in front). */
-export const SUN = new THREE.Vector3(1.0, 0.55, 0.55).normalize();
+/** Direction the light comes from (right, slightly above and behind): leaves the left of the globe in shadow. */
+export const SUN = new THREE.Vector3(1.0, 0.42, -0.18).normalize();
 
 const earthVertex = /* glsl */ `
   varying vec2 vUv;
@@ -61,6 +61,8 @@ const earthFragment = /* glsl */ `
   varying vec3 vNormalW;
   varying vec3 vPosW;
 
+  float dither(vec2 c) { return (fract(sin(dot(c, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0; }
+
   void main() {
     vec3 N = normalize(vNormalW);
     vec3 V = normalize(cameraPosition - vPosW);
@@ -76,23 +78,23 @@ const earthFragment = /* glsl */ `
     col = mix(col, uCloudCol, smoothstep(0.0, 0.8, cloud) * 0.85);
 
     float ndl = dot(N, uSun);
-    float diffuse = smoothstep(-0.35, 0.75, ndl);
-    col *= 0.04 + 1.15 * diffuse;
+    float diffuse = smoothstep(-0.45, 0.75, ndl);
+    col *= 0.05 + 1.35 * diffuse;
 
     // Orange city hot spots (glow taken from a blurred mip of the light map).
     float lightsSharp = texture2D(uLights, vUv).r;
-    float lightsSoft = texture2D(uLights, vUv, 3.5).r;
+    float lightsSoft = texture2D(uLights, vUv, 2.5).r;
     float cityMask = 1.0 - 0.35 * smoothstep(0.3, 1.0, ndl);
-    float hot = lightsSharp * lightsSharp;
+    float hot = lightsSharp * lightsSharp * lightsSharp;
     col = mix(col, col * vec3(0.55, 0.6, 0.75), clamp(lightsSoft * 2.0 * uCity, 0.0, 0.6));
-    float cluster = smoothstep(0.12, 0.5, lightsSoft);
-    col += uCityCol * (hot * 2.5 * cluster + cluster * 1.6 + lightsSoft * 1.2) * uCity * cityMask;
+    float cluster = smoothstep(0.22, 0.6, lightsSoft);
+    col += uCityCol * (hot * 1.6 * cluster + cluster * 2.0 + lightsSoft * 1.0) * uCity * cityMask;
 
     // Fresnel rim, stronger on the lit limb.
     float fres = pow(1.0 - max(dot(N, V), 0.0), 2.6);
     col += uRimCol * fres * (0.25 + 1.3 * smoothstep(-0.2, 0.8, ndl));
 
-    gl_FragColor = vec4(col, 1.0);
+    gl_FragColor = vec4(col + dither(gl_FragCoord.xy), 1.0);
   }
 `;
 
@@ -112,13 +114,14 @@ const atmoFragment = /* glsl */ `
   uniform vec3 uSun;
   varying vec3 vNormalW;
   varying vec3 vPosW;
+  float dither(vec2 c) { return (fract(sin(dot(c, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0; }
   void main() {
     vec3 N = normalize(vNormalW);
     vec3 V = normalize(cameraPosition - vPosW);
     // Back faces: 0 at the outer edge of the shell, 1 at the planet limb.
     float a = pow(clamp(-dot(N, V) / 0.36, 0.0, 1.0), 1.8);
     float lit = 0.2 + 1.0 * smoothstep(-0.35, 0.8, dot(N, uSun));
-    gl_FragColor = vec4(uRimCol * a * lit * 1.1, 1.0);
+    gl_FragColor = vec4(uRimCol * a * lit * 1.1 + dither(gl_FragCoord.xy) * 2.0, 1.0);
   }
 `;
 
@@ -193,11 +196,13 @@ const lineFragment = /* glsl */ `
 const hazeFragment = /* glsl */ `
   uniform vec3 uColor;
   varying vec2 vUv;
+  float dither(vec2 c) { return (fract(sin(dot(c, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0; }
   void main() {
     vec2 p = vUv * 2.0 - 1.0;
     float r = length(p);
     float a = exp(-r * r * 4.5) * 0.6;
-    gl_FragColor = vec4(uColor * a, a);
+    // dither breaks up 8-bit banding in the smooth glow
+    gl_FragColor = vec4(uColor * a + dither(gl_FragCoord.xy) * 1.5, a);
   }
 `;
 const hazeVertex = /* glsl */ `
@@ -216,6 +221,7 @@ type Built = {
   shellGroup: THREE.Group; // outer network, drifts slowly
   earthMat: THREE.ShaderMaterial;
   pointMats: THREE.ShaderMaterial[];
+  shellLineMat: THREE.ShaderMaterial;
   haze: THREE.Mesh;
 };
 
@@ -348,7 +354,7 @@ export const buildScene = (tex: Textures, palette: Palette): Built => {
     uniforms: { uColor: { value: lineColor }, uOpacity: { value: 1 } },
     ...additive,
   });
-  earthGroup.add(new THREE.LineSegments(buildPlexus(surfaceNodes, 0.22, 4, 1.5, rng), surfLineMat));
+  earthGroup.add(new THREE.LineSegments(buildPlexus(surfaceNodes, 0.22, 4, 1.1, rng), surfLineMat));
 
   // Lifted network just above the surface (the bright triangulated mesh).
   const liftNodes: THREE.Vector3[] = [];
@@ -433,5 +439,5 @@ export const buildScene = (tex: Textures, palette: Palette): Built => {
     new THREE.Points(pointsGeometry(crosses, () => range(rng, 45, 85), () => range(rng, 0.6, 1.0)), crossMat),
   );
 
-  return { scene, earthGroup, shellGroup, earthMat, pointMats, haze };
+  return { scene, earthGroup, shellGroup, earthMat, pointMats, shellLineMat, haze };
 };
