@@ -34,18 +34,20 @@ export const paintCharcoalMarks = (F: Frame, r: Rng, dens: number, strength: num
       const o = (k / (lines - 1) - 0.5) * width + gauss(r) * F.u;
       const e = Math.abs(k / (lines - 1) - 0.5) * 2;
       const cut = range(r, 0, 0.3) * (y1 - y0) * (0.4 + e);
+      const lead = range(r, 0, 0.12) * (y1 - y0) * (0.3 + e); // ragged start too
       brush.set(chance(r, 0.8) ? "charcoal" : "2B", inkGrey(ink * range(r, 0.7, 1) * (1 - e * 0.35)), brushWeight(F, (width / lines) * range(r, 2.2, 3.0)));
       // wobbly spline, so the stick's edges are ragged
       const ye = y1 - cut;
       const pts: [number, number, number][] = [];
       for (let m = 0; m <= 8; m++) {
         const t = m / 8;
-        pts.push([x + o + dx * t + gauss(r) * (width / lines) * 0.35, y0 + (ye - y0) * t, range(r, 0.6, 1)]);
+        const press = Math.min(1, Math.sin(Math.PI * t) * 2.5 + 0.2) * range(r, 0.6, 1);
+        pts.push([x + o + dx * t + gauss(r) * (width / lines) * 0.35, y0 + lead + (ye - y0 - lead) * t, press]);
       }
       brush.spline(pts, 0.5);
     }
   };
-  const nHeavy = Math.round(range(r, 1, 3) + 4 * dens);
+  const nHeavy = Math.round(range(r, 1, 2) + 1.5 * dens);
   for (let i = 0; i < nHeavy; i++) {
     const top = chance(r, 0.5);
     const p = tryPos(() => [range(r, -0.02, 1.02), top ? 0 : 1]);
@@ -53,10 +55,10 @@ export const paintCharcoalMarks = (F: Frame, r: Rng, dens: number, strength: num
     const len = range(r, 0.06, 0.32) * F.H;
     const y0 = top ? Y(F, -BLEED) : Y(F, 1 + BLEED);
     const y1 = top ? Y(F, 0) + len : Y(F, 1) - len;
-    stick(X(F, p[0]), y0, y1, range(r, 22, 70) * F.u, strength * range(r, 0.85, 1));
+    stick(X(F, p[0]), y0, y1, range(r, 25, 70) * F.u, strength * range(r, 0.92, 1));
   }
   // a few long, faint, grainy vertical columns
-  const nLong = Math.round(range(r, 1, 2.5) + 2 * dens);
+  const nLong = Math.round(range(r, 0.5, 1.5) + dens);
   for (let i = 0; i < nLong; i++) {
     const fromTop = chance(r, 0.5);
     const p = tryPos(() => [range(r, -0.02, 1.02), fromTop ? 0 : 1]);
@@ -97,7 +99,11 @@ float charcoalInk(vec2 P, vec4 a, vec4 b) {
   // coverage: large rubbed regions, elongated along a diagonal
   float big = fbm(q * 1.3, uSeed + 1, 5);
   float diag = fbm(vec2(rq.x * 2.2, rq.y * 1.1) + 0.6 * vec2(big), uSeed + 2, 5);
-  float cov = smoothstep(a.z, a.z + 0.45, 0.75 * big + 0.5 * diag);
+  // dirt builds up towards the edges, leaving a rough diagonal clearing through the middle
+  vec2 Fq = vec2(P.x / uAspect, P.y);
+  float edgeW = clamp(max(abs(Fq.x - 0.5) * 2.0, abs(Fq.y - 0.5) * 2.0), 0.0, 1.0);
+  float clearing = exp(-pow(((Fq.x - 0.5) * 0.8 - (Fq.y - 0.5) * 0.9) / 0.22, 2.0)) * (1.0 - edgeW * edgeW);
+  float cov = smoothstep(a.z, a.z + 0.45, 0.75 * big + 0.5 * diag + 0.2 * edgeW - 0.5 * clearing + 0.15 * (rough(P * 14.0, uSeed + 8, 3) - 0.5));
   // vertical columns of rubbed texture
   float colN = fbm(vec2(q.x * 7.0, q.y * 0.35), uSeed + 3, 4);
   float col = smoothstep(0.3, 0.62, colN) * b.z;
@@ -105,7 +111,8 @@ float charcoalInk(vec2 P, vec4 a, vec4 b) {
   float hatch = 0.5 + 0.6 * fbm(vec2(rq.x * 90.0, rq.y * 7.0), uSeed + 4, 4);
   float g = 0.55 * grain3(P, uSeed + 5) + 0.3 * vnoise(P * 700.0, uSeed + 7) + 0.15 * clamp(hatch, 0.0, 1.0);
   float c = max(cov * a.w, col * 0.7);
-  float ink = c * (0.1 + 0.5 * g * g) + grit(c * 0.26, g, 0.06) * 0.3;
+  float gc = clamp((g - 0.5) * 1.8 + 0.5, 0.0, 1.0); // crisper grain
+  float ink = c * (0.06 + 0.42 * gc * gc) + grit(c * 0.16, gc, 0.05) * 0.3;
   // light grey grime over much of the sheet, heavier towards one side and the edges, with a soft clearing
   vec2 F2 = vec2(P.x / uAspect, P.y);
   float side = mix(1.0 - F2.x, F2.x, b.w);
@@ -116,7 +123,7 @@ float charcoalInk(vec2 P, vec4 a, vec4 b) {
   // tiny dark specks, mostly inside the textured areas
   float clump = clamp(fbm(q * 2.5, uSeed + 30, 3) + 0.4, 0.0, 1.0);
   float inTex = clamp(max(c, grimeCov) * 1.5, 0.08, 1.0);
-  float sp = specks(P, 0.03 / sqrt(d), 0.45 * (0.3 + 0.7 * clump), 0.0006, 0.0034, uPx, uSeed + 20);
+  float sp = specks(P, 0.03 / sqrt(d), 0.3 * clump * clump * inTex, 0.0005, 0.003, uPx, uSeed + 20);
   sp = max(sp, 0.8 * specks(P, 0.008 / sqrt(d), 0.3 * clump * inTex, 0.0002, 0.0009, uPx, uSeed + 21));
   return 1.0 - (1.0 - clamp(ink, 0.0, 1.0)) * (1.0 - sp);
 }
@@ -167,10 +174,12 @@ float brushInk(vec4 c, vec2 P) {
     ctx.strokeStyle = "#fff";
     ctx.lineCap = "round";
     // stray curly hairs
-    const nHair = int(r, 7, 10) + Math.round(dens * 8);
+    const nHair = int(r, 6, 9) + Math.round(dens * 6);
     for (let i = 0; i < nHair; i++) {
       const big = chance(r, 0.35);
-      curlyHair(ctx, r, F, X(F, range(r, -BLEED, 1 + BLEED)), Y(F, range(r, -BLEED, 1 + BLEED)), range(r, 0.04, big ? 0.28 : 0.11) * F.H, range(r, 0.1, 0.22), range(r, 0.9, big ? 1.9 : 1.4) * u, range(r, 0.75, 1));
+      const ex = chance(r, 0.65);
+      const hx = ex ? (chance(r, 0.5) ? range(r, -BLEED, 0.15) : range(r, 0.85, 1 + BLEED)) : range(r, -BLEED, 1 + BLEED);
+      curlyHair(ctx, r, F, X(F, hx), Y(F, range(r, -BLEED, 1 + BLEED)), range(r, 0.04, big ? 0.28 : 0.11) * F.H, range(r, 0.1, 0.22), range(r, 0.9, big ? 1.9 : 1.4) * u, range(r, 0.75, 1));
     }
     // pencil flicks
     const nFlick = int(r, 2, 8);

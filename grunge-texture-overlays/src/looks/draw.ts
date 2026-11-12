@@ -1,4 +1,4 @@
-import { chance, gauss, int, range, type Rng } from "../lib/rng";
+import { chance, gauss, range, type Rng } from "../lib/rng";
 import type { Frame } from "./types";
 
 export type Pt = [number, number];
@@ -42,46 +42,66 @@ export const brokenStroke = (
   alpha: number,
   gapChance = 0.12,
 ) => {
+  // Brightness and width vary smoothly along the line (a few random sine components) instead of in
+  // blocks; the line breaks where that variation dips low, so gaps have uneven lengths.
   const n = pts.length - 1;
-  let i = 0;
-  while (i < n) {
-    const run = int(r, 2, 9);
-    const on = !chance(r, gapChance);
-    const end = Math.min(n, i + run);
-    if (on) {
-      const t = (i + end) / 2 / n;
-      const taper = Math.min(1, Math.sin(Math.PI * Math.min(1, Math.max(0, t))) * 1.8 + 0.15);
-      const a = alpha * taper * range(r, 0.55, 1);
-      const w = width * (0.6 + 0.4 * taper) * range(r, 0.8, 1.15);
-      const pw = Math.max(w, 1);
-      ctx.globalAlpha = Math.min(1, a * (w / pw));
-      ctx.lineWidth = pw;
-      ctx.beginPath();
-      ctx.moveTo(pts[i][0], pts[i][1]);
-      for (let k = i + 1; k <= end; k++) ctx.lineTo(pts[k][0], pts[k][1]);
-      ctx.stroke();
-    }
-    i = end;
+  const ph = [range(r, 0, 6.28), range(r, 0, 6.28), range(r, 0, 6.28)];
+  const fr = [range(r, 0.5, 1.5), range(r, 2, 5), range(r, 6, 14)];
+  const gapLevel = gapChance * 1.4;
+  ctx.lineCap = "butt";
+  for (let i = 0; i < n; i++) {
+    const t = (i + 0.5) / n;
+    const v = 0.5 + 0.22 * Math.sin(ph[0] + t * fr[0] * 6.28) + 0.18 * Math.sin(ph[1] + t * fr[1] * 6.28) + 0.1 * Math.sin(ph[2] + t * fr[2] * 6.28);
+    if (v < gapLevel) continue;
+    const taper = Math.min(1, Math.sin(Math.PI * t) * 2.2 + 0.1);
+    const k = Math.min(1, (v - gapLevel) / 0.25);
+    const w = width * (0.55 + 0.6 * v) * (0.6 + 0.4 * taper);
+    const pw = Math.max(w, 1);
+    ctx.globalAlpha = Math.min(1, alpha * k * taper * (0.5 + 0.6 * v) * (w / pw));
+    ctx.lineWidth = pw;
+    ctx.beginPath();
+    ctx.moveTo(pts[i][0], pts[i][1]);
+    ctx.lineTo(pts[i + 1][0], pts[i + 1][1]);
+    ctx.stroke();
   }
   ctx.globalAlpha = 1;
 };
 
 /** Smooth thin curve (hair / fibre) through a few wandering control points. */
 export const curlyHair = (ctx: CanvasRenderingContext2D, r: Rng, F: Frame, x: number, y: number, len: number, curl: number, width: number, alpha: number) => {
-  const pts = wanderPath(r, x, y, range(r, 0, Math.PI * 2), len, len / 14, curl);
-  ctx.globalAlpha = alpha;
-  ctx.lineWidth = Math.max(width, 1);
-  if (width < 1) ctx.globalAlpha = alpha * width;
-  ctx.beginPath();
-  ctx.moveTo(pts[0][0], pts[0][1]);
-  for (let i = 1; i < pts.length - 1; i++) {
-    const mx = (pts[i][0] + pts[i + 1][0]) / 2;
-    const my = (pts[i][1] + pts[i + 1][1]) / 2;
-    ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+  // Irregular fibre: curl strength changes along the hair, width and darkness taper and waver,
+  // and a faint second pass gives it a slightly fuzzy edge.
+  const n = 40;
+  const pts: Pt[] = [[x, y]];
+  let a = range(r, 0, Math.PI * 2);
+  let da = gauss(r) * curl * 1.8;
+  for (let i = 1; i <= n; i++) {
+    if (chance(r, 0.1)) da = gauss(r) * curl * 2.4; // kinks / changes of curl
+    da += gauss(r) * curl * 0.6;
+    da *= 0.97;
+    a += da;
+    x += Math.cos(a) * (len / n);
+    y += Math.sin(a) * (len / n);
+    pts.push([x, y]);
   }
-  ctx.stroke();
+  const wph = range(r, 0, 6.28);
+  ctx.lineCap = "round";
+  for (let pass = 0; pass < 2; pass++) {
+    const off = pass === 0 ? 0 : 0.6 * F.u;
+    for (let i = 0; i < n; i++) {
+      const t = (i + 0.5) / n;
+      const taper = Math.min(1, Math.sin(Math.PI * t) * 1.6 + 0.15);
+      const w = width * taper * (0.75 + 0.35 * Math.sin(wph + t * 9));
+      const pw = Math.max(w, 1);
+      ctx.globalAlpha = Math.min(1, alpha * (pass === 0 ? 1 : 0.18) * (0.6 + 0.4 * taper) * (w / pw));
+      ctx.lineWidth = pass === 0 ? pw : pw * 2;
+      ctx.beginPath();
+      ctx.moveTo(pts[i][0] + off, pts[i][1] + off);
+      ctx.lineTo(pts[i + 1][0] + off, pts[i + 1][1] + off);
+      ctx.stroke();
+    }
+  }
   ctx.globalAlpha = 1;
-  void F;
 };
 
 /** Short tapered flick (pencil flick / fleck). */

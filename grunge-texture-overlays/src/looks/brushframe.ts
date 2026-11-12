@@ -48,13 +48,13 @@ const inkStroke = (F: Frame, r: Rng, horizontal: boolean, centre: number, thickn
     const s0 = Math.max(0, range(r, -0.02, 0.05) + edge * range(r, 0, 0.07));
     const s1 = Math.min(1, 1 - range(r, -0.02, 0.05) - edge * range(r, 0, 0.08));
     const pieces: [number, number][] = [];
-    if (chance(r, 0.08 + edge * edge * 0.5)) {
+    if (chance(r, 0.2 + edge * edge * 0.45)) {
       const cut = range(r, s0 + 0.15, s1 - 0.15);
-      const gap = range(r, 0.01, 0.06);
+      const gap = range(r, 0.01, 0.12);
       pieces.push([s0, cut - gap / 2], [cut + gap / 2, s1]);
     } else pieces.push([s0, s1]);
-    // streaks: most bristles near full coverage, some lighter
-    const c = chance(r, 0.2) ? range(r, 0.7, 0.88) : range(r, 0.88, 1);
+    // ink pools at the edges of the stroke (darker rims), the middle is lighter and streaky
+    const c = edge > 0.75 ? range(r, 0.92, 1) : chance(r, 0.3) ? range(r, 0.62, 0.8) : range(r, 0.8, 0.95);
     brush.set("inkBristle", covGrey(c), customWeight(F.H, (thickness / bristles) * range(r, 2.8, 3.8)));
     for (const [a, z] of pieces) {
       if (z - a < 0.05) continue;
@@ -69,7 +69,8 @@ const inkStroke = (F: Frame, r: Rng, horizontal: boolean, centre: number, thickn
         const [nx, ny] = normal(Math.round(t));
         const w = widthAt[Math.round(t)];
         const press = Math.min(1, Math.sin((Math.PI * k) / m) * 2.5 + 0.3);
-        pts.push([cx + nx * across * w, cy + ny * across * w, press]);
+        const rag = edge > 0.7 ? gauss(r) * 0.012 : 0; // ragged, fibrous outer edge
+        pts.push([cx + nx * (across + rag) * w, cy + ny * (across + rag) * w, press]);
       }
       brush.spline(pts, 0.5);
     }
@@ -129,13 +130,16 @@ float brushInk(vec4 c, vec2 P) {
     const [extraL, extraR, tH, tV] = cu.p[3];
     if (layer === 0) {
       inkStroke(F, r, true, 0.055 + jt * 0.6, 0.135 * F.H * tH);
-      inkStroke(F, r, true, 0.945 + jb * 0.6, 0.135 * F.H * tH * range(r, 0.93, 1.04));
+      inkStroke(F, r, true, 0.95 + jb * 0.6, 0.135 * F.H * tH * range(r, 0.93, 1.04));
     } else if (layer === 1) {
-      inkStroke(F, r, false, 0.05 + jl * 0.5, 0.085 * F.W * tV);
-      inkStroke(F, r, false, 0.95 + jr * 0.5, 0.085 * F.W * tV * range(r, 0.93, 1.04));
+      inkStroke(F, r, false, 0.048 + jl * 0.4, 0.09 * F.W * tV);
+      inkStroke(F, r, false, 0.952 + jr * 0.4, 0.09 * F.W * tV * range(r, 0.93, 1.04));
     } else if (layer === 2) {
-      if (extraL >= 0) inkStroke(F, r, false, 0.018 + extraL * 0.5, 0.045 * F.W * range(r, 0.85, 1.1));
-      if (extraR >= 0) inkStroke(F, r, false, 0.982 - extraR * 0.5, 0.045 * F.W * range(r, 0.85, 1.1));
+      // heavier outer strokes hugging the frame edges (lopsided per card): darker outer strips and corners
+      if (extraL >= 0) inkStroke(F, r, false, 0.012 + extraL * 0.3, 0.04 * F.W * range(r, 0.8, 1.3));
+      if (extraR >= 0) inkStroke(F, r, false, 0.988 - extraR * 0.3, 0.04 * F.W * range(r, 0.8, 1.3));
+      if (chance(r, 0.6)) inkStroke(F, r, true, 0.015, 0.05 * F.H * range(r, 0.8, 1.4));
+      if (chance(r, 0.4)) inkStroke(F, r, true, 0.985, 0.05 * F.H * range(r, 0.8, 1.3));
     } else {
       // faint charcoal marks under the frame, border only
       paintCharcoalMarks(F, r, cu.p[0][0] * 0.6 * density, 0.8, inBorder);

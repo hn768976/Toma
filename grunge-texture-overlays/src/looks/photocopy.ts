@@ -15,7 +15,7 @@ export const photocopyLook: LookDef = {
     const rollerSide = chance(r, 0.5) ? int(r, 2, 3) : chance(r, 0.6) ? int(r, 0, 1) : -1; // 0/1 roller banding, 2/3 ink spatter column
     const smudgeSide = chance(r, 0.45) ? int(r, 0, 3) : -1;
     // up to two dense toner sprays: x, y (frame fraction), radius (height units)
-    const spray = () => (chance(r, 0.3) ? [chance(r, 0.5) ? range(r, 0.03, 0.2) : range(r, 0.8, 0.97), range(r, 0.05, 0.95), range(r, 0.03, 0.1)] : [0, 0, 0]);
+    const spray = () => (chance(r, 0.2) ? [chance(r, 0.5) ? range(r, 0.0, 0.08) : range(r, 0.92, 1.0), range(r, 0.05, 0.95), range(r, 0.04, 0.09)] : [0, 0, 0]);
     const s1 = spray();
     const s2 = spray();
     return {
@@ -44,17 +44,19 @@ float lookInk(vec2 P, vec2 F) {
   vec2 c2 = abs(F - 0.5) * 2.0;
   float ew = clamp(max(pow(c2.x, 2.0), pow(c2.y, 1.7)) * 0.8 + 0.3 * length(c2) - 0.08, 0.0, 1.0);
   // toner haze: uneven clouds, streaked horizontally (paper travel), heavier at the edges
-  float hz = fbm(vec2(q.x * 0.9, q.y * 3.4), uSeed + 1, 6);
-  float hz2 = fbm(vec2(q.x * 3.0, q.y * 16.0), uSeed + 2, 4);
+  float hz = fbm(vec2(q.x * 1.1, q.y * 2.0), uSeed + 1, 6);
+  float hz2 = fbm(vec2(q.x * 6.0, q.y * 9.0), uSeed + 2, 4);
   // uneven: one side of the sheet is dirtier than the other
   float side = mix(1.0 - F.x, F.x, uP[2].w);
   float ew2 = clamp(ew * 0.55 + side * 0.55 - 0.1, 0.0, 1.0);
-  float cov = smoothstep(uP[0].z, uP[0].z + 0.85, hz + 0.3 * hz2 + 1.0 * ew2 - 0.4);
+  float cov = smoothstep(uP[0].z, uP[0].z + 0.85, hz + 0.3 * hz2 + 1.0 * ew2 - 0.4 + 0.2 * (rough(P * 9.0, uSeed + 18, 3) - 0.5));
   cov *= mix(0.3, 0.8, ew2);
   float g = grain3(P, uSeed + 3);
   float gf = vnoise(P * 520.0, uSeed + 13);
   float haze = cov * uP[0].y * (0.7 + 0.25 * g + 0.2 * (gf - 0.5));
   haze = max(haze, grit(cov * 0.06, g, 0.05) * (0.15 + 0.25 * g));
+  // faint mottled toner over the whole sheet (still exactly white in places)
+  haze = 1.0 - (1.0 - haze) * (1.0 - smoothstep(0.15, 0.75, fbm(q * 4.0 + 5.0, uSeed + 19, 4)) * 0.07 * (0.4 + g));
   // soft darker smudge clouds, mostly on the dirty side
   float sm = smoothstep(0.35, 0.8, fbm(vec2(q.x * 1.6, q.y * 3.0) + 9.0, uSeed + 14, 5) + 0.4 * side - 0.2);
   haze = 1.0 - (1.0 - haze) * (1.0 - sm * (0.25 + 0.25 * g) * uP[2].z * 1.4);
@@ -97,7 +99,8 @@ float lookInk(vec2 P, vec2 F) {
   if (dh < 0.3 * side * side) {
     float xl = (dcol + 0.3 + 0.4 * hash3(ivec3(int(dcol), 11, uSeed + 15))) * 0.006;
     float dpx = abs(F.x - xl) * uAspect / uPx;
-    float brk = smoothstep(0.4, 0.65, vnoise(vec2(dcol * 3.1, P.y * mix(4.0, 60.0, hash3(ivec3(int(dcol), 13, uSeed + 15)))), uSeed + 16));
+    float brk = smoothstep(0.2, 0.7, vnoise(vec2(dcol * 3.1, P.y * mix(2.0, 9.0, hash3(ivec3(int(dcol), 13, uSeed + 15)))), uSeed + 16));
+    dpx *= mix(0.6, 1.5, vnoise(vec2(dcol, P.y * 25.0), uSeed + 20)); // width varies along the streak
     dstreak = (1.0 - smoothstep(0.5, 1.5, dpx)) * brk * (0.1 + 0.4 * hash3(ivec3(int(dcol), 17, uSeed + 15))) * (0.6 + 0.4 * g);
   }
   // smudged edge on some cards
@@ -108,7 +111,7 @@ float lookInk(vec2 P, vec2 F) {
     float along = side == 0 || side == 2 ? F.x : F.y;
     float w = uP[2].y * (0.5 + 0.9 * (0.5 + 0.5 * fbm(vec2(along * 3.0, 3.1), uSeed + 10, 5)));
     float m = smoothstep(w, -0.01, e + 0.012 * fbm(P * 30.0, uSeed + 11, 3));
-    smudge = grit(m * uP[2].z, g, 0.08) * (0.3 + 0.45 * g) + m * uP[2].z * 0.2 * g;
+    smudge = m * uP[2].z * (0.25 + 0.45 * g) * (0.6 + 0.4 * fbm(P * 20.0, uSeed + 21, 3));
   }
   // toner specks: scattered, clumped, plus dense sprays
   float clump = clamp(fbm(q * 2.5, uSeed + 30, 3) + 0.5, 0.0, 1.0);
@@ -143,7 +146,7 @@ float lookInk(vec2 P, vec2 F) {
       const pts = wanderPath(r, x0, y0, heading, len, 14 * u, 0.0004);
       const shadow = pts.map(([x, y]) => [x + (horizontal ? 0 : 2.5 * u), y + (horizontal ? 2.5 * u : 0)] as [number, number]);
       brokenStroke(ctx, r, shadow, range(r, 4, 9) * u, range(r, 0.04, 0.09), 0.1);
-      brokenStroke(ctx, r, pts, range(r, 0.6, 1.2) * u, range(r, 0.12, 0.35), 0.25);
+      brokenStroke(ctx, r, pts, range(r, 0.6, 1.2) * u, range(r, 0.08, 0.22), 0.25);
     }
     // crease marks: short straight lines, mostly near edges and corners
     const nCrease = int(r, 1, 5);
@@ -155,7 +158,7 @@ float lookInk(vec2 P, vec2 F) {
       brokenStroke(ctx, r, pts, range(r, 0.6, 1.3) * u, range(r, 0.2, 0.5), 0.1);
     }
     // a few short hairlines
-    const nHair = int(r, 1, 3) + Math.round(dens * 2);
+    const nHair = int(r, 0, 1) + Math.round(dens * 0.6);
     for (let i = 0; i < nHair; i++) {
       curlyHair(ctx, r, F, X(F, range(r, -BLEED, 1 + BLEED)), Y(F, range(r, -BLEED, 1 + BLEED)), range(r, 0.015, 0.07) * F.H, 0.06, range(r, 0.5, 1) * u, range(r, 0.5, 0.85));
     }
@@ -164,7 +167,7 @@ float lookInk(vec2 P, vec2 F) {
     for (let i = 0; i < nV; i++) {
       const len = range(r, 0.15, 1.1) * F.H;
       const pts = wanderPath(r, X(F, range(r, -BLEED, 1 + BLEED)), Y(F, range(r, -0.1, 0.9)), Math.PI / 2 + gauss(r) * 0.002, len, 3 * u, 0.0002);
-      const dotted = chance(r, 0.15);
+      const dotted = false;
       brokenStroke(ctx, r, pts, range(r, 0.5, 1.3) * u, range(r, 0.08, 0.35), dotted ? 0.55 : 0.15);
     }
     // jagged crack lines

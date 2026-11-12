@@ -104,6 +104,9 @@ float specks(vec2 p, float cell, float prob, float rMin, float rMax, float px, i
       // irregular outline: modulate the radius with angle
       float th = atan(dr.y, dr.x);
       float dist = length(dr) * (1.0 + 0.1 * sin(th * 2.0 + hb * 40.0) + 0.08 * sin(th * 5.0 + hb * 17.0));
+      // second, smaller lobe: irregular, clumpy specks rather than round dots
+      vec2 lobe = vec2(cos(hb * 91.0), sin(hb * 91.0)) * r * mix(0.5, 1.1, fract(hb * 29.3));
+      dist = min(dist, length(dr - lobe) * mix(1.2, 1.8, fract(hb * 3.7)));
       float re = max(r, px * 0.6);
       float cov = 1.0 - smoothstep(re - px * 0.6, re + px * 0.6, dist);
       cov *= min(1.0, (r * r) / (re * re));
