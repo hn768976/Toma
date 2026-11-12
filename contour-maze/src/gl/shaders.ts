@@ -33,52 +33,49 @@ float fieldF(vec2 p) {
     sin(q.x * 3.1 - 1.5 * sin(q.y * 2.3 - t * 0.18) - t * 0.24)
   );
 
-  // Island frame: centre drifts, the shape rotates and stretches along a
-  // diagonal over the shot (compact blob -> long diagonal shape).
-  vec2 c = mix(vec2(0.0, 0.05), vec2(-0.05, 0.0), pr);
-  float ang = mix(0.30, 0.85, pr);
-  float stretch = mix(1.0, 1.65, pr);
+  // Island frame: the centre stays put; the shape bends from a compact blob
+  // into a hook / S over the first half of the shot (uProgress is eased).
+  vec2 c = mix(vec2(0.0, 0.05), vec2(-0.03, 0.02), pr);
+  float ang = mix(1.30, 1.45, pr);
+  float stretch = mix(1.0, 1.25, pr);
   vec2 d = q - c;
   vec2 dr = vec2(cos(ang) * d.x + sin(ang) * d.y, -sin(ang) * d.x + cos(ang) * d.y);
   dr.x /= stretch;
-  dr.y *= mix(1.0, 1.2, pr);
+  dr.y *= mix(1.0, 1.15, pr);
   // Bend the island (arms curl) with a low-frequency warp in its own frame.
-  dr += 0.10 * vec2(sin(dr.y * 3.1 + 0.7 + t * 0.2), sin(dr.x * 2.7 - 0.4 - t * 0.17));
+  dr += mix(0.08, 0.17, pr) * vec2(sin(dr.y * 3.1 + 0.7 + t * 0.2), sin(dr.x * 2.7 - 0.4 - t * 0.17));
   float r = length(dr);
   float th = atan(dr.y, dr.x);
 
-  // Lobed island outline R(theta).
+  // Lobed island outline: r = R0 * (1 + wig(theta)).
   const float R0 = 0.52;
-  float wig = 0.20 * sin(3.0 * th + 0.8 + t * 0.15)
-            + 0.12 * sin(5.0 * th - 1.1 - t * 0.21)
-            + 0.07 * sin(8.0 * th + 2.3 + t * 0.27);
+  float wig = 0.16 * sin(2.0 * th - 0.4 + t * 0.11)
+            + 0.24 * sin(3.0 * th + 0.8 + t * 0.15)
+            + 0.13 * sin(5.0 * th - 1.1 - t * 0.21)
+            + 0.08 * sin(8.0 * th + 2.3 + t * 0.27);
   // Effective radius: offset curves of the island whose wiggles relax with distance.
   float relax = exp(-max(r - R0, 0.0) / 1.4);
   float reff = r - R0 * wig * relax;
 
-  // Outside: evenly spaced offset contours that relax into long waves.
-  float outer = 1.0 - 0.66 * (reff - R0);
+  // Outside: offset contours of the island that relax into long waves. The
+  // terraces start wide and become denser over the shot.
+  float slopeOut = mix(0.36, 0.58, pr);
+  float outer = 1.0 - slopeOut * (reff - R0);
   float waves = 0.20 * sin(q.x * 1.35 + q.y * 0.55 + 0.6 + t * 0.10)
               + 0.14 * sin(-q.x * 0.75 + q.y * 1.70 - 1.3 - t * 0.08)
-              + 0.07 * sin(q.x * 2.60 - q.y * 2.20 + 2.2 + t * 0.13)
-              + 0.03 * sin(q.x * 3.70 + q.y * 3.10 - 0.9 - t * 0.15);
-  outer += 1.1 * waves * smoothstep(0.65, 1.5, reff);
-  // Meanders grow with distance from the island.
-  outer += 0.10 * dot(w2, vec2(0.8, 0.6)) * smoothstep(0.56, 1.0, reff);
+              + 0.05 * sin(q.x * 2.60 - q.y * 2.20 + 2.2 + t * 0.13);
+  outer += 0.75 * waves * smoothstep(0.65, 1.5, reff);
+  // Meanders (U-turn fingers) grow with distance from the island.
+  outer += mix(0.08, 0.12, pr) * dot(w2, vec2(0.8, 0.6)) * smoothstep(0.58, 1.0, reff);
 
-  // Inside: a flat plateau. Meandering lines cross the next contour levels
-  // (the blue maze); a clean single-arm spiral sits at the very centre.
-  vec2 sc = q - c;
-  float rs = length(sc);
-  float ts = atan(sc.y, sc.x);
-  float meander = (sin(sc.x * 11.0 + 2.6 * sin(sc.y * 6.5 + t * 0.30))
-                + 0.7 * sin(sc.y * 9.6 - 1.0 + 2.1 * sin(sc.x * 5.8 - t * 0.24))) / 1.7;
-  float spiralMask = exp(-rs * rs / 0.035);
-  float spiral = sin(ts - rs * 30.0 + t * 0.5);
-  // Slight rise towards the middle + meanders -> nested, wandering maze lines.
-  float inside = 1.30 + 0.03 * (R0 - reff) + 0.11 * mix(meander, spiral, spiralMask);
+  // Inside: nested, scaled copies of the island outline (normalised radius
+  // rn = 1 on the outline, 0 at the centre) that wind into a spiral core.
+  float rn = clamp(r / (R0 * (1.0 + wig)), 0.0, 1.2);
+  float spiralMask = 1.0 - smoothstep(0.22, 0.5, rn);
+  float spiral = sin(th - rn * 17.0 + t * 0.5);
+  float inside = 1.02 + 0.25 * (1.0 - rn) + 0.045 * spiral * spiralMask;
 
-  // Step at the island edge -> the tall white outline wall.
+  // Step at the island edge -> the white outline wall.
   float k = smoothstep(R0 + 0.02, R0 - 0.02, reff);
   float base = mix(outer, inside, k);
   return base;
@@ -236,8 +233,8 @@ void main() {
           if (dot(nrm, rd) > 0.0) nrm = -nrm;
           float lam = 0.75 + 0.25 * max(dot(nrm, uLightDir), 0.0);
           float glow = pow(hz, 1.6);
-          vec3 face = base * (0.12 + 0.95 * glow) * lam;
-          face = mix(face, uStreakCol * (0.2 + 1.8 * glow), s * 0.6 * glow * glow * glow);
+          vec3 face = base * (0.12 + 0.90 * glow) * lam;
+          face = mix(face, uStreakCol * (0.3 + 1.9 * glow), s * 0.85 * glow * glow);
           float rimAmt = 1.0 - smoothstep(uRimR * 0.7, uRimR * 1.8 + aa, -e * hl);
           col += T * mix(face, rimColor(b, s), rimAmt);
           T = 0.0;
@@ -361,6 +358,9 @@ void main() {
   vec2 v = vUv - 0.5;
   c *= 1.0 - uVignette * dot(v, v) * 1.6;
   c = tonemap(c * uExposure);
+  // Saturation lift (linear light) towards the reference's vivid neon look.
+  float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  c = clamp(mix(vec3(lum), c, 1.28), 0.0, 1.0);
   // Tiny ordered dither to avoid banding in the dark gradients after H.264.
   float d = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
   outColor = vec4(toSrgb(c) + d / 255.0, 1.0);
