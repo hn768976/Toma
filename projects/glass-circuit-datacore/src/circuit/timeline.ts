@@ -12,9 +12,9 @@ import { mulberry32 } from "../random";
 export const GRID_X = 9; // cells from -GRID_X..GRID_X along the rows (X)
 export const GRID_Z = 9; // rows from -GRID_Z..GRID_Z (Z)
 export const CELL = 1.0; // cell pitch
-export const PLATES_PER_CELL = 20;
-export const PLATE_SPACING = 0.043;
-export const PLATE_THICKNESS = 0.012;
+export const PLATES_PER_CELL = 24;
+export const PLATE_SPACING = 0.036;
+export const PLATE_THICKNESS = 0.009;
 export const PLATE_DEPTH = 0.74;
 
 const easeInOut = (x: number) =>
@@ -97,21 +97,19 @@ const buildCells = () => {
     [1, 2, 0.8],
     [2, -1, 0.75],
   ] as const) {
-    at(ix, iz).glows.push({ t0: -0.3, hold: 1.0, ramp: 0.3, g, wave: 0.3 });
+    at(ix, iz).glows.push({ t0: -0.3, hold: 1.0, ramp: 0.6, g, wave: 0.3 });
     at(ix, iz).base = 0.26;
   }
   // 1.6–3.1 s: hero core block rises
   at(1, 0).heights.push({ t0: 1.55, hold: 1.0, ramp: 0.55, h: 1.35 });
-  at(1, 0).glows.push({ t0: 1.9, hold: 1.1, ramp: 0.35, g: 1.0, wave: 0.0 });
+  at(1, 0).glows.push({ t0: 1.9, hold: 1.0, ramp: 0.5, g: 0.75, wave: 0.0 });
   // 2.8–4.4 s: white slab flare-up
   for (const [ix, iz, g] of [
-    [1, 0, 1.25],
-    [2, 0, 1.1],
-    [1, 1, 0.9],
-    [0, -1, 0.85],
-    [-1, 0, 0.7],
+    [2, 0, 0.95],
+    [1, 1, 0.7],
+    [-1, 0, 0.6],
   ] as const) {
-    at(ix, iz).glows.push({ t0: 2.8, hold: 0.9, ramp: 0.35, g, wave: 0.6 });
+    at(ix, iz).glows.push({ t0: 2.7, hold: 0.9, ramp: 0.6, g, wave: 0.6 });
   }
   at(2, 0).heights.push({ t0: 2.7, hold: 1.0, ramp: 0.4, h: 0.62 });
   // 4.0–7.3 s: tall dark blocks rise on the right
@@ -206,9 +204,11 @@ const buildPanels = (): Panel[] => {
   P([
     [0, -0.5, 0.18, 0.0],
     [1.4, -0.5, 0.18, 0.0],
-    [2.1,  0.5, 0.22, 0.0],
-    [4.2,  0.5, 0.22, 0.0],
-    [5.0, -0.5, 0.12, 0.0],
+    [2.1, -0.5, 0.42, 1.0],
+    [4.4, -0.5, 0.42, 1.0],
+    [5.3, -0.5, 0.2, 0.0],
+    [6.2, -0.5, 0.2, 0.0],
+    [6.9, -1.5, 0.35, 0.0],
   ]);
   // upper-left panel pair
   P([
@@ -228,6 +228,8 @@ const buildPanels = (): Panel[] => {
     [0, -2.5, 0.1, 1.0],
     [3.0, -2.5, 0.1, 1.0],
     [3.8, -2.5, 0.25, 0.0],
+    [5.0, -2.5, 0.25, 0.0],
+    [5.8, -2.5, 0.55, 0.0],
   ]);
   // right side / back panels
   P([
@@ -240,7 +242,7 @@ const buildPanels = (): Panel[] => {
   P([[0, 2.5, 0.3, 2.0]], { rideCell: CELLS.at(2, 2) });
   P([[0, 3.5, 0.3, 0.0]], { rideCell: CELLS.at(3, 0) });
   // mid-ground panels around the focal plane
-  P([[0, 1.5, 0.28, 1.0], [3.2, 1.5, 0.28, 1.0], [3.9, 1.5, 0.5, 1.0]]);
+  P([[0, 1.5, 0.28, 1.0], [3.2, 1.5, 0.28, 1.0], [3.9, 1.5, 0.5, 1.0], [4.9, 1.5, 0.5, 1.0], [5.7, 2.5, 0.3, 1.0]]);
   P([[0, -0.5, 0.55, -1.0], [2.2, -0.5, 0.55, -1.0], [2.9, 0.5, 0.6, -1.0]]);
   P([[0, 0.5, 0.25, 2.0], [1.0, 0.5, 0.25, 2.0], [1.7, -0.5, 0.3, 2.0]]);
   P([[0, -1.5, 0.22, 1.0], [4.6, -1.5, 0.22, 1.0], [5.3, -1.5, 0.45, 1.0]]);
@@ -249,7 +251,7 @@ const buildPanels = (): Panel[] => {
   for (let i = 0; i < 14; i++) {
     const ix = Math.floor(rnd() * 12) - 3;
     const iz = -2 - Math.floor(rnd() * 6);
-    const t1 = rnd() * 5;
+    const t1 = 0.5 + rnd() * 5.5;
     const y = 0.25 + rnd() * 0.6;
     P([
       [0, ix + 0.5, y, iz],
@@ -260,7 +262,7 @@ const buildPanels = (): Panel[] => {
   // stacked glass plates of the rising core block
   const core = CELLS.at(1, 0);
   for (let s = 0; s < 7; s++) {
-    P([[0, 0.62 + s * 0.06, -0.85, 0.0]], {
+    P([[0, 0.62 + s * 0.06, -1.25, 0.0]], {
       rideCell: core,
       opacity: 0.75,
       h: 1.05,

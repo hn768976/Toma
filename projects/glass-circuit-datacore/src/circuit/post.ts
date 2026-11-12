@@ -273,7 +273,9 @@ void main() {
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
   c = mix(vec3(l), c, uSaturation);
   c *= mix(uShadows, uHighlights, smoothstep(0.0, 0.75, l));
-  c = c * (1.0 - uLift) + uLift * uShadows * vec3(0.8, 0.9, 1.0);
+  // lift > 0 raises blacks; lift < 0 sets a black point (crushes shadows)
+  c = uLift >= 0.0 ? c * (1.0 - uLift) + uLift * uShadows * vec3(0.8, 0.9, 1.0)
+                   : max(c + uLift, 0.0) / (1.0 + uLift);
   vec2 q = (vUv - 0.5) * vec2(1.0, 0.82);
   c *= 1.0 - uVignette * smoothstep(0.28, 0.75, length(q));
   // grain scaled to output pixels so it survives the 4K→1080p downscale softly

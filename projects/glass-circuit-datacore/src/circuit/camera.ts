@@ -28,7 +28,7 @@ const orbit = (target: THREE.Vector3, dist: number, azDeg: number, elDeg: number
 
 /**
  * Version 1 – reference match: a long-lens, almost locked-off shot
- * (measured drift ≈ 0.5 % of frame width per second) looking down ~30°
+ * (measured drift ≈ 0.5 % of frame width per second) looking down ~22°
  * across the rows, shallow depth of field focused on the hero panels.
  *
  * Version 2 – alternative camera move: a low, close crane-and-orbit that
@@ -38,9 +38,9 @@ const orbit = (target: THREE.Vector3, dist: number, azDeg: number, elDeg: number
 export const cameraAt = (variant: Variant, t: number): CameraPose => {
   const k = t / CLIP_SECONDS;
   if (variant === "v1") {
-    const target = new THREE.Vector3(0.1 + 0.15 * k, 0.62, 0.2 - 0.1 * k);
+    const target = new THREE.Vector3(-0.17 + 0.15 * k, 0.6, -0.03 - 0.1 * k);
     const dist = 6.0 - 0.25 * k;
-    const position = orbit(target, dist, 50 + 2.5 * k, 31);
+    const position = orbit(target, dist, 50 + 2.5 * k, 22);
     return { position, target, fov: 19, focus: dist - 0.45 };
   }
   const e = smooth(k);

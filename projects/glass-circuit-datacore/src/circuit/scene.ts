@@ -22,7 +22,8 @@ import {
 } from "./timeline";
 
 const WORLD_LAYER = 0;
-const PANEL_TURN = THREE.MathUtils.degToRad(30);
+const PANEL_TURN = THREE.MathUtils.degToRad(-8);
+const GLASS_THICKNESS = 0.035;
 const GLASS_LAYER = 1;
 
 /** Thin heat-sink / memory plate with a stepped "tab" profile. */
@@ -75,6 +76,7 @@ uniform vec3 uTint;
 uniform vec3 uEdge;
 uniform vec3 uGlyphCol;
 uniform float uFlicker;
+uniform float uBack;
 varying vec2 vUv;
 varying vec3 vNormalW;
 varying vec3 vViewW;
@@ -113,21 +115,23 @@ void main() {
   vec3 v = normalize(vViewW);
   float fres = pow(1.0 - abs(dot(n, v)), 3.0);
 
-  float rim = smoothstep(0.007 + aa, 0.007 - aa, abs(d + 0.004));
-  float bevel = smoothstep(0.005 + aa, 0.005 - aa, abs(d + 0.034));
+  float rim = smoothstep(0.004 + aa, 0.004 - aa, abs(d + 0.003));
+  float bevel = smoothstep(0.003 + aa, 0.003 - aa, abs(d + 0.03));
   // glass thickness: brighter band just inside the rim
-  float band = smoothstep(-0.034, -0.004, d) * 0.35;
+  float band = smoothstep(-0.03, -0.004, d) * 0.22;
 
   vec2 guv = p / (uSize - vec2(0.16, 0.14)) + 0.5;
   float inGlyph = step(0.0, guv.x) * step(guv.x, 1.0) * step(0.0, guv.y) * step(guv.y, 1.0);
-  float g = texture2D(uGlyph, guv).a * inGlyph * uFlicker;
+  float g = texture2D(uGlyph, guv).a * inGlyph * uFlicker * (1.0 - uBack);
 
   // faint diagonal sheen
   float sheen = smoothstep(0.25, 0.0, abs(p.x * 0.6 + p.y - 0.15)) * 0.12;
 
-  float aBase = 0.3 + 0.5 * fres + band + sheen;
-  vec3 col = uTint * aBase + uEdge * (rim * 1.5 + bevel * 0.6 + band * 0.5 + sheen) + uGlyphCol * g * 1.6;
-  float a = clamp(aBase + rim * 0.95 + bevel * 0.5 + g * 0.85, 0.0, 1.0);
+  // clear glass: mostly transparent body, thin unlit edges that catch a
+  // little specular, a second (back) face gives the slab visible thickness
+  float aBase = (0.16 + 0.45 * fres + band + sheen) * mix(1.0, 0.6, uBack);
+  vec3 col = uTint * aBase + uEdge * (rim * 0.75 + bevel * 0.35 + band * 0.35 + sheen * 0.8) + uGlyphCol * g * 1.25;
+  float a = clamp(aBase + rim * 0.6 + bevel * 0.3 + g * 0.8, 0.0, 1.0);
   a *= inside * uOpacity;
   gl_FragColor = vec4(col * inside * uOpacity, a);
 }
@@ -248,6 +252,7 @@ export const createCircuitScene = (
         uEdge: { value: new THREE.Color(look.glassEdge) },
         uGlyphCol: { value: new THREE.Color(look.glyphColor) },
         uFlicker: { value: 1 },
+        uBack: { value: 0 },
       },
       vertexShader: glassVertex,
       fragmentShader: glassFragment,
@@ -266,6 +271,15 @@ export const createCircuitScene = (
     m.rotation.y = -Math.PI / 2 + PANEL_TURN;
     m.layers.set(GLASS_LAYER);
     m.userData.index = i;
+    // back face of the glass slab (thickness)
+    const backMat = mat.clone();
+    backMat.uniforms.uBack.value = 1;
+    backMat.uniforms.uGlyph.value = glyphs[p.glyph];
+    glassMats.push(backMat);
+    const back = new THREE.Mesh(m.geometry, backMat);
+    back.position.z = -GLASS_THICKNESS;
+    back.layers.set(GLASS_LAYER);
+    m.add(back);
     scene.add(m);
     return m;
   });
@@ -275,8 +289,8 @@ export const createCircuitScene = (
     near: camera.near,
     far: camera.far,
     focus: 10,
-    blurScale: 440 * res,
-    maxCoc: 64 * res,
+    blurScale: 400 * res,
+    maxCoc: 52 * res,
   });
   glassMats.forEach((m) => (m.uniforms.uWorldDepth.value = dof.world.depthTexture));
 
@@ -385,9 +399,6 @@ export const createCircuitScene = (
       const m = glassMeshes[i];
       m.position.set(pp.x, pp.y + p.h / 2, pp.z);
       m.updateMatrixWorld();
-      // occasional data refresh flicker
-      const f = Math.sin(t * 9.0 + i * 3.1);
-      glassMats[i].uniforms.uFlicker.value = f > 0.985 ? 0.55 : 1;
     });
 
     grade.uniforms.uSeed.value = frame;

@@ -23,7 +23,7 @@ export const createGlyphTexture = (seed: number) => {
   ctx.fillRect(90, 150, 230, 4);
 
   // gel / barcode columns
-  const cols = 9;
+  const cols = 6;
   const x0 = 90;
   const colW = (size - 180) / cols;
   const marker = Math.floor(rnd() * cols);
@@ -40,11 +40,11 @@ export const createGlyphTexture = (seed: number) => {
     let y = 200 + rnd() * 30;
     while (y < 900) {
       const h = 9 + rnd() * 12;
-      const w = colW * (0.3 + rnd() * 0.5);
+      const w = colW * (0.18 + rnd() * 0.32);
       const a = 0.35 + rnd() * 0.65;
       ctx.fillStyle = `rgba(255,255,255,${a.toFixed(2)})`;
       ctx.fillRect(cx + (colW - w) * 0.3, y, w, h);
-      y += h + 8 + rnd() * 26;
+      y += h + 14 + rnd() * 46;
     }
   }
   const tex = new THREE.CanvasTexture(canvas);
