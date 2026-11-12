@@ -1,7 +1,7 @@
 # Petal Swirl — Remotion + Three.js (4K)
 
-An overhead view of overlapping, fluted "swirl rosette" discs that slowly
-turn in place. All geometry is procedural (no external assets), built with
+An overhead view of overlapping, fluted "swirl rosette" discs whose flutes
+sway gently in place. All geometry is procedural (no external assets), built with
 Three.js through `@remotion/three`.
 
 | Composition ID            | Size        | FPS | Frames | Duration | Notes |
@@ -12,8 +12,8 @@ Three.js through `@remotion/three`.
 The reference clip has 270 frames at 29.97 fps (9.009 s). At exactly 30 fps
 the same 270 frames last 9.000 s.
 
-The disc rotation travels exactly three flute periods per clip, so the video
-loops seamlessly, like the reference.
+As in the reference, the discs do not rotate. They sway in unison on a
+90-frame cycle, three cycles per clip, so the video loops seamlessly.
 
 ## Requirements
 
