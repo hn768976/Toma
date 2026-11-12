@@ -12,30 +12,30 @@ export type VariantName = "v1" | "v2";
 // magenta -> violet -> periwinkle -> white -> warm yellow glow at the floor.
 export const LOOK: Look = {
   stops: [
-    { depth: 0.0, color: "#fcecf2" },
-    { depth: 0.5, color: "#f1bde0" },
-    { depth: 1.15, color: "#c25ad8" },
-    { depth: 1.85, color: "#7c2bd0" },
-    { depth: 2.6, color: "#8db0f5" },
-    { depth: 3.25, color: "#f4f6ff" },
+    { depth: 0.0, color: "#fff4f3" },
+    { depth: 0.5, color: "#f2bfdf" },
+    { depth: 1.15, color: "#b048c8" },
+    { depth: 1.95, color: "#6a1fa8" },
+    { depth: 2.75, color: "#8db0f5" },
+    { depth: 3.2, color: "#f4f6ff" },
     { depth: 3.9, color: "#fff3a8" },
   ],
   // Pillars raised above the surface (crater rim / snap-shut pop).
   upStops: [
-    { height: 0.0, color: "#fcecf2" },
-    { height: 1.2, color: "#f4c6e4" },
-    { height: 2.8, color: "#de93e2" },
-    { height: 5.0, color: "#b866da" },
+    { height: 0.0, color: "#fff4f3" },
+    { height: 0.6, color: "#f3c0e2" },
+    { height: 1.5, color: "#e08edc" },
+    { height: 3.0, color: "#b866da" },
   ],
-  background: "#fcecf2",
+  background: "#fff6f4",
   shadowTint: "#a95cc4",
   emissiveFrom: 2.2,
   emissiveTo: 3.9,
   emissive: 0.45,
-  vignette: 0.08,
+  vignette: 0.02,
 };
 
-export const MOTION_BLUR = { samples: 8, shutter: 1.0 };
+export const MOTION_BLUR = { samples: 12, shutter: 1.5 };
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
@@ -54,12 +54,13 @@ export const cameraFor = (variant: VariantName) => (frame: number): CameraState 
   if (variant === "v1") {
     // Reference framing: locked-off, steep top-down view with the grid
     // rotated ~45 degrees so the valley runs bottom-left -> top-right.
-    const target: [number, number, number] = [-1.3, -2, -3.4];
+    const target: [number, number, number] = [-5, -2, -6];
     return {
-      position: orbit(target, 32, 1.1, 2.88),
+      position: orbit(target, 43, 1.1, 2.88),
       target,
       roll: 2.36,
       fov: 40,
+      shiftX: 0.18,
     };
   }
   // Version 2: low, oblique tracking shot travelling along the valley with a

@@ -1,12 +1,13 @@
-// Pillar-grid "valley" model.
+// Tile-grid "valley" model.
 //
-// A square grid of tall pillars. Along a zig-zag (pixel-staircase) path the
-// pillars sink, forming a terraced V-shaped valley that opens from a thin slit
-// to a wide band, holds, then closes again. One cycle = 120 frames (4 s), the
-// same loop period as the reference; the shot runs 2.225 cycles (267 frames).
+// A square grid of thin square plates. Along a zig-zag (pixel-staircase) path
+// the plates sink and tip over to follow the slope, forming a terraced V-shaped
+// valley of fins that opens from a thin slit to a wide band, holds, then closes
+// again. One cycle = 134 frames (~4.47 s), measured from the reference, so the
+// 267-frame shot runs ~2 cycles, in phase with the reference.
 
-export const CYCLE_FRAMES = 120;
-export const GRID = 96; // GRID x GRID pillars, centred on the origin
+export const CYCLE_FRAMES = 134;
+export const GRID = 136; // GRID x GRID tiles, centred on the origin
 export const MAX_DEPTH = 4.0; // depth of the valley floor, in tile units
 
 type Seg = { ax: number; ay: number; bx: number; by: number; depth: number; width: number };
@@ -47,10 +48,14 @@ const BRANCH: [number, number][] = [
   [-40, -19],
 ];
 
+// Path control points are authored at unit scale and enlarged here.
+const PATH_SCALE = 1.4;
+
 const toSegs = (pts: [number, number][], depth: number, width: number): Seg[] => {
   const out: Seg[] = [];
+  const k = PATH_SCALE;
   for (let i = 0; i < pts.length - 1; i++) {
-    out.push({ ax: pts[i][0], ay: pts[i][1], bx: pts[i + 1][0], by: pts[i + 1][1], depth, width });
+    out.push({ ax: pts[i][0] * k, ay: pts[i][1] * k, bx: pts[i + 1][0] * k, by: pts[i + 1][1] * k, depth, width });
   }
   return out;
 };
@@ -76,15 +81,33 @@ const hash = (i: number, j: number, k: number) => {
   return (h >>> 0) / 4294967296;
 };
 
+const nearest = (x: number, y: number) => {
+  let best = Infinity;
+  let strength = 0;
+  let widthMul = 1;
+  for (const s of SEGS) {
+    const d = segDist(x, y, s) / s.width;
+    if (d < best) {
+      best = d;
+      strength = s.depth;
+      widthMul = s.width;
+    }
+  }
+  return { best, strength, widthMul };
+};
+
 export type Cell = {
   x: number; // grid coords (u)
   y: number; // grid coords (v)
   dist: number; // distance to the nearest path segment (in cells)
+  gx: number; // unit direction of increasing distance (away from the valley axis)
+  gy: number;
   strength: number; // depth multiplier of the nearest branch
   widthMul: number;
-  delay: number; // per-cell timing jitter, in cycles
+  delay: number; // per-cell timing offset, in cycles
   jitter: number; // small per-cell depth variation
   rnd: number; // per-cell random amplitude for the rim / pop motion
+  rnd2: number;
 };
 
 export const CELLS: Cell[] = (() => {
@@ -94,26 +117,33 @@ export const CELLS: Cell[] = (() => {
     for (let i = 0; i < GRID; i++) {
       const x = i - half + 0.5;
       const y = j - half + 0.5;
-      let best = Infinity;
-      let strength = 0;
-      let widthMul = 1;
-      for (const s of SEGS) {
-        const d = segDist(x, y, s) / s.width;
-        if (d < best) {
-          best = d;
-          strength = s.depth;
-          widthMul = s.width;
-        }
+      const n = nearest(x, y);
+      // Central-difference gradient of the distance field (axis aligned for
+      // the Chebyshev metric, diagonal at the staircase corners).
+      let gx = nearest(x + 0.5, y).best - nearest(x - 0.5, y).best;
+      let gy = nearest(x, y + 0.5).best - nearest(x, y - 0.5).best;
+      const gl = Math.hypot(gx, gy);
+      if (gl > 1e-6) {
+        gx /= gl;
+        gy /= gl;
+      } else {
+        gx = 0;
+        gy = hash(i, j, 5) < 0.5 ? 1 : -1;
       }
       out.push({
         x,
         y,
-        dist: best,
-        strength,
-        widthMul,
-        delay: hash(i, j, 1) * 0.06 + best * 0.01,
+        dist: n.best,
+        gx,
+        gy,
+        strength: n.strength,
+        widthMul: n.widthMul,
+        // Random per-cell jitter, a little lag away from the axis, and a
+        // travelling delay along the path (the lower-left end leads).
+        delay: hash(i, j, 1) * 0.05 + n.best * 0.008 + (x + half) * 0.0011,
         jitter: hash(i, j, 2) - 0.5,
         rnd: hash(i, j, 3),
+        rnd2: hash(i, j, 4),
       });
     }
   }
@@ -125,47 +155,69 @@ const smoothstep = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
-// Valley opening over one cycle (phase 0..1). Rises from a slit to the full
-// band, holds, then snaps shut with a springy overshoot (negative values lift
-// the pillars above the surface before they settle).
+// Valley opening over one cycle (phase 0..1), shaped after the reference:
+// a ~40-frame rise from a slit to the full band, a short hold, a ~45-frame
+// close, a brief springy flick as it snaps shut, then ~30 frames at rest.
 export const opening = (phase: number) => {
   const p = ((phase % 1) + 1) % 1;
-  if (p < 0.4) return smoothstep(0, 0.4, p);
-  if (p < 0.52) return 1;
+  if (p < 0.36) return smoothstep(0, 0.36, p);
+  if (p < 0.42) return 1;
+  if (p < 0.7) return 1 - smoothstep(0.42, 0.7, p);
   if (p < 0.8) {
-    const u = (p - 0.52) / 0.28;
-    return 1 - u * u * (2.2 - 1.2 * u); // accelerating close
-  }
-  if (p < 0.92) {
-    // Fast pop above the surface, then a quick settle.
-    const u = (p - 0.8) / 0.12;
-    return -0.34 * Math.sin(Math.PI * Math.pow(u, 0.6)) * (1 - 0.5 * u);
+    // Flick above the surface, then settle.
+    const u = (p - 0.7) / 0.1;
+    return -0.3 * Math.sin(Math.PI * Math.pow(u, 0.6)) * (1 - 0.5 * u);
   }
   return 0;
 };
 
 // Phase offset so frame 0 starts on a freshly opening slit (as the reference does).
-export const PHASE_OFFSET = 0.1;
+export const PHASE_OFFSET = 0.12;
 
-const W_MAX = 4.1; // half width of the fully open valley, in cells
-const RIM_LIFT = 5.0; // how far the crater-rim pillars rise while open
-const POP_LIFT = 7.5; // overshoot height when the valley snaps shut
+const W_MAX = 4.4; // half width of the fully open valley, in cells
+const RIM_LIFT = 2.6; // how far the crater-rim tiles rise while open
+const POP_LIFT = 3.0; // flick height when the valley snaps shut
+const TILT_GAIN = 1.15; // exaggerates the slope -> tiles stand up as fins
+const MAX_TILT = 1.1; // radians (~63 deg)
 
-/** Height of a pillar top relative to the surface (negative = sunk) at `frame`. */
-export const cellHeight = (c: Cell, frame: number) => {
+// Smooth (noise-free) height profile as a function of distance from the axis,
+// used both for the height and, by finite differences, for the tile tilt.
+const profile = (dist: number, a: number, strength: number) => {
+  const w = a * W_MAX;
+  const open = smoothstep(0, 0.1, a);
+  const ring = Math.max(0, 1 - dist / (w + 0.6));
+  const depth = MAX_DEPTH * strength * ring * open;
+  const x = (dist - (w + 1.5)) / 1.4;
+  const rim = RIM_LIFT * a * Math.exp(-x * x) * strength;
+  return rim - depth;
+};
+
+export type Pose = {
+  h: number; // tile top height relative to the surface (negative = sunk)
+  tilt: number; // radians; positive tips the tile's top face towards the axis
+  gx: number;
+  gy: number;
+};
+
+/** Pose of a tile at `frame`: height plus a tilt about the axis across the slope. */
+export const cellPose = (c: Cell, frame: number): Pose => {
   const phase = frame / CYCLE_FRAMES + PHASE_OFFSET - c.delay;
   const a = opening(phase);
   if (a < 0) {
-    // Snap-shut overshoot: pillars near the path pop up, then settle.
+    // Snap-shut flick: tiles near the path pop up and flip over, then settle.
     const reach = Math.max(0, 1 - c.dist / 7.5);
-    return -a * POP_LIFT * reach * c.strength * (0.25 + 1.1 * c.rnd * c.rnd);
+    const amt = -a * reach * c.strength;
+    return {
+      h: amt * POP_LIFT * (0.25 + 1.1 * c.rnd * c.rnd),
+      tilt: amt * (2.2 + 2.5 * c.rnd2) * (c.rnd < 0.5 ? -1 : 1),
+      gx: c.gx,
+      gy: c.gy,
+    };
   }
-  const w = a * W_MAX;
-  const open = smoothstep(0, 0.1, a);
-  const ring = Math.max(0, 1 - c.dist / (w + 0.6));
-  const depth = MAX_DEPTH * c.strength * ring * open * (1 + 0.07 * c.jitter);
-  // Crater rim: a ring of pillars just outside the valley edge rises up.
-  const x = (c.dist - (w + 1.6)) / 1.8;
-  const rim = RIM_LIFT * a * Math.exp(-x * x) * c.strength * (0.15 + 0.85 * Math.pow(c.rnd, 1.6));
-  return rim - depth;
+  const base = profile(c.dist, a, c.strength);
+  const slope = (profile(c.dist + 0.5, a, c.strength) - profile(c.dist - 0.5, a, c.strength));
+  const depthNoise = base < 0 ? 1 + 0.07 * c.jitter : 0.3 + 0.9 * Math.pow(c.rnd, 1.4);
+  const h = base * depthNoise;
+  const tilt = Math.max(-MAX_TILT, Math.min(MAX_TILT, Math.atan(slope * TILT_GAIN) * (0.85 + 0.3 * c.rnd2)));
+  return { h, tilt, gx: c.gx, gy: c.gy };
 };

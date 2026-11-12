@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { CELLS, cellHeight } from "./field";
+import { CELLS, cellPose } from "./field";
 
 export type Look = {
   stops: { depth: number; color: string }[]; // sRGB hex, keyed on depth below surface
@@ -17,20 +17,33 @@ export type CameraState = {
   target: [number, number, number];
   roll: number; // radians, around the view axis
   fov: number; // vertical, degrees
+  shiftX?: number; // horizontal lens shift, as a fraction of the frame width
 };
 
 const MAX_STOPS = 8;
-const PILLAR_HEIGHT = 10;
+const TILE_SIZE = 0.995; // plates butt together: the resting surface reads as one flat sheet
+const TILE_THICKNESS = 0.16;
+const CURL = 0.55; // bend per radian of tilt
 
 const VERT = /* glsl */ `
+attribute vec4 aCurl; // (gx, gy) local slope direction, curl amount, stretch
 varying vec3 vWorld;
 varying vec3 vNormal;
 varying vec3 vLocal;
 void main() {
-  vec4 wp = modelMatrix * instanceMatrix * vec4(position, 1.0);
+  // Bend the plate like curling paper along the slope direction.
+  vec3 p = position;
+  // Lengthen tipped plates along the slope so they overlap like scales
+  // instead of opening gaps.
+  p.xz += aCurl.xy * dot(p.xz, aCurl.xy) * (aCurl.w - 1.0);
+  float s = dot(p.xz, aCurl.xy);
+  p.y -= aCurl.z * s * s;
+  vec3 nrm = normal;
+  if (abs(normal.y) > 0.5) nrm = normalize(vec3(2.0 * aCurl.z * s * aCurl.x, 1.0, 2.0 * aCurl.z * s * aCurl.y) * sign(normal.y));
+  vec4 wp = modelMatrix * instanceMatrix * vec4(p, 1.0);
   vWorld = wp.xyz;
   vLocal = position;
-  vNormal = normalize(mat3(modelMatrix * instanceMatrix) * normal);
+  vNormal = normalize(mat3(modelMatrix * instanceMatrix) * nrm);
   gl_Position = projectionMatrix * viewMatrix * wp;
 }`;
 
@@ -75,18 +88,15 @@ void main() {
   // Soft, high-key studio light: wrap diffuse + sky fill.
   float lam = dot(n, uLightDir) * 0.5 + 0.5;
   float sky = 0.5 + 0.5 * n.y;
-  float light = clamp(0.42 + 0.38 * lam + 0.25 * sky, 0.0, 1.2);
+  float light = clamp(0.22 + 0.62 * lam + 0.24 * sky, 0.0, 1.2);
   // Gentle bevel on the top face so neighbouring tiles read as separate pieces.
-  float top = step(0.5, n.y) * smoothstep(0.05, 0.4, abs(vWorld.y));
+  float top = step(0.5, abs(n.y)) * smoothstep(0.05, 0.4, abs(vWorld.y));
   vec2 e = abs(vLocal.xz);
-  float edge = smoothstep(0.43, 0.5, max(e.x, e.y));
+  float edge = smoothstep(0.38, 0.47, max(e.x, e.y));
   light *= 1.0 - top * edge * 0.10;
   // Shadows tint towards lavender instead of grey (pastel studio look).
   vec3 shade = mix(uShadowTint, vec3(1.0), clamp(light, 0.0, 1.0)) * max(light, 1.0);
   vec3 col = base * shade;
-  // Contact darkening at the base of pillars standing above the surface.
-  float side = 1.0 - step(0.5, abs(n.y));
-  col *= mix(1.0, mix(0.78, 1.0, smoothstep(0.0, 2.5, vWorld.y)), side * step(0.0, vWorld.y));
   // Deep valley floor glows.
   col += base * uEm * smoothstep(uEmFrom, uEmTo, depth);
   gl_FragColor = vec4(col, 1.0);
@@ -157,6 +167,8 @@ export class TileRenderer {
   private outMat: THREE.ShaderMaterial;
   private quad: THREE.Mesh;
   private dummy = new THREE.Object3D();
+  private axis = new THREE.Vector3();
+  private curl: THREE.InstancedBufferAttribute;
 
   constructor(canvas: HTMLCanvasElement, look: Look) {
     this.width = canvas.width;
@@ -204,9 +216,12 @@ export class TileRenderer {
       },
     });
 
-    const geo = new THREE.BoxGeometry(1, PILLAR_HEIGHT, 1);
-    geo.translate(0, -PILLAR_HEIGHT / 2, 0); // top face at y = 0
-    // Shift local coords so vLocal.xz is centred and the top is at y = 0.
+    // Thin square plate, top face at local y = 0 (the pivot of its tilt).
+    const geo = new THREE.BoxGeometry(TILE_SIZE, TILE_THICKNESS, TILE_SIZE, 6, 1, 6);
+    geo.translate(0, -TILE_THICKNESS / 2, 0);
+    this.curl = new THREE.InstancedBufferAttribute(new Float32Array(CELLS.length * 4), 4);
+    this.curl.setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute("aCurl", this.curl);
     this.mesh = new THREE.InstancedMesh(geo, this.material, CELLS.length);
     this.mesh.frustumCulled = false;
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -244,11 +259,20 @@ export class TileRenderer {
     const d = this.dummy;
     for (let k = 0; k < CELLS.length; k++) {
       const c = CELLS[k];
-      d.position.set(c.x, cellHeight(c, frame), c.y);
+      const p = cellPose(c, frame);
+      d.position.set(c.x, p.h, c.y);
+      // Tip the plate about the horizontal axis across the slope (grid v -> world z).
+      this.axis.set(-p.gy, 0, p.gx);
+      d.quaternion.setFromAxisAngle(this.axis, p.tilt);
       d.updateMatrix();
       this.mesh.setMatrixAt(k, d.matrix);
+      // Tiles curl as they tip: the bend follows the tilt (sign included).
+      const t = Math.abs(p.tilt);
+      const stretch = 1 + Math.min(0.85, (1 / Math.cos(Math.min(t, 1.2)) - 1) * 1.3 + 0.25 * Math.min(1, t / 0.15));
+      this.curl.setXYZW(k, p.gx, p.gy, CURL * p.tilt, stretch);
     }
     this.mesh.instanceMatrix.needsUpdate = true;
+    this.curl.needsUpdate = true;
   }
 
   private setCamera(cam: CameraState) {
@@ -278,7 +302,8 @@ export class TileRenderer {
       // Sub-pixel jitter per sample (R2 sequence) -> accumulation anti-aliasing.
       const jx = ((0.5 + s * 0.7548776662) % 1) - 0.5;
       const jy = ((0.5 + s * 0.5698402909) % 1) - 0.5;
-      this.camera.setViewOffset(this.width, this.height, jx, jy, this.width, this.height);
+      const shift = (cameraAt(f).shiftX ?? 0) * this.width;
+      this.camera.setViewOffset(this.width, this.height, jx + shift, jy, this.width, this.height);
       this.camera.updateProjectionMatrix();
       r.setRenderTarget(this.sceneRT);
       r.clear(true, true, true);
