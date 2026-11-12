@@ -32,12 +32,12 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
   // ---- data bands ------------------------------------------------------------
   // Centre band (holds the chip): "fader" ticks = thin rung + bright pill.
   const CENTER_HALF = 0.58;
-  const centreStart = 2.0;
+  const centreStart = 2.45;
   const centreSpeed = 9.0;
   for (const off of [-CENTER_HALF - 0.05, CENTER_HALF + 0.05]) {
     segs.push({
       x0: -LENGTH, z0: off, x1: LENGTH, z1: off, w: 0.008, color: rail, a: 0.55,
-      tIn: 1.75, inDur: 2.4, grow: 1, anchor: 0.5,
+      tIn: 2.0, inDur: 2.4, grow: 1, anchor: 0.5,
     });
   }
   for (let x = -LENGTH; x <= LENGTH; x += 0.16) {
@@ -67,7 +67,7 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
       const flip = k % 2 === 1 ? 1 : -1; // alternate which edge is straight
       const edge = flip === 1 ? inner : inner + side * BAND_W;
       const dirOut = side * flip; // direction the rows grow from the edge
-      const start = 2.75 + 0.3 * (k - 1) + range(rng, 0, 0.15);
+      const start = 3.3 + 0.28 * (k - 1) + range(rng, 0, 0.15);
       const speed = 7 + range(rng, 0, 2);
       const fall = k === 1 ? 1 : k === 2 ? 0.85 : 0.7;
       const revealAt = (x: number) => start + Math.abs(x) / speed + range(rng, 0, 0.08);
@@ -76,8 +76,8 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
         x0: -LENGTH, z0: edge, x1: LENGTH, z1: edge, w: 0.009, color: tickBright, a: 0.6 * fall,
         tIn: start - 0.25, inDur: 2.2, grow: 1, anchor: 0.5,
       });
-      const DASH = 0.085;
-      const GAP = 0.03;
+      const DASH = 0.12;
+      const GAP = 0.022;
       const maxUnits = Math.floor(BAND_W / (DASH + GAP));
       for (let x = -LENGTH; x <= LENGTH; x += 0.09) {
         const t0 = revealAt(x);
@@ -86,12 +86,12 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
         for (let u = 0; u < units; u++) {
           if (rng() < 0.05) continue;
           const p = 0.03 + u * (DASH + GAP);
-          const len = rng() < 0.25 ? DASH * 2 + GAP : DASH;
+          const len = rng() < 0.35 ? DASH * 2 + GAP : DASH;
           if (p + len > BAND_W) break;
           const bright = rng() < 0.16;
           segs.push({
             x0: x, z0: edge + dirOut * p, x1: x, z1: edge + dirOut * (p + len), w: 0.017,
-            color: bright ? tickBright : tick, a: (bright ? 0.95 : 0.65) * fall,
+            color: bright ? tickBright : tick, a: (bright ? 1.0 : 0.78) * fall,
             tIn: t0 + p * 0.3, inDur: 0.45,
             twAmp: 0.18, twFreq: range(rng, 0.5, 3), twPhase: range(rng, 0, 6.28),
           });
@@ -132,8 +132,8 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
       chipSegs.push({ x0, z0, x1, z1, w, color: chipC, a, tIn: t + i * 0.1, inDur: 0.4, grow: 1, anchor: 0, y: 0.012 }),
     );
   };
-  frame(CHIP, 0.5, 0.6, 0.014);
-  frame(CHIP * 0.82, 0.3, 0.8, 0.009);
+  frame(CHIP, 0.5, 1.3, 0.014);
+  frame(CHIP * 0.82, 0.3, 1.5, 0.009);
   // cross dividing the core into four windows
   chipSegs.push({ x0: -CHIP * 0.82, z0: 0, x1: CHIP * 0.82, z1: 0, w: 0.014, color: chipC, a: 0.7, tIn: 1.7, inDur: 0.4, grow: 1, anchor: 0.5, y: 0.012 });
   chipSegs.push({ x0: 0, z0: -CHIP * 0.82, x1: 0, z1: CHIP * 0.82, w: 0.014, color: chipC, a: 0.7, tIn: 1.75, inDur: 0.4, grow: 1, anchor: 0.5, y: 0.012 });
@@ -144,7 +144,7 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
       const cz = j * CHIP * 0.41;
       chipSegs.push({
         x0: cx - CHIP * 0.33, z0: cz, x1: cx + CHIP * 0.33, z1: cz, w: CHIP * 0.66, color: tickBright,
-        a: i === j ? 0.12 : 0.07, tIn: 0.9 + range(rng, 0, 0.4), inDur: 0.3, y: 0.012,
+        a: i === j ? 0.12 : 0.07, tIn: 1.4 + range(rng, 0, 0.4), inDur: 0.3, y: 0.012,
         twAmp: 0.3, twFreq: range(rng, 1, 3), twPhase: range(rng, 0, 6.28),
       });
     }
@@ -212,8 +212,8 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
   // ---- chip glow (animated intensity) ---------------------------------------
   const glowC = col(pal.chipGlow);
   const glows: Sprite[] = [
-    { x: 0, y: 0.05, z: 0, size: 2.2, sharp: 4, color: glowC, a: 0.22 },
-    { x: 0, y: 0.06, z: 0, size: 0.9, sharp: 5, color: chipC, a: 0.32 },
+    { x: 0, y: 0.05, z: 0, size: 1.8, sharp: 4, color: glowC, a: 0.13 },
+    { x: 0, y: 0.06, z: 0, size: 0.7, sharp: 5, color: chipC, a: 0.16 },
   ];
 
   const bg = createBackground({
@@ -228,7 +228,7 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
   scene.add(bg.mesh, stripBatch.mesh, chipBatch.mesh, sparkBatch.mesh, glowBatch.mesh);
 
   const target = new THREE.Vector3(0, 0, 0);
-  const dof = { focus: 12, aperture: 0.02, maxBlur: 0.0065, nearMul: 1.2, skyBlur: 0.0065 };
+  const dof = { focus: 12, aperture: 0.015, maxBlur: 0.0065, nearMul: 1.2, skyBlur: 0.0065 };
 
   return {
     scene,
@@ -256,7 +256,7 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
       camera.rotateZ(THREE.MathUtils.degToRad(8));
       stage.dof.params.focus = radius;
       // chip ignition: soft glow builds from ~0.3 s, peaks ~1.6 s then settles
-      const flare = smoothstep(0.25, 1.6, t) * (1 - 0.45 * smoothstep(1.8, 3.2, t));
+      const flare = smoothstep(0.35, 1.7, t) * (1 - 0.4 * smoothstep(2.0, 3.4, t));
       glowBatch.material.uniforms.uIntensity.value = flare * (1 + 0.04 * Math.sin(t * 5.0));
       // background light slowly drifts and breathes
       bg.material.uniforms.uGP.value.set(1.0 - 0.06 * Math.sin(t * 0.35), 0.3 + 0.05 * Math.sin(t * 0.5 + 1));
