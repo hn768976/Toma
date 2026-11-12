@@ -30,10 +30,10 @@ Each video was rendered from its 4K composition with `--scale=0.5`, which produc
 | Black frames | 0 | 0 | 0 | 0 |
 | Frozen frame transitions | 0 | 0 | 0 | 0 |
 | Flicker events (luma spikes) | 0 | 0 | 0 | 0 |
-| Mean-luma range | 238–252 | 28–43 | 118–172 | 112–168 |
-| Loop seam, last frame to first (mean abs diff)¹ | 0.19 | 0.04 | 2.20 | 4.22 |
-| Median frame-to-frame diff | 3.74 | 2.48 | 3.71 | 6.55 |
-| Bitrate | 2.4 Mb/s | 2.7 Mb/s | 5.9 Mb/s | 7.8 Mb/s |
+| Mean-luma range | 238–252 | 28–43 | 118–172 | 112–167 |
+| Loop seam, last frame to first (mean abs diff)¹ | 0.19 | 0.04 | 2.47 | 4.27 |
+| Median frame-to-frame diff | 3.74 | 2.48 | 6.70 | 7.58 |
+| Bitrate | 2.4 Mb/s | 2.7 Mb/s | 6.3 Mb/s | 8.1 Mb/s |
 | Audio | none (references have none) | none | none | none |
 
 ¹ Every loop seam is at or below a normal frame step, so all four videos loop seamlessly.
@@ -56,7 +56,7 @@ Each ZIP was then installed and rendered using only the commands in its README:
 | `tsc --noEmit` | ok | ok |
 | `remotion compositions` | 2 compositions at 3840×2160, 30 fps, 270 frames (9.00 s) | same |
 | 4K still | 3840×2160 PNG | 3840×2160 PNG |
-| 1080p test render (frames 0–29) | PSNR 57.1 dB against the delivered file | 50.4 dB (V2) |
+| 1080p test render (frames 0–29) | PSNR 57.1 dB against the delivered file | 50.5 dB (V1) |
 
 The high PSNR values show that renders made from the ZIPs reproduce the delivered videos.
 
@@ -82,7 +82,32 @@ Round two fixed:
 - uneven pacing in Tube Bloom (a stall followed by a burst)
 - clipped highlights
 
-Final reviewer scores and remaining notes are in the section below.
+A third, independent review checked the final renders.
+
+| Deliverable | Score | Basis |
+|---|---|---|
+| 01 Emboss Circles V1 | 7/10 | Fidelity to reference A. Layout and timing match; motion curve correlation is 0.94. |
+| 02 Emboss Circles V2 | 8/10 | Credibility as an alternative. The look is clearly different and the concept is kept. |
+| 03 Tube Bloom V1 | 5/10 | Fidelity to reference B. See the note below. |
+| 04 Tube Bloom V2 | 7/10 | Credibility as an alternative. A convincing orbiting camera that stays true to the concept. |
+
+The reviewer flagged a nearly static middle section in 03 (frames 81–198). I fixed this after the review by speeding up the spin from 6 to 12 tube steps per loop.
+
+Mean frame-to-frame change, in 30-frame windows:
+
+| Window | Reference B | 03 before the fix | 03 after the fix |
+|---|---|---|---|
+| f0–29 | 9.0 | 5.0 | 6.3 |
+| f30–59 | 6.7 | 8.4 | 12.0 |
+| f60–89 | 6.2 | 4.2 | 7.9 |
+| f90–119 | 7.9 | 1.6 | 3.7 |
+| f120–149 | 7.2 | 2.6 | 6.3 |
+| f150–179 | 6.2 | 2.6 | 5.2 |
+| f180–209 | 9.9 | 4.0 | 8.0 |
+| f210–239 | 9.9 | 10.3 | 14.4 |
+| f240–269 | 12.2 | 6.3 | 7.5 |
+
+The average gap to the reference roughly halved, and both Tube Bloom videos were re-rendered with the fix. The reviewer found nothing that blocks delivery.
 
 **V2 choices.**
 
@@ -91,6 +116,6 @@ Final reviewer scores and remaining notes are in the section below.
 
 ## Known limitations
 
-- **A:** the shadows are slightly softer and wider than in the reference.
-- **B:** the reference's crossing grooves form tighter nested-diamond "eyes" than this weave does. The tubes are also a little chunkier than the reference's fine grooves, and the rim of the hole shows slight segmentation when it is wide open.
+- **A:** the shadows are softer and wider than the reference's tight navy contact shadows. The lens shapes at f78–84 are rounder than the reference's pointed ones. The bead squares fade out instead of shrinking to dots, and the slight warm tint and the alternating tile lighting are not reproduced.
+- **B:** the reference's crossing grooves form tighter nested-diamond "eyes" than this weave does. The tubes are also a little chunkier than the reference's fine grooves, and the rim of the hole shows slight segmentation when it is wide open. The pink phase uses a plain band instead of the reference's bead ring and chevron ribs. The middle of the clip is a little darker and greyer, and out-of-focus areas in V2 can look slightly streaky.
 - The stock-site watermark in reference B was intentionally not reproduced.
