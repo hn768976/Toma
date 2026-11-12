@@ -1,15 +1,19 @@
 # Tile Wave — Remotion project (4K)
 
-A flat pastel sheet of square tiles. Along a zig-zag "pixel staircase" path the
-tiles sink and tip over into curled, overlapping fins, forming a terraced
-valley whose floor glows (pink → violet → periwinkle → white → warm yellow),
-edged by a rim of raised, curling pink tiles. The valley opens from a slit
-(the lower-left end leading), holds briefly, closes with a flick and rests,
-looping every 134 frames (~4.47 s), the period measured from the reference.
+A flat pastel sheet of square tiles. Along a "lightning-bolt" zig-zag path
+(short grid-aligned runs and alternating jogs, plus a side branch) the tiles
+sink and tip over into curled, overlapping fins, forming a terraced valley
+whose floor glows (pink → violet → periwinkle → white → warm yellow), edged by
+a rim of raised, curling pink tiles. The valley opens from a slit (the
+lower-left end leading), holds briefly, then closes: whole columns of tiles are
+drawn out into long shingled blades across the band, which relax while the
+surface rests. The ends of the path lag the centre, so the sheet is never
+completely still. The cycle loops every 134 frames (~4.47 s), the period
+measured from the reference.
 
 | Composition   | Size        | FPS | Frames | Duration | Camera |
 |---------------|-------------|-----|--------|----------|--------|
-| `TileWave-V1` | 3840 × 2160 | 30  | 267    | 8.9 s    | Reference recreation: locked-off steep top-down view, grid rotated ~45°, horizontal lens shift |
+| `TileWave-V1` | 3840 × 2160 | 30  | 267    | 8.9 s    | Reference recreation: locked-off steep top-down view, band at ~60° on screen, horizontal lens shift |
 | `TileWave-V2` | 3840 × 2160 | 30  | 267    | 8.9 s    | Alternative camera angle + movement: low oblique tracking shot that travels along the valley with a slow orbit |
 
 ## Technology
@@ -36,7 +40,7 @@ src/index.ts                entry (registerRoot)
 src/Root.tsx                the two 4K compositions
 src/TileWave.tsx            React component: canvas + per-frame render
 src/variants.ts             timing, palette, cameras for V1/V2, blur settings
-src/scene/field.ts          grid, zig-zag path, valley/rim/flick animation, tile poses
+src/scene/field.ts          grid, lightning path, valley/rim/blade animation, tile poses
 src/scene/TileRenderer.ts   Three.js scene, shaders, accumulation pipeline
 remotion.config.ts          render defaults (H.264, yuv420p, CRF 16, GL backend)
 ```
