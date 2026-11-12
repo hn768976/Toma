@@ -36,12 +36,12 @@ Technology: Composition 1 uses **Three.js** (instanced meshes, soft shadow map, 
 
 ### Per-video measurements
 
-Luma is per-frame mean on a 0–255 scale. Motion is mean absolute frame-to-frame difference at 192×108.
+Luma is per-frame mean on a 0–255 scale. Motion is mean absolute frame-to-frame difference at 192×108; the value in brackets is the reference measured the same way.
 
 | Video | Bitrate | Luma mean [min..max] | Max luma step | Motion (ref) | Loop check |
 |---|---|---|---|---|---|
-| Pin V1 | PIN_V1_BITRATE | PIN_V1_LUMA | PIN_V1_JUMP | PIN_V1_MOTION | PIN_V1_LOOP |
-| Pin V2 | PIN_V2_BITRATE | PIN_V2_LUMA | PIN_V2_JUMP | PIN_V2_MOTION | n/a – camera move, no loop by design |
+| Pin V1 | 10.4 Mb/s | 151.3 [140.2..160.8] | 3.12 | 9.28 (10.34) | frame 0 vs 90: 0.52 → seamless 90-frame loop; no 45/30-frame repeat |
+| Pin V2 | 13.9 Mb/s | 145.9 [130.4..162.0] | 4.18 | 18.03 (10.34) – higher because of the camera move | n/a – camera move, no loop by design |
 | Tunnel V1 | 10.5 Mb/s | 106.3 [105.2..107.3] | 0.26 | 8.40 (8.61) | frame 0 vs 45: 0.45 → seamless 45-frame loop |
 | Tunnel V2 | 10.5 Mb/s | 79.5 [78.8..80.2] | 0.24 | 6.61 (8.61) | frame 0 vs 45: 0.49 → seamless 45-frame loop |
 
@@ -73,9 +73,12 @@ Each composition was compared against its reference frame by frame by an indepen
 **Pin Field Waves – V1: 6.5/10 after 4 passes (started at 4).**
 - **Fixed during review:** the camera (overhead, halftone look → low, wide perspective) and pin shape (needles → pills with stubs). Motion is now 9.5–10.0 against the reference's 11.0. The 90-frame loop is exact with no 45- or 30-frame repeat.
 - **Two defects found and removed:** foreground "boiling" and a visible pin-grid edge.
-- **Residual differences:** the near field moves in regular wave crests where the reference swells more slowly. Raised areas form ridges rather than the reference's oval pools. The image was about 13 levels darker; exposure was lifted for the final render.
+- **Residual differences:**
+  - The near field moves in regular wave crests (about every 13 frames) where the reference swells more slowly.
+  - Raised areas form ridges rather than the reference's oval pools.
+  - The image is about 13 levels darker than the reference (mean RGB 148/151/155 vs 162/162/164), and the far field is light grey rather than near-white.
 
-**Pin Field Waves – V2: clearly distinguishable.** The camera opens high and nearly overhead, orbits about 95° and cranes down to a low grazing angle, with a smooth cosine ease and no jerks. No grid edge, empty plate or horizon is visible. The reviewer found one defect: a faceted seam where pin heads meet stalks at the low angle. It was fixed geometrically (stalk matches the head radius with aligned vertices) and both pin-field versions were re-rendered.
+**Pin Field Waves – V2: clearly distinguishable.** The camera opens high and nearly overhead, orbits about 95° and cranes down to a low grazing angle, with a smooth cosine ease and no jerks. No grid edge, empty plate or horizon is visible. The reviewer found one defect: a faceted seam where pin heads meet stalks at the low angle. It was fixed geometrically (stalk matches the head radius with aligned vertices), both pin-field versions were re-rendered, and the final check confirmed the seam is gone with no new artifacts.
 
 ## Summary
 
