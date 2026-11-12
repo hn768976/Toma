@@ -1,7 +1,7 @@
 // WebGL 2 fragment shader that synthesises a holographic / prismatic light-leak
-// field: large overlapping colour washes (some prism-cut), soft out-of-focus
-// prism bars and bokeh blobs with chromatic fringes, hot white flares and soft
-// shadow bands over a mauve base.
+// field: large overlapping colour washes, soft out-of-focus prism bars and
+// bokeh blobs - each carrying a spectral gradient and chromatic fringes - hot
+// white flares, soft shadow bands and light film grain over a mauve base.
 //
 // uMode 0 = flat, screen-aligned camera (Version 1 - matches the reference)
 // uMode 1 = low-angle perspective tracking shot across the foil (Version 2)
@@ -23,7 +23,7 @@ uniform vec4  uCamB;   // persp: pitch, roll, focal, fogDensity
 out vec4 outColor;
 
 const float TAU = 6.28318530718;
-const float LIGHT_GAIN = 1.7;
+const float LIGHT_GAIN = 1.5;
 
 // Element tiling: every element lives in a periodic tile and is evaluated at its
 // nearest periodic image. Each element's contribution is exactly zero beyond a
@@ -73,6 +73,24 @@ vec3 spectrum(float x) {
   return vec3(e.x + 0.3 * e.y, 0.68 * e.z, e.w + 0.28 * e.y) * 1.15;
 }
 
+// Normalised spectral colour (full brightness at every hue)
+vec3 spec(float x) {
+  vec3 c = spectrum(x);
+  c /= max(max(c.r, c.g), max(c.b, 0.35));
+  return mix(c, vec3(0.95, 0.82, 0.9), 0.08);   // slightly milky, like light through frosted foil
+}
+// Palette: centre position on the spectrum for a hash value (-1 = white)
+float hueOf(float k) {
+  if (k < 0.26) return 0.10;   // red-orange
+  if (k < 0.44) return 0.19;   // orange
+  if (k < 0.52) return 0.29;   // yellow
+  if (k < 0.58) return -1.0;   // pinkish white
+  if (k < 0.65) return 0.45;   // green
+  if (k < 0.80) return 0.70;   // blue
+  if (k < 0.87) return 0.84;   // violet
+  return 0.5;                  // full rainbow
+}
+
 // C1-smooth window that is exactly 0 at distance >= E
 float win(float d, float E) { return 1.0 - smoothstep(0.55 * E, E, d); }
 
@@ -109,8 +127,7 @@ vec2 placeAt(Slot s, vec2 P, float vmax, float j, vec2 g) {
 }
 
 // Large, smeared, overlapping colour washes (1-4 dominate the frame at once).
-// Some are cut by a crisp prism edge with an RGB fringe, some carry a blown-out
-// white core.
+// Each carries a spectral gradient; some carry a blown-out white core.
 void washes(inout Field F, vec2 uv, float t, float fp) {
   for (int i = 0; i < 16; i++) {
     Slot s = slot(float(i), float(i), 16.0, t, 2.6, 1.9);
@@ -123,48 +140,29 @@ void washes(inout Field F, vec2 uv, float t, float fp) {
     vec2 r = rot2(q, s.h2.z * TAU + (s.h2.w - 0.5) * 0.4 * (s.ph - 0.5) * s.T);
     vec2 e = r / vec2(rx, ry);
     float I = exp(-dot(e, e) * 1.05) * win(d, E) * plateau(s.ph) * (0.32 + 0.28 * s.h3.y);
-    I *= 0.55 + 0.75 * vnoise(vec2(e.x * 0.8, e.y * 5.0) + s.h3.zw * 40.0); // smeared striations
-    vec3 cut = vec3(1.0);
-    if (s.h1.w < 0.4) {
-      // crisp prism edge across the wash, brightest right at the edge
-      float cp = (s.h2.w - 0.5) * 0.8 * ry;
-      float sg = s.h3.z < 0.5 ? 1.0 : -1.0;
-      float y = (r.y - cp + 0.5 * (s.h1.z - 0.5) * r.x * r.x / rx) * sg; // gently curved edge
-      float bs = 0.005 + 1.2 * fp;
-      float fr = 0.006 + 0.006 * s.h3.w;
-      cut = 0.3 + 0.7 * vec3(smoothstep(-bs, bs, y + fr), smoothstep(-bs, bs, y), smoothstep(-bs, bs, y - fr));
-      I *= 1.0 + 0.7 * exp(-y * y / (0.0016 + 0.03 * ry * ry));
-    }
+    I *= 0.7 + 0.45 * vnoise(vec2(e.x * 0.6, e.y * 2.2) + s.h3.zw * 40.0); // smeared, uneven
     float k = s.h3.x;
-    vec3 c;
-    if (k < 0.07) c = vec3(0.24, 0.08, 1.0);         // violet
-    else if (k < 0.18) c = vec3(0.05, 0.30, 1.0);    // blue
-    else if (k < 0.40) c = vec3(1.0, 0.16, 0.08);    // red-orange
-    else if (k < 0.53) c = vec3(1.0, 0.42, 0.06);    // orange
-    else if (k < 0.61) c = vec3(1.0, 0.80, 0.12);    // yellow
-    else if (k < 0.71) c = vec3(0.20, 0.90, 0.25);   // green
-    else if (k < 0.73) c = vec3(0.10, 0.80, 0.70);   // teal
+    float h0;
+    if (k < 0.07) h0 = 0.84;          // violet
+    else if (k < 0.18) h0 = 0.70;     // blue
+    else if (k < 0.40) h0 = 0.10;     // red-orange
+    else if (k < 0.53) h0 = 0.19;     // orange
+    else if (k < 0.61) h0 = 0.29;     // yellow
+    else if (k < 0.71) h0 = 0.45;     // green
+    else if (k < 0.73) h0 = 0.56;     // teal
     else if (k < 0.81) { F.dark += I * 2.0; continue; } // shadow
-    else c = spectrum(0.5 + 0.42 * clamp(r.x / rx, -1.2, 1.2)); // rainbow sheet
-    F.light += c * cut * I;
-    if (s.h3.w > 0.78) F.white += exp(-dot(e, e) * 6.0) * I * cut.g * 1.2; // blown-out core
+    else h0 = -1.0;                   // full rainbow sheet
+    // dispersion: the hue runs across the wash like light through a prism
+    float u = clamp((s.h1.w < 0.5 ? e.x : e.y) * 0.45, -0.6, 0.6);
+    vec3 c = h0 < 0.0 ? spec(0.5 + 0.8 * u) : spec(h0 + (0.25 + 0.3 * s.h1.z) * u);
+    F.light += c * I;
+    if (s.h3.w > 0.78) F.white += exp(-dot(e, e) * 6.0) * I * 1.2; // blown-out core
   }
 }
 
-// Soft out-of-focus prism bars: fat rounded bands of light. Each colour
-// channel's copy is displaced along the band normal (prism dispersion seen out
-// of focus), giving rainbow fringes on soft edges. A minority keep one crisp
-// caustic edge.
-vec3 barColor(float k) {
-  if (k < 0.26) return vec3(1.0, 0.20, 0.07);       // red-orange
-  if (k < 0.44) return vec3(1.0, 0.48, 0.08);       // orange
-  if (k < 0.52) return vec3(1.0, 0.82, 0.22);       // yellow
-  if (k < 0.58) return vec3(1.0, 0.78, 0.84);       // pinkish white
-  if (k < 0.65) return vec3(0.28, 0.95, 0.32);      // green
-  if (k < 0.80) return vec3(0.12, 0.35, 1.0);       // blue
-  if (k < 0.87) return vec3(0.45, 0.14, 1.0);       // violet
-  return vec3(-1.0);                                // rainbow across the band
-}
+// Soft out-of-focus prism bars: fat rounded bands of light whose hue runs
+// across or along the band (dispersion). Each colour channel's copy is also
+// displaced along the band normal, giving rainbow fringes on the soft edges.
 void bars(inout Field F, vec2 uv, float t, float fp) {
   for (int i = 0; i < 8; i++) {
     Slot s = slot(float(i) + 10.0, float(i), 8.0, t, 1.8, 1.8);
@@ -179,28 +177,21 @@ void bars(inout Field F, vec2 uv, float t, float fp) {
     float curv = (s.h3.z - 0.5) * 0.7;
     float xs = r.y + curv * r.x * r.x;
     float soft = 0.5 * w + 0.02;                    // defocused edge
-    bool crisp = s.h1.w < 0.3;
-    float side = s.h3.w < 0.5 ? 1.0 : -1.0;
     float disp = 0.22 * w + 0.008;                  // chromatic displacement
     float ax = max(abs(r.x) - Lh, 0.0);
     vec3 m;
     for (int ch = 0; ch < 3; ch++) {
       float y = xs + disp * (float(ch) - 1.0);
       float d = length(vec2(ax, y)) - w;
-      float b = (crisp && y * side > 0.0 && ax == 0.0) ? 0.004 + 1.2 * fp : soft;
-      m[ch] = 1.0 - smoothstep(-b, b, d);
+      m[ch] = 1.0 - smoothstep(-soft, soft, d);
     }
     float life = bell(s.ph) * win(dq, 0.75) * (0.36 + 0.3 * s.h1.y);
     life *= 0.75 + 0.5 * vnoise(vec2(r.x * 2.2, xs * 4.0) + s.h2.xy * 50.0); // uneven brightness
-    vec3 body = barColor(s.h3.x);
-    vec3 col;
-    if (body.r < 0.0) {
-      float hx = clamp(0.5 + 0.5 * xs / w * (s.h1.z < 0.5 ? 1.0 : -1.0), 0.0, 1.0);
-      col = spectrum(hx) * m.g;
-    } else {
-      col = mix(body, vec3(1.0), 0.06) * m;
-    }
-    F.light += col * life;
+    float h0 = hueOf(s.h3.x);
+    float span = s.h3.x >= 0.87 ? 0.9 : 0.25 + 0.35 * s.h2.x;
+    float u = s.h1.z < 0.5 ? clamp(xs / w, -1.0, 1.0) * 0.5 : clamp(r.x / (Lh + w), -1.0, 1.0) * 0.5;
+    vec3 body = h0 < 0.0 ? vec3(1.0, 0.8, 0.86) : spec(h0 + span * u);
+    F.light += mix(body, vec3(1.0), 0.06) * m * life;
     if (s.h1.x > 0.85) F.white += m.g * exp(-xs * xs / (0.15 * w * w)) * life * 0.5; // hot centre line
   }
 }
@@ -223,8 +214,9 @@ void orbs(inout Field F, vec2 uv, float t, float fp) {
       m[ch] = 1.0 - smoothstep(R - soft, R + soft, length(qq));
     }
     float life = bell(s.ph) * win(dq, 0.6) * (0.32 + 0.3 * s.h1.y);
-    vec3 body = barColor(s.h3.x);
-    if (body.r < 0.0) body = vec3(1.0, 0.9, 0.85);
+    float h0 = hueOf(s.h3.x);
+    float u = clamp(dot(q, vec2(cos(ang), sin(ang))) / R, -1.0, 1.0) * 0.5;
+    vec3 body = h0 < 0.0 ? vec3(1.0, 0.9, 0.85) : spec(h0 + (0.2 + 0.3 * s.h2.w) * u);
     F.light += mix(body, vec3(1.0), 0.08) * m * life;
     if (s.h3.w > 0.85) F.white += m.g * life * 0.4;
   }
@@ -273,9 +265,9 @@ vec3 shade(vec2 uv, float t, float fp) {
   vec3 col = base * (1.0 - 0.75 * lw) + light;
   col = 1.0 - exp(-col * 1.75);                     // filmic shoulder
   float luma = dot(col, vec3(0.299, 0.587, 0.114));
-  col = max(mix(vec3(luma), col, 1.3), 0.0);        // restore saturation lost in the shoulder
+  col = max(mix(vec3(luma), col, 1.22), 0.0);        // restore saturation lost in the shoulder
   // soft highlight roll-off for the specular glows (no flat clipped centres)
-  col = mix(col, vec3(1.0, 0.97, 0.96), (1.0 - exp(-F.white * 1.6)) * 0.92);
+  col = mix(col, vec3(1.0, 0.98, 0.97), (1.0 - exp(-F.white * 1.6)) * 0.97);
   return col;
 }
 
@@ -324,6 +316,10 @@ void main() {
   // triangular dither to avoid banding in the soft gradients
   float dth = hash12(gl_FragCoord.xy + fract(t) * 91.7) + hash12(gl_FragCoord.yx * 1.37 + 4.1) - 1.0;
   col += dth * 1.5 / 255.0;
+  // light film grain, refreshed every frame
+  float gl = dot(col, vec3(0.299, 0.587, 0.114));
+  float gr = hash12(gl_FragCoord.xy * 0.731 + fract(t * 7.13) * 517.0) + hash12(gl_FragCoord.yx * 1.13 + fract(t * 3.71) * 211.0) - 1.0;
+  col += gr * 0.016 * (0.6 + 0.8 * gl);
 
   outColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
