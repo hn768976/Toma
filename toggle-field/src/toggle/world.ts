@@ -16,7 +16,7 @@ export const KNOB_T = 0.07;
 const DIAG = Math.PI / 4;
 
 type Flip = { start: number; dur: number };
-type Turn = { start: number; dur: number; delta: number };
+type Turn = { start: number; dur: number; delta: number; pivot: boolean };
 
 export type KnobDef = {
   color: string;
@@ -59,24 +59,28 @@ const makeFlips = (
 };
 
 /**
- * Rotation rhythm measured from the reference (edge-orientation histogram per
- * frame): two interleaved groups of switches swing 90° clockwise around their
- * knob onto the opposite diagonal, hold, then swing another 90° back onto the
- * main diagonal. A transition happens every ~20 frames, alternating groups.
- * Centre frames of each group's swings:
+ * Rotation rhythm measured from the reference (per-frame edge-orientation
+ * histogram + frame inspection):
+ *  - every ~40 frames ALL switches swing 90° clockwise around their knob in
+ *    sync, alternating main diagonal -> (horizontal) -> other diagonal ->
+ *    (vertical) -> main diagonal;
+ *  - ~20 frames after each global swing, patches of switches spin a half-turn
+ *    in place, so something turns on every ~20-frame beat.
  */
-const GROUP_SWINGS: Record<"A" | "B", number[]> = {
-  A: [30, 70, 108, 152, 190, 230, 268, 312],
-  B: [50, 90, 130, 168, 210, 250, 288, 314],
-};
-const OPENING_SWING = 8; // pieces that start on the other diagonal return here
+const GLOBAL_SWINGS = [30, 70, 110, 150, 190, 230, 270, 312];
+const PATCH_SPINS = [8, 50, 90, 130, 168, 210, 250, 290];
 const SWING_DUR = 12;
-const ROTOR_SHARE = 0.6;
+const SPIN_DUR = 14;
+const ROTOR_SHARE = 0.92;
 
 const assignRotations = (pieces: PieceDef[], rand: ReturnType<typeof createRandom>) => {
-  const rowCounter = new Map<number, number>();
-  const ordered = [...pieces].sort((a, b) => a.row - b.row || a.x + a.y - (b.x + b.y));
-  for (const p of ordered) {
+  const patches = PATCH_SPINS.map(() => ({
+    fx: rand.range(0.45, 0.8),
+    fy: rand.range(0.45, 0.8),
+    px: rand.range(0, Math.PI * 2),
+    py: rand.range(0, Math.PI * 2),
+  }));
+  for (const p of pieces) {
     const isPill = p.width <= TRACK_W * 1.01 && p.length > TRACK_W * 1.5;
     if (!isPill || rand.next() > ROTOR_SHARE) {
       // static pieces form the bottom sheet
@@ -84,21 +88,24 @@ const assignRotations = (pieces: PieceDef[], rand: ReturnType<typeof createRando
       p.z = rand.range(0, 0.012);
       continue;
     }
-    const n = rowCounter.get(p.row) ?? 0;
-    rowCounter.set(p.row, n + 1);
-    const group = n % 2 === 0 ? "A" : "B";
-    // each group owns three layers (by row) so swinging pieces pass over/under
-    p.layer = (group === "A" ? 4 : 1) + (((p.row % 3) + 3) % 3);
+    // switches are stacked by row so swinging rows pass over/under each other
+    p.layer = 1 + (((p.row % 3) + 3) % 3);
     p.z = p.layer * LAYER_H + rand.range(0, 0.012);
-    const wave = (p.x + p.y) * 0.25;
-    if (rand.next() < 0.3) {
-      p.startAngle = Math.PI / 2;
-      p.turns.push({ start: OPENING_SWING - SWING_DUR / 2 + wave * 0.5 + rand.range(-1, 1), dur: SWING_DUR, delta: -Math.PI / 2 });
+    const wave = -(p.x + p.y) * 0.18; // the swing ripples from top-right to bottom-left
+    const events: Turn[] = [];
+    for (const c of GLOBAL_SWINGS) {
+      events.push({ start: c - SWING_DUR / 2 + wave + rand.range(-1.2, 1.2), dur: SWING_DUR * rand.range(0.92, 1.08), delta: -Math.PI / 2, pivot: true });
     }
-    for (const c of GROUP_SWINGS[group]) {
-      p.turns.push({ start: c - SWING_DUR / 2 + wave + rand.range(-1.5, 1.5), dur: SWING_DUR * rand.range(0.92, 1.08), delta: -Math.PI / 2 });
-    }
-    // knob flips never overlap a swing (the knob is the pivot)
+    PATCH_SPINS.forEach((c, i) => {
+      const q = patches[i];
+      const field = Math.sin(p.x * q.fx + q.px) * Math.sin(p.y * q.fy + q.py);
+      if (field > 0.15 && rand.next() < 0.85) {
+        events.push({ start: c - SPIN_DUR / 2 + wave + rand.range(-1.5, 1.5), dur: SPIN_DUR * rand.range(0.92, 1.08), delta: -Math.PI, pivot: false });
+      }
+    });
+    events.sort((a, b) => a.start - b.start);
+    p.turns.push(...events);
+    // knob flips never overlap a turn (the knob is the pivot)
     if (p.knob) {
       p.knob.flips = p.knob.flips.filter(
         (f) => !p.turns.some((t) => f.start < t.start + t.dur + 2 && f.start + f.dur > t.start - 2),
@@ -233,7 +240,7 @@ export const pieceTurn = (piece: PieceDef, frame: number) => {
   for (const t of piece.turns) {
     const raw = clamp((frame - t.start) / t.dur);
     if (raw <= 0) break;
-    const k = piece.knob ? knobPosition(piece.knob, t.start) * travel : 0;
+    const k = piece.knob && t.pivot ? knobPosition(piece.knob, t.start) * travel : 0;
     const next = angle + t.delta * easeInOutSine(raw);
     ox += k * (Math.cos(angle) - Math.cos(next));
     oy += k * (Math.sin(angle) - Math.sin(next));
