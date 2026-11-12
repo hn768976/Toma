@@ -189,10 +189,10 @@ void main(){
       float dens = smoothstep(0.07, -0.2, v.x);
       if (dens < 0.003) continue;
       // Thin out into wisps as it cools; dissipate with uSmoke.
-      dens = max(0.0, dens - uThin*(1.15 - v.y)*1.2);
+      dens = max(0.0, dens - uThin*(1.15 - v.y)*1.5);
       // Smoke stays a ring: the outer fringe thins away first, leaving dark corners.
       float rr = length(q.xy + gWarp) / max(uR, 0.05);
-      dens *= 1.0 - uThin*smoothstep(0.45, 0.88, rr);
+      dens *= 1.0 - min(1.0, uThin*2.5)*smoothstep(mix(0.4, 0.22, uThin), mix(0.82, 0.6, uThin), rr);
       float smokeA = mix(1.0, uSmoke, cool);
       dens *= smokeA;
       if (dens < 0.003) continue;
