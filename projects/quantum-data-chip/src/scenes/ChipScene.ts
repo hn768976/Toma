@@ -8,9 +8,9 @@ import { BLUE, EMBER, ChipPalette, col } from "./palettes";
 
 export type ChipVariant = "v1" | "v2";
 
-const STRIPS = 10; // data bands on each side of the centre band
+const STRIPS = 16; // data bands on each side of the centre band
 const LENGTH = 26; // half length of every strip along X
-const CHIP = 0.5; // chip half size
+const CHIP = 0.75; // chip half size
 
 export const createChipScene = (variant: ChipVariant): SceneSpec => {
   const pal: ChipPalette = variant === "v1" ? BLUE : EMBER;
@@ -31,7 +31,7 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
 
   // ---- data bands ------------------------------------------------------------
   // Centre band (holds the chip): "fader" ticks = thin rung + bright pill.
-  const CENTER_HALF = 0.58;
+  const CENTER_HALF = 0.87;
   const centreStart = 2.45;
   const centreSpeed = 9.0;
   for (const off of [-CENTER_HALF - 0.05, CENTER_HALF + 0.05]) {
@@ -44,11 +44,11 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
     if (Math.abs(x) < CHIP + 0.12) continue;
     const t0 = centreStart + Math.abs(x) / centreSpeed + range(rng, 0, 0.06);
     segs.push({
-      x0: x, z0: -0.47, x1: x, z1: 0.47, w: 0.014, color: tick, a: 0.7,
+      x0: x, z0: -0.8 * CENTER_HALF, x1: x, z1: 0.8 * CENTER_HALF, w: 0.014, color: tick, a: 0.62,
       tIn: t0, inDur: 0.35, grow: 1, anchor: 0.5,
       twAmp: 0.12, twFreq: range(rng, 1, 3), twPhase: range(rng, 0, 6.28),
     });
-    const pc = ((nA(x * 0.7 + 3) - 0.5) * 0.35 + (rng() - 0.5) * 0.45);
+    const pc = ((nA(x * 0.7 + 3) - 0.5) * 0.5 + (rng() - 0.5) * 0.65);
     const pl = 0.045 + 0.05 * rng();
     segs.push({
       x0: x, z0: pc - pl, x1: x, z1: pc + pl, w: 0.034, color: tickBright, a: 0.8,
@@ -69,7 +69,7 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
       const dirOut = side * flip; // direction the rows grow from the edge
       const start = 3.3 + 0.28 * (k - 1) + range(rng, 0, 0.15);
       const speed = 7 + range(rng, 0, 2);
-      const fall = k === 1 ? 1 : k === 2 ? 0.85 : 0.7;
+      const fall = k === 1 ? 1 : k === 2 ? 0.88 : 0.78;
       const revealAt = (x: number) => start + Math.abs(x) / speed + range(rng, 0, 0.08);
       const nz = side * 13.7 + k * 5.1;
       segs.push({
@@ -81,17 +81,17 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
       const maxUnits = Math.floor(BAND_W / (DASH + GAP));
       for (let x = -LENGTH; x <= LENGTH; x += 0.09) {
         const t0 = revealAt(x);
-        const env = 0.68 + 0.32 * Math.pow(nC(x * 1.3 + nz), 1.1);
+        const env = 0.86 + 0.14 * nC(x * 1.3 + nz);
         const units = Math.max(2, Math.round(maxUnits * env + (rng() - 0.5) * 2));
         for (let u = 0; u < units; u++) {
-          if (rng() < 0.05) continue;
+          if (rng() < 0.02) continue;
           const p = 0.03 + u * (DASH + GAP);
           const len = rng() < 0.35 ? DASH * 2 + GAP : DASH;
           if (p + len > BAND_W) break;
           const bright = rng() < 0.16;
           segs.push({
             x0: x, z0: edge + dirOut * p, x1: x, z1: edge + dirOut * (p + len), w: 0.017,
-            color: bright ? tickBright : tick, a: (bright ? 1.25 : 1.0) * fall,
+            color: bright ? tickBright : tick, a: (bright ? 1.1 : 0.86) * fall,
             tIn: t0 + p * 0.3, inDur: 0.45,
             twAmp: 0.18, twFreq: range(rng, 0.5, 3), twPhase: range(rng, 0, 6.28),
           });
@@ -149,8 +149,8 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
       });
     }
   // small satellite tiles around the core
-  for (const [sx, sz] of [[-1.25, 0.15], [1.2, -0.2], [-0.15, 1.05], [0.25, -1.05], [1.0, 0.85], [-1.0, -0.8]]) {
-    const h = 0.11;
+  for (const [sx, sz] of [[-1.85, 0.2], [1.8, -0.3], [-0.2, 1.55], [0.35, -1.55], [1.5, 1.25], [-1.5, -1.2]]) {
+    const h = 0.15;
     chipSegs.push({ x0: sx - h, z0: sz, x1: sx + h, z1: sz, w: 2 * h, color: tickBright, a: 0.14, tIn: 1.3 + range(rng, 0, 0.8), inDur: 0.5, y: 0.01 });
     for (const [a0, b0, a1, b1] of [[-h, -h, h, -h], [h, -h, h, h], [h, h, -h, h], [-h, h, -h, -h]])
       chipSegs.push({ x0: sx + a0, z0: sz + b0, x1: sx + a1, z1: sz + b1, w: 0.008, color: chipC, a: 0.35, tIn: 1.4 + range(rng, 0, 0.8), inDur: 0.4, grow: 1, anchor: 0, y: 0.01 });
@@ -184,10 +184,10 @@ export const createChipScene = (variant: ChipVariant): SceneSpec => {
     const h = 0.32;
     chipSegs.push({ x0: sx - h, z0: sz, x1: sx + h, z1: sz, w: 2 * h, color: tickBright, a: 0.06, tIn: t0, inDur: 0.6, y: 0.01 });
     for (const [a0, b0, a1, b1] of [[-h, -h, h, -h], [h, -h, h, h], [h, h, -h, h], [-h, h, -h, -h], [0, -h, 0, h], [-h, 0, h, 0]])
-      chipSegs.push({ x0: sx + a0, z0: sz + b0, x1: sx + a1, z1: sz + b1, w: 0.014, color: chipC, a: 0.55, tIn: t0 + 0.1, inDur: 0.5, grow: 1, anchor: 0, y: 0.01 });
+      chipSegs.push({ x0: sx + a0, z0: sz + b0, x1: sx + a1, z1: sz + b1, w: 0.014, color: tickBright, a: 0.5, tIn: t0 + 0.1, inDur: 0.5, grow: 1, anchor: 0, y: 0.01 });
     for (const i of [-1, 1]) for (const j of [-1, 1]) {
       const cx = sx + i * h * 0.5, cz = sz + j * h * 0.5;
-      chipSegs.push({ x0: cx - h * 0.35, z0: cz, x1: cx + h * 0.35, z1: cz, w: h * 0.7, color: tickBright, a: 0.11, tIn: t0 + 0.2, inDur: 0.4, y: 0.01 });
+      chipSegs.push({ x0: cx - h * 0.35, z0: cz, x1: cx + h * 0.35, z1: cz, w: h * 0.7, color: tick, a: 0.3, tIn: t0 + 0.2, inDur: 0.4, y: 0.01 });
     }
   }
 
