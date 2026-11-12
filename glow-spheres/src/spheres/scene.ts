@@ -88,7 +88,7 @@ export const createSphereStage =
     const tanV = Math.tan(THREE.MathUtils.degToRad(22.5));
     const aspect = width / height;
     const pockets = LIGHTS.map((def) => {
-      const light = new THREE.PointLight(palette.coreLight, 0, 3.5, 2); // local light
+      const light = new THREE.PointLight(palette.coreLight, 0, 3.0, 2); // local light
       scene.add(light);
       return { def, light, pos: new THREE.Vector3(), energy: 0 };
     });
@@ -224,9 +224,9 @@ export const createSphereStage =
     const spinQ = new THREE.Quaternion();
     const dimTint = new THREE.Color(palette.dimTint);
     const WHITE = new THREE.Color("#ffffff");
-    const SIGMA2 = 2.3 * 2.3;
+    const SIGMA2 = 2.05 * 2.05;
     // faint residual light so unlit spheres read as dim shapes, not black holes
-    const FLOOR = 0.009;
+    const FLOOR = 0.005;
     const darkEmissive = new THREE.Color(palette.darkSphere);
 
     return {
@@ -245,7 +245,7 @@ export const createSphereStage =
           p.pos.set(sx * d * tanV * aspect, sy * d * tanV, p.def.depth);
           p.energy = Math.max(0, track(p.def.energy, frame)) * (p.def.gain ?? 1) * fl;
           p.light.position.copy(p.pos);
-          p.light.intensity = p.energy * 10;
+          p.light.intensity = p.energy * 11;
           lvl = Math.max(lvl, p.energy);
         }
         // dim fill follows the light level so the clip starts/ends in darkness
@@ -268,8 +268,8 @@ export const createSphereStage =
               glow += p.energy * Math.max(0, (Math.exp(-d2 / SIGMA2) - 0.12) / 0.88);
             }
             // weak glow is saturated (coloured light), strong glow burns to white
-            b.material.emissive.copy(dimTint).lerp(WHITE, Math.min(1, Math.max(0, (glow - 0.08) / 0.55)));
-            b.material.emissiveIntensity = glow * 2.7;
+            b.material.emissive.copy(dimTint).lerp(WHITE, Math.min(1, Math.max(0, (glow - 0.2) / 0.6)));
+            b.material.emissiveIntensity = glow * 5.0;
           }
         }
         grade.uniforms.seed.value = (frame * 7.31) % 100;

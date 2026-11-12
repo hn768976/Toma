@@ -18,18 +18,18 @@ export const REFERENCE_PALETTE: SpherePalette = {
   background: "#020009",
   contourLine: "#160b46",
   stripes: [
-    ["#fbf2fd", "#b263f7", "#e2b6fb", "#a052f2"],
-    ["#f6e8ff", "#9b55ee", "#d29ef9", "#8446e0"],
-    ["#fbf2fd", "#bf6ff8", "#9a7cf3", "#ead0fc"],
-    ["#d7a5f9", "#6b48c0", "#a98cf2", "#8a55e6"],
+    ["#f3c9ff", "#b04cf6", "#dc9cff", "#9a3cee"],
+    ["#ecc0ff", "#9640ea", "#cf88fb", "#7f34dc"],
+    ["#f3c9ff", "#bd58f8", "#9468f0", "#e3b0ff"],
+    ["#d696fb", "#6a3cc0", "#a678f2", "#8a44e6"],
   ],
   darkSphere: "#221a58",
   darkSpecular: "#6b4fd8",
-  coreLight: "#c09aff",
+  coreLight: "#c879ff",
   fill: "#3a2a8f",
-  streakTint: "#7a64ff",
+  streakTint: "#9a5cff",
   shard: "#251a5c",
-  dimTint: "#5b3fd6",
+  dimTint: "#9a46ee",
 };
 
 /** Version 2: electric cyan / teal – same mood, clearly different palette. */
