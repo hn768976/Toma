@@ -1,0 +1,6 @@
+node_modules/
+build/
+out/
+refs/
+*.mp4
+!public/*.mp4
