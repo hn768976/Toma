@@ -104,7 +104,7 @@ export const createSphereStage =
       color: palette.darkSphere,
       roughness: 0.3,
       metalness: 0.0,
-      emissive: new THREE.Color(palette.darkSphere).multiplyScalar(0.05),
+      emissive: new THREE.Color(palette.darkSphere).multiplyScalar(0.05), // scaled per frame (FLOOR)
     });
     // thin irregular flake (a shard of a broken shell)
     const shardGeo = new THREE.BufferGeometry();
@@ -224,7 +224,10 @@ export const createSphereStage =
     const spinQ = new THREE.Quaternion();
     const dimTint = new THREE.Color(palette.dimTint);
     const WHITE = new THREE.Color("#ffffff");
-    const SIGMA2 = 2.0 * 2.0;
+    const SIGMA2 = 2.3 * 2.3;
+    // faint residual light so unlit spheres read as dim shapes, not black holes
+    const FLOOR = 0.009;
+    const darkEmissive = new THREE.Color(palette.darkSphere);
 
     return {
       render: (frame: number) => {
@@ -242,13 +245,14 @@ export const createSphereStage =
           p.pos.set(sx * d * tanV * aspect, sy * d * tanV, p.def.depth);
           p.energy = Math.max(0, track(p.def.energy, frame)) * (p.def.gain ?? 1) * fl;
           p.light.position.copy(p.pos);
-          p.light.intensity = p.energy * 9;
+          p.light.intensity = p.energy * 10;
           lvl = Math.max(lvl, p.energy);
         }
         // dim fill follows the light level so the clip starts/ends in darkness
         const fade = Math.max(0, Math.min(1, frame / 6, (fps * 8.3 - frame) / 10));
         ambient.intensity = 0.006 * fade;
         fill.intensity = 0.03 * lvl * fade;
+        darkMat.emissive.copy(darkEmissive).multiplyScalar(0.05 + 3.5 * FLOOR * fade);
 
         for (const b of bodies) {
           b.mesh.position.copy(b.base).addScaledVector(FLOW, t);
@@ -256,7 +260,7 @@ export const createSphereStage =
           spinQ.setFromAxisAngle(b.spinAxis, b.spin * t + b.phase);
           b.mesh.quaternion.copy(spinQ).multiply(b.baseQuat);
           if (b.material) {
-            let glow = 0;
+            let glow = FLOOR * fade;
             for (const p of pockets) {
               if (p.energy <= 0) continue;
               const d2 = b.mesh.position.distanceToSquared(p.pos);
@@ -265,7 +269,7 @@ export const createSphereStage =
             }
             // weak glow is saturated (coloured light), strong glow burns to white
             b.material.emissive.copy(dimTint).lerp(WHITE, Math.min(1, Math.max(0, (glow - 0.08) / 0.55)));
-            b.material.emissiveIntensity = glow * 2.5;
+            b.material.emissiveIntensity = glow * 2.7;
           }
         }
         grade.uniforms.seed.value = (frame * 7.31) % 100;

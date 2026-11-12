@@ -16,7 +16,7 @@ export type SpherePalette = {
 export const REFERENCE_PALETTE: SpherePalette = {
   name: "ultraviolet",
   background: "#020009",
-  contourLine: "#0a0524",
+  contourLine: "#160b46",
   stripes: [
     ["#fbf2fd", "#b263f7", "#e2b6fb", "#a052f2"],
     ["#f6e8ff", "#9b55ee", "#d29ef9", "#8446e0"],
@@ -36,7 +36,7 @@ export const REFERENCE_PALETTE: SpherePalette = {
 export const CYAN_PALETTE: SpherePalette = {
   name: "electric-cyan",
   background: "#000508",
-  contourLine: "#02141b",
+  contourLine: "#05283a",
   stripes: [
     ["#f0feff", "#18c8e6", "#9ef3ff", "#0f9fc0"],
     ["#e4fbff", "#1b84c9", "#7fe3f7", "#136aa8"],
