@@ -194,10 +194,8 @@ void main() {
   float onT = vData.z;
   float rate = vData.w;
 
-  // switch-on with a short electrical flicker
-  float on = step(onT, uTime);
-  float flick = step(0.45, h21(vec2(seed * 91.0, floor(uTime * 24.0))));
-  on *= mix(flick, 1.0, smoothstep(onT + 0.05, onT + 0.35, uTime));
+  // smooth power-on ramp (no frame-to-frame blinking)
+  float on = smoothstep(onT, onT + 0.4, uTime);
 
   vec3 col;
   if (vN.z > 0.5) {
