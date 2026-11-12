@@ -77,8 +77,16 @@ const noiseCanvas = (w: number, h: number, cell: number, seed: number, octaves: 
 };
 
 /** Builds the static print texture once per resolution (deterministic). */
-export const buildPaper = (w: number, h: number, pal: PaperPalette): PaperLayers => {
-  const H = h;
+export const buildPaper = (
+  w: number,
+  h: number,
+  pal: PaperPalette,
+  /** output frame size: sets the texture scale and the vignette canvas
+   *  (the texture itself may be larger, e.g. to rotate it under the frame) */
+  viewW = w,
+  viewH = h,
+): PaperLayers => {
+  const H = viewH;
   const rnd = mulberry32(1234);
 
   // ---- base paper with mottling ------------------------------------------
@@ -95,7 +103,7 @@ export const buildPaper = (w: number, h: number, pal: PaperPalette): PaperLayers
   b.drawImage(mott, 0, 0, w, h);
   b.restore();
   b.save();
-  b.globalAlpha = 0.25;
+  b.globalAlpha = 0.4;
   b.globalCompositeOperation = "multiply";
   b.fillStyle = pal.paperDark;
   const blot = noiseCanvas(w, h, Math.max(2, H / 40), 99, 3);
@@ -106,7 +114,7 @@ export const buildPaper = (w: number, h: number, pal: PaperPalette): PaperLayers
     const v = bi.data[i] / 255;
     const k = Math.max(0, Math.min(1, (v - 0.55) * 3.2));
     bi.data[i + 3] = Math.round(k * 255);
-    bi.data[i] = 120; bi.data[i + 1] = 150; bi.data[i + 2] = 145;
+    bi.data[i] = 118; bi.data[i + 1] = 150; bi.data[i + 2] = 152;
   }
   bctx.putImageData(bi, 0, 0);
   b.drawImage(blot, 0, 0, w, h);
@@ -180,13 +188,15 @@ export const buildPaper = (w: number, h: number, pal: PaperPalette): PaperLayers
   gr.putImageData(grain, 0, 0);
 
   // ---- vignette ----------------------------------------------------------
-  const vignette = makeCanvas(w, h);
+  const vignette = makeCanvas(viewW, viewH);
   const v = vignette.getContext("2d")!;
-  const grad = v.createRadialGradient(w / 2, h / 2, h * 0.35, w / 2, h / 2, Math.hypot(w, h) * 0.58);
+  const grad = v.createRadialGradient(
+    viewW / 2, viewH / 2, viewH * 0.35, viewW / 2, viewH / 2, Math.hypot(viewW, viewH) * 0.58,
+  );
   grad.addColorStop(0, "#ffffff");
   grad.addColorStop(1, pal.vignette);
   v.fillStyle = grad;
-  v.fillRect(0, 0, w, h);
+  v.fillRect(0, 0, viewW, viewH);
 
   return { base, grid, grunge, vignette };
 };

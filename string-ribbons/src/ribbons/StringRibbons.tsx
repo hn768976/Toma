@@ -44,13 +44,19 @@ export const StringRibbons: React.FC<StringRibbonsProps> = ({ rig, palette }) =>
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const key = `${W}x${H}:${JSON.stringify(palette)}`;
+    const cam = RIGS[rig](frame, durationInFrames);
+    // a ground-plane paper must cover the frame at any rotation
+    const P = cam.groundPaper ? Math.ceil(Math.hypot(W, H)) + 4 : 0;
+    const key = `${W}x${H}:${P}:${JSON.stringify(palette)}`;
     if (!cache.current || cache.current.key !== key) {
-      cache.current = { key, paper: buildPaper(W, H, palette), ink: new InkRenderer(W, H) };
+      cache.current = {
+        key,
+        paper: P ? buildPaper(P, P, palette, W, H) : buildPaper(W, H, palette),
+        ink: new InkRenderer(W, H),
+      };
     }
     const { paper, ink } = cache.current;
 
-    const cam = RIGS[rig](frame, durationInFrames);
     const view = makeView(cam);
     const f = cam.focal * H;
     const project = (p: V3): [number, number] => [W / 2 + (f * p[0]) / p[2], H / 2 - (f * p[1]) / p[2]];
@@ -106,17 +112,40 @@ export const StringRibbons: React.FC<StringRibbonsProps> = ({ rig, palette }) =>
 
     ink.render(polylines, hexToRgb(palette.ink), INK_OPACITY);
 
+    // Paper placement: screen-fixed, or (overhead rig) turned by the on-screen
+    // angle of the world x axis so the printed grid rotates under the camera.
+    let spin = 0;
+    if (P) {
+      const c = cam.target;
+      const a = view.toCam(c);
+      const b = view.toCam([c[0] + 0.5, c[1], c[2]]);
+      const [ax, ay] = project(a);
+      const [bx, by] = project(b);
+      spin = Math.atan2(by - ay, bx - ax);
+    }
+    const drawPaper = (layer: HTMLCanvasElement) => {
+      if (!P) {
+        ctx.drawImage(layer, 0, 0);
+        return;
+      }
+      ctx.save();
+      ctx.translate(W / 2, H / 2);
+      ctx.rotate(spin);
+      ctx.drawImage(layer, -P / 2, -P / 2);
+      ctx.restore();
+    };
+
     const ctx = canvas.getContext("2d")!;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = 1;
-    ctx.drawImage(paper.base, 0, 0);
+    drawPaper(paper.base);
     ctx.globalCompositeOperation = "multiply";
     ctx.drawImage(ink.canvas, 0, 0);
-    ctx.drawImage(paper.grid, 0, 0);
+    drawPaper(paper.grid);
     ctx.globalCompositeOperation = "overlay";
     ctx.globalAlpha = 0.55;
-    ctx.drawImage(paper.grunge, 0, 0);
+    drawPaper(paper.grunge);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = "multiply";
     ctx.drawImage(paper.vignette, 0, 0);
