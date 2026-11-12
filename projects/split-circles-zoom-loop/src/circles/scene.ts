@@ -35,11 +35,12 @@ const MID_R: Keys = [
 const EXTRA: Keys = [[63, 0], [71, 0], [77, 0.12], [83, 0.38], [90, 0.9]];
 // Trails (the wide diagonal strips) rise behind the rolling disks.
 const TRAIL_W: Keys = [[13, 0], [19, 1], [90, 1]];
+const TRAIL_FREEZE = 36;
 // Platform: wide stadium along the diagonal that retracts into a circle.
 const PLAT_R: Keys = [[32.5, 0], [36.5, 0.47], [56, 0.52], [90, 0.52]];
-const PLAT_LEN: Keys = [[0, 3.2], [45, 3.2], [57, 0], [90, 0]];
+const PLAT_LEN: Keys = [[0, 3.2], [42, 3.2], [54, 0], [90, 0]];
 
-const ENTRY_SPAN = 2.4; // extra pair separation at t = 0
+const ENTRY_SPAN = 2.25; // extra pair separation at t = 0
 const diskR = (t: number) => R_DISK * spline(DISK_SCALE, t);
 const pairDistance = (t: number) => {
   if (t >= 30) return 2 * diskR(t);
@@ -175,9 +176,12 @@ export const drawScene = (
   // 2. trails: wide strips laid down behind each disk, from where it entered
   //    to its current centre (the rounded head is hidden under the disk).
   if (s.trailW > 0.001) {
-    const r = (s.rDisk / z) * 0.97 * s.trailW;
-    const headA = { x: s.A.x / z, y: s.A.y / z };
-    const headB = { x: s.B.x / z, y: s.B.y / z };
+    // Heads follow the disks until the platform has covered them (t = 36),
+    // then stay put so the strips remain in frame until the zoom takes over.
+    const h = t < TRAIL_FREEZE ? s : sceneAt(TRAIL_FREEZE);
+    const r = h.rDisk * 0.97 * s.trailW; // layer units (scaled by the zoom)
+    const headA = { x: h.A.x, y: h.A.y };
+    const headB = { x: h.B.x, y: h.B.y };
     layer(() => capsulePath(ctx, TAIL_A, headA, r), z, planeGrad, shadowZ, true, false);
     layer(() => capsulePath(ctx, TAIL_B, headB, r), z, planeGrad, shadowZ, true, false);
   }

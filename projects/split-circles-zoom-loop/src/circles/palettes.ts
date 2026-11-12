@@ -24,8 +24,8 @@ export const VIOLET_PINK: Palette = {
   planeLeft: "#cb89fa",
   planeRight: "#c07ef6",
   dark: "#965bfa",
-  shadow: "rgba(22, 8, 78, 0.95)",
-  shadowWide: "rgba(36, 12, 112, 0.62)",
+  shadow: "rgba(24, 8, 82, 0.85)",
+  shadowWide: "rgba(38, 12, 116, 0.55)",
   rim: "rgba(255, 255, 255, 0.07)",
 };
 
@@ -37,7 +37,7 @@ export const COBALT_AQUA: Palette = {
   planeLeft: "#4cace6",
   planeRight: "#40a0dc",
   dark: "#2a4ee6",
-  shadow: "rgba(3, 12, 66, 0.95)",
-  shadowWide: "rgba(5, 20, 96, 0.62)",
+  shadow: "rgba(4, 14, 70, 0.85)",
+  shadowWide: "rgba(6, 22, 100, 0.55)",
   rim: "rgba(255, 255, 255, 0.08)",
 };
