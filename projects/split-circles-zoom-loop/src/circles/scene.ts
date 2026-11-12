@@ -37,8 +37,12 @@ const EXTRA: Keys = [[63, 0], [71, 0], [77, 0.12], [83, 0.38], [90, 0.9]];
 const TRAIL_W: Keys = [[13, 0], [19, 1], [90, 1]];
 const TRAIL_FREEZE = 36;
 // Platform: wide stadium along the diagonal that retracts into a circle.
-const PLAT_R: Keys = [[32.5, 0], [36.5, 0.47], [56, 0.52], [90, 0.52]];
-const PLAT_LEN: Keys = [[0, 3.2], [42, 3.2], [54, 0], [90, 0]];
+// It enters as a band whose lower-left end sweeps in from off-frame and
+// rounds off around the pair while the band widens, then it shortens from the
+// upper-right end into a circle.
+const PLAT_R: Keys = [[20, 0], [27, 0.07], [33, 0.22], [38, 0.37], [43, 0.47], [56, 0.52], [90, 0.52]];
+const PLAT_LEN: Keys = [[0, 3.2], [38, 3.2], [46, 1.5], [55, 0], [90, 0]];
+const PLAT_TAIL: Keys = [[0, 1.9], [32, 1.9], [36, 1.05], [39.5, 0], [90, 0]];
 
 const ENTRY_SPAN = 2.25; // extra pair separation at t = 0
 const diskR = (t: number) => R_DISK * spline(DISK_SCALE, t);
@@ -62,6 +66,7 @@ export type SceneState = {
   trailW: number;
   platR: number;
   platLen: number;
+  platTail: number;
   midR: number;
 };
 
@@ -86,6 +91,7 @@ export const sceneAt = (t: number): SceneState => {
     trailW: spline(TRAIL_W, t),
     platR: spline(PLAT_R, t),
     platLen: spline(PLAT_LEN, t),
+    platTail: spline(PLAT_TAIL, t),
     midR,
   };
 };
@@ -189,8 +195,11 @@ export const drawScene = (
   // 3. platform: wide diagonal stadium (lower-left end round the pair) that
   //    retracts into a circle under the pair.
   if (s.platR > 0.002) {
-    const far = { x: Math.cos(PLATFORM_ANGLE) * s.platLen, y: -Math.sin(PLATFORM_ANGLE) * s.platLen };
-    layer(() => capsulePath(ctx, { x: 0, y: 0 }, far, s.platR), z, planeGrad, shadowZ);
+    const dx = Math.cos(PLATFORM_ANGLE);
+    const dy = -Math.sin(PLATFORM_ANGLE);
+    const near = { x: -dx * s.platTail, y: -dy * s.platTail };
+    const far = { x: dx * s.platLen, y: dy * s.platLen };
+    layer(() => capsulePath(ctx, near, far, s.platR), z, planeGrad, shadowZ);
   }
 
   // 4. the two split disks
