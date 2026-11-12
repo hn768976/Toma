@@ -34,7 +34,7 @@ export const PALETTES: Record<"reference" | "aurora", Palette> = {
     lineHot: c(0.75, 0.3, 1.0),
     haze: c(0.3, 0.08, 0.62),
     dot: c(1.0, 0.32, 0.08),
-    pin: c(1.0, 0.16, 0.018),
+    pin: c(1.0, 0.12, 0.012),
     pinHot: c(1.0, 0.36, 0.09),
     lift: new THREE.Vector3(0.006, 0.0, 0.01),
     saturation: 1.05,
@@ -121,7 +121,7 @@ const buildGround = (palette: Palette, pxScale: number) => {
         float pix = e / fw;                       // distance to the contour in pixels
         float footprint = max(length(fwidth(p)), 1e-5); // world units per pixel
         float corePx = max(0.022 / footprint, 0.85 * uPxScale);
-        float coc = min(uAperture * 0.3 * abs(dist - uFocus) / dist, uMaxCoc) * uPxScale;
+        float coc = min(uAperture * 0.3 * abs(dist - uFocus) / dist * (dist > uFocus ? 0.6 : 1.0), uMaxCoc) * uPxScale;
         float w = corePx + coc * 0.75;
         float energy = corePx / w;
         float core = exp(-pix * pix / (w * w * 0.6)) * energy;
@@ -129,10 +129,10 @@ const buildGround = (palette: Palette, pxScale: number) => {
         float glow = exp(-pix / glowPx) * 0.2 * energy;
         // sub-pixel contours in the distance: replace by their average coverage
         float avg = clamp(corePx * 1.2 * fw, 0.0, 1.0) * 0.55 + 0.06;
-        float far = smoothstep(0.15, 0.5, fw);
+        float far = smoothstep(0.12, 0.4, fw);
         float lineI = mix(core + glow, avg, far);
         vec3 lineCol = mix(uLine, uLineHot, clamp(core * 0.8, 0.0, 1.0) * (1.0 - far));
-        vec3 col = uFloor + uLine * 0.012 + lineCol * lineI * 1.6;
+        vec3 col = uFloor + uLine * (0.018 + 0.02 * fbm(p * 0.05 + 3.0)) + lineCol * lineI * 1.6;
 
         // sparse node sparks sitting on the contours
         vec2 q = p / 1.7;
@@ -153,7 +153,7 @@ const buildGround = (palette: Palette, pxScale: number) => {
 
         // distance haze toward the horizon
         float hz = 1.0 - exp(-max(dist - 12.0, 0.0) / 70.0);
-        col = mix(col, uHaze * 0.35 + uSkyHorizon, hz * 0.5);
+        col = mix(col, uHaze * 0.4 + uSkyHorizon, hz * 0.62);
         col *= uReveal;
         gl_FragColor = vec4(col, 1.0);
       }`,
@@ -175,7 +175,7 @@ const buildSky = (palette: Palette) => {
       void main(){
         float y = vDir.y;
         vec3 col = mix(uHor, uTop, smoothstep(0.0, 0.5, y));
-        col += uHaze * 0.09 * exp(-max(y, 0.0) * 30.0);
+        col += uHaze * 0.15 * exp(-max(y, 0.0) * 16.0);
         gl_FragColor = vec4(col, 1.0);
       }`,
   });
@@ -198,7 +198,7 @@ const makePins = (): Pin[] => {
     // keep the camera corridor clear near the path
     if (Math.abs(x) < 0.9 && z > -45) continue;
     const u = clamp01((z + 105) / 100); // 0 far .. 1 near
-    const tA = (z < -48 ? 1.6 + rnd() * 4.5 : 1.3 + rnd() * 3.2) + u * u * 2.5;
+    const tA = (z < -48 ? 0.9 + rnd() * 4.5 : 0.5 + rnd() * 3.0) + u * u * 2.5;
     pins.push({
       x,
       z,
@@ -267,7 +267,7 @@ const buildPins = (palette: Palette, atlas: THREE.Texture, avgColors: THREE.Colo
       void main(){
         vec4 mvC = viewMatrix * vec4(aCenter, 1.0);
         float d = max(-mvC.z, 0.05);
-        float cocPx = min(uAperture * abs(d - uFocus) / d, uMaxCoc);
+        float cocPx = min(uAperture * abs(d - uFocus) / d * (d > uFocus ? 0.6 : 1.0), uMaxCoc);
         float px = uWorldPerPx * d;            // world size of one 1080p pixel here
         float b = max(cocPx * px, 0.6 * px);   // blur radius in world units (min ~AA)
         float h = aRadius * 1.9 + b * 1.4;
@@ -295,12 +295,12 @@ const buildPins = (palette: Palette, atlas: THREE.Texture, avgColors: THREE.Colo
         vec2 uv = (cellXY + auv) / ${AVATAR_GRID.toFixed(1)};
         uv.y = 1.0 - uv.y;
         float texelsPerWorld = 256.0 / (inner * 2.0);
-        float lod = log2(max(b * texelsPerWorld, 1.0));
+        float lod = min(log2(max(b * texelsPerWorld, 1.0)), 4.5);
         vec3 av = texture2D(uAtlas, uv, lod).rgb;
         float heavy = smoothstep(0.4, 1.2, b / inner);
-        av = mix(av, vAvg, heavy);
-        vec3 ringCol = mix(uPin, uPinHot, 0.2) * 1.3;
-        vec3 inside = mix(av, vec3(1.0, 0.62, 0.42), 0.18) * 0.78 + uPin * 0.08;
+        av = mix(av, vAvg, max(heavy, smoothstep(0.08, 0.5, b / inner) * smoothstep(0.35 * inner, inner, r)));
+        vec3 ringCol = mix(uPin, uPinHot, 0.15) * 1.05;
+        vec3 inside = mix(av, uPinHot * 0.9 + vec3(0.1), 0.3) * 0.78 + uPin * 0.1;
         vec3 col = mix(inside, ringCol, ring);
         // heavy defocus reads as a glowing orange disc with a faint face
         col = mix(col, mix(ringCol, av, 0.2) * 0.9, heavy * 0.75);
@@ -340,32 +340,32 @@ const buildPins = (palette: Palette, atlas: THREE.Texture, avgColors: THREE.Colo
       vertexShader: /* glsl */ `
         attribute vec3 aBase; attribute float aHeight; attribute float aFade;
         uniform float uFocus, uAperture, uMaxCoc, uWorldPerPx; uniform vec3 uCamRight;
-        varying float vT; varying float vAcross; varying float vEnergy; varying float vFade; varying float vH;
+        varying float vT; varying float vAcross; varying float vEnergy; varying float vFade; varying float vH; varying float vW;
         void main(){
           float t = position.y;
           float yy = ${reflection ? "-t * aHeight * 0.75" : "t * aHeight"};
           vec3 wp = aBase + vec3(0.0, yy, 0.0);
           vec4 mv = viewMatrix * vec4(wp, 1.0);
           float d = max(-mv.z, 0.05);
-          float cocPx = min(uAperture * abs(d - uFocus) / d, uMaxCoc);
+          float cocPx = min(uAperture * abs(d - uFocus) / d * (d > uFocus ? 0.6 : 1.0), uMaxCoc);
           float px = uWorldPerPx * d;
           float w0 = max(0.011, 0.8 * px);
           float w = w0 + cocPx * px * 0.8;
           wp += normalize(vec3(uCamRight.x, 0.0, uCamRight.z)) * position.x * w * 2.2;
           gl_Position = projectionMatrix * viewMatrix * vec4(wp, 1.0);
-          vT = t; vAcross = position.x * 2.2; vEnergy = w0 / w; vFade = aFade; vH = aHeight;
+          vW = w; vT = t; vAcross = position.x * 2.2; vEnergy = w0 / w; vFade = aFade; vH = aHeight;
         }`,
       fragmentShader: /* glsl */ `
         uniform vec3 uPin;
-        varying float vT; varying float vAcross; varying float vEnergy; varying float vFade; varying float vH;
+        varying float vT; varying float vAcross; varying float vEnergy; varying float vFade; varying float vH; varying float vW;
         void main(){
           float prof = exp(-vAcross * vAcross * 2.2);
           float glow = exp(-abs(vAcross) * 1.2) * 0.25;
           float i = (prof + glow) * vEnergy * vFade;
           ${
             reflection
-              ? "i *= 0.42 * pow(1.0 - vT, 2.2);"
-              : "i *= 0.75 + 0.5 * smoothstep(0.6, 1.0, vT); i += vEnergy * vFade * exp(-vT * vH * 14.0) * prof * 2.0;"
+              ? "i *= 0.42 * pow(1.0 - vT, 2.2) * smoothstep(0.0, 1.0, vT * vH * 0.75 / max(vW * 1.5, 1e-3) + 0.15);"
+              : "i *= (0.75 + 0.5 * smoothstep(0.6, 1.0, vT)) * mix(0.42, 1.0, smoothstep(0.0, 1.0, vT * vH / max(vW * 1.5, 1e-3))); i += vEnergy * vFade * exp(-vT * vH * 14.0) * prof * 2.0;"
           }
           gl_FragColor = vec4(uPin * i * 0.9, 1.0);
         }`,
