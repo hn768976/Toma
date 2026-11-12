@@ -1,0 +1,27 @@
+{
+  "name": "anime-fx-graffiti-stylewalk-inkfigure",
+  "version": "1.0.0",
+  "description": "Hand-animated 2D looks in Remotion: anime shards, graffiti wall, anime fire, style walk, ink figure",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "perfect-freehand": "1.2.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "roughjs": "4.6.6",
+    "simplex-noise": "4.0.3"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "typecheck": "tsc --noEmit",
+    "previews": "bash scripts/render-previews.sh",
+    "render4k": "bash scripts/render-4k.sh"
+  }
+}
