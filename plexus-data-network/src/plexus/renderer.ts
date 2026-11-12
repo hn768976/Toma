@@ -58,7 +58,14 @@ const glowSprite = (core: string, halo: string) => {
   if (cached) return cached;
   const c = makeCanvas(SPRITE);
   const ctx = c.getContext("2d")!;
-  const g = ctx.createRadialGradient(SPRITE / 2, SPRITE / 2, 0, SPRITE / 2, SPRITE / 2, SPRITE / 2);
+  const g = ctx.createRadialGradient(
+    SPRITE / 2,
+    SPRITE / 2,
+    0,
+    SPRITE / 2,
+    SPRITE / 2,
+    SPRITE / 2,
+  );
   g.addColorStop(0, core);
   g.addColorStop(0.09, core);
   g.addColorStop(0.14, withAlpha(halo, 0.8));
@@ -78,7 +85,14 @@ const bokehSprite = (color: string) => {
   if (cached) return cached;
   const c = makeCanvas(SPRITE);
   const ctx = c.getContext("2d")!;
-  const g = ctx.createRadialGradient(SPRITE / 2, SPRITE / 2, 0, SPRITE / 2, SPRITE / 2, SPRITE / 2);
+  const g = ctx.createRadialGradient(
+    SPRITE / 2,
+    SPRITE / 2,
+    0,
+    SPRITE / 2,
+    SPRITE / 2,
+    SPRITE / 2,
+  );
   g.addColorStop(0, withAlpha(color, 0.7));
   g.addColorStop(0.4, withAlpha(color, 0.62));
   g.addColorStop(0.7, withAlpha(color, 0.4));
@@ -97,7 +111,14 @@ const cloudSprite = (color: string) => {
   if (cached) return cached;
   const c = makeCanvas(SPRITE);
   const ctx = c.getContext("2d")!;
-  const g = ctx.createRadialGradient(SPRITE / 2, SPRITE / 2, 0, SPRITE / 2, SPRITE / 2, SPRITE / 2);
+  const g = ctx.createRadialGradient(
+    SPRITE / 2,
+    SPRITE / 2,
+    0,
+    SPRITE / 2,
+    SPRITE / 2,
+    SPRITE / 2,
+  );
   for (let i = 0; i <= 10; i++) {
     const x = i / 10;
     g.addColorStop(x, withAlpha(color, Math.exp(-x * x * 4.5) * (1 - x)));
@@ -165,9 +186,12 @@ export const drawPlexusFrame = (
     z: v.z,
   });
 
-  const coc = (z: number) => clamp((APERTURE * Math.abs(z - cam.focus)) / Math.max(z, 0.5), 0, 160 * k);
-  const distFade = (z: number) => smoothstep(FAR, FAR - 55, z) * smoothstep(NEAR, NEAR + 3, z);
-  const onScreen = (sx: number, sy: number, m: number) => sx > -m && sx < W + m && sy > -m && sy < H + m;
+  const coc = (z: number) =>
+    clamp((APERTURE * Math.abs(z - cam.focus)) / Math.max(z, 0.5), 0, 160 * k);
+  const distFade = (z: number) =>
+    smoothstep(FAR, FAR - 55, z) * smoothstep(NEAR, NEAR + 3, z);
+  const onScreen = (sx: number, sy: number, m: number) =>
+    sx > -m && sx < W + m && sy > -m && sy < H + m;
 
   // ---------- Background grade ----------
   ctx.globalCompositeOperation = "source-over";
@@ -181,7 +205,14 @@ export const drawPlexusFrame = (
 
   ctx.globalCompositeOperation = "screen";
   // Brighter centre / lower-centre band
-  const band = ctx.createRadialGradient(W * 0.5, H * 0.72, 0, W * 0.5, H * 0.72, W * 0.6);
+  const band = ctx.createRadialGradient(
+    W * 0.5,
+    H * 0.72,
+    0,
+    W * 0.5,
+    H * 0.72,
+    W * 0.6,
+  );
   band.addColorStop(0, palette.floorGlow);
   band.addColorStop(0.5, withAlpha(palette.floorGlow, 0.22));
   band.addColorStop(1, withAlpha(palette.floorGlow, 0));
@@ -212,7 +243,11 @@ export const drawPlexusFrame = (
     const base = (b.size * 0.75 * F) / v.z;
     const r = Math.sqrt(base * base + blur * blur * 0.35) + 2 * k;
     if (!onScreen(p.sx, p.sy, r)) continue;
-    ctx.globalAlpha = clamp(b.alpha * fade * clamp((30 * k) / r, 0.16, 0.7), 0, 1);
+    ctx.globalAlpha = clamp(
+      b.alpha * fade * clamp((30 * k) / r, 0.16, 0.7),
+      0,
+      1,
+    );
     ctx.drawImage(bokehSprites[b.color], p.sx - r, p.sy - r, r * 2, r * 2);
   }
 
@@ -246,11 +281,23 @@ export const drawPlexusFrame = (
     w: number,
     core: number,
   ) => {
-    const pass = (width: number, alphaA: number, alphaB: number, rgb: [number, number, number], op: GlobalCompositeOperation) => {
+    const pass = (
+      width: number,
+      alphaA: number,
+      alphaB: number,
+      rgb: [number, number, number],
+      op: GlobalCompositeOperation,
+    ) => {
       if (alphaA < 0.004 && alphaB < 0.004) return;
       const g = ctx.createLinearGradient(pa.sx, pa.sy, pb.sx, pb.sy);
-      g.addColorStop(0, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${clamp(alphaA, 0, 1)})`);
-      g.addColorStop(1, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${clamp(alphaB, 0, 1)})`);
+      g.addColorStop(
+        0,
+        `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${clamp(alphaA, 0, 1)})`,
+      );
+      g.addColorStop(
+        1,
+        `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${clamp(alphaB, 0, 1)})`,
+      );
       ctx.globalCompositeOperation = op;
       ctx.strokeStyle = g;
       ctx.lineWidth = width;
@@ -271,13 +318,31 @@ export const drawPlexusFrame = (
       [0.38, 0.12],
     ];
     for (const [wm, am] of PROFILE) {
-      pass(Math.max(core, w * wm), (blurA + ia * 0.25) * am, (blurB + ib * 0.25) * am, [gr, gg, gb], "screen");
+      pass(
+        Math.max(core, w * wm),
+        (blurA + ia * 0.25) * am,
+        (blurB + ib * 0.25) * am,
+        [gr, gg, gb],
+        "screen",
+      );
     }
     // Sharp core fades in continuously with focus (no threshold -> no pops).
     const coreGate = smoothstep(0.02, 0.12, Math.max(ea, eb));
     if (coreGate > 0) {
-      pass(core * 2.4, ia * ea * 0.3 * coreGate, ib * eb * 0.3 * coreGate, [lr, lg, lb], "screen");
-      pass(core, ia * ea ** 0.8 * 0.95 * coreGate, ib * eb ** 0.8 * 0.95 * coreGate, [255, 255, 255], "source-over");
+      pass(
+        core * 2.4,
+        ia * ea * 0.3 * coreGate,
+        ib * eb * 0.3 * coreGate,
+        [lr, lg, lb],
+        "screen",
+      );
+      pass(
+        core,
+        ia * ea ** 0.8 * 0.95 * coreGate,
+        ib * eb ** 0.8 * 0.95 * coreGate,
+        [255, 255, 255],
+        "source-over",
+      );
     }
   };
 
@@ -285,8 +350,16 @@ export const drawPlexusFrame = (
   for (const s of world.streaks) {
     const STEPS = 8;
     for (let i = 0; i < STEPS; i++) {
-      const va = toView({ x: s.x0 + ((s.x1 - s.x0) * i) / STEPS, y: s.y, z: s.z });
-      const vb = toView({ x: s.x0 + ((s.x1 - s.x0) * (i + 1)) / STEPS, y: s.y, z: s.z });
+      const va = toView({
+        x: s.x0 + ((s.x1 - s.x0) * i) / STEPS,
+        y: s.y,
+        z: s.z,
+      });
+      const vb = toView({
+        x: s.x0 + ((s.x1 - s.x0) * (i + 1)) / STEPS,
+        y: s.y,
+        z: s.z,
+      });
       if (va.z < NEAR || vb.z < NEAR) continue;
       const pa = projectView(va);
       const pb = projectView(vb);
@@ -294,7 +367,8 @@ export const drawPlexusFrame = (
       const w = 1.4 * k + blur * 0.4;
       const ta = Math.sin((Math.PI * i) / STEPS);
       const tb = Math.sin((Math.PI * (i + 1)) / STEPS);
-      const base = s.alpha * distFade(va.z) * clamp((2.2 * k) / w, 0.15, 1) * 0.45;
+      const base =
+        s.alpha * distFade(va.z) * clamp((2.2 * k) / w, 0.15, 1) * 0.45;
       const e = clamp((2 * k) / w, 0, 1) * 0.5;
       softLine(pa, pb, base * ta, base * tb, e, e, w, 1.2 * k);
     }
@@ -312,7 +386,11 @@ export const drawPlexusFrame = (
     if (va.z < NEAR || vb.z < NEAR) {
       const [inside, outside] = va.z >= NEAR ? [va, vb] : [vb, va];
       const tt = (inside.z - NEAR) / (inside.z - outside.z);
-      const clipped = { x: inside.x + (outside.x - inside.x) * tt, y: inside.y + (outside.y - inside.y) * tt, z: NEAR };
+      const clipped = {
+        x: inside.x + (outside.x - inside.x) * tt,
+        y: inside.y + (outside.y - inside.y) * tt,
+        z: NEAR,
+      };
       if (va.z >= NEAR) vb = clipped;
       else va = clipped;
     }
@@ -322,15 +400,25 @@ export const drawPlexusFrame = (
     const maxX = Math.max(pa0.sx, pb0.sx);
     const minY = Math.min(pa0.sy, pb0.sy);
     const maxY = Math.max(pa0.sy, pb0.sy);
-    if (maxX < -100 || minX > W + 100 || maxY < -100 || minY > H + 100) continue;
+    // Generous margin: blurred strands are wide, so cull only when even the
+    // outer halo cannot reach the frame.
+    const M = 320 * k;
+    if (maxX < -M || minX > W + M || maxY < -M || minY > H + M) continue;
 
     // Subdivide so the blur width follows depth along the line (true DOF:
     // the near end of a strand is soft and wide, the far end crisp).
-    const ca0 = coc(va.z);
-    const cb0 = coc(vb.z);
-    const segs = Math.min(10, Math.max(1, Math.ceil(Math.abs(ca0 - cb0) / (5 * k))));
+    // Segment count depends only on the (static) 3D edge length, never on
+    // time-varying focus, so a line can never re-tessellate between frames.
+    const n0 = world.nodes[e.a];
+    const n1 = world.nodes[e.b];
+    const len3 = Math.hypot(n1.x - n0.x, n1.y - n0.y, n1.z - n0.z);
+    const segs = Math.min(10, Math.max(2, Math.ceil(len3 / 5)));
     const at = (u: number) => {
-      const v = { x: va.x + (vb.x - va.x) * u, y: va.y + (vb.y - va.y) * u, z: va.z + (vb.z - va.z) * u };
+      const v = {
+        x: va.x + (vb.x - va.x) * u,
+        y: va.y + (vb.y - va.y) * u,
+        z: va.z + (vb.z - va.z) * u,
+      };
       const c = coc(v.z);
       const eFocus = clamp(CORE / (CORE + c * 0.3), 0, 1);
       // Lines are bright where they are in focus, faint soft light elsewhere.
@@ -342,7 +430,16 @@ export const drawPlexusFrame = (
       const cur = at(si / segs);
       if (prev.inten > 0.008 || cur.inten > 0.008) {
         const w = Math.min(MAXW, CORE + ((prev.c + cur.c) / 2) * 0.55);
-        softLine(prev.p, cur.p, prev.inten, cur.inten, prev.eFocus, cur.eFocus, w, CORE);
+        softLine(
+          prev.p,
+          cur.p,
+          prev.inten,
+          cur.inten,
+          prev.eFocus,
+          cur.eFocus,
+          w,
+          CORE,
+        );
       }
       prev = cur;
     }
@@ -352,7 +449,16 @@ export const drawPlexusFrame = (
   ctx.globalCompositeOperation = "screen";
   const nodeGlow = glowSprite(palette.nodeCore, palette.nodeHalo);
   const nodeBokeh = bokehSprite(palette.bokeh[3]);
-  type LabelJob = { x: number; y: number; size: number; alpha: number; text: string; boxed: boolean; side: number; prio: number };
+  type LabelJob = {
+    x: number;
+    y: number;
+    size: number;
+    alpha: number;
+    text: string;
+    boxed: boolean;
+    side: number;
+    prio: number;
+  };
   const labelJobs: LabelJob[] = [];
   world.nodes.forEach((n, i) => {
     const v = views[i];
@@ -365,24 +471,45 @@ export const drawPlexusFrame = (
     const sharpR = clamp(((n.hub ? 0.75 : 0.32) * F) / v.z, 2.6 * k, 60 * k);
     const R = Math.sqrt(sharpR * sharpR + blur * blur * 0.4);
     const glowR = sharpR * (n.hub ? 6.5 : 4.4);
-    if (!onScreen(p.sx, p.sy, Math.max(R, glowR))) return;
+    // Sprites are culled tightly, labels with a wide margin so text that
+    // trails off-screen slides in smoothly instead of popping at the edge.
+    const spritesVisible = onScreen(p.sx, p.sy, Math.max(R, glowR));
+    if (!spritesVisible && !onScreen(p.sx, p.sy, 520 * k)) return;
     const sharpness = (sharpR / R) ** 2;
-    const tw = 0.92 + 0.08 * Math.sin(t * 2.1 + i * 1.7);
-    const bright = n.brightness * fade * tw;
-    ctx.globalAlpha = clamp(bright * sharpness ** 0.7 * 1.2, 0, 1);
-    ctx.drawImage(nodeGlow, p.sx - glowR, p.sy - glowR, glowR * 2, glowR * 2);
-    if (n.hub) {
-      // extra hot, blown-out centre on in-focus hubs (additive -> pure white)
-      ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = clamp(bright * sharpness * 0.9, 0, 1);
-      ctx.drawImage(nodeGlow, p.sx - glowR * 0.6, p.sy - glowR * 0.6, glowR * 1.2, glowR * 1.2);
-      ctx.globalCompositeOperation = "screen";
-    }
-    if (sharpness < 0.85) {
-      // Defocused: blown-out glowing blob (brighter when in front of focus)
-      const nearBoost = v.z < cam.focus ? 1.4 : 0.55;
-      ctx.globalAlpha = clamp(bright * nearBoost * (1 - sharpness) * clamp((36 * k) / R, 0.16, 0.8), 0, 1);
-      ctx.drawImage(nodeBokeh, p.sx - R, p.sy - R, R * 2, R * 2);
+    if (spritesVisible) {
+      const tw = 0.92 + 0.08 * Math.sin(t * 2.1 + i * 1.7);
+      const bright = n.brightness * fade * tw;
+      ctx.globalAlpha = clamp(bright * sharpness ** 0.7 * 1.2, 0, 1);
+      ctx.drawImage(nodeGlow, p.sx - glowR, p.sy - glowR, glowR * 2, glowR * 2);
+      if (n.hub) {
+        // extra hot, blown-out centre on in-focus hubs (additive -> pure white)
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = clamp(bright * sharpness * 0.9, 0, 1);
+        ctx.drawImage(
+          nodeGlow,
+          p.sx - glowR * 0.6,
+          p.sy - glowR * 0.6,
+          glowR * 1.2,
+          glowR * 1.2,
+        );
+        ctx.globalCompositeOperation = "screen";
+      }
+      const discAmt = smoothstep(0.97, 0.75, sharpness); // continuous, no threshold pop
+      if (discAmt > 0) {
+        // Defocused: blown-out glowing blob (brighter when in front of focus;
+        // the switch happens at sharpness 1, where discAmt is 0)
+        const nearBoost = v.z < cam.focus ? 1.4 : 0.55;
+        ctx.globalAlpha = clamp(
+          discAmt *
+            bright *
+            nearBoost *
+            (1 - sharpness) *
+            clamp((36 * k) / R, 0.16, 0.8),
+          0,
+          1,
+        );
+        ctx.drawImage(nodeBokeh, p.sx - R, p.sy - R, R * 2, R * 2);
+      }
     }
     if (n.label) {
       const la = Math.min(1, fade * 1.4 * (1 / (1 + (blur / (16 * k)) ** 2)));
@@ -404,7 +531,14 @@ export const drawPlexusFrame = (
   // ---------- Vignette (before text so readouts stay crisp) ----------
   ctx.globalCompositeOperation = "source-over";
   ctx.globalAlpha = 1;
-  const vg = ctx.createRadialGradient(W / 2, H * 0.6, H * 0.3, W / 2, H * 0.6, W * 0.72);
+  const vg = ctx.createRadialGradient(
+    W / 2,
+    H * 0.6,
+    H * 0.3,
+    W / 2,
+    H * 0.6,
+    W * 0.72,
+  );
   vg.addColorStop(0, withAlpha(palette.vignette, 0));
   vg.addColorStop(1, withAlpha(palette.vignette, 0.85));
   ctx.fillStyle = vg;
@@ -418,9 +552,12 @@ export const drawPlexusFrame = (
     const v = toView(fl);
     if (v.z < NEAR + 2) return;
     const p = projectView(v);
-    if (!onScreen(p.sx, p.sy, 120 * k)) return;
+    if (!onScreen(p.sx, p.sy, 520 * k)) return;
     const blur = coc(v.z);
-    const la = Math.min(1, distFade(v.z) * 1.3 * (1 / (1 + (blur / (16 * k)) ** 2)));
+    const la = Math.min(
+      1,
+      distFade(v.z) * 1.3 * (1 / (1 + (blur / (16 * k)) ** 2)),
+    );
     if (la < 0.03) return;
     labelJobs.push({
       x: p.sx,
@@ -440,23 +577,42 @@ export const drawPlexusFrame = (
     const v = toView(cb);
     if (v.z < NEAR + 2) continue;
     const p = projectView(v);
-    if (!onScreen(p.sx, p.sy, 260 * k)) continue;
+    if (!onScreen(p.sx, p.sy, 520 * k)) continue;
     const blur = coc(v.z);
-    const a = Math.min(0.95, distFade(v.z) * 1.3 * (1 / (1 + (blur / (14 * k)) ** 2)));
+    const a = Math.min(
+      0.95,
+      distFade(v.z) * 1.3 * (1 / (1 + (blur / (14 * k)) ** 2)),
+    );
     if (a < 0.03) continue;
     const size = clamp((9 * k * 25) / v.z, 7 * k, 17 * k);
     const lh = size * 1.18;
-    codeRects.push({ x: p.sx - size, y: p.sy, w: size * 7, h: cb.rows.length * lh, weight: smoothstep(0.05, 0.4, a) });
+    codeRects.push({
+      x: p.sx - size,
+      y: p.sy,
+      w: size * 7,
+      h: cb.rows.length * lh,
+      weight: smoothstep(0.05, 0.4, a),
+    });
     ctx.font = `500 ${size}px ${MONO_FAMILY}`;
     ctx.fillStyle = `rgb(${tr}, ${tg}, ${tb})`;
     ctx.globalAlpha = a * 0.9;
-    ctx.fillRect(p.sx - size * 0.7, p.sy, Math.max(1, size * 0.14), cb.rows.length * lh);
+    ctx.fillRect(
+      p.sx - size * 0.7,
+      p.sy,
+      Math.max(1, size * 0.14),
+      cb.rows.length * lh,
+    );
     cb.rows.forEach((row, li) => {
       ctx.globalAlpha = a * row.alpha;
       if (row.text) {
         ctx.fillText(row.text, p.sx, p.sy + li * lh);
       } else {
-        ctx.fillRect(p.sx, p.sy + li * lh + size * 0.3, size * 6 * row.bar, size * 0.42);
+        ctx.fillRect(
+          p.sx,
+          p.sy + li * lh + size * 0.3,
+          size * 6 * row.bar,
+          size * 0.42,
+        );
       }
     });
   }
@@ -470,11 +626,17 @@ export const drawPlexusFrame = (
     const x = job.side > 0 ? job.x : job.x - tw;
     const padX = job.size * 0.3;
     const padY = job.size * 0.12;
-    const rect = { x: x - padX, y: job.y - padY, w: tw + padX * 2, h: job.size * 1.05 + padY * 2 };
+    const rect = {
+      x: x - padX,
+      y: job.y - padY,
+      w: tw + padX * 2,
+      h: job.size * 1.05 + padY * 2,
+    };
     let ov = 0;
     // Overlap is weighted by how visible the other element is, so the
     // suppression changes continuously as things fade in and out.
-    for (const r of placed) ov = Math.max(ov, overlapFraction(rect, r) * r.weight);
+    for (const r of placed)
+      ov = Math.max(ov, overlapFraction(rect, r) * r.weight);
     const alpha = job.alpha * clamp(1 - ov * 4, 0, 1);
     if (alpha < 0.02) continue;
     placed.push({ ...rect, weight: clamp(alpha * 1.5, 0, 1) });
