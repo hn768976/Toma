@@ -10,12 +10,13 @@ export type SpherePalette = {
   fill: string; // dim fill light
   streakTint: string; // anamorphic streak colour
   shard: string;
+  dimTint: string; // colour of weak glow at the edge of a light pocket
 };
 
 export const REFERENCE_PALETTE: SpherePalette = {
   name: "ultraviolet",
   background: "#020009",
-  contourLine: "#090420",
+  contourLine: "#0a0524",
   stripes: [
     ["#fbf2fd", "#b263f7", "#e2b6fb", "#a052f2"],
     ["#f6e8ff", "#9b55ee", "#d29ef9", "#8446e0"],
@@ -28,13 +29,14 @@ export const REFERENCE_PALETTE: SpherePalette = {
   fill: "#3a2a8f",
   streakTint: "#7a64ff",
   shard: "#251a5c",
+  dimTint: "#5b3fd6",
 };
 
 /** Version 2: electric cyan / teal – same mood, clearly different palette. */
 export const CYAN_PALETTE: SpherePalette = {
   name: "electric-cyan",
-  background: "#00070a",
-  contourLine: "#03202a",
+  background: "#000508",
+  contourLine: "#02141b",
   stripes: [
     ["#f0feff", "#18c8e6", "#9ef3ff", "#0f9fc0"],
     ["#e4fbff", "#1b84c9", "#7fe3f7", "#136aa8"],
@@ -44,7 +46,8 @@ export const CYAN_PALETTE: SpherePalette = {
   darkSphere: "#0a3442",
   darkSpecular: "#2fb8d8",
   coreLight: "#8ff0ff",
-  fill: "#0d4a63",
+  fill: "#073346",
   streakTint: "#3fd2ff",
   shard: "#0a3140",
+  dimTint: "#127ab8",
 };

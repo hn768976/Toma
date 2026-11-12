@@ -18,7 +18,7 @@ export type ToggleSceneOptions = {
   seed: number;
 };
 
-const BEVEL = 0.022;
+const BEVEL = 0.03;
 
 const roundedRectShape = (length: number, width: number, radius: number) => {
   const l = length / 2 - BEVEL;

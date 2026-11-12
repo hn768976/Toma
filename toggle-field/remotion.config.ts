@@ -14,6 +14,8 @@ Config.setVideoImageFormat("jpeg");
 Config.setJpegQuality(95);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
+// Tag output as standard BT.709 limited range (broadcast / web players).
+Config.setColorSpace("bt709");
 Config.setOverwriteOutput(true);
 // Three.js scenes are GPU/CPU heavy at 4K – keep a generous timeout.
 Config.setDelayRenderTimeoutInMilliseconds(120000);

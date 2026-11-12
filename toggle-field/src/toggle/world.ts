@@ -1,4 +1,4 @@
-import { clamp, createRandom, easeInOutCubic } from "../lib/random";
+import { clamp, createRandom, easeInOutCubic, easeInOutSine } from "../lib/random";
 import type { TogglePalette } from "./palette";
 
 /**
@@ -55,23 +55,56 @@ const makeFlips = (
   return flips;
 };
 
-const makeTurns = (
+/**
+ * Rotation waves measured from the reference: groups of foreground toggles
+ * spin a half-turn clockwise in sync (e.g. f20 diagonal -> f28 horizontal ->
+ * f40 other diagonal -> f68 vertical -> f80 back on the diagonal), repeating
+ * through the clip. Start frame / duration of each wave:
+ */
+const ROTATION_WAVES: [number, number][] = [
+  [18, 60],
+  [100, 54],
+  [142, 56],
+  [196, 52],
+  [226, 54],
+  [262, 52],
+  [296, 50],
+];
+const ROTOR_SPACING = 2.35; // rotating pieces never sweep into each other
+export const ROTOR_Z = 3 * LAYER_H + 0.16; // rotating pieces ride above the stack
+
+const assignRotations = (
+  pieces: PieceDef[],
   rand: ReturnType<typeof createRandom>,
-  totalFrames: number,
-  fps: number,
-): Turn[] => {
-  const turns: Turn[] = [];
-  let t = rand.range(-0.5, 2.5) * fps;
-  let acc = 0;
-  while (t < totalFrames + fps) {
-    const dur = rand.range(0.6, 0.95) * fps;
-    // swing away from the diagonal and back again, like the reference
-    const delta = acc === 0 ? rand.pick([Math.PI / 4, -Math.PI / 4, Math.PI / 2]) : -acc;
-    acc += delta;
-    turns.push({ start: t, dur, delta });
-    t += dur + rand.range(1.1, 2.8) * fps;
+  accentColor: string,
+) => {
+  const candidates = pieces.filter((p) => p.width <= TRACK_W * 1.01 && p.length > TRACK_W * 1.5);
+  // deterministic shuffle
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(rand.next() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
   }
-  return turns;
+  // accent (yellow) toggles lead the waves, as in the reference
+  candidates.sort((a, b) => Number(b.color === accentColor) - Number(a.color === accentColor));
+  const rotors: PieceDef[] = [];
+  for (const c of candidates) {
+    if (rand.next() > 0.85) continue;
+    if (rotors.some((r) => Math.hypot(r.x - c.x, r.y - c.y) < ROTOR_SPACING)) continue;
+    rotors.push(c);
+  }
+  for (const r of rotors) {
+    r.z = ROTOR_Z + rand.range(0, 0.01);
+    let busyUntil = -Infinity;
+    for (const [start, dur] of ROTATION_WAVES) {
+      if (rand.next() > 0.75) continue;
+      // the wave travels diagonally across the frame
+      const s = start + (r.x + r.y) * 1.2 + rand.range(-4, 4);
+      const d = dur * rand.range(0.9, 1.1);
+      if (s < busyUntil + 4) continue;
+      r.turns.push({ start: s, dur: d, delta: -Math.PI });
+      busyUntil = s + d;
+    }
+  }
 };
 
 export const buildWorld = (opts: {
@@ -95,6 +128,7 @@ export const buildWorld = (opts: {
   // one of four paper heights so neighbours overlap and cast shadows.
   const rows = Math.ceil(reach / ROW_SPACING);
   let id = 0;
+  const accents: [number, number][] = [];
   for (let row = -rows; row <= rows; row++) {
     const n = row * ROW_SPACING;
     let s = -reach + rand.range(0, 2);
@@ -102,7 +136,7 @@ export const buildWorld = (opts: {
       const kind = rand.weighted([
         ["switch", 0.56],
         ["long", 0.1],
-        ["plate", 0.14],
+        ["plate", 0.08],
         ["tile", 0.2],
       ] as const);
       const isTile = kind === "tile";
@@ -125,7 +159,9 @@ export const buildWorld = (opts: {
       const layer = isTile
         ? rand.weighted([[0, 0.55], [1, 0.35], [2, 0.1]] as const)
         : rand.weighted([[0, 0.2], [1, 0.3], [2, 0.3], [3, 0.2]] as const);
-      const accent = rand.next() < (isTile ? 0.04 : 0.075);
+      let accent = rand.next() < (isTile ? 0.04 : 0.075);
+      if (accent && accents.some(([ax2, ay2]) => Math.hypot(ax2 - cx, ay2 - cy) < 2.8)) accent = false;
+      if (accent) accents.push([cx, cy]);
       const color = accent ? palette.accentTrack : rand.weighted(palette.tracks);
       let knob: KnobDef | null = null;
       const knobChance = kind === "plate" ? 0 : isTile ? 0.35 : 0.88;
@@ -144,12 +180,12 @@ export const buildWorld = (opts: {
           flips: makeFlips(rand, totalFrames, fps, isTile ? 0.4 : 0.72),
         };
       }
-      const turns = layer >= 2 && rand.next() < 0.28 ? makeTurns(rand, totalFrames, fps) : [];
+      const turns: Turn[] = [];
       pieces.push({
         id: id++,
         x: cx,
         y: cy,
-        z: layer * LAYER_H + rand.range(0, 0.012) + (turns.length ? 0.06 : 0),
+        z: layer * LAYER_H + rand.range(0, 0.012),
         length,
         width,
         radius: Math.min(radius, width / 2, length / 2),
@@ -161,6 +197,7 @@ export const buildWorld = (opts: {
       });
     }
   }
+  assignRotations(pieces, rand, palette.accentTrack);
   return pieces;
 };
 
@@ -183,8 +220,8 @@ export const pieceTurn = (piece: PieceDef, frame: number) => {
   let lift = 0;
   for (const t of piece.turns) {
     const raw = clamp((frame - t.start) / t.dur);
-    angle += t.delta * easeInOutCubic(raw);
-    lift = Math.max(lift, Math.sin(Math.PI * raw) * 0.18);
+    angle += t.delta * easeInOutSine(raw);
+    lift = Math.max(lift, Math.sin(Math.PI * raw) * 0.1);
   }
   return { angle, lift };
 };
