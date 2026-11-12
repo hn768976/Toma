@@ -71,7 +71,7 @@ const GLOBAL_SWINGS = [30, 70, 110, 150, 190, 230, 270, 312];
 const PATCH_SPINS = [8, 50, 90, 130, 168, 210, 250, 290];
 const SWING_DUR = 12;
 const SPIN_DUR = 14;
-const ROTOR_SHARE = 0.92;
+const ROTOR_SHARE = 0.85;
 
 const assignRotations = (pieces: PieceDef[], rand: ReturnType<typeof createRandom>) => {
   const patches = PATCH_SPINS.map(() => ({
@@ -83,13 +83,13 @@ const assignRotations = (pieces: PieceDef[], rand: ReturnType<typeof createRando
   for (const p of pieces) {
     const isPill = p.width <= TRACK_W * 1.01 && p.length > TRACK_W * 1.5;
     if (!isPill || rand.next() > ROTOR_SHARE) {
-      // static pieces form the bottom sheet
-      p.layer = 0;
-      p.z = rand.range(0, 0.012);
+      // static pieces sit just above the base sheet
+      p.layer = 1;
+      p.z = LAYER_H + rand.range(0, 0.012);
       continue;
     }
-    // switches are stacked by row so swinging rows pass over/under each other
-    p.layer = 1 + (((p.row % 3) + 3) % 3);
+    // switches sit on random paper layers so knobs of neighbouring rows stay visible
+    p.layer = 2 + rand.int(0, 2);
     p.z = p.layer * LAYER_H + rand.range(0, 0.012);
     const wave = -(p.x + p.y) * 0.18; // the swing ripples from top-right to bottom-left
     const events: Turn[] = [];
@@ -207,6 +207,38 @@ export const buildWorld = (opts: {
     }
   }
   assignRotations(pieces, rand);
+
+  // Base sheet: a dense 45° grid of static rounded tiles under everything, so
+  // the swinging switches always read against layered paper (as in the reference).
+  const SHEET = 2.05;
+  const span = Math.ceil(reach / SHEET);
+  for (let i = -span; i <= span; i++) {
+    for (let j = -span; j <= span; j++) {
+      const cs = (i + (j % 2 === 0 ? 0 : 0.5)) * SHEET;
+      const cn = j * SHEET * 0.5 * 1.02;
+      const cx = ax * cs + nx * cn;
+      const cy = ay * cs + ny * cn;
+      if (Math.abs(cx) > halfX + 2.5 || Math.abs(cy) > halfY + 2.5) continue;
+      if (rand.next() < 0.2) continue;
+      const size = rand.range(1.55, 1.9) * TRACK_W;
+      pieces.push({
+        id: id++,
+        x: cx + rand.range(-0.1, 0.1),
+        y: cy + rand.range(-0.1, 0.1),
+        z: rand.range(0, 0.006),
+        length: size * rand.range(0.95, 1.1),
+        width: size,
+        radius: size * rand.range(0.2, 0.28),
+        angle: DIAG,
+        color: rand.next() < 0.06 ? palette.accentTrack : rand.weighted(palette.tracks),
+        knob: null,
+        turns: [],
+        layer: 0,
+        row: j,
+        startAngle: 0,
+      });
+    }
+  }
   return pieces;
 };
 
