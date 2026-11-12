@@ -20,7 +20,11 @@ def luma_stats(path):
     fr = json.loads(r.stdout)["frames"]
     return [(float(f["tags"]["lavfi.signalstats.YAVG"]), float(f["tags"]["lavfi.signalstats.YDIF"])) for f in fr]
 
-def main(path, ref_frames, ref_dur):
+def ref_static(ref_path):
+    ls = luma_stats(ref_path)
+    return [i for i, (_, d) in enumerate(ls) if i > 0 and d < 0.6]
+
+def main(path, ref_frames, ref_dur, ref_path=None):
     info = probe(path)
     v = [s for s in info["streams"] if s["codec_type"] == "video"][0]
     a = [s for s in info["streams"] if s["codec_type"] == "audio"]
@@ -44,7 +48,7 @@ def main(path, ref_frames, ref_dur):
         "bitrate_kbps": round(int(info["format"]["bit_rate"]) / 1000),
         "audio_streams": len(a),
         "decode_errors": dec.stderr.strip() or "none",
-        "black_frames(YAVG<20)": black[:10], "frozen_frames": frozen[:10],
+        "black_frames(YAVG<20)": black[:10], "frozen_frames": frozen,
         "luma_min_max": [round(min(yavg), 1), round(max(yavg), 1)],
         "mean_frame_diff": round(mean_d, 2), "max_frame_diff": round(max(ydif), 2),
         "flicker_spikes": spikes[:10],
@@ -57,11 +61,14 @@ def main(path, ref_frames, ref_dur):
         "duration within 1 frame of reference": abs(dur - ref_dur) < 1 / 30,
         "clean decode": not dec.stderr.strip(),
         "no black frames": not black,
-        "no frozen frames": not frozen,
+        # Static frames are only acceptable where the reference itself holds still
+        # (e.g. the empty-gradient beat between zoom cycles).
+        "no unintended frozen frames": not frozen or (ref_path is not None and all(
+            any(abs(f - g) <= 3 for g in ref_static(ref_path)) for f in frozen)),
         "no flicker spikes": not spikes,
     }
     res["checks"] = {k: ("PASS" if ok else "FAIL") for k, ok in checks.items()}
     print(json.dumps(res, indent=1))
 
 if __name__ == "__main__":
-    main(sys.argv[1], int(sys.argv[2]), float(sys.argv[3]))
+    main(sys.argv[1], int(sys.argv[2]), float(sys.argv[3]), sys.argv[4] if len(sys.argv) > 4 else None)
