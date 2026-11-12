@@ -51,7 +51,7 @@ export const referenceRig: CameraRig = {
   azimuth: 39,
   azimuthSway: 1.5,
   elevationSway: 1.2,
-  distance: 28,
+  distance: 34,
   fov: 17,
   lateral: 0.2,
   roll: 0,
@@ -173,28 +173,52 @@ type Wire = {
   gap: number;
 };
 
-const makeStripeTexture = (palette: NeonPalette) => {
-  const size = 512;
-  const c = document.createElement("canvas");
-  c.width = size;
-  c.height = size;
-  const ctx = c.getContext("2d")!;
-  ctx.fillStyle = palette.ground;
-  ctx.fillRect(0, 0, size, size);
-  ctx.fillStyle = palette.stripe;
-  // 4 stripes per tile, each ~16% of the pitch
-  const pitch = size / 4;
-  for (let i = 0; i < 4; i++) {
-    ctx.fillRect(0, i * pitch, size, pitch * 0.14);
-  }
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  tex.anisotropy = 16;
-  tex.generateMipmaps = true;
-  tex.minFilter = THREE.LinearMipmapLinearFilter;
-  return tex;
+/**
+ * Floor material with stripes generated in screen space, as in the reference:
+ * thin parallel lines at -41 degrees (falling to the right, parallel to the
+ * chain), uniform spacing and fixed on screen while the camera travels.
+ * Lighting and soft shadows still come from the standard material.
+ */
+const makeStripedFloorMaterial = (palette: NeonPalette, width: number) => {
+  const mat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(palette.ground),
+    roughness: 0.95,
+    metalness: 0,
+  });
+  const angle = THREE.MathUtils.degToRad(-41);
+  // horizontal period of 18 px at 768 px width, scaled to the render width
+  const horizontalPeriod = (18 / 768) * width;
+  const normal = new THREE.Vector2(-Math.sin(angle), Math.cos(angle));
+  const uniforms = {
+    uStripeColor: { value: new THREE.Color(palette.stripe) },
+    uStripeNormal: { value: normal },
+    uStripePeriod: { value: horizontalPeriod * Math.abs(normal.x) },
+    uStripeFill: { value: 0.16 },
+  };
+  mat.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+        uniform vec3 uStripeColor;
+        uniform vec2 uStripeNormal;
+        uniform float uStripePeriod;
+        uniform float uStripeFill;`,
+      )
+      .replace(
+        "#include <map_fragment>",
+        `#include <map_fragment>
+        {
+          float sd = dot(gl_FragCoord.xy, uStripeNormal) / uStripePeriod;
+          float f = fract(sd);
+          float aa = 1.2 / uStripePeriod;
+          float line = smoothstep(0.0, aa, f) * (1.0 - smoothstep(uStripeFill - aa, uStripeFill, f));
+          diffuseColor.rgb = mix(diffuseColor.rgb, uStripeColor, line);
+        }`,
+      );
+  };
+  return mat;
 };
 
 export const createNeonPipesScene =
@@ -241,20 +265,13 @@ export const createNeonPipesScene =
     const sunOffset = new THREE.Vector3(-6, 18, 9);
 
     /* ground */
-    const stripeTex = makeStripeTexture(palette);
     const groundSize = 260;
-    stripeTex.repeat.set(groundSize / 1.25, groundSize / 1.25);
+    const floorMat = makeStripedFloorMaterial(palette, width);
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(groundSize, groundSize),
-      new THREE.MeshStandardMaterial({
-        map: stripeTex,
-        roughness: 0.95,
-        metalness: 0,
-      }),
+      floorMat,
     );
     ground.rotation.x = -Math.PI / 2;
-    // stripes run across the chain at an angle, like the reference
-    ground.rotation.z = THREE.MathUtils.degToRad(84);
     ground.receiveShadow = true;
     scene.add(ground);
 
@@ -374,7 +391,7 @@ export const createNeonPipesScene =
         if (r1 < 0.72) {
           addWire(roundedPath(outline, 0.32, true), true, {
             speed: 5 + rand() * 4,
-            seg: 2.2 + rand() * 3.5,
+            seg: 3 + rand() * 4.6,
           });
         } else {
           // an open outline that drops down at both ends into glowing caps
@@ -388,7 +405,7 @@ export const createNeonPipesScene =
           ];
           addWire(roundedPath(pts, 0.25, false), false, {
             speed: 4 + rand() * 4,
-            seg: 2 + rand() * 2.5,
+            seg: 2.7 + rand() * 3.3,
           });
           addCap(pts[0]);
           addCap(pts[pts.length - 1]);
@@ -400,7 +417,7 @@ export const createNeonPipesScene =
           );
           addWire(roundedPath(belt, 0.28, true), true, {
             speed: 3 + rand() * 3,
-            seg: 1.2 + rand() * 1.8,
+            seg: 1.6 + rand() * 2.4,
           });
         }
         // little hanging drops with caps at the bracket end
@@ -528,7 +545,7 @@ export const createNeonPipesScene =
           const mesh = o as THREE.Mesh;
           if (mesh.geometry) mesh.geometry.dispose();
         });
-        stripeTex.dispose();
+        floorMat.dispose();
       },
     };
   };
