@@ -132,7 +132,7 @@ float riverSlope(float x) {
 }
 // signed distance to river water (negative inside)
 float riverSD(vec2 p) {
-  vec2 r = rot(-0.2) * (p - vec2(0.0, 13.0));
+  vec2 r = rot(0.25) * (p - vec2(0.0, 12.0));
   float c = riverCenter(r.x);
   float d = curveDist(r.y - c, riverSlope(r.x));
   float width = 0.26 + 0.42 * smoothstep(0.35, 0.75, fbm(vec2(r.x * 0.08, 4.0)));
@@ -202,11 +202,11 @@ void main() {
   }
 
   // ------------------------------------------------ parks
-  float pn = fbm(p * 0.085 + vec2(3.0, 8.5));
+  float pn = fbm(p * 0.085 + vec2(-6.0, 21.0));
   float rsd = riverSD(p);
   float bank = smoothstep(0.8, 0.0, rsd) * smoothstep(0.58, 0.75, fbm(p * 0.12 + 5.0));
   float parkField = max(pn, 0.42 + 0.3 * bank) + 0.04 * (vnoise(p * 2.0) - 0.5);
-  float parkSD = 0.565 - parkField;
+  float parkSD = 0.522 - parkField;
   float paa = max(fwidth(parkField) * 0.8, 1e-5);
   float parkA = smoothstep(paa, -paa, parkSD);
   float darkF = fbm(p * 0.21 + 3.0);

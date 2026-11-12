@@ -81,7 +81,8 @@ export const planPins = (aspect: number): PinPlan[] => {
         x = base.x + Math.cos(a) * r;
         z = base.z + Math.sin(a) * r;
       } else {
-        const ndc = new THREE.Vector2(rnd() * 1.9 - 0.95, rnd() * 1.7 - 0.9);
+        // biased towards the foreground (lower half), like the reference
+        const ndc = new THREE.Vector2(rnd() * 1.9 - 0.95, Math.pow(rnd(), 1.35) * 1.7 - 0.9);
         ray.setFromCamera(ndc, cam);
         if (!ray.ray.intersectPlane(ground, hit)) continue;
         x = hit.x;
@@ -96,8 +97,8 @@ export const planPins = (aspect: number): PinPlan[] => {
       pins.push({ x, z, t, size: 0.92 + rnd() * 0.16 });
       placed = true;
     }
-    // accelerating spawn rate: ~1.8 pins/s at start → ~7.4 pins/s from 8 s on
-    const rate = 1.8 + 0.7 * Math.min(t, 8.0);
+    // accelerating spawn rate: ~2 pins/s at start → ~10 pins/s from 6 s on
+    const rate = 2.0 + 1.35 * Math.min(t, 6.0);
     t += (0.55 + rnd() * 0.9) / rate;
   }
   return pins;
@@ -106,11 +107,11 @@ export const planPins = (aspect: number): PinPlan[] => {
 // ----------------------------------------------------------- pin animation
 // Pins grow upright in place from their ground anchor (tip): 0 → ~1.1 → 1
 // over ~9 frames, then a tiny settling wobble – as in the reference.
-const GROW_TIME = 0.3;
+const GROW_TIME = 0.32;
 const DROP_TIME = 0.12; // ripple (V2) starts as the pin reaches full size
 
 const backOut = (k: number) => {
-  const c1 = 1.9;
+  const c1 = 0.9; // ~6 % overshoot
   const c3 = c1 + 1;
   return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2);
 };
@@ -123,7 +124,7 @@ export const pinPose = (age: number) => {
     return { y: 0, sxz: s, sy: s, shadow: Math.min(1, k * 1.4), visible: true };
   }
   const b = age - GROW_TIME;
-  const wobble = 0.025 * Math.exp(-b * 9) * Math.sin(b * 26);
+  const wobble = 0.015 * Math.exp(-b * 9) * Math.sin(b * 26);
   return { y: 0, sxz: 1 + wobble, sy: 1 - wobble, shadow: 1, visible: true };
 };
 

@@ -56,7 +56,7 @@ const daylight: MapPalette = {
   pinEmissive: "#000000",
   pinEmissiveIntensity: 0,
   pinRoughness: 0.36,
-  pinDot: "#e7cfcf",
+  pinDot: "#7a1219",
   pinDotGlow: 0.0,
   shadowColor: "#4a4f55",
   shadowOpacity: 0.24,
