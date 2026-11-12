@@ -10,6 +10,8 @@ Config.setMuted(true);
 // The base textures are a WebGL2 fragment shader on a three.js plane.
 Config.setChromiumOpenGlRenderer("angle");
 Config.setOverwriteOutput(true);
+// Painting a 4K brush-frame card in software (no GPU) can take longer than the 30 s default.
+Config.setDelayRenderTimeoutInMilliseconds(300000);
 // Optional: point Remotion at a local Chromium instead of its downloaded headless shell.
 if (process.env.REMOTION_BROWSER_EXECUTABLE) {
   Config.setBrowserExecutable(process.env.REMOTION_BROWSER_EXECUTABLE);

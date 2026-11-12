@@ -55,10 +55,13 @@ for id in ScratchGrunge_Black ScratchGrunge_White PhotocopyGrunge_White Photocop
 - To use a local Chrome instead of Remotion's downloaded headless shell, set
   `REMOTION_BROWSER_EXECUTABLE=/path/to/chrome`.
 - To render a 720p preview, add `--scale=0.3333333333333333`, or run `scripts/render-previews.sh`.
+- `remotion.config.ts` raises Remotion's per-frame timeout to 5 minutes. Without a GPU, painting one 4K
+  brush-frame card takes longer than the 30 s default.
 
 The textures are resolution-independent: every size is defined as a fraction of the frame height, and the
 WebGL buffers are allocated at the output resolution. A 4K render has the same look as the preview, with
-finer grain.
+finer grain: above about 1000 px frame height, a pixel-scale grain octave is blended in, so the paper grain
+stays fine instead of showing the noise grid.
 
 ## Tweaking (one data row each, in `src/settings.ts`)
 
@@ -116,7 +119,30 @@ which makes the composition 601 frames long.
 Measured in a 4-core cloud container with **no GPU** (SwiftShader, `--gl=swangle`, concurrency 2).
 A GPU machine with `--gl=angle` will be considerably faster.
 
-TIMINGS_PLACEHOLDER
+**720p previews** (1280×720, all 600 frames, wall-clock time of `remotion render` including encoding):
+
+| Clip | Total | Per frame |
+|---|---|---|
+| ScratchGrunge_Black | 404 s | 673 ms |
+| ScratchGrunge_White | 428 s | 713 ms |
+| PhotocopyGrunge_White | 414 s | 691 ms |
+| PhotocopyGrunge_Black | 408 s | 679 ms |
+| CharcoalGrunge_White | 374 s | 623 ms |
+| CharcoalGrunge_Orange | 357 s | 595 ms |
+| BrushFrame_White | 775 s | 1292 ms |
+| BrushFrame_Black | 771 s | 1285 ms |
+
+**One 4K frame** (3840×2160, frame 300, cold `npx remotion still ... --scale=1`, so it includes starting
+the browser and painting the card from scratch):
+
+| Clip | One 4K frame | Same frame at 720p, for comparison |
+|---|---|---|
+| ScratchGrunge_Black | 28.5 s | 5.4 s |
+| BrushFrame_White | 56.9 s | 11.0 s |
+
+In a full render each card is painted once and reused for the 2–4 frames it is held, and only the 4 most
+recent cards are kept, so most frames cost much less than a cold still. The brush frames are the slowest
+because p5.brush paints four stroke layers per card.
 
 ## Licences
 

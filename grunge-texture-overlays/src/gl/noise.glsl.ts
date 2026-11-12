@@ -76,6 +76,15 @@ float grit(float cov, float g, float soft) {
 // multi-scale paper/toner grain in ~[0,1]
 float grain3(vec2 P, int s) {
   float g = 0.5 * vnoise(P * 380.0, s) + 0.3 * vnoise(P * 130.0, s + 1) + 0.2 * vnoise(P * 42.0, s + 2);
+  // Above ~1000 px frame height the 380-cell octave spans several pixels and its grid shows as little
+  // blocks, so blend in a rotated pixel-scale octave there. At 720p this branch is skipped entirely,
+  // so the previews are unchanged; at 4K the grain is genuinely finer instead of blocky.
+  float hi = 1.0 - smoothstep(0.0005, 0.001, uPx);
+  if (hi > 0.0) {
+    float fine = vnoise(ROT_OCT * P / uPx * 0.55, s + 3);
+    float g380 = vnoise(ROT_OCT * P * 380.0 + 3.1, s);
+    g = mix(g, 0.3 * vnoise(P * 130.0, s + 1) + 0.2 * vnoise(P * 42.0, s + 2) + 0.25 * g380 + 0.25 * fine, hi);
+  }
   return clamp((g - 0.5) * 2.4 + 0.5, 0.0, 1.0); // stretch to roughly uniform [0,1]
 }
 
