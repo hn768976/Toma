@@ -1,19 +1,19 @@
 # Tile Wave — Remotion project (4K)
 
-A flat pastel sheet of square tiles. Along a "lightning-bolt" zig-zag path
-(short grid-aligned runs and alternating jogs, plus a side branch) the tiles
-sink and tip over into curled, overlapping fins, forming a terraced valley
-whose floor glows (pink → violet → periwinkle → white → warm yellow), edged by
-a rim of raised, curling pink tiles. The valley opens from a slit (the
-lower-left end leading), holds briefly, then closes: whole columns of tiles are
-drawn out into long shingled blades across the band, which relax while the
-surface rests. The ends of the path lag the centre, so the sheet is never
-completely still. The cycle loops every 134 frames (~4.47 s), the period
-measured from the reference.
+A flat pastel sheet of square tiles. Along a "lightning-bolt" staircase path
+(long runs along one grid axis alternating with shorter steps along the other,
+plus a side branch) the tiles sink and tip into a terraced valley whose floor
+glows (pink → violet → periwinkle → white → warm cream), so the band zig-zags
+along the grid while running diagonally across it. A rim of raised pink cards
+leans in towards the axis like overlapping scales and keeps fluttering while
+the band is open. The valley opens from a slit, holds, then closes: columns of
+tiles are drawn out into long blades across the band, which relax while the
+surface rests. The open/hold/close curve and the 132-frame (~4.4 s) cycle are
+fitted to the reference's colour curve.
 
 | Composition   | Size        | FPS | Frames | Duration | Camera |
 |---------------|-------------|-----|--------|----------|--------|
-| `TileWave-V1` | 3840 × 2160 | 30  | 267    | 8.9 s    | Reference recreation: locked-off steep top-down view, band at ~60° on screen, horizontal lens shift |
+| `TileWave-V1` | 3840 × 2160 | 30  | 267    | 8.9 s    | Reference recreation: locked-off steep top-down view, band at ~50° on screen, horizontal lens shift |
 | `TileWave-V2` | 3840 × 2160 | 30  | 267    | 8.9 s    | Alternative camera angle + movement: low oblique tracking shot that travels along the valley with a slow orbit |
 
 ## Technology
@@ -26,7 +26,7 @@ measured from the reference.
   height (depth palette below the surface, rim palette above it), with soft
   wrap lighting and lavender-tinted shading.
 * **Motion blur + anti-aliasing by accumulation:** each output frame averages
-  12 sub-frame renders spread over a 1.5-frame shutter, each with a sub-pixel camera
+  12 sub-frame renders spread over a 0.9-frame shutter, each with a sub-pixel camera
   jitter, into a half-float buffer.
 * Fully deterministic: every pillar height is a pure function of the
   (fractional) frame number.
