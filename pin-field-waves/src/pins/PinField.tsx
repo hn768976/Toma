@@ -45,10 +45,11 @@ const LOOK = {
   rippleY: 35,
   rippleWavelength: 40,
   rippleMix: 0.45,
-  rippleSpeed: 1,
+  rippleSpeed: 1.5,
   edge0: 0.24,
   edge1: 0.5,
-  cycles: 2, // wave periods travelled per loop (integer keeps the loop seamless)
+  cycles: 2, // band periods per loop (integer); ripple does cycles x rippleSpeed = 3,
+  // so the combined pattern only repeats every full loop (gcd(2, 3) = 1)
   ease: 0.4, // speed modulation within each loop (0 = constant speed)
   // Reference camera (Version 1)
   distance: 30,

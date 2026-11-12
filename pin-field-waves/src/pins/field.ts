@@ -41,8 +41,9 @@ export type FieldParams = {
   rippleCenter: [number, number];
   rippleWavelength: number;
   rippleMix: number;
-  /** Ripple travel relative to the bands (integer keeps the loop seamless;
-   *  negative values travel the opposite way). */
+  /** Ripple travel relative to the bands. The loop stays seamless when
+   *  (band cycles per loop) x rippleSpeed is an integer; negative values
+   *  travel the opposite way. */
   rippleSpeed: number;
   /** Threshold band that turns the sine into raised / flat zones. */
   edge0: number;
