@@ -232,7 +232,8 @@ export class EarthRenderer {
     const dS = this.rayDir(sunPxX, sunPxY, tanHalf);
     const bS = dot(dS, C);
     const nLimb = norm(sub(vscale(dS, bS), C));
-    const sunDir = norm([dS[0] + 0.16 * nLimb[0], dS[1] + 0.16 * nLimb[1], dS[2] + 0.16 * nLimb[2]]);
+    const lit = 0.16 + 0.2 * s.sunFlare; // the lit crescent widens as the sun clears the limb
+    const sunDir = norm([dS[0] + lit * nLimb[0], dS[1] + lit * nLimb[1], dS[2] + lit * nLimb[2]]);
 
     const warmAt = (px: number, py: number) => {
       const dx = Math.abs(px - sunPxX) / (0.21 * W);

@@ -12,6 +12,9 @@ Config.setJpegQuality(95);
 Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
+Config.setCrf(12); // high-quality 4K master (visually lossless)
+Config.setColorSpace("bt709");
+Config.setConcurrency(2);
 
 // The scenes are drawn with raw WebGL 2. "swangle" (ANGLE on SwiftShader)
 // provides a WebGL 2 context on every machine, including GPU-less servers,

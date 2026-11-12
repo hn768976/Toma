@@ -132,7 +132,7 @@ void main() {
     col += dayCol * day * uRimI * (0.3 + 2.6 * warm) * mix(vec3(1.0), uSunGlow * 1.3, 0.45);
     // city lights, brightest near the terminator / sunrise
     float nightMask = 1.0 - smoothstep(0.0, 0.4, ndl);
-    float cityI = city * (0.12 + 2.4 * warm * warm) * (0.35 + 0.65 * nightMask);
+    float cityI = city * (0.3 + 3.2 * warm) * (0.45 + 0.55 * nightMask);
     col += uCity * cityI * 1.4;
     // limb brightening
     float rim = pow(1.0 - mu, 4.0);
@@ -148,8 +148,8 @@ void main() {
 
   // sun: core, halos, anamorphic streak and rays
   float si = uSunI;
-  float core = exp(-pow(sunDist / (0.012 * W), 2.0)) * 3.0 + exp(-sunDist / (0.022 * W)) * 1.1;
-  float halo = exp(-sunDist / (0.05 * W)) * 0.7 + exp(-sunDist / (0.2 * W)) * 0.06;
+  float core = exp(-pow(sunDist / (0.018 * W), 2.0)) * 3.2 + exp(-sunDist / (0.03 * W)) * 1.3;
+  float halo = exp(-sunDist / (0.07 * W)) * 0.85 + exp(-sunDist / (0.2 * W)) * 0.08;
   float streak = exp(-abs(toSun.y) / (0.0016 * H)) * exp(-abs(toSun.x) / (0.28 * W)) * 1.3
                + exp(-abs(toSun.y) / (0.007 * H)) * exp(-abs(toSun.x) / (0.16 * W)) * 0.4;
   float ang = atan(toSun.y, toSun.x);
@@ -252,7 +252,7 @@ void main() {
   }
   vec3 c = sceneAt(suv, split);
   // soft highlight roll-off (keeps the glare from clipping harshly)
-  c = 1.0 - exp(-c * 1.05);
+  c = 1.0 - exp(-c * 1.4);
   vec4 hud = hudAt(huv);
   c = c * (1.0 - hud.a) + hud.rgb;
   vec2 p = (uv - 0.5) * vec2(uRes.x / uRes.y, 1.0);
