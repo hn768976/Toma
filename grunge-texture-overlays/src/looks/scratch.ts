@@ -17,11 +17,11 @@ export const scratchLook: LookDef = {
     return {
       p: [
         // density, patch grey level, hole threshold, worn edge side
-        [d, range(r, 0.17, 0.33), range(r, 0.12, 0.36), worn],
+        [d, range(r, 0.2, 0.38), range(r, 0.12, 0.36), worn],
         // dust amount, -, noise offset
         [range(r, 0.6, 1.3), 0, range(r, -50, 50), range(r, -50, 50)],
         // worn strength, patch threshold (coverage), worn depth
-        [range(r, 0.35, 0.6), range(r, -0.7, -0.05) + (1 - Math.min(1, d)) * 0.15, range(r, 0.08, 0.22), 0],
+        [range(r, 0.35, 0.6), range(r, -0.3, 0.12) + (1 - Math.min(1, d)) * 0.12, range(r, 0.08, 0.22), 0],
         // crusty fringe strength, big blob chance
         [chance(r, 0.3) ? range(r, 0.4, 0.8) : 0, range(r, 0.3, 0.7), 0, 0],
       ],
@@ -35,17 +35,17 @@ float lookInk(vec2 P, vec2 F) {
   // large worn grey patches (domain-warped clouds)
   vec2 w = vec2(fbm(q * 1.2, uSeed + 5, 3), fbm(q * 1.2 + 7.0, uSeed + 6, 3));
   float cloud = fbm(q * 1.15 + w * 0.55, uSeed + 1, 6);
-  float cov = smoothstep(uP[2].y, uP[2].y + 0.55, cloud + 0.18 * (rough(P * 12.0, uSeed + 14, 3) - 0.5));
+  float cov = smoothstep(uP[2].y, uP[2].y + 0.45, cloud + 0.18 * (rough(P * 12.0, uSeed + 14, 3) - 0.5));
   // inside: micro-scratch grain (anisotropic noise in two directions) + pepper
   float a1 = vnoise(vec2(P.x * 420.0, P.y * 22.0), uSeed + 2);
   float a2 = vnoise(mat2(0.71, 0.71, -0.71, 0.71) * P * vec2(320.0, 26.0), uSeed + 3);
   float pep = vnoise(P * 430.0, uSeed + 4);
-  float g = 0.4 * pep + 0.4 * max(a1, a2) + 0.2 * vnoise(P * 70.0, uSeed + 7);
+  float g = 0.5 * pep + 0.15 * max(a1, a2) + 0.35 * vnoise(P * 70.0, uSeed + 7);
   // soft, cloudy stain with a little fine scuff texture in it
-  float soft = 0.75 + 0.25 * fbm(q * 9.0, uSeed + 13, 4);
+  float soft = (0.7 + 0.3 * fbm(q * 9.0, uSeed + 13, 4)) * (0.55 + 0.6 * rough(P * 38.0, uSeed + 18, 4));
   float a3 = vnoise(mat2(0.26, 0.97, -0.97, 0.26) * P * vec2(360.0, 20.0), uSeed + 15);
-  float scuff = smoothstep(0.62, 0.9, max(max(a1, a2), a3));
-  float patchInk = cov * uP[0].y * soft * (0.7 + 0.35 * g) + cov * scuff * 0.22;
+  float scuff = smoothstep(0.72, 0.95, max(max(a1, a2), a3)) * smoothstep(0.45, 0.8, vnoise(P * 9.0, uSeed + 17));
+  float patchInk = cov * uP[0].y * soft * (0.7 + 0.35 * g) + cov * cov * scuff * 0.12;
   // soft bright smudges
   patchInk += smoothstep(0.55, 0.85, fbm(q * 5.0 + 11.0, uSeed + 16, 4)) * 0.18 * (0.5 + g);
   patchInk = max(patchInk, grit(cov * 0.1, g, 0.05) * 0.35);
