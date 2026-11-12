@@ -1,9 +1,11 @@
 # Contour Maze — Remotion project (4K)
 
-Glowing "contour-wall" landscape: every iso-line of a slowly morphing scalar
-field is extruded into a thin neon wall. A bright island with a blue maze and
-spiral core sits in the middle of ember-orange terrain while the camera pulls
-back and tilts down. Light pulses run along individual walls.
+Glowing "contour-wall" landscape: every iso-line of a slowly morphing,
+meandering scalar field is extruded into a thin, equal-height neon wall
+(contour spacing 0.06), giving a dense folded maze. A flat bright island with a
+fine labyrinth and a spiral core sits in the middle of ember-orange terrain.
+The camera pulls back and tilts towards top-down with an ease-out move (most
+travel early, then it settles). Light pulses run along individual walls.
 
 | Composition      | Size        | FPS | Frames | Duration | Look |
 |------------------|-------------|-----|--------|----------|------|
@@ -71,6 +73,10 @@ Codec (H.264), pixel format (yuv420p) and CRF are set in `remotion.config.ts`.
 * Remotion downloads its Chrome Headless Shell on first render. If that
   download is blocked, point to an existing one:
   `REMOTION_BROWSER=/path/to/chrome-headless-shell npm run render:v1`.
+* CPU-only (swangle) speed is roughly 10-15 s per 1080p frame on 4 cores, so a
+  full 400-frame render takes ~1.5 h. If the first frame is slow on a loaded
+  machine, add `--timeout=300000`. A frame range can be rendered with
+  `--frames=0-99` and the parts joined with `ffmpeg -f concat -c copy`.
 
 ## Notes on duration
 
