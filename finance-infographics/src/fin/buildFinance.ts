@@ -241,7 +241,7 @@ varying vec2 vUv;
 void main() {
   vec2 q = (vUv - 0.5) * vec2(uAspect, 1.0);
   float d = length(q * vec2(0.82, 1.0));
-  vec3 c = mix(uCenter, uEdge, smoothstep(0.02, 0.9, d));
+  vec3 c = mix(uCenter, uEdge, smoothstep(0.1, 1.0, d));
   // soft breathing hot-spot
   c += (uCenter - uEdge) * 0.08 * exp(-d * d * 9.0) * (0.85 + 0.15 * sin(uTime * 0.7));
   gl_FragColor = vec4(c, 1.0);
@@ -264,7 +264,7 @@ void main() {
   float band = floor(yb);
   float tick = floor(uFrame / 3.0) + floor(h21(vec2(band, 3.0)) * 3.0);
   float hb = h21(vec2(band, tick));
-  float thr = 0.80 - uBurst * 0.25;
+  float thr = 0.72 - uBurst * 0.25;
   if (hb > thr) {
     float x0 = h21(vec2(band + 0.37, tick)) * 1.2 - 0.2;
     float len = 0.05 + 0.55 * pow(h21(vec2(band, tick + 2.7)), 2.0);
@@ -275,7 +275,7 @@ void main() {
     float line = smoothstep(thick * 0.5 + 0.08, thick * 0.5 - 0.08, abs(sub - 0.5));
     // fine horizontal texture inside thick smears
     float tex = 0.6 + 0.4 * h21(vec2(floor(vUv.x * 300.0), band + tick));
-    float a = inside * line * mix(0.05, 0.32, h21(vec2(band, tick + 7.0))) * tex;
+    float a = inside * line * mix(0.08, 0.42, h21(vec2(band, tick + 7.0))) * tex;
     vec3 col = h21(vec2(band, tick + 5.0)) < 0.55 ? uDark : uLight;
     outc = vec4(col * a, a);
   }
@@ -284,14 +284,14 @@ void main() {
   float b2 = floor(yb2);
   float t2 = floor(uFrame / 5.0);
   float hb2 = h21(vec2(b2 + 91.0, t2));
-  if (hb2 > 0.88 - uBurst * 0.3) {
+  if (hb2 > 0.8 - uBurst * 0.3) {
     float x0 = h21(vec2(b2, t2 + 1.0)) - 0.3;
     float len = 0.3 + 0.7 * h21(vec2(b2, t2 + 2.0));
     float inside = smoothstep(x0, x0 + 0.15, vUv.x) * smoothstep(x0 + len, x0 + len - 0.15, vUv.x);
     float v = fract(yb2);
     float prof = smoothstep(0.0, 0.3, v) * smoothstep(1.0, 0.7, v);
     float rows = 0.5 + 0.5 * h21(vec2(floor(vUv.y / (uPx * 2.0)), t2));
-    float a = inside * prof * rows * 0.16;
+    float a = inside * prof * rows * 0.22;
     vec3 col = h21(vec2(b2, t2 + 3.0)) < 0.5 ? uDark : uLight;
     outc = outc + vec4(col * a, a) * (1.0 - outc.a);
   }
@@ -309,6 +309,8 @@ const srgb = (hex: string) => {
 };
 
 type Spawn = { pos: THREE.Vector3; sizeH: number };
+
+const PERCENTS = ["+8,464 %", "-9,876 %", "+5,878 %", "+2,433 %", "-0,240 %", "+8,741 %", "-7,873 %", "0,240 %"];
 
 /* ------------------------------------------------------------------ */
 /* Builder                                                              */
@@ -400,7 +402,7 @@ export const makeFinanceBuilder =
     const cr = rng(rig.seed);
     type ChartInst = { pos: THREE.Vector3; w: number; h: number; uv: number[]; birth: number; death: number; seed: number; kind: number; alpha: number };
     const charts: ChartInst[] = [];
-    const chartRate = 16; // spawns per second
+    const chartRate = 26; // spawns per second
     for (let t = -4; t < duration; t += -Math.log(1 - cr() * 0.999) / chartRate) {
       const sp = sprites[Math.floor(cr() * sprites.length)];
       const s = spawnAt(t, cr, 3.2, 17);
@@ -422,7 +424,7 @@ export const makeFinanceBuilder =
       }
       const near = s.pos.distanceTo(camFor(t).position);
       if (near < 5) frac *= 1.6;
-      const h = frac * s.sizeH * 0.78;
+      const h = frac * s.sizeH * 0.95;
       const birth = snapToBurst(t, cr);
       const life = 1.1 + cr() * 2.6;
       const death = snapToBurst(birth + life, cr);
@@ -447,14 +449,21 @@ export const makeFinanceBuilder =
     const inkDark = srgb(palette.inkDark);
     const inkMid = srgb(palette.inkMid);
     const inkLight = srgb(palette.inkLight);
-    const labelRate = 120; // spawns per second
+    const labelRate = 170; // spawns per second
     for (let t = -4; t < duration; t += -Math.log(1 - lr() * 0.999) / labelRate) {
       const tier = lr();
       // screen-height fraction for the glyph height
       let frac: number;
       let ink: THREE.Color;
       let alpha: number;
-      if (tier < 0.05) {
+      let near = false;
+      if (tier < 0.02) {
+        // huge, defocused foreground numbers
+        frac = 0.05 + lr() * 0.03;
+        ink = inkMid;
+        alpha = 0.75;
+        near = true;
+      } else if (tier < 0.08) {
         frac = 0.035 + lr() * 0.025;
         ink = inkDark;
         alpha = 0.9;
@@ -467,14 +476,14 @@ export const makeFinanceBuilder =
         ink = lr() < 0.5 ? inkMid : inkLight;
         alpha = 0.8;
       }
-      const s = spawnAt(t, lr, 3.0, 17, 1.15, 1.1);
+      const s = near ? spawnAt(t, lr, 3.6, 5.0, 0.9, 0.9) : spawnAt(t, lr, 3.0, 17, 1.15, 1.1);
       const size = frac * s.sizeH;
       // label string template
       const pct = lr() < 0.3;
       let tpl: string;
       if (pct) {
-        tpl = `${lr() < 0.5 ? "+" : "-"}D,DDD %`;
-        if (lr() < 0.3) tpl = "D,DDD %";
+        // the reference keeps repeating a small set of percentages
+        tpl = PERCENTS[Math.floor(lr() * PERCENTS.length)];
       } else {
         const nd = 3 + Math.floor(lr() * 3);
         tpl = `${lr() < 0.45 ? "-" : ""}L${"D".repeat(nd - 1)},DDD`;

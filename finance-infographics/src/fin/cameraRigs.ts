@@ -50,16 +50,19 @@ export const ORBIT_GLIDE: FinanceRig = {
   apply: (camera, t, duration) => {
     const k = Math.min(1, Math.max(0, t / duration));
     const e = k * k * (3 - 2 * k);
-    const yaw = THREE.MathUtils.degToRad(lerp(-48, 44, e));
+    // the camera stays elevated (looking down onto the cards) for the whole shot,
+    // so no frame ever lines up with V1's straight-on view
+    const yaw = THREE.MathUtils.degToRad(lerp(-50, 42, e));
+    const elev = THREE.MathUtils.degToRad(lerp(24, 16, e) + Math.sin(t * 0.4) * 1.2);
     const radius = lerp(15, 11, e);
     const pivot = new THREE.Vector3(0, 0, -4 - t * 0.12);
     camera.position.set(
-      pivot.x + Math.sin(yaw) * radius,
-      pivot.y + lerp(1.6, -1.2, e) + Math.sin(t * 0.4) * 0.15,
-      pivot.z + Math.cos(yaw) * radius,
+      pivot.x + Math.sin(yaw) * Math.cos(elev) * radius,
+      pivot.y + Math.sin(elev) * radius,
+      pivot.z + Math.cos(yaw) * Math.cos(elev) * radius,
     );
     camera.up.set(0, 1, 0);
     camera.lookAt(pivot);
-    camera.rotateZ(THREE.MathUtils.degToRad(lerp(7, -7, e)));
+    camera.rotateZ(THREE.MathUtils.degToRad(lerp(8, -8, e)));
   },
 };

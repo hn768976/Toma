@@ -63,9 +63,9 @@ const KIND_PLAN: [SpriteKind, number][] = [
   ["teal", 8],
   ["pie", 8],
   ["donut", 8],
-  ["line", 10],
-  ["mini", 4],
-  ["table", 4],
+  ["line", 13],
+  ["mini", 3],
+  ["table", 2],
 ];
 
 const fmtNumber = (r: () => number) => {
@@ -95,21 +95,24 @@ const drawArea = (
   h: number,
   c: ChartColors,
 ) => {
-  const n = 5 + Math.floor(r() * 5);
+  // overlapping translucent layers with sharp peaks (like the reference)
   const layers = [
-    { col: c.red, lo: 0.35, hi: 0.95 },
-    { col: c.yellow, lo: 0.25, hi: 0.7 },
-    { col: c.blue, lo: 0.12, hi: 0.45 },
+    { col: c.red, lo: 0.3, hi: 1.0 },
+    { col: c.yellow, lo: 0.2, hi: 0.78 },
+    { col: c.blue, lo: 0.1, hi: 0.55 },
   ];
   const base = h * 0.86;
   for (const L of layers) {
-    const s = smoothSeries(r, n, L.lo, L.hi);
+    const n = 4 + Math.floor(r() * 4);
     ctx.beginPath();
     ctx.moveTo(0, base);
-    s.forEach((v, i) => ctx.lineTo((i / (n - 1)) * w, base - v * base * 0.95));
+    for (let i = 0; i < n; i++) {
+      const v = L.lo + (L.hi - L.lo) * r();
+      ctx.lineTo((i / (n - 1)) * w, base - v * base * 0.95);
+    }
     ctx.lineTo(w, base);
     ctx.closePath();
-    ctx.globalAlpha = 0.93;
+    ctx.globalAlpha = 0.84;
     ctx.fillStyle = L.col;
     ctx.fill();
   }
@@ -230,14 +233,14 @@ const drawLine = (
 ) => {
   const n = 5 + Math.floor(r() * 5);
   const pts: [number, number][] = [];
-  let y = 0.15 + r() * 0.2;
+  let y = 0.08 + r() * 0.15;
   for (let i = 0; i < n; i++) {
-    y += (r() - 0.25) * 0.22;
+    y += (r() - 0.15) * 0.2;
     y = Math.max(0.08, Math.min(0.92, y));
     pts.push([0.04 + (i / (n - 1)) * 0.92, y]);
   }
   ctx.strokeStyle = c.inkLight;
-  ctx.globalAlpha = 0.35;
+  ctx.globalAlpha = 0.18;
   ctx.lineWidth = h * 0.004;
   for (let i = 0; i < 4; i++) {
     ctx.beginPath();
@@ -245,9 +248,9 @@ const drawLine = (
     ctx.lineTo(w, h * (0.2 + i * 0.22));
     ctx.stroke();
   }
-  ctx.globalAlpha = 0.95;
+  ctx.globalAlpha = 1;
   ctx.strokeStyle = c.ink;
-  ctx.lineWidth = h * 0.012;
+  ctx.lineWidth = h * 0.016;
   ctx.beginPath();
   pts.forEach(([px, py], i) => {
     const X = px * w;
@@ -258,7 +261,7 @@ const drawLine = (
   ctx.stroke();
   pts.forEach(([px, py]) => {
     ctx.beginPath();
-    ctx.arc(px * w, h * (1 - py), h * 0.022, 0, Math.PI * 2);
+    ctx.arc(px * w, h * (1 - py), h * 0.03, 0, Math.PI * 2);
     ctx.fillStyle = c.ink;
     ctx.fill();
   });
