@@ -11,6 +11,8 @@ Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
+// Standard broadcast-range BT.709 output (yuv420p, not full-range yuvj420p).
+Config.setColorSpace("bt709");
 // The scenes are WebGL2 (Three.js). ANGLE works with a GPU and falls back to
 // software rendering on machines without one.
 Config.setChromiumOpenGlRenderer("angle");

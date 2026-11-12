@@ -1,7 +1,7 @@
 {
   "name": "holographic-data-cubes",
   "version": "1.0.0",
-  "description": "My Remotion video",
+  "description": "Holographic data cubes motion graphic (Remotion + Three.js, 4K masters)",
   "repository": {},
   "license": "UNLICENSED",
   "engines": {
@@ -28,7 +28,11 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:v1": "remotion render DataCubes-V1-Reference out/data-cubes-v1-1080p.mp4 --scale=0.5",
+    "render:v2": "remotion render DataCubes-V2-CyanAmber out/data-cubes-v2-1080p.mp4 --scale=0.5",
+    "render:v1:4k": "remotion render DataCubes-V1-Reference out/data-cubes-v1-4k.mp4",
+    "render:v2:4k": "remotion render DataCubes-V2-CyanAmber out/data-cubes-v2-4k.mp4"
   },
   "allowScripts": {
     "esbuild": false
