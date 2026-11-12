@@ -313,6 +313,7 @@ uniform float uSeed;
 uniform float uVignette;
 uniform float uGrain;
 uniform float uExposure;
+uniform float uResY;
 varying vec2 vUv;
 float h(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 float viewDepth(vec2 uv) {
@@ -325,6 +326,9 @@ vec3 toSRGB(vec3 c) {
 void main() {
   float depth = viewDepth(vUv);
   float coc = clamp(abs(depth - uFocus) * uAperture, 0.0, uMaxBlur) * 0.45;
+  // sample a pre-filtered mip level matched to the tap spacing, so large blurs
+  // stay smooth instead of breaking into a structured dot pattern
+  float lod = log2(max(1.0, coc * uResY / 3.5));
   vec3 acc = vec3(0.0);
   float wsum = 0.0;
   const int N = 56;
@@ -333,7 +337,7 @@ void main() {
     float a = float(i) * 2.39996323;
     vec2 off = vec2(cos(a), sin(a)) * r * coc;
     off.x /= uAspect;
-    vec3 c = texture2D(tColor, vUv + off).rgb;
+    vec3 c = textureLod(tColor, vUv + off, lod).rgb;
     float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
     float w = 1.0 + 2.5 * max(l - 0.45, 0.0); // brighter bokeh highlights
     acc += c * w;
@@ -545,6 +549,9 @@ export const makeDataWallBuilder =
       type: THREE.HalfFloatType,
       samples: 4,
       depthTexture: new THREE.DepthTexture(Math.round(width * pixelRatio), Math.round(height * pixelRatio)),
+      generateMipmaps: true,
+      minFilter: THREE.LinearMipmapLinearFilter,
+      magFilter: THREE.LinearFilter,
     });
     const finalMat = new THREE.ShaderMaterial({
       uniforms: {
@@ -560,7 +567,8 @@ export const makeDataWallBuilder =
         uSeed: { value: 0 },
         uVignette: { value: 0.55 },
         uGrain: { value: 0.004 },
-        uExposure: { value: 1.28 },
+        uExposure: { value: 1.12 },
+        uResY: { value: height * pixelRatio },
       },
       vertexShader: finalVert,
       fragmentShader: finalFrag,
@@ -586,7 +594,7 @@ export const makeDataWallBuilder =
       camera.updateMatrixWorld();
 
       // boot sequence
-      const boot = smoothstep(0.1, 1.4, t);
+      const boot = 0.12 + 0.88 * smoothstep(0.0, 1.4, t);
       wallUniforms.uTime.value = t;
       wallUniforms.uBoot.value = boot;
       panelUniforms.uTime.value = t;
@@ -613,7 +621,7 @@ export const makeDataWallBuilder =
           const radius = 0.0042 * (1 + 0.5 * hash(k, ev.start));
           tmpM.compose(ev.hub, tmpQ, new THREE.Vector3(radius, radius, len));
           beams.setMatrixAt(bi, tmpM);
-          tmpC.copy(laserColor).multiplyScalar(env * flick * 0.75);
+          tmpC.copy(laserColor).multiplyScalar(env * flick * 1.0);
           beams.setColorAt(bi, tmpC);
           bi++;
           if (grow >= 1 && ni < maxBeams) {
@@ -641,7 +649,7 @@ export const makeDataWallBuilder =
 
       // depth of field + grade
       finalMat.uniforms.uFocus.value = rig.focus(t);
-      finalMat.uniforms.uFade.value = smoothstep(0.15, 1.6, t);
+      finalMat.uniforms.uFade.value = 0.4 + 0.6 * smoothstep(0.1, 1.6, t);
       finalMat.uniforms.uSeed.value = (frame * 7.31) % 97;
 
       renderer.setRenderTarget(rt);

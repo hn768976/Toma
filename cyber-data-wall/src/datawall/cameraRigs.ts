@@ -26,12 +26,12 @@ const TGT1 = new THREE.Vector3(10.6, 8.6, 0);
  * Shared by V1 and V2 (V2 changes the colour palette only).
  */
 export const LOW_ANGLE_DRIFT: CameraRig = {
-  fov: 25,
+  fov: 21,
   fogDensity: 0.03,
   aperture: 0.009,
   maxBlur: 0.026,
   fanSeed: 7,
-  fanRegion: { x0: 7.5, x1: 13, y0: 10, y1: 12 },
+  fanRegion: { x0: 8, x1: 12.5, y0: 8.6, y1: 10.2 },
   focus: (t) => lerp(17.2, 17.8, Math.min(1, t / 19)),
   apply: (camera, t, duration) => {
     const k = ease(Math.min(1, t / duration));
