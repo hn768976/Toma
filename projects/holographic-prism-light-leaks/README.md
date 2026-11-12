@@ -1,11 +1,12 @@
 # Holographic Prism Light Leaks (Remotion · WebGL 2 · 4K)
 
 Blurred holographic / prismatic light-leak footage recreated procedurally with a
-**WebGL 2 fragment shader**: broad violet / magenta / rainbow washes, two
-parallax layers of small defocused prism shards with RGB-split (chromatic)
-edges, soft shadow bands and white specular glows drifting over a mauve base.
-Every shape falls off to exactly zero inside a radius the shader's cell
-neighbourhood provably covers, so there are no cut-off edges or seams.
+**WebGL 2 fragment shader**: a few large, smeared, overlapping colour washes,
+spectral streaks with one crisp caustic edge that converge on a wandering light
+source, caustic crescents, hot blooming white flares and soft shadow bands over
+a mauve base. Every element lives in a periodic tile and fades to exactly zero
+within half the tile period, so the infinite plane seen by the V2 tracking
+camera has no cut-off edges or seams.
 
 | Composition id | Version | Size | FPS | Frames | Duration |
 |---|---|---|---|---|---|

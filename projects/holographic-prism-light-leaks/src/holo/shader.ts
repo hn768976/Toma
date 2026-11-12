@@ -1,7 +1,7 @@
-// WebGL 2 fragment shader that synthesises a blurred holographic / prismatic
-// light-leak field: broad violet / magenta / rainbow washes, a dense layer of
-// small defocused prism shards with RGB-split edges, soft shadow bands and
-// white specular glows drifting over a mauve base.
+// WebGL 2 fragment shader that synthesises a holographic / prismatic light-leak
+// field: a few large overlapping colour washes, spectral streaks with one crisp
+// caustic edge that converge on a wandering light source, caustic crescents,
+// hot white flares and soft shadow bands over a mauve base.
 //
 // uMode 0 = flat, screen-aligned camera (Version 1 - matches the reference)
 // uMode 1 = low-angle perspective tracking shot across the foil (Version 2)
@@ -25,15 +25,13 @@ out vec4 outColor;
 const float TAU = 6.28318530718;
 const float LIGHT_GAIN = 2.0;
 
-// Seam-safety rule for both cell layers: a shape's anchor sits at least 0.3
-// cells inside its own cell and drifts by at most m, and its contribution is
-// exactly zero beyond reach E, with E + m <= 1.3 * CELL. No shape outside the
-// evaluated 3x3 neighbourhood can then touch the pixel, so nothing is ever cut
-// off with a hard edge.
-const float CELL_A = 0.9;    // large soft colour washes + white specular glows
-const float REACH_A = 1.0;   // drift <= 0.06 -> 1.06 <= 1.17
-const float CELL_B = 0.46;   // dense defocused prism shards ("pills")
-const float REACH_B = 0.54;  // drift <= 0.05 -> 0.59 <= 0.598
+// Element tiling: every element lives in a periodic tile and is evaluated at its
+// nearest periodic image. Each element's contribution is exactly zero beyond a
+// reach that is <= half the tile period, so the infinite plane (needed by the
+// tracking camera of Version 2) is seamless by construction.
+const vec2 P_WASH = vec2(2.6, 1.8);   // wash reach <= 0.9
+const vec2 P_STREAK = vec2(2.4, 1.6); // streak reach <= 0.75
+const vec2 P_SMALL = vec2(2.4, 1.6);  // crescents / flares, reach <= 0.75
 
 // ---- hashes (sin-free, stable on every GPU / SwiftShader) ----
 float hash12(vec2 p) {
@@ -78,139 +76,144 @@ vec3 spectrum(float x) {
 // C1-smooth window that is exactly 0 at distance >= E
 float win(float d, float E) { return 1.0 - smoothstep(0.55 * E, E, d); }
 
-float capsule(vec2 q, float hl, float r) {
-  return length(vec2(max(abs(q.x) - hl, 0.0), q.y)) - r;
-}
-
 struct Field { vec3 light; float dark; float white; };
 
-// Large, slow layer: broad colour washes, soft arcs, shadow bands, white glows.
-void layerA(inout Field F, vec2 uv, float t) {
-  vec2 baseCell = floor(uv / CELL_A);
-  for (int dy = -1; dy <= 1; dy++) {
-    for (int dx = -1; dx <= 1; dx++) {
-      vec2 cell = baseCell + vec2(float(dx), float(dy));
-      for (int k = 0; k < 2; k++) {
-        vec2 sd = cell + vec2(float(k) * 17.13, float(k) * 3.71);
-        vec4 h0 = hash42(sd);
-        if (h0.w < 0.22) continue;                       // bare mauve gaps
-        float T = 2.4 + 2.6 * h0.x;
-        float lt = t / T + h0.y;
-        float g = floor(lt);
-        float ph = lt - g;
-        vec4 h1 = hash42(sd + g * vec2(7.31, 13.17));
-        vec4 h2 = hash42(sd + g * vec2(29.7, 3.3) + 11.0);
-        float a = h2.x * TAU + (h2.y - 0.5) * 0.5 * (ph - 0.5) * T;
-        vec2 c = (cell + 0.3 + 0.4 * h1.xy) * CELL_A
-               + vec2(cos(a), sin(a)) * 0.06 * (2.0 * ph - 1.0);
-        vec2 q0 = uv - c;
-        float d = length(q0);
-        if (d >= REACH_A) continue;
-        vec4 h3 = hash42(sd + g * vec2(5.1, 41.9) + 23.0);
-        float life = sin(3.14159265 * ph);
-        life *= life * win(d, REACH_A);
-        float ca = cos(a);
-        float sa = sin(a);
-        vec2 q = vec2(ca * q0.x + sa * q0.y, -sa * q0.x + ca * q0.y);
-        float kind = h3.y;
+vec2 wrapq(vec2 q, vec2 P) { return q - P * floor(q / P + 0.5); }
+vec2 rot2(vec2 q, float a) { float c = cos(a); float s = sin(a); return vec2(c * q.x + s * q.y, -s * q.x + c * q.y); }
 
-        if (k == 1 && h0.z < 0.30) {
-          // large defocused white specular glow (soft roll-off, no plateau)
-          float rad = 0.07 + 0.07 * h2.w;
-          vec2 e = q / vec2(rad * (1.0 + 0.9 * h2.z), rad);
-          float dd = dot(e, e);
-          F.white += exp(-dd * dd * 0.35) * life * (0.8 + 0.5 * h3.w);
-          F.light += vec3(1.0, 0.5, 0.75) * exp(-dd * 0.25) * life * 0.10;
-          continue;
-        }
+// One recycling element slot: it lives for T seconds, then respawns elsewhere
+// with new random parameters. Slots of a role are phase-staggered so the
+// number of visible elements stays steady.
+struct Slot { float ph; float T; vec4 h1; vec4 h2; vec4 h3; };
+Slot slot(float id, float idx, float n, float t, float Tmin, float Tspan) {
+  vec4 h0 = hash42(vec2(id * 1.731 + 0.37, 7.7));
+  Slot s;
+  s.T = Tmin + Tspan * h0.x;
+  float lt = t / s.T + (idx + 0.35 * h0.y) / n;
+  float g = floor(lt);
+  s.ph = lt - g;
+  vec2 k = vec2(id * 1.731 + 0.37, g * 1.117 + 0.53);
+  s.h1 = hash42(k + vec2(3.1, 11.7));
+  s.h2 = hash42(k * 1.37 + vec2(17.3, 5.9));
+  s.h3 = hash42(k * 0.73 + vec2(41.1, 23.3));
+  return s;
+}
+float bell(float ph) { float s = sin(3.14159265 * ph); return s * s; }
+float plateau(float ph) { return smoothstep(0.0, 0.35, ph) * (1.0 - smoothstep(0.65, 1.0, ph)); }
+vec2 placeAt(Slot s, vec2 P, float vmax) {
+  return (s.h1.xy - 0.5) * P + (s.h1.zw - 0.5) * 2.0 * vmax * (s.ph - 0.5) * s.T;
+}
 
-        float curv = (h2.z - 0.5) * 1.1;
-        float wid = 0.08 + 0.12 * h2.w;
-        float L = 0.16 + 0.20 * h3.x;
-        float x = (q.y + curv * q.x * q.x) / wid;
-        float qa = q.x / L;
-        float I = exp(-(x * x * 0.8 + qa * qa)) * life;
-        if (kind < 0.40) {
-          float dir = h3.z < 0.5 ? 1.0 : -1.0;
-          float hx = 0.06 + 0.8 * fract(h1.w * 7.13) + dir * x * 0.17;
-          F.light += spectrum(hx) * I * 0.75;
-        } else if (kind < 0.62) {
-          F.light += mix(vec3(0.30, 0.12, 1.0), vec3(0.12, 0.22, 1.0), h1.z) * I * 0.8;
-        } else if (kind < 0.78) {
-          F.light += mix(vec3(0.95, 0.12, 0.55), vec3(0.95, 0.10, 0.22), h1.z) * I * 0.75;
-        } else if (kind < 0.86) {
-          F.light += vec3(1.0, 0.36, 0.12) * I * 0.6;
-        } else {
-          F.dark += I * 1.2;
-        }
-      }
+// Large, soft, overlapping colour washes (1-4 dominate the frame at once).
+void washes(inout Field F, vec2 uv, float t) {
+  for (int i = 0; i < 12; i++) {
+    Slot s = slot(float(i), float(i), 12.0, t, 5.0, 3.5);
+    vec2 q = wrapq(uv - placeAt(s, P_WASH, 0.05), P_WASH);
+    float rx = 0.30 + 0.15 * s.h2.x;
+    float d = length(q);
+    float E = 2.0 * rx;                      // <= 0.9 = P_WASH.y / 2
+    if (d >= E) continue;
+    float ry = rx * (0.35 + 0.45 * s.h2.y);
+    vec2 r = rot2(q, s.h2.z * TAU + (s.h2.w - 0.5) * 0.12 * (s.ph - 0.5) * s.T);
+    vec2 e = r / vec2(rx, ry);
+    float I = exp(-dot(e, e) * 1.05) * win(d, E) * plateau(s.ph) * (0.55 + 0.4 * s.h3.y);
+    I *= 0.55 + 0.75 * vnoise(vec2(e.x * 0.8, e.y * 5.0) + s.h3.zw * 40.0); // smeared striations
+    float k = s.h3.x;
+    vec3 c;
+    if (k < 0.15) c = vec3(0.24, 0.08, 1.0);         // violet
+    else if (k < 0.31) c = vec3(0.05, 0.30, 1.0);    // blue
+    else if (k < 0.53) c = vec3(1.0, 0.12, 0.16);    // red
+    else if (k < 0.67) c = vec3(1.0, 0.36, 0.08);    // orange
+    else if (k < 0.73) c = vec3(1.0, 0.75, 0.15);    // amber-yellow
+    else if (k < 0.79) c = vec3(0.10, 0.80, 0.70);   // teal
+    else if (k < 0.85) { F.dark += I * 1.4; continue; } // shadow
+    else c = spectrum(0.5 + 0.42 * clamp(r.x / rx, -1.2, 1.2)); // rainbow sheet
+    F.light += c * I;
+  }
+}
+
+// Spectral streaks: dispersed light bands with one crisp caustic edge and one
+// soft edge. Most point at a slowly wandering light source -> converging rays.
+void streaks(inout Field F, vec2 uv, float t, float fp) {
+  vec2 S = vec2(-0.78 + 0.35 * sin(t * 0.13), 0.36 + 0.22 * sin(t * 0.17 + 1.0));
+  for (int i = 0; i < 11; i++) {
+    Slot s = slot(float(i) + 10.0, float(i), 11.0, t, 2.8, 3.2);
+    vec2 c = placeAt(s, P_STREAK, 0.06);
+    vec2 q = wrapq(uv - c, P_STREAK);
+    if (dot(q, q) >= 0.5625) continue;       // reach 0.75 <= P_STREAK.y / 2
+    float a;
+    if (s.h2.x < 0.7) {
+      vec2 toS = wrapq(c - S, P_STREAK);
+      a = atan(toS.y, toS.x) + (s.h2.y - 0.5) * 0.5;
+    } else {
+      a = s.h2.y * TAU + (s.h3.y - 0.5) * 0.3 * (s.ph - 0.5) * s.T;
+    }
+    vec2 r = rot2(q, a);
+    float Lh = 0.28 + 0.34 * s.h2.z;               // <= 0.62
+    float w = 0.022 + 0.13 * s.h2.w * s.h2.w;      // <= 0.152
+    float curv = (s.h3.z - 0.5) * 0.5;             // bend <= 0.1
+    float side = s.h3.w < 0.5 ? 1.0 : -1.0;
+    float xs = (r.y + curv * r.x * r.x) * side;    // sharp edge at xs = -w/2
+    float bs = 0.0045 + 0.008 * s.h1.w + 1.2 * fp; // crisp caustic edge
+    float bsoft = 0.25 * w + 0.03 * s.h3.y;        // defocused edge
+    float m = smoothstep(-0.5 * w - bs, -0.5 * w + bs, xs)
+            * (1.0 - smoothstep(0.5 * w - bsoft, 0.5 * w + bsoft, xs));
+    float along = win(abs(r.x), Lh);
+    along *= mix(1.0, smoothstep(-Lh, 0.4 * Lh, r.x), 0.65); // brighter toward the source
+    float I = m * along * bell(s.ph) * (0.75 + 0.45 * s.h1.y);
+    I *= 0.6 + 0.6 * vnoise(vec2(r.x * 3.0, xs * 30.0) + s.h2.xy * 50.0); // striations
+    float hx = clamp((xs + 0.5 * w) / (w + bsoft), 0.0, 1.0);
+    float k = s.h3.x;
+    vec3 c3;
+    if (k < 0.62) c3 = mix(spectrum(s.h1.z < 0.5 ? hx : 1.0 - hx), vec3(0.9, 0.8, 0.9), 0.12);
+    else if (k < 0.70) c3 = vec3(1.0, 0.82, 0.88);
+    else if (k < 0.88) c3 = vec3(1.0, 0.30 + 0.25 * hx, 0.08);
+    else c3 = vec3(0.15, 0.25, 1.0);
+    F.light += c3 * I;
+    if (s.h1.z < 0.55) {
+      // thin bright caustic line on the sharp edge
+      float e = (xs + 0.5 * w) / (0.007 + 1.5 * fp);
+      float rim = exp(-e * e) * along * bell(s.ph) * (0.007 / (0.007 + 1.5 * fp));
+      F.light += vec3(1.0, 0.85, 0.92) * rim * 0.35;
+      F.white += rim * 0.15;
     }
   }
 }
 
-// Dense layer of small defocused prism shards ("pills") with RGB-split edges.
-void layerB(inout Field F, vec2 uv, float t, float fp, float salt, float skip) {
-  vec2 baseCell = floor(uv / CELL_B);
-  for (int dy = -1; dy <= 1; dy++) {
-    for (int dx = -1; dx <= 1; dx++) {
-      vec2 cell = baseCell + vec2(float(dx), float(dy));
-      for (int k = 0; k < 2; k++) {
-        vec2 sd = cell + vec2(float(k) * 31.7 + salt, float(k) * 5.3 - salt);
-        vec4 h0 = hash42(sd);
-        if (h0.w < skip) continue;
-        float T = 1.8 + 2.4 * h0.x;
-        float lt = t / T + h0.y;
-        float g = floor(lt);
-        float ph = lt - g;
-        vec4 h1 = hash42(sd + g * vec2(7.31, 13.17));
-        vec4 h2 = hash42(sd + g * vec2(29.7, 3.3) + 11.0);
-        float a = h2.x * TAU + (h2.y - 0.5) * 0.8 * (ph - 0.5) * T;
-        vec2 c = (cell + 0.3 + 0.4 * h1.xy) * CELL_B
-               + vec2(cos(a), sin(a)) * 0.05 * (2.0 * ph - 1.0);
-        vec2 q0 = uv - c;
-        if (dot(q0, q0) >= REACH_B * REACH_B) continue;
-        vec4 h3 = hash42(sd + g * vec2(5.1, 41.9) + 23.0);
-        float ca = cos(a);
-        float sa = sin(a);
-        vec2 q = vec2(ca * q0.x + sa * q0.y, -sa * q0.x + ca * q0.y);
-
-        float hl = 0.04 + 0.16 * h2.z;
-        float r = 0.038 + 0.05 * h2.w;
-        // defocus (+ pixel footprint so distant shards never alias), capped so
-        // the reach hl + r + b + fringe <= 0.20 + 0.095 + 0.2 + 0.02 < REACH_B
-        float b = min(0.045 + 0.05 * h3.x + 1.3 * fp, 0.2);
-        float energy = r / (r + 1.5 * fp);
-        vec2 o = vec2(0.0, 0.008 + 0.012 * h3.z);           // prism fringe offset
-        float mR = 1.0 - smoothstep(-b, b, capsule(q - o, hl, r));
-        float mG = 1.0 - smoothstep(-b, b, capsule(q, hl, r));
-        float mB = 1.0 - smoothstep(-b, b, capsule(q + o, hl, r));
-        if (mR + mG + mB < 0.001) continue;
-        vec3 m = vec3(mR, mG, mB);
-        float life = sin(3.14159265 * ph);
-        life *= life * energy;
-        float I = life * (0.6 + 0.6 * h3.w);
-        float kind = h3.y;
-        if (kind < 0.50) {
-          // dispersed rainbow streak: hue runs along the shard and across it
-          float dir = h1.z < 0.5 ? 1.0 : -1.0;
-          float hx = 0.03 + 0.8 * pow(fract(h1.w * 5.37), 1.3)
-                   + dir * (q.x / (hl + r)) * 0.28 + q.y / r * 0.08;
-          F.light += spectrum(hx) * m * I;
-        } else if (kind < 0.66) {
-          F.light += mix(vec3(0.30, 0.13, 1.0), vec3(0.10, 0.25, 1.0), h1.z) * m * I;
-        } else if (kind < 0.81) {
-          F.light += mix(vec3(1.0, 0.12, 0.50), vec3(1.0, 0.10, 0.18), h1.z) * m * I;
-        } else if (kind < 0.91) {
-          F.light += vec3(1.0, 0.30, 0.08) * m * I;
-        } else if (kind < 0.94) {
-          F.light += vec3(0.12, 0.80, 1.0) * m * I * 0.8;
-        } else {
-          // white bokeh shard with coloured edges
-          F.light += m * I * 0.9;
-          F.white += mG * mG * I * 0.55;
-        }
-      }
-    }
+// Caustic crescents with a crisp bright outer rim, and hot white flares.
+void accents(inout Field F, vec2 uv, float t, float fp) {
+  for (int i = 0; i < 2; i++) {
+    Slot s = slot(float(i) + 20.0, float(i), 2.0, t, 3.0, 2.5);
+    vec2 q = wrapq(uv - placeAt(s, P_SMALL, 0.05), P_SMALL);
+    float R = 0.07 + 0.14 * s.h2.x;
+    if (length(q) > 2.0 * R + 0.05) continue;
+    float a = s.h2.z * TAU + (s.h2.w - 0.5) * 0.4 * (s.ph - 0.5) * s.T;
+    vec2 off = vec2(cos(a), sin(a)) * R * (0.25 + 0.3 * s.h2.y);
+    float bs = 0.005 + 1.2 * fp;
+    vec2 qs = rot2(q, a) * vec2(1.0, 1.0 / (0.55 + 0.4 * s.h3.w)); // elliptical arcs
+    vec2 os = rot2(off, a) * vec2(1.0, 1.0 / (0.55 + 0.4 * s.h3.w));
+    float d1 = length(qs) - R;
+    float d2 = length(qs - os) - R;
+    float m = (1.0 - smoothstep(-bs, bs, d1)) * smoothstep(-0.35 * R, 0.1 * R, d2);
+    float e = d1 / (0.006 + 1.5 * fp);
+    float rim = exp(-e * e) * smoothstep(-0.1 * R, 0.35 * R, d2);
+    float life = bell(s.ph) * (0.7 + 0.4 * s.h3.y);
+    bool wh = s.h3.x < 0.35;
+    vec3 c = wh ? vec3(1.0, 0.86, 0.9) : spectrum(clamp(0.5 + 0.6 * qs.y / R, 0.0, 1.0));
+    F.light += c * (m * 0.5 + rim * 0.25) * life;
+    F.white += rim * life * (wh ? 0.3 : 0.06);
+  }
+  for (int i = 0; i < 5; i++) {
+    Slot s = slot(float(i) + 30.0, float(i), 5.0, t, 2.2, 2.2);
+    vec2 q = wrapq(uv - placeAt(s, P_SMALL, 0.04), P_SMALL);
+    float d = length(q);
+    if (d >= 0.7) continue;
+    float rad = 0.035 + 0.06 * s.h2.x;
+    vec2 e = rot2(q, s.h2.z * TAU) / vec2(rad * (1.0 + 1.6 * s.h2.y), rad);
+    float dd = dot(e, e);
+    float life = bell(s.ph) * win(d, 0.7) * (0.8 + 0.5 * s.h3.y);
+    F.white += (exp(-dd * 1.1) * 1.6 + exp(-dd * 0.3) * 0.25) * life; // blooming hot core
+    F.light += vec3(1.0, 0.62, 0.82) * exp(-dd * 0.12) * life * 0.35; // bloom
   }
 }
 
@@ -221,11 +224,10 @@ Field evalField(vec2 uv, float t, float fp) {
   F.white = 0.0;
   // gentle domain warp: refractions are never perfectly straight
   vec2 w = vec2(vnoise(uv * 2.1 + vec2(t * 0.21, 3.7)), vnoise(uv * 2.1 + vec2(8.3, -t * 0.19))) - 0.5;
-  uv += w * 0.06;
-  layerA(F, uv, t);
-  // two depths of shards drifting at different rates -> parallax
-  layerB(F, uv + vec2(0.035, -0.015) * t, t, fp, 0.0, 0.50);
-  layerB(F, uv * 1.35 + vec2(-0.03, 0.02) * t + 5.0, t, fp * 1.35, 71.0, 0.62);
+  uv += w * 0.035;
+  washes(F, uv, t);
+  streaks(F, uv, t, fp);
+  accents(F, uv, t, fp);
   return F;
 }
 
@@ -233,13 +235,15 @@ vec3 shade(vec2 uv, float t, float fp) {
   Field F = evalField(uv, t, fp);
   float n = fbm(uv * 0.9 + vec2(t * 0.05, -t * 0.03));
   // darker maroon-mauve base
-  vec3 base = mix(vec3(0.08, 0.05, 0.07), vec3(0.34, 0.26, 0.32), smoothstep(0.3, 0.72, n));
+  vec3 base = mix(vec3(0.12, 0.09, 0.12), vec3(0.34, 0.28, 0.34), smoothstep(0.3, 0.72, n));
   base *= 1.0 - 0.62 * clamp(F.dark, 0.0, 1.0);
   vec3 light = 1.0 - exp(-F.light * LIGHT_GAIN);   // soft-clip the additive light
   // hue-preserving combine: strong light mostly replaces the base
   float lw = max(light.r, max(light.g, light.b));
-  vec3 col = base * (1.0 - 0.55 * lw) + light;
+  vec3 col = base * (1.0 - 0.75 * lw) + light;
   col = 1.0 - exp(-col * 1.75);                     // filmic shoulder
+  float luma = dot(col, vec3(0.299, 0.587, 0.114));
+  col = max(mix(vec3(luma), col, 1.3), 0.0);        // restore saturation lost in the shoulder
   // soft highlight roll-off for the specular glows (no flat clipped centres)
   col = mix(col, vec3(1.0, 0.97, 0.96), (1.0 - exp(-F.white * 1.6)) * 0.92);
   return col;
