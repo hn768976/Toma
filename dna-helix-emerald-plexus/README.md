@@ -50,9 +50,13 @@ npx remotion render V1-EmeraldPlexusHelix-4K out/v1.mp4
 The delivered 1080p files were made from the 4K masters with a Lanczos downscale:
 
 ```bash
-ffmpeg -i "out/<name> (4K).mp4" -vf scale=1920:1080:flags=lanczos -c:v libx264 -preset slow \
-  -crf 16 -pix_fmt yuv420p -r 30 -movflags +faststart "<name> (1080p).mp4"
+ffmpeg -i "out/<name> (4K).mp4" -vf "scale=1920:1080:flags=lanczos,noise=c0s=3:c0f=t" \
+  -c:v libx264 -preset slow -tune grain -crf 16 -pix_fmt yuv420p -r 30 -movflags +faststart \
+  "<name> (1080p).mp4"
 ```
+
+(The light temporal luma grain keeps the soft green-to-black glow falloff free of 8-bit
+banding after the 4K -> 1080p downscale averages away the shader's dither.)
 
 ### WebGL / GPU note
 
