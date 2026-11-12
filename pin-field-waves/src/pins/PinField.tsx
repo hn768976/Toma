@@ -16,6 +16,8 @@ export const pinFieldSchema = z.object({
   camera: z.enum(["reference", "orbit-crane"]),
   /** Frames per full travel of the wave pattern (seamless loop length). */
   loopFrames: z.number().int().positive(),
+  /** Optional overrides of LOOK values (look development only). */
+  tune: z.record(z.string(), z.number()).optional(),
 });
 export type PinFieldProps = z.infer<typeof pinFieldSchema>;
 
@@ -24,29 +26,61 @@ export type PinFieldProps = z.infer<typeof pinFieldSchema>;
 // ---------------------------------------------------------------------------
 const GRID = 110; // pins per side
 const SPACING = 1;
-const MIN_RADIUS = 0.09; // flat pins read as small dots on the plate
-const MAX_RADIUS = 0.5;
-const MIN_LENGTH = 0.9; // even "flat" pins stand on a thin needle
-const MAX_LENGTH = 2.2; // stalk length of fully raised pins
-const STALK_RATIO = 0.82; // stalk radius relative to head radius
-const MIN_STALK = 0.035;
 
-const FIELD: FieldParams = {
-  wavelength: 36,
+/** All tunable look values (tuned against the reference). */
+const LOOK = {
+  // Pins
+  minRadius: 0.1, // flat pins read as small dots on the plate
+  maxRadius: 0.5,
+  minLength: 0.25, // flat pins: tiny heads on short stubs
+  maxLength: 1.5, // stalk length of fully raised pins
+  stalkRatio: 0.95, // stalk radius relative to head radius
+  minStalk: 0.035,
+  // Height field
+  wavelength: 20,
   direction: 0.35,
-  warp: 0.55,
-  warpScale: 26,
-  rippleCenter: [-6, 10],
-  rippleWavelength: 30,
+  warp: 1.0,
+  warpScale: 18,
+  rippleX: -55,
+  rippleY: 35,
+  rippleWavelength: 22,
   rippleMix: 0.6,
-  edge0: 0.27,
-  edge1: 0.52,
+  edge0: 0.24,
+  edge1: 0.5,
+  cycles: 1, // wave periods travelled per loop (integer keeps the loop seamless)
+  ease: 0.5, // speed modulation within each loop (0 = constant speed)
+  // Reference camera (Version 1)
+  distance: 34,
+  elevationDeg: 37,
+  azimuthDeg: 0,
+  rollDeg: 62,
+  fov: 32,
+  focus: 31,
+  targetX: 0,
+  targetZ: 0,
+  // Rendering
+  exposure: 1.35,
+  focusRange: 12,
+  maxBlur: 18, // px at 2160p
 };
+type Look = typeof LOOK;
+
+const fieldFrom = (L: Look): FieldParams => ({
+  wavelength: L.wavelength,
+  direction: L.direction,
+  warp: L.warp,
+  warpScale: L.warpScale,
+  rippleCenter: [L.rippleX, L.rippleY],
+  rippleWavelength: L.rippleWavelength,
+  rippleMix: L.rippleMix,
+  edge0: L.edge0,
+  edge1: L.edge1,
+});
 
 const COLORS = {
-  plate: "#aab0bc",
-  background: "#9ea5b2",
-  pin: "#fbf6ef",
+  plate: "#bcc2cd",
+  background: "#b0b7c3",
+  pin: "#f6f6f4",
   sky: "#ffffff",
   ground: "#5d6578",
 };
@@ -64,18 +98,22 @@ type CameraPose = {
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const easeInOut = (t: number) => 0.5 - 0.5 * Math.cos(Math.PI * t);
 
-const REFERENCE_POSE: CameraPose = {
-  target: new THREE.Vector3(0, 0, 0),
-  distance: 35,
-  elevation: THREE.MathUtils.degToRad(58),
-  azimuth: THREE.MathUtils.degToRad(0),
-  roll: THREE.MathUtils.degToRad(-132),
-  fov: 25,
-  focus: 38,
-};
+const referencePose = (L: Look): CameraPose => ({
+  target: new THREE.Vector3(L.targetX, 0, L.targetZ),
+  distance: L.distance,
+  elevation: THREE.MathUtils.degToRad(L.elevationDeg),
+  azimuth: THREE.MathUtils.degToRad(L.azimuthDeg),
+  roll: THREE.MathUtils.degToRad(L.rollDeg),
+  fov: L.fov,
+  focus: L.focus,
+});
 
-const poseAt = (camera: PinFieldProps["camera"], progress: number): CameraPose => {
-  if (camera === "reference") return REFERENCE_POSE;
+const poseAt = (
+  camera: PinFieldProps["camera"],
+  progress: number,
+  L: Look,
+): CameraPose => {
+  if (camera === "reference") return referencePose(L);
   // Version 2: a slow orbit + crane-down move across the whole clip, ending
   // on a low grazing angle that shows the pins' height in profile.
   const t = easeInOut(progress);
@@ -204,8 +242,8 @@ const buildScene = (canvas: HTMLCanvasElement, width: number, height: number): S
       uNear: { value: camera.near },
       uFar: { value: camera.far },
       uFocus: { value: 25 },
-      uFocusRange: { value: 9 },
-      uMaxBlur: { value: (22 * height) / 2160 },
+      uFocusRange: { value: LOOK.focusRange },
+      uMaxBlur: { value: (LOOK.maxBlur * height) / 2160 },
     },
     depthTest: false,
     depthWrite: false,
@@ -250,7 +288,7 @@ const applyPose = (cam: THREE.PerspectiveCamera, pose: CameraPose) => {
   cam.updateMatrixWorld();
 };
 
-export const PinField: React.FC<PinFieldProps> = ({ camera, loopFrames }) => {
+export const PinField: React.FC<PinFieldProps> = ({ camera, loopFrames, tune }) => {
   const frame = useCurrentFrame();
   const { width, height, durationInFrames } = useVideoConfig();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -272,18 +310,26 @@ export const PinField: React.FC<PinFieldProps> = ({ camera, loopFrames }) => {
       const s = stateRef.current;
       if (!s) throw new Error("Scene not initialised");
 
-      // Animate the pins.
-      const phase = frame / loopFrames;
+      const L: Look = { ...LOOK, ...tune };
+      const field = fieldFrom(L);
+
+      // Animate the pins. The phase advances `cycles` wave periods per loop;
+      // `ease` modulates the speed within each loop (fastest early in it).
+      // Both keep phase(t + 1) = phase(t) + cycles, so the loop stays seamless.
+      const t = frame / loopFrames;
+      const phase =
+        L.cycles *
+        (t + (L.ease / (2 * Math.PI)) * Math.sin(2 * Math.PI * (t - 0.13)));
       const hm = s.heads.instanceMatrix.array as Float32Array;
       const sm = s.stalks.instanceMatrix.array as Float32Array;
       const n = s.gridXY.length / 2;
       for (let i = 0; i < n; i++) {
         const x = s.gridXY[i * 2];
         const y = s.gridXY[i * 2 + 1];
-        const h = heightAt(x, y, phase, FIELD);
-        const r = MIN_RADIUS + (MAX_RADIUS - MIN_RADIUS) * h;
-        const len = MIN_LENGTH + (MAX_LENGTH - MIN_LENGTH) * h;
-        const sr = Math.max(r * STALK_RATIO, MIN_STALK);
+        const h = heightAt(x, y, phase, field);
+        const r = L.minRadius + (L.maxRadius - L.minRadius) * h;
+        const len = L.minLength + (L.maxLength - L.minLength) * h;
+        const sr = Math.max(r * L.stalkRatio, L.minStalk);
         const o = i * 16;
         // Head: uniform scale r, centred at stalk top.
         hm.fill(0, o, o + 16);
@@ -297,7 +343,14 @@ export const PinField: React.FC<PinFieldProps> = ({ camera, loopFrames }) => {
       s.heads.instanceMatrix.needsUpdate = true;
       s.stalks.instanceMatrix.needsUpdate = true;
 
-      const pose = poseAt(camera, durationInFrames > 1 ? frame / (durationInFrames - 1) : 0);
+      const pose = poseAt(
+        camera,
+        durationInFrames > 1 ? frame / (durationInFrames - 1) : 0,
+        L,
+      );
+      s.renderer.toneMappingExposure = L.exposure;
+      s.post.material.uniforms.uFocusRange.value = L.focusRange;
+      s.post.material.uniforms.uMaxBlur.value = (L.maxBlur * height) / 2160;
       applyPose(s.camera, pose);
       s.post.material.uniforms.uFocus.value = pose.focus;
 
@@ -310,7 +363,7 @@ export const PinField: React.FC<PinFieldProps> = ({ camera, loopFrames }) => {
     } catch (err) {
       cancelRender(err as Error);
     }
-  }, [frame, width, height, camera, loopFrames, durationInFrames]);
+  }, [frame, width, height, camera, loopFrames, durationInFrames, tune]);
 
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.background }}>
