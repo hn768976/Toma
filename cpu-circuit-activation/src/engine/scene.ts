@@ -387,8 +387,8 @@ export class Engine {
     // lid
     const lidY = LID_REST + (isLock ? 7 : 9) * (1 - drop * drop) + (landed ? 0 : 0.0);
     this.lid.position.y = lidY;
-    this.u.lid.uI.value = landed ? 1.15 + 1.3 * flash : 0.75 + 0.3 * drop;
-    this.u.lid.uAlpha.value = landed ? 1 : 0.5 + 0.3 * drop;
+    this.u.lid.uI.value = landed ? 1.15 + 1.3 * flash : 1.25 + 0.3 * drop;
+    this.u.lid.uAlpha.value = landed ? 1 : 0.68 + 0.2 * drop;
     this.lid.visible = t >= this.lidFrom - 0.01 || true;
 
     this.u.board.uGlow.value = glow * 0.55;

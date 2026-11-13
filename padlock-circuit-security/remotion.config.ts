@@ -9,6 +9,7 @@ Config.setJpegQuality(95);
 Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
+Config.setColorSpace("bt709");
 Config.setCrf(18);
 
 // The scene is rendered with Three.js / WebGL 2, so Chrome needs a GL backend.
