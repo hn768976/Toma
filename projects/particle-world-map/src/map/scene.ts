@@ -148,10 +148,10 @@ export const makeWorldMapFactory =
     // pillars standing on it and their dimmer bluish mirror reflections below.
     // Rolled slightly with the map tilt; drifts slowly for parallax. ---
     const HALL = {
-      pos: new THREE.Vector3(-0.7, -0.16, -6.6),
+      pos: new THREE.Vector3(-0.1, -0.16, -6.6),
       rotY: -0.22,
       roll: -4.5 * DEG,
-      hx: 5.6,
+      hx: 6.4,
       hz: 4.2,
     };
     const hall = new THREE.Group();
@@ -175,10 +175,11 @@ export const makeWorldMapFactory =
       const m = new THREE.Mesh(g, mat);
       m.position.copy(a).add(b).multiplyScalar(0.5);
       m.quaternion.setFromUnitVectors(Y, d.normalize());
+      m.renderOrder = 10 + hallInner.children.length;
       hallInner.add(m);
       return m;
     };
-    const REFL = 0.5; // reflection strength
+    const REFL = 0.38; // reflection strength
     {
       const { hx, hz } = HALL;
       const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
@@ -186,7 +187,7 @@ export const makeWorldMapFactory =
       const floor = new THREE.Mesh(plane(hx * 2, hz * 2), hallMat(LIGHT, 0.5, tex(gridTexture(70))));
       floor.rotation.x = -Math.PI / 2;
       hallInner.add(floor);
-      const floor2 = new THREE.Mesh(plane(hx * 2.4, hz * 2.4), hallMat(TEAL_HAZE, 1.0, tex(reflectionTexture(91)), false));
+      const floor2 = new THREE.Mesh(plane(hx * 2.4, hz * 2.4), hallMat(TEAL_HAZE, 0.55, tex(reflectionTexture(91)), false));
       floor2.rotation.x = -Math.PI / 2;
       floor2.position.y = -0.02;
       hallInner.add(floor2);
@@ -261,18 +262,69 @@ export const makeWorldMapFactory =
       }
 
       // stacked window dashes on the left (above the floor)
-      for (let i = 0; i < 5; i++) {
-        const mesh = new THREE.Mesh(plane(0.7 + rnd() * 0.5, 0.13), hallMat(LIGHT, 0.9 + rnd() * 0.6, lineTex));
-        mesh.position.set(-hx * 0.62 + rnd() * 0.3, 0.25 + i * 0.3, hz * 0.45);
-        hallInner.add(mesh);
-      }
 
       // soft volume glow just above and below the floor
       for (let i = 0; i < 4; i++) {
-        const g = new THREE.Mesh(plane(4 + rnd() * 3, 1.4 + rnd()), hallMat(i % 2 ? LIGHT_BLUE : LIGHT, 0.045, radialTex, false));
+        const g = new THREE.Mesh(plane(4 + rnd() * 3, 1.4 + rnd()), hallMat(i % 2 ? LIGHT_BLUE : LIGHT, 0.025, radialTex, false));
         g.position.set(-2 + i * 1.4, (i % 2 ? -0.5 : 0.4), hz * 0.3);
         hallInner.add(g);
       }
+    }
+
+    // --- near-field crisp detail (close to the focus plane, so it stays sharp):
+    // thin grid lines converging to the right, small data dashes, bright points ---
+    {
+      const nearGroup = new THREE.Group();
+      nearGroup.position.set(0.3, 0.02, -1.6);
+      nearGroup.rotation.z = HALL.roll;
+      city.add(nearGroup);
+      const gridMat = glowMat(tex(gridTexture(77)), LIGHT, 0.5);
+      const g = new THREE.Mesh(plane(7.5, 5), gridMat);
+      g.rotation.x = -Math.PI / 2 + 0.06;
+      g.rotation.z = 0.0;
+      const gHolder = new THREE.Group();
+      gHolder.rotation.y = -0.55; // lines converge to the right
+      gHolder.add(g);
+      nearGroup.add(gHolder);
+      hallMats.push({ mat: gridMat, color: LIGHT, k: 0.5 });
+      // stacked bright window dashes on the left (small, crisp)
+      for (let i = 0; i < 5; i++) {
+        const m = hallMat(LIGHT, 1.3 + rnd() * 0.6, lineTex);
+        const d = new THREE.Mesh(plane(0.32 + rnd() * 0.2, 0.05), m);
+        d.position.set(-3.1 + rnd() * 0.15, 0.08 + i * 0.16, 0);
+        nearGroup.add(d);
+      }
+      // scattered small data dashes along the band
+      for (let i = 0; i < 34; i++) {
+        const k = 0.9 + Math.pow(rnd(), 2) * 1.7;
+        const m = glowMat(lineTex, rnd() < 0.3 ? LIGHT_BLUE : LIGHT, k);
+        const d = new THREE.Mesh(plane(0.06 + rnd() * 0.25, 0.035), m);
+        d.position.set(-2.6 + rnd() * 6.5, -0.25 + rnd() * 0.9, -rnd() * 1.2);
+        nearGroup.add(d);
+        addAnimated({ mesh: d, mat: m, intensity: k, color: LIGHT, period: 1.5 + rnd() * 3, phase: rnd() * 10, speed: 0, permanent: rnd() < 0.4 });
+      }
+      // a few thin vertical light lines (crisp)
+      for (let i = 0; i < 8; i++) {
+        const k = 0.4 + rnd() * 0.6;
+        const m = glowMat(lineTex, LIGHT, k);
+        const h = 0.4 + rnd() * 1.2;
+        const d = new THREE.Mesh(plane(h, 0.05), m);
+        d.rotation.z = Math.PI / 2;
+        d.position.set(-2.2 + rnd() * 5, h / 2 - 0.05, -0.3 - rnd() * 1.0);
+        nearGroup.add(d);
+        addAnimated({ mesh: d, mat: m, intensity: k, color: LIGHT, period: 3 + rnd() * 4, phase: rnd() * 10, speed: 0, permanent: rnd() < 0.5 });
+      }
+    }
+
+    // dim data panels on the right, extending the structure toward the beam end
+    for (let i = 0; i < 6; i++) {
+      const w = 0.6 + rnd() * 1.0;
+      const h = 0.4 + rnd() * 0.9;
+      const m = hallMat(LIGHT, 0.18 + rnd() * 0.15, tex(screenTexture(300 + i, 0.8)));
+      const mesh = new THREE.Mesh(plane(w, h), m);
+      mesh.position.set(4.3 + rnd() * 1.8, -0.1 + rnd() * 1.2, -3.2 - rnd() * 1.5);
+      mesh.renderOrder = 5;
+      city.add(mesh);
     }
 
     // --- light shafts raking down-left / down-right from the core ---
@@ -286,7 +338,7 @@ export const makeWorldMapFactory =
       const m = glowMat(shaftTex, LIGHT_BLUE, k * 1.4, false);
       const mesh = new THREE.Mesh(geo, m);
       mesh.position.set(-1.5 + gauss() * 1.4, 0.0, 1.5 + rnd() * 1.5);
-      mesh.rotation.z = (i % 3 ? 198 + rnd() * 22 : -20 - rnd() * 18) * DEG;
+      mesh.rotation.z = (200 + rnd() * 24) * DEG;
       hall.add(mesh);
       shafts.push({ mesh, mat: m, k, ph: rnd() * 6 });
     }
@@ -296,11 +348,11 @@ export const makeWorldMapFactory =
     const beam = new THREE.Mesh(plane(7.6, 0.15), beamMat);
     beam.position.set(2.55, 0.08, -0.3);
     beam.rotation.z = -6.1 * DEG;
-    scene.add(beam);
+    const sharpLayer: THREE.Object3D[] = [beam];
     const redMat = glowMat(radialTex, new THREE.Color(1, 0.15, 0.1), 1.6, false);
     const red = new THREE.Mesh(plane(0.075, 0.075), redMat);
     red.position.set(6.2, -0.3, -0.3);
-    scene.add(red);
+    sharpLayer.push(red);
 
     // --- orange specks inside the structure ---
     const speckGeo = track(new THREE.BufferGeometry());
@@ -309,7 +361,7 @@ export const makeWorldMapFactory =
     const speckPhase = new Float32Array(speckCount);
     for (let i = 0; i < speckCount; i++) {
       if (i < 55) speckPos.set([0.2 + gauss() * 2.6, 0.25 + gauss() * 0.4, -4.5 + gauss() * 1.8], i * 3);
-      else speckPos.set([-5 + rnd() * 9, -0.6 + rnd() * 2.8, -0.6 - rnd() * 1.5], i * 3);
+      else speckPos.set([-5 + rnd() * 9, -0.6 + rnd() * 2.8, -0.3 - rnd() * 0.6], i * 3);
       speckPhase[i] = rnd() * 6.28;
     }
     speckGeo.setAttribute("position", new THREE.BufferAttribute(speckPos, 3));
@@ -324,7 +376,7 @@ export const makeWorldMapFactory =
           varying float vA;
           void main() {
             vec4 mv = modelViewMatrix * vec4(position, 1.0);
-            gl_PointSize = max(2.0, 0.06 * pxScale / -mv.z);
+            gl_PointSize = max(2.0, 0.035 * pxScale / -mv.z);
             vA = 0.4 + 0.6 * (0.5 + 0.5 * sin(time * 2.3 + aPhase));
             gl_Position = projectionMatrix * mv;
           }`,
@@ -338,7 +390,7 @@ export const makeWorldMapFactory =
           }`,
         transparent: true,
         blending: THREE.AdditiveBlending,
-        depthWrite: false,
+        depthWrite: true,
       }),
     );
     const specks = new THREE.Points(speckGeo, speckMat);
@@ -353,6 +405,8 @@ export const makeWorldMapFactory =
 
     // --- particle world map (overlay layer with per-particle DOF) ---
     const overlay = new THREE.Scene();
+    // beam + end dot sit at the map plane: draw them crisp, after depth of field
+    sharpLayer.forEach((o) => overlay.add(o));
     const particles =
       mode === "orbit"
         ? buildWorldParticles(90000, 2024, 0.05)
@@ -399,7 +453,7 @@ export const makeWorldMapFactory =
             float coc = clamp((abs(dist - focusDistance) - focusRange) / blurRange, 0.0, 1.0) * maxBlurPx;
             float total = sizePx + coc;
             gl_PointSize = total + 2.0;
-            float tw = 0.7 + 0.3 * sin(time * (6.0 + fract(aPhase * 3.7) * 8.0) + aPhase);
+            float tw = 1.27 * (0.35 + 0.65 * pow(0.5 + 0.5 * sin(time * (5.0 + fract(aPhase * 3.7) * 9.0) + aPhase), 3.0));
             // a slow diagonal light sweep across the continents
             float sweep = exp(-pow((position.x + position.y * 0.6) - sheen, 2.0) * 0.5) * 0.5;
             vA = aBright * tw * (1.0 + sweep) * (sizePx * sizePx) / (total * total);
@@ -442,7 +496,7 @@ export const makeWorldMapFactory =
         hall.position.set(HALL.pos.x + 0.035 * t, HALL.pos.y, HALL.pos.z);
         hall.rotation.set(0, 0, HALL.roll);
         hallInner.rotation.y = HALL.rotY + 0.011 * t;
-        const rise = 0.82 + 0.18 * smoothstep(0.45, 0.85, t);
+        const rise = 0.62 + 0.38 * smoothstep(0.45, 0.85, t);
         for (const h of hallMats) h.mat.color.copy(h.color).multiplyScalar(h.k * rise);
 
         for (const a of animated) {
@@ -496,7 +550,7 @@ export const makeWorldMapFactory =
             streakTint: new THREE.Color(0.75, 0.88, 1.0),
             exposure: 0.84,
             contrast: 1.06,
-            saturation: 0.92,
+            saturation: 0.82,
             lift: LIFT,
             vignette: 0.4,
             grain: 0.03,
