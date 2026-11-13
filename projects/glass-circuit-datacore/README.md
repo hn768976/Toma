@@ -25,11 +25,13 @@ alternative version.
     its own depth texture, and blurred with a golden-angle
     scatter-as-gather bokeh, so anything seen through a sharp panel is
     still correctly defocused. This is followed by UnrealBloom, ACES tone
-    mapping and a display-referred grade (desaturation, split-tone, lift,
-    vignette, fine grain).
+    mapping and a display-referred grade (desaturation, split-tone, black point,
+    midtone gamma, vignette, fine grain).
 * The choreography in `src/circuit/timeline.ts` follows the reference beats:
   glowing fin groups (0–1.2 s), the glass core block rising (1.6–3.1 s), the
   white flare (2.8–4.4 s), and tall data blocks rising on the right (4–7.3 s).
+  A global light rhythm (`ambient` and `exposureLift`) follows the reference's
+  brightness curve: bright opening, darker 1–2 s, flare peak 3–4 s, settle, dim end.
 
 ## Commands
 No external media assets are needed: the landscape, glass panels and data read-outs are all generated procedurally in code.
