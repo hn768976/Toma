@@ -27,7 +27,7 @@ vec4 shape(vec3 p, float tau) {
     snoise(vec4(p * 1.25 + 23.9, w)));
   // Two families of diagonal ridges that sweep around the body (the folded,
   // layered look of the reference). Crests are sharpened, troughs flattened.
-  vec3 ax1 = normalize(vec3(0.55, 1.0, 0.3));
+  vec3 ax1 = normalize(vec3(0.9, 1.0, 0.35));
   vec3 ax2 = normalize(vec3(-0.7, 0.45, 0.55));
   float s1 = sin(dot(q, ax1) * 8.4 + 1.6 * snoise(vec4(q * 1.2, w * 1.4)) + tau * 1.1);
   float s2 = sin(dot(q, ax2) * 6.3 + 1.4 * snoise(vec4(q * 1.1 + 9.0, w * 1.2)) - tau * 0.8);
@@ -115,7 +115,7 @@ void main() {
   float spec = pow(max(dot(sn, H), 0.0), 38.0) * self;
   float rim = pow(1.0 - clamp(vN.z, 0.0, 1.0), 2.2);
   vec3 col = uAmb * 0.45
-           + uDot * (diff * 1.9 + fill * 0.7 + 0.2)
+           + uDot * (diff * 2.1 + fill * 0.75 + 0.24)
            + uHi * spec * 1.25
            + uRim * rim * 0.85 * (0.4 + 0.6 * sn.z);
   col *= cavity * mix(0.62, 1.0, sn.z);
@@ -186,7 +186,7 @@ void main() {
   col += vec3(0.05, 0.045, 0.035) * smoothstep(0.55, 0.0, length((uv - vec2(0.0, 1.0)) * vec2(1.1, 1.6)));
   // fine grain + dither so the gradient survives 8-bit / H.264 without banding
   float n = hash(gl_FragCoord.xy) + hash(gl_FragCoord.yx + 17.0) - 1.0;
-  col += n * (5.0 / 255.0);
+  col += n * (6.0 / 255.0);
   fragColor = vec4(col, 1.0);
 }
 `;

@@ -23,9 +23,9 @@ export type ParticleBlobProps = {
 };
 
 /** Grid resolution of each cube face before it is projected onto the sphere. */
-const DOTS_PER_CUBE_EDGE = 52; // 6 * 52 * 52 = 16,224 dots
+const DOTS_PER_CUBE_EDGE = 46; // 6 * 46 * 46 = 12,696 dots
 /** World-space diameter of each dot (unit sphere radius = 1). */
-const DOT_SIZE = 0.0228;
+const DOT_SIZE = 0.0256;
 const CAMERA_FOV = 30;
 const CAMERA_Z = 4.75;
 
