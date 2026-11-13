@@ -7,8 +7,9 @@ export const boot = (frame: number, start: number, end = Infinity, fade = 20) =>
   if (frame < start) return 0;
   const f = frame - start;
   let v = 1;
-  if (f < 8) {
-    const pattern = [1, 0, 0.6, 0, 1, 0.25, 1, 0.8];
+  if (f < 6) {
+    // quick ramp-in with a single soft flicker (no on/off strobing)
+    const pattern = [0.25, 0.6, 0.85, 0.55, 0.9, 1];
     v = pattern[f];
   }
   if (frame > end - fade) {

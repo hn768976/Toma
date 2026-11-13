@@ -52,9 +52,12 @@ void main() {
   }
   vec2 q = vec2(fbm(p * 1.4 + t * 0.03), fbm(p * 1.4 + vec2(5.2, 1.3) - t * 0.025));
   float detail = fbm(p * 1.7 + 1.6 * q + vec2(t * 0.04, -t * 0.02));
-  float d = m * (0.15 + 1.35 * detail);
-  d = smoothstep(0.05, 1.7, d);
-  vec3 c = mix(uCol, uHi, smoothstep(0.5, 1.0, d)) * d * 0.55;
+  float d = m * (0.1 + 1.45 * detail);
+  d = smoothstep(0.12, 1.6, d);
+  d = pow(d, 1.25);
+  // slow luminous pulsing of the whole cloud bank
+  float pulse = 0.85 + 0.15 * sin(t * 0.55) + 0.08 * sin(t * 1.3 + 1.7);
+  vec3 c = mix(uCol, uHi, smoothstep(0.45, 1.0, d)) * d * 0.68 * pulse;
   // vignette keeps the frame edges darker, like the reference
   vec2 v = uv - 0.5;
   c *= 1.0 - dot(v, v) * 1.1;

@@ -8,11 +8,12 @@ const ease = Easing.inOut(Easing.sin);
 const kf = (t: number, times: number[], values: number[]) =>
   interpolate(t, times, values, { easing: ease, extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
-// Reticle keyframes (seconds) - drifts left -> centre -> right and shrinks.
-const RT = [1.4, 6, 10, 14, 18, 22, 26, 30];
-const RX = [520, 610, 760, 1000, 1430, 1520, 1480, 1640];
-const RY = [560, 540, 580, 560, 600, 560, 600, 600];
-const RR = [310, 300, 285, 270, 250, 232, 212, 190];
+// Reticle keyframes (seconds), measured from the reference: it sits left of
+// centre, sweeps to the right, shrinks a little and exits frame right by ~27 s.
+const RT = [1.3, 2.0, 6, 12, 18, 21, 24, 27, 30];
+const RX = [600, 610, 612, 1035, 1525, 1680, 2050, 2450, 2600];
+const RY = [555, 550, 540, 525, 575, 480, 500, 520, 520];
+const RR = [360, 360, 355, 350, 300, 300, 290, 280, 280];
 
 type Sq = [number, number, number, number, number, number];
 const SQUARES: Sq[] = [
@@ -30,7 +31,6 @@ const SQUARES: Sq[] = [
   [1230, 600, 100, 95, 19.0, 25.5],
   [860, 400, 80, 90, 23.0, 28.0],
   [300, 560, 120, 120, 25.0, 99],
-  [1020, 330, 300, 380, 27.0, 99],
 ];
 
 type Lb = [number, number, number, number];
@@ -50,14 +50,32 @@ const LABELS: Lb[] = [
   [180, 700, 1.6, 99],
 ];
 
+type Blk = [number, number, number, number, number]; // x, y, lines, start(s), end(s)
+const BLOCKS: Blk[] = [
+  [440, 660, 5, 0.35, 99],
+  [905, 345, 3, 0.4, 99],
+  [1625, 770, 3, 0.45, 99],
+  [1640, 140, 4, 0.3, 99],
+  [500, 290, 2, 0.5, 12],
+  [1180, 470, 3, 0.6, 18],
+  [250, 470, 3, 2.5, 99],
+  [1350, 880, 2, 0.8, 99],
+  [760, 160, 2, 1.0, 99],
+  [1060, 760, 3, 4.0, 20],
+  [1500, 330, 3, 8.0, 99],
+  [620, 780, 2, 14.0, 99],
+];
+
 export const Center: React.FC<{ frame: number; p: Palette }> = ({ frame, p }) => {
   const t = frame / 30;
   const cx = kf(t, RT, RX);
   const cy = kf(t, RT, RY);
-  const grow = interpolate(t, [1.4, 2.1], [0.55, 1], { easing: Easing.out(Easing.cubic), extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const grow = interpolate(t, [1.3, 2.0], [0.55, 1], { easing: Easing.out(Easing.cubic), extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const R = kf(t, RT, RR) * grow;
-  const ret = boot(frame, 42);
-  const hx = cx - R * 0.55 + Math.sin(t * 0.4) * 40;
+  const ret = boot(frame, 39);
+  // crosshair rides with the reticle but parks at the right edge once the
+  // reticle has left frame (as in the reference's final seconds)
+  const hx = Math.min(cx - R * 0.55 + Math.sin(t * 0.4) * 40, 1872);
   const hy = cy - R * 0.5 + Math.cos(t * 0.33) * 30;
   const rot = t * 9;
   const step8 = Math.floor(frame / 8);
@@ -107,6 +125,10 @@ export const Center: React.FC<{ frame: number; p: Palette }> = ({ frame, p }) =>
           <g transform={`rotate(${-rot * 1.6 + 40})`}>
             <circle r={R * 0.62} fill="none" stroke={p.line} strokeWidth={1} opacity={0.4} strokeDasharray={`${R * 0.5} ${R * 0.35} ${R * 0.12} ${R * 0.9}`} />
           </g>
+          <g transform={`rotate(${-rot * 0.35 + 12})`}>
+            <circle r={R * 1.3} fill="none" stroke={p.line} strokeWidth={1} opacity={0.4} strokeDasharray={`${R * 0.04} ${R * 0.035}`} />
+            <circle r={R * 1.3} fill="none" stroke={p.text} strokeWidth={2} opacity={0.5} strokeDasharray={`${R * 0.5} ${R * 1.1} ${R * 0.2} ${R * 6.3}`} />
+          </g>
           <g transform={`rotate(${rot * 0.5})`}>
             <circle r={R + 10} fill="none" stroke={p.text} strokeWidth={2.4} opacity={0.6} strokeDasharray={`${R * 0.08} ${R * 1.5}`} />
           </g>
@@ -121,6 +143,17 @@ export const Center: React.FC<{ frame: number; p: Palette }> = ({ frame, p }) =>
           <Txt x={R * 0.72} y={-R * 0.72} size={8} fill={p.text} opacity={0.65}>{`▸ ${code(3500, 8)} ${digits(3501, 4, step8)}`}</Txt>
         </g>
       </G>
+
+      {/* floating multi-line data blocks */}
+      {BLOCKS.map(([x, y, n, s0, e], i) => (
+        <G key={`b${i}`} o={boot(frame, Math.round(s0 * 30), Math.round(e * 30), 15) * glitch(frame, 4000 + i, 0.02)}>
+          {Array.from({ length: n }, (_, k) => (
+            <Txt key={k} x={x + (k === 0 ? 0 : 10)} y={y + k * 11} size={k === 0 ? 8 : 7} fill={p.text} opacity={k === 0 ? 0.75 : 0.5}>
+              {k === 0 ? `■ ${code(4100 + i, 8)} ${code(4200 + i, 5)}` : `${code(4300 + i * 7 + k, 4)}  ${digits(4400 + i * 7 + k, 6, k === 1 ? step8 : 0)}  ${code(4500 + i * 7 + k, 3)}`}
+            </Txt>
+          ))}
+        </G>
+      ))}
 
       {/* floating annotation labels */}
       {LABELS.map(([x, y, s, e], i) => (

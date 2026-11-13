@@ -15,8 +15,8 @@ export type Palette = {
 
 // Version 1: teal / blue holographic interface (matches the reference).
 export const TEAL: Palette = {
-  smoke: [0.07, 0.30, 0.42],
-  smokeHi: [0.16, 0.48, 0.62],
+  smoke: [0.04, 0.27, 0.44],
+  smokeHi: [0.10, 0.50, 0.74],
   line: "#6fd6dc",
   text: "#a6e6ea",
   fill: "#2f9aa3",
@@ -30,13 +30,13 @@ export const TEAL: Palette = {
 // Version 2: alternative amber "alert" palette - same interface, warm
 // red/amber atmosphere with ice-white accents.
 export const AMBER: Palette = {
-  smoke: [0.40, 0.11, 0.04],
-  smokeHi: [0.66, 0.26, 0.07],
+  smoke: [0.46, 0.15, 0.03],
+  smokeHi: [0.80, 0.36, 0.08],
   line: "#ffb35c",
   text: "#ffd7a3",
   fill: "#c8702a",
   panel: "#e08a3a",
-  accent: "#ff3d4a",
+  accent: "#ff7a2f",
   dot: "#e9f6ff",
   bar: "#ff6f8e",
   grid: "#d99a6a",

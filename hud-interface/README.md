@@ -2,13 +2,14 @@
 
 A sci-fi holographic data interface over drifting volumetric smoke, recreated
 from a 30 s reference clip (768×432, 30 fps). The interface includes a top
-data bar, sector labels, a bar chart, a line graph, gauges, an equalizer, a
-moving reticle and crosshair, translucent scan panels and annotation labels.
+data bar, sector labels, a bar chart, a line graph, gauges, rotated data columns, a
+moving reticle and crosshair, translucent scan panels, floating data blocks
+and annotation labels.
 
 | Composition ID       | Size        | FPS | Frames | Duration | Description |
 |----------------------|-------------|-----|--------|----------|-------------|
 | `HudInterface-V1-4K` | 3840 × 2160 | 30  | 900    | 30.000 s | **Version 1**: matches the reference: teal/blue interface, blue smoke, yellow graph points. |
-| `HudInterface-V2-4K` | 3840 × 2160 | 30  | 900    | 30.000 s | **Version 2**: the same interface and animation in an alternative amber/red "alert" colour palette (warm smoke, amber lines, red markers, ice-white data points). |
+| `HudInterface-V2-4K` | 3840 × 2160 | 30  | 900    | 30.000 s | **Version 2**: the same interface and animation in an alternative amber/red "alert" colour palette (warm smoke, amber lines, hot-orange markers, ice-white data points). |
 
 ## Requirements
 
@@ -52,8 +53,8 @@ src/
   palette.ts               TEAL (V1) and AMBER (V2) palettes
   smoke/SmokeLayer.tsx     WebGL 2 shader: drifting soft cloud masses × domain-warped fBm
   hud/TopBar.tsx           data-analysis waveform, sector tables, GPS, CODE box, progress bars
-  hud/SidePanels.tsx       sector labels, bar chart, flowing curves, line graph, gauges, equalizer
-  hud/Center.tsx           reticle path, crosshair, translucent squares, annotation labels
+  hud/SidePanels.tsx       sector labels, bar chart, connectors, line graph, gauges, rotated data columns
+  hud/Center.tsx           reticle + outer ring path, crosshair, translucent squares, data blocks, labels
   lib/anim.ts              boot-flicker, glitch, value-noise and text generators
   lib/random.ts            stateless hash (deterministic frames)
 public/fonts/              Share Tech Mono (SIL Open Font License)
