@@ -152,22 +152,22 @@ const smoothstep = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
-// Valley opening over one cycle (phase 0..1), shaped after the reference's
-// colour curve: a fast rise from a slit to nearly the full band, a hold that
-// keeps widening slowly, a quick close, then a fully-closed rest in which the
-// standing slats lie back down.
+// Valley opening over one cycle (phase 0..1), fitted to the reference's
+// colour curve: a steady opening from a slit (~42 frames), a short hold that
+// keeps widening slowly, a gradual close (~48 frames), then a brief rest.
 export const opening = (phase: number) => {
   const p = ((phase % 1) + 1) % 1;
-  if (p < 0.33) return 0.9 * smoothstep(0.05, 0.33, p);
-  if (p < 0.58) return 0.9 + 0.1 * smoothstep(0.33, 0.58, p);
-  if (p < 0.72) return 1 - smoothstep(0.58, 0.72, p);
+  if (p < 0.34) return 0.92 * smoothstep(0.0, 0.34, p);
+  if (p < 0.59) return 0.92 + 0.08 * smoothstep(0.34, 0.59, p);
+  if (p < 0.95) return 1 - smoothstep(0.59, 0.95, p);
   return 0;
 };
 
-// Phase offset so frame 0 starts on a freshly opening slit (as the reference does).
-export const PHASE_OFFSET = 0.12;
+// Phase offset so frame 0 lands about a quarter of the way into an opening,
+// as in the reference.
+export const PHASE_OFFSET = 0.25;
 
-const W_MAX = 5.6; // half width of the fully open valley, in cells
+const W_MAX = 6.0; // half width of the fully open valley, in cells
 const RIM_LIFT = 2.6; // how far the crater-rim tiles rise while open
 const POP_LIFT = 1.2; // flick height when the valley snaps shut
 const TILT_GAIN = 1.15; // exaggerates the slope -> tiles stand up as fins
@@ -198,10 +198,10 @@ export type Pose = {
 const bladeEnv = (p: number) => {
   const q = ((p % 1) + 1) % 1;
   // Closing: blades grow as the valley narrows, then relax during the rest.
-  const closing = smoothstep(0.58, 0.68, q) * (1 - smoothstep(0.72, 0.9, q));
+  const closing = smoothstep(0.66, 0.8, q) * (1 - smoothstep(0.9, 1.0, q));
   // Opening slit: the first tiles to tip are drawn out too.
   const w = q > 0.5 ? q - 1 : q;
-  const opening = Math.exp(-Math.pow((w - 0.1) / 0.08, 2));
+  const opening = Math.exp(-Math.pow((w - 0.04) / 0.07, 2));
   return Math.max(closing, opening);
 };
 const BLADE_REACH = 7.0; // cells from the axis that form blades
@@ -262,7 +262,7 @@ export const cellPose = (c: Cell, frame: number): Pose => {
   // While shut, the tiles along the seam stay tipped on edge, so the closed
   // band reads as a dashed dark line (every other tile).
   const q = ((phase % 1) + 1) % 1;
-  const seamEnv = (q > 0.5 ? smoothstep(0.6, 0.72, q) : 1 - smoothstep(0.08, 0.2, q)) * (1 - smoothstep(0.05, 0.3, a));
+  const seamEnv = (q > 0.5 ? smoothstep(0.78, 0.9, q) : 1 - smoothstep(0.03, 0.12, q)) * (1 - smoothstep(0.05, 0.3, a));
   const seam = seamEnv * Math.exp(-Math.pow(c.dist / 1.1, 2)) * c.strength * (c.rnd < 0.4 ? 1 : 0);
   const h = base * depthNoise + bob + 0.5 * blade - 0.35 * seam;
   // Rim cards keep fluttering while the band is open (the reference never holds still).
