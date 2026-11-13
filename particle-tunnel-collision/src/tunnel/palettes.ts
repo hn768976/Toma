@@ -22,12 +22,12 @@ export const CYAN_MATCH: TunnelPalette = {
   bgCenter: [1, 5, 8],
   bgMid: [7, 20, 30],
   bgEdge: [4, 13, 20],
-  lineNear: [42, 194, 250],
+  lineNear: [30, 192, 252],
   lineMid: [30, 138, 205],
   lineFar: [36, 170, 178],
-  beadNear: [170, 246, 255],
+  beadNear: [128, 238, 255],
   beadFar: [74, 200, 206],
-  bloom: [60, 190, 230],
+  bloom: [30, 150, 215],
 };
 
 /** Version 2 — alternative "ember" palette: amber / red-orange / crimson on warm black. */

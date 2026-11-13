@@ -10,7 +10,7 @@ particle-string tunnel whose concentric rings bend, curl and finally tangle into
 
 **Technology:** Canvas 2D, drawn per frame at full composition resolution. The renderer
 uses manual 3D perspective projection, seeded simplex-noise displacement and a
-quarter-resolution blur for bloom. Every frame depends only on time, so Remotion can
+quarter-resolution blur for bloom, plus a late blue haze, oval soft core and vignette. Every frame depends only on time, so Remotion can
 render frames in parallel and get the same result each run.
 
 ## Requirements

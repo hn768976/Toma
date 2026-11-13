@@ -69,6 +69,7 @@ type Field = {
   a2: number; // high-frequency curl amplitude
   w1: number; // noise time coordinates
   w2: number;
+  a3: number; // per-ring radial jitter (about one ring spacing) so strands braid early
   rot: number; // global slow spin
 };
 
@@ -95,8 +96,10 @@ const displace = (
     field.a1 * noiseY1(c * f1, s * f1, k1) +
     field.a2 * noiseY2(c * f2, s * f2, k2);
   const dz = field.a2 * 0.35 * noiseZ(c * f2 + 7.1, s * f2, k2);
-  out[0] = c + dx;
-  out[1] = s + dy;
+  // Strongly decorrelated per-ring radial offset: neighbours cross and braid.
+  const rr = 1 + field.a3 * noiseZ(c * 1.7 - 3.3, s * 1.7, ringKey * 2.31 + field.w1 * 1.4);
+  out[0] = c * rr + dx;
+  out[1] = s * rr + dy;
   out[2] = dz;
 };
 
@@ -131,12 +134,15 @@ export const drawTunnel = (
     // ~2 s); the high-frequency curls build steadily to a full tangle at the end.
     a1: 0.01 + 0.075 * (1 - Math.pow(1 - p, 2.2)),
     a2: 0.25 * Math.pow(smoothstep(0.08, 1.0, p), 1.05),
-    w1: timeSec * 0.1,
-    w2: timeSec * 0.22,
+    a3: 0.042 * smoothstep(0.08, 0.38, p),
+    w1: timeSec * 0.14,
+    w2: timeSec * 0.31,
     rot: timeSec * 0.025,
   };
-  // Brightness holds for the first ~3.5 s, then builds to the end.
-  const intensity = 1.05 + 0.75 * Math.pow(smoothstep(0.3, 1.0, p), 1.4);
+  // Brightness holds for the first ~3.5 s, then accelerates right up to the
+  // last frame (ease-in, no flattening).
+  const ramp = Math.pow(clamp((p - 0.35) / 0.65, 0, 1), 1.7);
+  const intensity = 0.85 + 0.72 * ramp;
 
   // ---- Strings + beads on a transparent FX layer --------------------------
   const fx = getCanvas("fx", W, H);
@@ -178,7 +184,7 @@ export const drawTunnel = (
     // Centre-weighted: the mid-radius band is brightest, the outskirts dimmer.
     const rDesign = FOCAL / z;
     const radial =
-      (1 - (0.72 + 0.12 * p) * smoothstep(620, 1300, rDesign)) *
+      (1 - (0.74 + 0.1 * p) * smoothstep(620, 1300, rDesign)) *
       (1 + 0.35 * p * (1 - smoothstep(380, 900, rDesign)));
     const lineAlpha = intensity * nearFade * lineFar * radial * 0.75;
     if (lineAlpha > 0.004) {
@@ -211,16 +217,20 @@ export const drawTunnel = (
     const ringBeads = beads[k];
     for (let j = 0; j < ringBeads.length; j++) {
       const b = ringBeads[j];
-      const theta = b.theta + b.speed * timeSec;
+      const theta = b.theta + b.speed * 1.5 * timeSec;
       displace(ringField, k, theta, tmp);
       const zz = z * (1 + tmp[2]);
       const x = cx + (F * tmp[0]) / zz;
       const y = cy + (F * tmp[1]) / zz;
       if (x < -20 || y < -20 || x > W + 20 || y > H + 20) continue;
-      // Dense, bright speckle band around the core, fading softly into it.
+      // Oval (1.3x wide) soft core; the inner halo dims slightly late.
+      const re = Math.hypot((x - cx) / 1.3, y - cy) / K;
       const coreFade =
-        Math.pow(smoothstep(60, 340, rDesign), 1.3) *
-        (1 + 0.3 * (1 - smoothstep(300, 600, rDesign)));
+        Math.pow(smoothstep(45, 290, re), 1.3) *
+        (1 + 0.3 * (1 - smoothstep(300, 600, re))) *
+        (1 - 0.22 * smoothstep(0.6, 1.0, p) * (1 - smoothstep(250, 450, re)));
+      // Dense, bright speckle band around the core, fading softly into it.
+
       const a =
         b.bright * nearFade * dotFar * radial * coreFade * (0.75 + 0.25 * intensity) * (1 + 0.3 * p);
       if (a < 0.01) continue;
@@ -259,19 +269,32 @@ export const drawTunnel = (
 
   ctx.globalCompositeOperation = "lighter";
   ctx.drawImage(fx, 0, 0);
-  ctx.globalAlpha = 0.8 + 0.7 * smoothstep(0.3, 1.0, p);
+  ctx.globalAlpha = 0.72 + 0.68 * ramp;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(bloom, 0, 0, W, H);
   ctx.globalAlpha = 1;
 
   // Dark core at the vanishing point.
   ctx.globalCompositeOperation = "source-over";
+  // Late blue haze lifting the voids between strands (reference look).
+  const hazeAmt = smoothstep(0.5, 1.0, p);
+  if (hazeAmt > 0) {
+    ctx.globalCompositeOperation = "lighter";
+    const haze = ctx.createRadialGradient(cx, cy, 120 * K, cx, cy, diag);
+    haze.addColorStop(0, rgba(palette.bloom, 0.009 * hazeAmt));
+    haze.addColorStop(0.6, rgba(palette.bloom, 0.007 * hazeAmt));
+    haze.addColorStop(1, rgba(palette.bloom, 0.002 * hazeAmt));
+    ctx.fillStyle = haze;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  ctx.globalCompositeOperation = "source-over";
   // Soft, slightly wide dark core (feathered, not a hard disc); late
   // tangles are allowed to bleed into it.
   ctx.save();
   ctx.translate(cx, cy);
   ctx.scale(1.3, 1);
-  const holeR = 150 * K;
+  const holeR = 122 * K;
   const hole = ctx.createRadialGradient(0, 0, 0, 0, 0, holeR);
   const core = 0.94 - 0.18 * smoothstep(0.6, 1.0, p);
   hole.addColorStop(0, rgba(palette.bgCenter, core));
