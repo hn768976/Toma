@@ -134,15 +134,15 @@ export const drawTunnel = (
     // ~2 s); the high-frequency curls build steadily to a full tangle at the end.
     a1: 0.01 + 0.075 * (1 - Math.pow(1 - p, 2.2)),
     a2: 0.25 * Math.pow(smoothstep(0.08, 1.0, p), 1.05),
-    a3: 0.042 * smoothstep(0.08, 0.38, p),
-    w1: timeSec * 0.14,
-    w2: timeSec * 0.31,
+    a3: 0.042 * smoothstep(0.03, 0.3, p),
+    w1: timeSec * 0.19,
+    w2: timeSec * 0.38,
     rot: timeSec * 0.025,
   };
   // Brightness holds for the first ~3.5 s, then accelerates right up to the
   // last frame (ease-in, no flattening).
-  const ramp = Math.pow(clamp((p - 0.35) / 0.65, 0, 1), 1.7);
-  const intensity = 0.85 + 0.72 * ramp;
+  const ramp = Math.pow(clamp((p - 0.38) / 0.62, 0, 1), 2.4);
+  const intensity = 0.85 + 0.62 * ramp;
 
   // ---- Strings + beads on a transparent FX layer --------------------------
   const fx = getCanvas("fx", W, H);
@@ -184,7 +184,7 @@ export const drawTunnel = (
     // Centre-weighted: the mid-radius band is brightest, the outskirts dimmer.
     const rDesign = FOCAL / z;
     const radial =
-      (1 - (0.74 + 0.1 * p) * smoothstep(620, 1300, rDesign)) *
+      (1 - (0.76 + 0.14 * p) * smoothstep(620, 1300, rDesign)) *
       (1 + 0.35 * p * (1 - smoothstep(380, 900, rDesign)));
     const lineAlpha = intensity * nearFade * lineFar * radial * 0.75;
     if (lineAlpha > 0.004) {
@@ -217,7 +217,7 @@ export const drawTunnel = (
     const ringBeads = beads[k];
     for (let j = 0; j < ringBeads.length; j++) {
       const b = ringBeads[j];
-      const theta = b.theta + b.speed * 1.5 * timeSec;
+      const theta = b.theta + b.speed * 2.0 * timeSec;
       displace(ringField, k, theta, tmp);
       const zz = z * (1 + tmp[2]);
       const x = cx + (F * tmp[0]) / zz;
@@ -296,7 +296,7 @@ export const drawTunnel = (
   ctx.scale(1.3, 1);
   const holeR = 122 * K;
   const hole = ctx.createRadialGradient(0, 0, 0, 0, 0, holeR);
-  const core = 0.94 - 0.18 * smoothstep(0.6, 1.0, p);
+  const core = 0.94 - 0.4 * smoothstep(0.75, 1.0, p);
   hole.addColorStop(0, rgba(palette.bgCenter, core));
   hole.addColorStop(0.22, rgba(palette.bgCenter, core * 0.88));
   hole.addColorStop(0.55, rgba(palette.bgCenter, core * 0.4));
@@ -309,7 +309,7 @@ export const drawTunnel = (
   const vig = ctx.createRadialGradient(cx, cy, diag * 0.3, cx, cy, diag);
   vig.addColorStop(0, "rgba(0,0,0,0)");
   vig.addColorStop(0.5, "rgba(0,0,0,0.2)");
-  vig.addColorStop(1, "rgba(0,0,0,0.62)");
+  vig.addColorStop(1, "rgba(0,0,0,0.7)");
   ctx.fillStyle = vig;
   ctx.fillRect(0, 0, W, H);
 };
