@@ -188,7 +188,7 @@ export const makeWorldMapFactory =
       const floor = new THREE.Mesh(plane(hx * 2, hz * 2), hallMat(LIGHT, 0.5, tex(gridTexture(70))));
       floor.rotation.x = -Math.PI / 2;
       hallInner.add(floor);
-      const floor2 = new THREE.Mesh(plane(hx * 2.4, hz * 2.4), hallMat(TEAL_HAZE, 0.38, tex(reflectionTexture(91)), false));
+      const floor2 = new THREE.Mesh(plane(hx * 2.4, hz * 2.4), hallMat(TEAL_HAZE, 0.25, tex(reflectionTexture(91)), false));
       floor2.rotation.x = -Math.PI / 2;
       floor2.position.y = -0.02;
       hallInner.add(floor2);
@@ -265,7 +265,7 @@ export const makeWorldMapFactory =
 
       // soft volume glow just above and below the floor
       for (let i = 0; i < 4; i++) {
-        const g = new THREE.Mesh(plane(4 + rnd() * 3, 1.4 + rnd()), hallMat(i % 2 ? LIGHT_BLUE : LIGHT, 0.025, radialTex, false));
+        const g = new THREE.Mesh(plane(4 + rnd() * 3, 1.4 + rnd()), hallMat(i % 2 ? LIGHT_BLUE : LIGHT, 0.014, radialTex, false));
         g.position.set(-2 + i * 1.4, (i % 2 ? -0.5 : 0.4), hz * 0.3);
         hallInner.add(g);
       }
@@ -339,8 +339,8 @@ export const makeWorldMapFactory =
     const shafts: Array<{ mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; k: number; ph: number }> = [];
     for (let i = 0; i < 11; i++) {
       const len = 3.5 + rnd() * 3;
-      const wdt = 0.5 + rnd() * 1.1;
-      const k = 0.16 + rnd() * 0.16;
+      const wdt = i < 3 ? 0.4 + rnd() * 0.5 : 0.25 + rnd() * 0.45;
+      const k = i < 3 ? 0.22 + rnd() * 0.12 : 0.09 + rnd() * 0.08;
       const geo = plane(len, wdt);
       geo.translate(len / 2, 0, 0); // origin at the bright end
       const m = glowMat(shaftTex, LIGHT_BLUE, k * 1.4, false);
@@ -524,7 +524,8 @@ export const makeWorldMapFactory =
           }
           a.mesh.position.set(a.base.x + slide, a.base.y, a.base.z);
           a.mat.color.copy(a.color).multiplyScalar(a.intensity * env * rise);
-          a.mesh.visible = env > 0.002;
+          // never toggle visibility: hidden meshes stop writing depth, which
+          // makes the depth of field pop for a frame or two
         }
         for (const s of shafts) {
           const k = s.k * (0.75 + 0.25 * Math.sin(t * 0.9 + s.ph));
