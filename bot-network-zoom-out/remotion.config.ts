@@ -4,8 +4,9 @@
 import { existsSync } from "node:fs";
 import { Config } from "@remotion/cli/config";
 
-Config.setVideoImageFormat("jpeg");
-Config.setJpegQuality(95);
+// PNG frames keep the encode in standard (limited-range) yuv420p / BT.709.
+Config.setVideoImageFormat("png");
+Config.setColorSpace("bt709");
 Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");

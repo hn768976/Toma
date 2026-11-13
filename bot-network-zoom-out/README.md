@@ -45,7 +45,7 @@ roughly 3–4 s per 1080p frame and about four times that at 4K.
 
 - **Remotion 4** drives time: every frame is a pure function of `frame / fps`.
 - **Three.js (WebGL 2)** with custom GLSL shaders, instanced meshes for the
-  ~26,000 tiles and ~13,000 bots, and an UnrealBloom post pass.
+  ~48,000 tiles and ~24,000 bots, and an UnrealBloom post pass.
 
 ## Layout
 

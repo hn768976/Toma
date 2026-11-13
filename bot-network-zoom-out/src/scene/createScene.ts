@@ -125,6 +125,12 @@ export const createScene = (
   });
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), groundMat);
   ground.rotation.x = -Math.PI / 2;
+  // The floor is one huge quad, so its interpolated depth is imprecise and
+  // can swallow the thin lines lying on it for a frame. It is always the
+  // lowest thing in the scene: draw it first and keep it out of the depth
+  // buffer so nothing ever has to depth-test against it.
+  groundMat.depthWrite = false;
+  ground.renderOrder = -10;
   scene.add(ground);
   disposables.push(groundMat, ground.geometry);
 
@@ -244,7 +250,7 @@ export const createScene = (
     const m = new THREE.Matrix4();
     const idx = new Float32Array(nearTiles.length);
     nearTiles.forEach((t, i) => {
-      m.makeTranslation(t.x, TILE_TOP + 0.012, t.z);
+      m.makeTranslation(t.x, TILE_TOP + 0.03, t.z);
       iconMesh.setMatrixAt(i, m);
       idx[i] = t.icon;
     });
@@ -277,7 +283,7 @@ export const createScene = (
         vec4 w = modelMatrix * vec4(position, 1.0);
         vec4 clip = projectionMatrix * viewMatrix * w;
         float px = clip.w * uPxScale;          // world size of one pixel here
-        float half0 = 0.022;
+        float half0 = 0.016;
         float halfW = max(half0, px * 0.65);
         vAlpha = half0 / halfW;
         w.xyz += aPerp * halfW;
@@ -294,7 +300,7 @@ export const createScene = (
       ${FOG_GLSL}
       void main() {
         float f = exp(-pow(vDist / uFogDist, 2.0));
-        gl_FragColor = vec4(uColor * 0.62 * vAlpha * f * uFade, 1.0);
+        gl_FragColor = vec4(uColor * 0.7 * vAlpha * f * uFade, 1.0);
       }
     `,
   });
@@ -527,7 +533,8 @@ export const createScene = (
     const a = attr.array as Float32Array;
     for (let i = 0; i < list.length; i++) {
       const tl = list[i];
-      const k = t > tl.land ? smooth((t - tl.land) / 0.4) : 0;
+      let k = t > tl.land ? smooth((t - tl.land) / 0.4) : 0;
+      if (wave > 0 && isFinite(tl.land)) k = lerp(k, waveDone(t, tl.seed), wave);
       const flash = t > tl.land ? Math.exp(-(t - tl.land) * 3.2) * 1.1 : 0;
       const gi = (0.82 + 0.3 * tl.seed) * idleGain;
       const gd = 1.12 + flash;
@@ -536,6 +543,19 @@ export const createScene = (
       a[i * 3 + 2] = lerp(idle[2] * gi, done[2] * gd, k);
     }
     attr.needsUpdate = true;
+  };
+
+  // Once the whole field is in view the floor "breathes": every ~1.6 s a
+  // wave of bots works the tiles (idle colour + bot dots), then the tiles
+  // flip to done and the bots clear, as in the reference's far shot.
+  let wave = 0;
+  const WAVE_START = 6.6;
+  const WAVE_PERIOD = 1.6;
+  const waveBlend = (t: number) => smooth((t - WAVE_START) / 1.4);
+  const waveDone = (t: number, seed: number) => {
+    const ph = (t - WAVE_START + (seed - 0.5) * 0.3) / WAVE_PERIOD;
+    const f = ph - Math.floor(ph);
+    return smooth((f - 0.42) / 0.16) * (1 - smooth((f - 0.94) / 0.06));
   };
 
   const writeRobots = (
@@ -567,6 +587,16 @@ export const createScene = (
           yaw += Math.sin(t * 1.7 + ph) * 0.22;
         }
         s *= (0.92 + 0.16 * r.seed) * scale;
+      }
+      if (wave > 0) {
+        const present = 1 - waveDone(t + 0.1, r.seed);
+        const sw = present * (0.92 + 0.16 * r.seed) * scale;
+        if (s === 0) {
+          x = r.x;
+          z = r.z;
+          y = TILE_TOP;
+        }
+        s = lerp(s, sw, wave);
       }
       const c = Math.cos(yaw) * s;
       const sn = Math.sin(yaw) * s;
@@ -603,6 +633,9 @@ export const createScene = (
     camera.up.set(0, 1, 0);
     camera.lookAt(cam.tx, cam.ty, cam.tz);
     camera.rotateZ(cam.roll);
+    camera.near = Math.max(0.5, cam.dist * 0.12);
+    camera.far = cam.dist * 6 + 900;
+    camera.updateProjectionMatrix();
     camera.updateMatrixWorld();
 
     fog.uFogDist.value = 55 + cam.dist * 2.3;
@@ -615,12 +648,13 @@ export const createScene = (
     // idle tiles dim a little once the whole field is in view
     const idleGain = 1 - 0.42 * smooth((t - 8.5) / 5);
 
+    wave = waveBlend(t);
     writeTileColors(nearTiles, nearColors, t, idleGain);
     writeTileColors(farTiles, farColors, t, idleGain);
     // seen from far away the bots are only a few pixels: enlarge and
     // brighten them a little so they still read as coloured dots
-    robotMat.uniforms.uBoost.value = 0.9 * farness;
-    const robotScale = 1.15 + 0.5 * farness;
+    robotMat.uniforms.uBoost.value = 0.45 * farness;
+    const robotScale = 1.15 + 0.3 * farness;
     writeRobots(nearRobots, nearRobotMesh, t, true, robotScale);
     writeRobots(farRobots, farRobotMesh, t, false, robotScale);
 

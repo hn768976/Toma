@@ -6,7 +6,7 @@ import { mulberry32 } from "./util";
 
 export const BLOCK = 9.0; // lattice period (world units)
 export const PAIR = 3.6; // spacing of the two tiles inside a period
-export const HALF_CELLS = 92; // lattice index range: -HALF..HALF (2 per period)
+export const HALF_CELLS = 124; // lattice index range: -HALF..HALF (2 per period)
 export const NEAR_RADIUS = 92; // tiles inside get detailed geometry
 
 /** World coordinate of lattice index k: tiles come in pairs (2x2 blocks). */
@@ -59,7 +59,7 @@ export const buildLayout = (): Layout => {
     for (let i = -HALF_CELLS; i <= HALF_CELLS; i++) {
       const f = forced.get(key(i, j));
       let occupied = rand() < 0.78;
-      let agent = rand() < 0.5;
+      let agent = rand() < (Math.hypot(latticePos(i), latticePos(j)) < 45 ? 0.68 : 0.5);
       if (f === "empty") occupied = false;
       if (f === "idle") {
         occupied = true;
@@ -86,8 +86,8 @@ export const buildLayout = (): Layout => {
       if (agent) {
         // Agents near the opening shot are already at work; the rest keep
         // arriving so that the far field is still busy during the pull-back.
-        const near = r < 30;
-        spawn = near ? -5 + r1 * 8.5 : -4 + r1 * 14.0;
+        const near = r < 45;
+        spawn = near ? -5 + r1 * 7.0 : -4 + r1 * 12.0;
         if (f === "agent") spawn = -6;
         const dwell = 0.75 + r2 * 0.5;
         land = spawn + dwell + 0.8;
@@ -124,7 +124,7 @@ export const buildLayout = (): Layout => {
     for (let i = -HALF_CELLS; i <= HALF_CELLS; i++) {
       const a = index.get(key(i, j));
       if (a === undefined) continue;
-      if (tiles[a].r > 240) continue;
+      if (tiles[a].r > 300) continue;
       let made = 0;
       for (let attempt = 0; attempt < 9 && made < 2; attempt++) {
         const di = Math.floor(lr() * 5) - 2;

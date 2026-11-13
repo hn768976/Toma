@@ -119,6 +119,12 @@ export const createScene = (
   });
   const board = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), boardMat);
   board.rotation.x = -Math.PI / 2;
+  // One huge quad has imprecise interpolated depth, which can swallow the
+  // thin traces lying on it for a frame. It is the lowest thing in the
+  // scene: draw it first without writing depth (it is still included in
+  // the separate depth pre-pass used for depth of field).
+  boardMat.depthWrite = false;
+  board.renderOrder = -10;
   scene.add(board);
   disposables.push(boardMat, board.geometry);
 
@@ -709,7 +715,7 @@ export const createScene = (
   const hiddenInDepth: THREE.Object3D[] = [];
   scene.traverse((o) => {
     const m = (o as THREE.Mesh).material as THREE.Material | undefined;
-    if (m && m.depthWrite === false) hiddenInDepth.push(o);
+    if (m && m.depthWrite === false && o !== board) hiddenInDepth.push(o);
   });
 
   // --------------------------------------------------------------- animate
