@@ -173,7 +173,7 @@ const ambient = (t: number) => {
   let a = 0.8;
   a -= 0.2 * (1 - k(1.9, 2.35, t)); // calmer opening
   a -= 0.22 * k(0.45, 0.95, t) * (1 - k(1.9, 2.35, t)); // dark section
-  a += 0.3 * k(2.2, 2.65, t) * (1 - k(3.9, 4.4, t)); // flare section
+  a += 0.15 * k(2.2, 2.65, t) * (1 - k(3.9, 4.4, t)); // flare section
   a += 0.3 * k(3.6, 4.2, t); // settle above the opening level
   a -= 0.12 * k(5.8, 6.6, t); // dim ending
   return a;
@@ -188,8 +188,8 @@ export const exposureLift = (t: number) => {
   const k = (t0: number, t1: number, x: number) => easeInOut((x - t0) / (t1 - t0));
   return (
     1 +
-    0.25 * k(0.7, 1.1, t) * (1 - k(2.2, 2.6, t)) +
-    0.22 * k(4.0, 4.4, t) * (1 - k(5.6, 6.2, t)) +
+    (0.12 * k(0.7, 1.1, t) + 0.22 * k(1.5, 2.1, t)) * (1 - k(2.3, 2.7, t)) +
+    0.14 * k(4.3, 4.7, t) * (1 - k(5.3, 5.9, t)) +
     0.15 * k(6.5, 7.0, t)
   );
 };

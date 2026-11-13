@@ -54,7 +54,7 @@ export const LOOK: CircuitLook = {
   rimColor: "#e6f0ff",
   rimIntensity: 1.5,
   envIntensity: 0.42,
-  exposure: 0.86,
+  exposure: 0.8,
   bloomStrength: 0.4,
   bloomRadius: 0.2,
   bloomThreshold: 0.9,
