@@ -115,7 +115,7 @@ export class Engine {
     scene.add(sky);
 
     // --- lights (for the lit components) -----------------------------------------
-    scene.add(new THREE.HemisphereLight(col(p.ambientSky), col(p.ambientGround), 2.2));
+    scene.add(new THREE.HemisphereLight(col(p.ambientSky), col(p.ambientGround), 2.4));
     const key = new THREE.DirectionalLight(col(p.key), 2.4);
     key.position.set(-8, 10, -16);
     scene.add(key);
@@ -282,7 +282,7 @@ export class Engine {
       const a = rr() * Math.PI * 2;
       const r = range(rr, 15, 75);
       aRain.set([Math.cos(a) * r, Math.sin(a) * r, rr(), range(rr, 2.5, 8)], i * 4);
-      aSize.set([range(rr, 0.22, 0.5) * (1 + r / 50), range(rr, 3, 9)], i * 2);
+      aSize.set([range(rr, 0.16, 0.36) * (1 + r / 50), range(rr, 3, 9)], i * 2);
     }
     rainGeo.setAttribute("aRain", new THREE.InstancedBufferAttribute(aRain, 4));
     rainGeo.setAttribute("aSize", new THREE.InstancedBufferAttribute(aSize, 2));
@@ -323,18 +323,18 @@ export class Engine {
       new THREE.ExtrudeGeometry(roundedRect<THREE.Shape>(0.58, 0.48, 0.1), { depth: 0.3, bevelEnabled: true, bevelSize: 0.035, bevelThickness: 0.035, bevelSegments: 3, curveSegments: 10 }),
     );
     bodyGeo.translate(0, 0, -0.15);
-    const mat = this.holo("lock", p, { uBody: 0.62, uRimI: 2.4, uAlpha: 0.62, uRimPow: 1.8, uSparkle: 1, uGhost: 0.16 });
+    const mat = this.holo("lock", p, { uBody: 0.5, uRimI: 2.6, uAlpha: 0.4, uRimPow: 1.6, uSparkle: 1, uGhost: 0.16 });
     const body = new THREE.Mesh(bodyGeo, mat);
     g.add(body);
     // shackle
     const R = 0.33;
     const pts: THREE.Vector3[] = [];
-    pts.push(new THREE.Vector3(-R, 0.44, 0), new THREE.Vector3(-R, 0.82, 0));
+    pts.push(new THREE.Vector3(-R, 0.44, 0), new THREE.Vector3(-R, 0.72, 0));
     for (let i = 1; i < 16; i++) {
       const a = Math.PI - (i / 16) * Math.PI;
-      pts.push(new THREE.Vector3(Math.cos(a) * R, 0.82 + Math.sin(a) * R, 0));
+      pts.push(new THREE.Vector3(Math.cos(a) * R, 0.72 + Math.sin(a) * R, 0));
     }
-    pts.push(new THREE.Vector3(R, 0.82, 0), new THREE.Vector3(R, 0.44, 0));
+    pts.push(new THREE.Vector3(R, 0.72, 0), new THREE.Vector3(R, 0.44, 0));
     const curve = new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0.1);
     const shackle = new THREE.Mesh(this.track(new THREE.TubeGeometry(curve, 64, 0.085, 14, false)), mat);
     g.add(shackle);
@@ -345,7 +345,7 @@ export class Engine {
     ks.lineTo(0.075, -0.17);
     ks.closePath();
     const keyGeo = this.track(new THREE.ShapeGeometry(ks, 20));
-    const keyMat = this.track(new THREE.MeshBasicMaterial({ color: col(p.holoRim, 1.15), transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+    const keyMat = this.track(new THREE.MeshBasicMaterial({ color: col(p.holoRim, 0.85), transparent: true, side: THREE.DoubleSide, depthWrite: false }));
     this.u.key = { mat: { value: keyMat } };
     for (const z of [0.19, -0.19]) {
       const k = new THREE.Mesh(keyGeo, keyMat);
@@ -423,13 +423,13 @@ export class Engine {
       const t0 = tLand + 0.25;
       const a = clamp((t - t0) / 3.9);
       const e = easeOutCubic(a);
-      const rest = 1.62;
+      const rest = 1.5;
       const settle = smooth(0.85, 1, a);
       this.lock.visible = t >= t0;
-      this.lock.position.set(0, lerp(6.2, rest, e) + 0.04 * Math.sin((t - t0) * 1.7) * settle, 0);
+      this.lock.position.set(0, lerp(5.0, rest, e) + 0.04 * Math.sin((t - t0) * 1.7) * settle, 0);
       const yaw = ((opts.lockYaw ?? 0) * Math.PI) / 180;
       this.lock.rotation.set(0, yaw + (1 - easeInOut(clamp((t - t0) / 4.2))) * Math.PI * 4.5, 0.32 * (1 - easeInOut(clamp((t - t0) / 3.8))));
-      this.lock.scale.setScalar(1.4 * lerp(0.36, 1, easeInOut(clamp((t - t0 - 0.4) / 4.4))));
+      this.lock.scale.setScalar(1.24 * lerp(0.36, 1, easeInOut(clamp((t - t0 - 0.4) / 4.4))));
       const fill = smooth(0.25, 2.8, t - t0);
       this.u.lock.uFill.value = fill >= 1 ? 100 : lerp(-0.6, 1.35, fill);
       this.u.lock.uTime.value = t;

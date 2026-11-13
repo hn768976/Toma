@@ -302,7 +302,8 @@ export const buildComponents = (
     }
     // keep the lens corridor clear
     for (const [cx, cy, cz] of camSamples) {
-      if (b.sy + (b.y ?? 0) > cy - 0.3 && Math.abs(b.x - cx) < hx + 0.5 + hx && Math.abs(b.z - cz) < hz + 0.5 + hz)
+      const m = b.sy > 0.25 ? 2.4 : 0.6; // keep tall parts well clear of the lens
+      if (b.sy + (b.y ?? 0) > cy - 0.3 && Math.abs(b.x - cx) < hx * 2 + m && Math.abs(b.z - cz) < hz * 2 + m)
         return false;
     }
     const x0 = Math.floor((b.x - hx) / oc);
@@ -417,7 +418,7 @@ export const buildComponents = (
   }
   // tall parts (capacitors, inductors, headers)
   for (let n = 0; n < 1300; n++) {
-    const [x, z] = pos(5.2);
+    const [x, z] = pos(10);
     const s = range(rng, 0.28, 0.75);
     tryPlace(
       { x, z, sx: s * 1.3, sy: range(rng, 0.3, 1.1), sz: s * range(rng, 0.9, 1.6), rot: rot90(), tone: rng() < 0.6 ? 0 : 1 },

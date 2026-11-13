@@ -64,15 +64,38 @@ const sample = (keys: CamKey[], ch: (typeof CHANNELS)[number], t: number) => {
   );
 };
 
-export const evalCamera = (keys: CamKey[], t: number): CamState => {
+const posOf = (key: CamKey): [number, number, number] => {
+  const yaw = (key.yaw * Math.PI) / 180;
+  return [Math.sin(yaw) * key.dist, key.h, Math.cos(yaw) * key.dist];
+};
+
+/**
+ * Keys with focus <= 0 mean "focus on the look-at point". Resolve those to real
+ * distances first, so that the focus channel interpolates between distances
+ * (never through the 0 sentinel) and focus pulls stay continuous.
+ */
+const resolved = new WeakMap<CamKey[], CamKey[]>();
+const resolveFocus = (keys: CamKey[]): CamKey[] => {
+  let r = resolved.get(keys);
+  if (!r) {
+    r = keys.map((key) => {
+      if (key.focus > 0) return key;
+      const p = posOf(key);
+      return { ...key, focus: Math.hypot(p[0] - (key.lx ?? 0), p[1] - Math.max(key.ly, 0), p[2] - (key.lz ?? 0)) };
+    });
+    resolved.set(keys, r);
+  }
+  return r;
+};
+
+export const evalCamera = (rawKeys: CamKey[], t: number): CamState => {
+  const keys = resolveFocus(rawKeys);
   const g = (ch: (typeof CHANNELS)[number]) => sample(keys, ch, t);
   const yaw = (g("yaw") * Math.PI) / 180;
   const d = g("dist");
   const pos: [number, number, number] = [Math.sin(yaw) * d, g("h"), Math.cos(yaw) * d];
   const look: [number, number, number] = [g("lx"), g("ly"), g("lz")];
-  const f = g("focus");
-  const focus =
-    f > 0 ? f : Math.hypot(pos[0] - look[0], pos[1] - Math.max(look[1], 0), pos[2] - look[2]);
+  const focus = Math.max(g("focus"), 0.2);
   return { pos, look, roll: (g("roll") * Math.PI) / 180, fov: g("fov"), focus, aperture: g("aperture") };
 };
 
@@ -117,8 +140,8 @@ export const CAM_LOCK_REFERENCE: CamKey[] = [
   k(3.6, -24, 6.2, 3.5, 0.8, -9, 39, 0, 1.05),
   k(5.0, -17, 6.9, 4.1, 1.0, -5, 38, 0, 1.05),
   k(6.4, -10, 7.3, 3.7, 1.25, -2, 37, 0, 1.05),
-  k(8.0, -3, 7.6, 2.6, 1.5, 0, 36, 0, 1.1),
-  k(10.1, 0, 7.6, 2.1, 1.55, 0, 36, 0, 1.1),
+  k(8.0, -3, 7.6, 2.6, 1.4, 0, 36, 0, 1.1),
+  k(10.1, 0, 7.6, 2.1, 1.45, 0, 36, 0, 1.1),
 ];
 
 /**
