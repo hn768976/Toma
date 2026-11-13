@@ -21,11 +21,11 @@ const TAN = Math.tan((FOV * Math.PI) / 360);
 const ASPECT = 16 / 9;
 
 // Camera move: slow, constant-speed pull-back that drifts down-left while
-// staying aimed at the hero cell - near cells slide up/right in parallax.
+// panning with it - the cells slide up and to the right through the frame.
 const CAM_START = new THREE.Vector3(0.0, 0.05, 7.9);
-const CAM_END = new THREE.Vector3(-4.3, -2.9, 12.0);
+const CAM_END = new THREE.Vector3(-6.8, -3.5, 16.2);
 const AIM_START = new THREE.Vector3(0.0, 0.0, 0);
-const AIM_END = new THREE.Vector3(-0.9, 1.1, 0);
+const AIM_END = new THREE.Vector3(-2.7, -1.7, 0);
 
 type Cell = {
   pos: THREE.Vector3;
@@ -57,7 +57,7 @@ const buildCells = (): Cell[] => {
   const rnd = makeRng(20240611);
   const cells: Cell[] = [];
   const mk = (x: number, y: number, z: number, r: number): Cell => {
-    const m = r * (1.62 + rnd() * 0.22);
+    const m = r * (1.58 + rnd() * 0.24);
     const o = new THREE.Vector3(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5)
       .normalize()
       .multiplyScalar(rnd() * 0.22 * m);
@@ -99,11 +99,11 @@ const buildCells = (): Cell[] => {
   const tmp = new THREE.Vector3();
   const closest = new THREE.Vector3();
   let tries = 0;
-  while (cells.length < 84 && tries++ < 40000) {
+  while (cells.length < 130 && tries++ < 40000) {
     const p = new THREE.Vector3(
-      -30 + rnd() * 52,
-      -20 + rnd() * 36,
-      -27 + rnd() * 31,
+      -36 + rnd() * 56,
+      -24 + rnd() * 38,
+      -24 + rnd() * 28,
     );
     const r = 0.86 + rnd() * 0.3;
     const visible = views.some((mi) => {
@@ -117,27 +117,27 @@ const buildCells = (): Cell[] => {
     });
     if (!visible) continue;
     seg.closestPointToPoint(p, true, closest);
-    if (closest.distanceTo(p) < 4.6) continue;
+    if (closest.distanceTo(p) < 4.0) continue;
     const mr = r * 1.75;
-    if (cells.some((c) => c.pos.distanceTo(p) < (c.m + mr) * 0.8)) continue;
+    if (cells.some((c) => c.pos.distanceTo(p) < (c.m + mr) * 0.74)) continue;
     cells.push(mk(p.x, p.y, p.z, r));
   }
   return cells;
 };
 
-// Lumpy "blackberry" nucleus: cellular bumps with creases between them.
+// Near-round nucleus with shallow cellular lumps and creases between them.
 const bakeNucleus = (base: THREE.BufferGeometry, seed: number) =>
   bakeSphere(
     base,
     (x, y, z, o) => {
-      const [f1, f2] = worley(x * 2.5 + seed, y * 2.5 + seed, z * 2.5 + seed);
+      const [f1, f2] = worley(x * 3.2 + seed, y * 3.2 + seed, z * 3.2 + seed);
       const big = vnoise(
         x * 1.3 + seed * 1.7,
         y * 1.3 + seed * 1.7,
         z * 1.3 + seed * 1.7,
       );
-      const lump = (1 - f1 * f1 * 1.35) * 0.115 + big * 0.09;
-      const r = 0.85 + lump;
+      const lump = (1 - f1 * f1 * 1.35) * 0.095 + big * 0.07;
+      const r = 0.83 + lump;
       o[0] = x * r;
       o[1] = y * r;
       o[2] = z * r;
@@ -145,6 +145,23 @@ const bakeNucleus = (base: THREE.BufferGeometry, seed: number) =>
       o[4] = f2 - f1;
     },
     0.035,
+  );
+
+// Glassy membrane shell: a gently irregular, wavy sphere.
+const bakeMembrane = (base: THREE.BufferGeometry, seed: number) =>
+  bakeSphere(
+    base,
+    (x, y, z, o) => {
+      const n = (f: number, k: number) =>
+        vnoise(x * f + seed * k, y * f + seed * k, z * f + seed * k);
+      const r = 0.92 + n(1.9, 1) * 0.085 + n(5.5, 3) * 0.036 + n(12, 5) * 0.015;
+      o[0] = x * r;
+      o[1] = y * r;
+      o[2] = z * r;
+      o[3] = 0;
+      o[4] = 0;
+    },
+    0.05,
   );
 
 export const stemCellsFactory: SceneFactory<StemParams> = ({
@@ -174,9 +191,22 @@ export const stemCellsFactory: SceneFactory<StemParams> = ({
     bakeNucleus(baseHi, s),
   );
   const geoLo = [15.5, 33.3, 64.9].map((s) => bakeNucleus(baseLo, s));
-  const memHi = mergeVertices(new THREE.IcosahedronGeometry(1, 22));
-  const memLo = mergeVertices(new THREE.IcosahedronGeometry(1, 11));
-  disposables.push(baseHi, baseLo, ...geoHi, ...geoLo, memHi, memLo);
+  const memBaseHi = mergeVertices(new THREE.IcosahedronGeometry(1, 26));
+  const memBaseLo = mergeVertices(new THREE.IcosahedronGeometry(1, 11));
+  const memHi = [4.2, 19.6, 37.3, 52.8, 77.7].map((s) =>
+    bakeMembrane(memBaseHi, s),
+  );
+  const memLo = [8.8, 46.1, 69.4].map((s) => bakeMembrane(memBaseLo, s));
+  disposables.push(
+    baseHi,
+    baseLo,
+    memBaseHi,
+    memBaseLo,
+    ...geoHi,
+    ...geoLo,
+    ...memHi,
+    ...memLo,
+  );
 
   // backdrop
   const bgMat = new THREE.ShaderMaterial({
@@ -201,8 +231,8 @@ export const stemCellsFactory: SceneFactory<StemParams> = ({
   disposables.push(bg.geometry, bgMat);
 
   const fog = {
-    uFogNear: { value: 9 },
-    uFogFar: { value: 34 },
+    uFogNear: { value: 14 },
+    uFogFar: { value: 52 },
     uFog: { value: v3(pal.fog) },
   };
   const cells = buildCells();
@@ -234,6 +264,7 @@ export const stemCellsFactory: SceneFactory<StemParams> = ({
       uTime: { value: 0 },
       uScale: { value: c.m },
       uDepthOnly: { value: 0 },
+      uBack: { value: 0 },
       uTint: { value: v3(pal.tint) },
       uRim: { value: v3(pal.memRim) },
     });
@@ -256,16 +287,31 @@ export const stemCellsFactory: SceneFactory<StemParams> = ({
       depthWrite: true,
     });
     dMat.uniforms.uDepthOnly.value = 1;
-    const mem = new THREE.Mesh(far ? memLo : memHi, mMat);
-    const memD = new THREE.Mesh(far ? memLo : memHi, dMat);
-    mem.scale.setScalar(c.m);
-    memD.scale.setScalar(c.m);
+    // inner (far) wall of the shell, drawn before the front wall
+    const bMat = new THREE.ShaderMaterial({
+      glslVersion: THREE.GLSL3,
+      vertexShader: MEMBRANE_VERT,
+      fragmentShader: MEMBRANE_FRAG,
+      uniforms: mU(),
+      transparent: true,
+      depthWrite: false,
+      side: THREE.BackSide,
+    });
+    bMat.uniforms.uBack.value = 1;
+    const mGeo = far ? memLo[i % memLo.length] : memHi[i % memHi.length];
+    const memB = new THREE.Mesh(mGeo, bMat);
+    const mem = new THREE.Mesh(mGeo, mMat);
+    const memD = new THREE.Mesh(mGeo, dMat);
+    const shell = new THREE.Group();
+    shell.scale.setScalar(c.m);
+    shell.add(memB, mem, memD);
+    memB.renderOrder = 1;
     mem.renderOrder = 1;
     memD.renderOrder = 2;
-    group.add(nucleus, mem, memD);
+    group.add(nucleus, shell);
     scene.add(group);
-    disposables.push(nMat, mMat, dMat);
-    return { c, group, nucleus, mMat, dMat };
+    disposables.push(nMat, mMat, dMat, bMat);
+    return { c, group, nucleus, shell, mMat, dMat, bMat };
   });
 
   const q = new THREE.Quaternion();
@@ -293,6 +339,9 @@ export const stemCellsFactory: SceneFactory<StemParams> = ({
         n.nucleus.quaternion.copy(q);
         n.mMat.uniforms.uTime.value = t;
         n.dMat.uniforms.uTime.value = t;
+        n.bMat.uniforms.uTime.value = t;
+        q.setFromAxisAngle(c.axis, c.phase * 0.7 - t * c.spin * 0.6);
+        n.shell.quaternion.copy(q);
       }
       bgMat.uniforms.uTime.value = t;
       (bgMat.uniforms.uShift.value as THREE.Vector2).set(u * 0.1, u * 0.06);
@@ -301,10 +350,10 @@ export const stemCellsFactory: SceneFactory<StemParams> = ({
         camera.position.distanceTo(nodes[0].group.position) * (1 - 0.08 * u);
       post.render(scene, camera, {
         focus,
-        aperture: 0.27,
-        maxCoc: 0.028,
-        vignette: 0.26,
-        grain: 0.012,
+        aperture: 0.1,
+        maxCoc: 0.02,
+        vignette: 0.16,
+        grain: 0.014,
         contrast: 1.04,
         saturation: pal.saturation,
         lift: pal.lift,

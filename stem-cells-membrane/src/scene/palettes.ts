@@ -14,31 +14,31 @@ export type Palette = {
 
 // Version 1 - the reference look: cyan / azure liquid, navy nuclei.
 export const AZURE: Palette = {
-  deep: "#03103a",
-  mid: "#1f5f8f",
-  rim: "#cdf6ff",
-  tint: "#49b6f2",
-  memRim: "#e2fbff",
-  fog: "#2a9be0",
-  bgA: "#0a5fae",
-  bgB: "#0d96e2",
-  bgC: "#74d6ff",
+  deep: "#04123c",
+  mid: "#2a6f95",
+  rim: "#9fe9e6",
+  tint: "#5cc4f5",
+  memRim: "#d6f8ff",
+  fog: "#2f9fe2",
+  bgA: "#0b6dbd",
+  bgB: "#17a0ea",
+  bgC: "#8adfff",
   lift: [0, 0, 0],
-  saturation: 1.05,
+  saturation: 1.04,
 };
 
-// Version 2 - alternative palette: magenta / orchid liquid, plum nuclei
-// with warm peach highlights.
+// Version 2 - alternative palette: magenta / orchid liquid, violet nuclei
+// with soft pink highlights.
 export const ORCHID: Palette = {
-  deep: "#2c0638",
-  mid: "#a23a86",
-  rim: "#ffe3d2",
-  tint: "#f27ac0",
-  memRim: "#fff0ea",
-  fog: "#c8409c",
-  bgA: "#5a0f6e",
-  bgB: "#cf3a98",
-  bgC: "#ffb48a",
+  deep: "#22083f",
+  mid: "#8a3f9c",
+  rim: "#ffd3e6",
+  tint: "#f68fd0",
+  memRim: "#ffeaf4",
+  fog: "#d655ac",
+  bgA: "#7a1c8c",
+  bgB: "#dc4faa",
+  bgC: "#ffb3dc",
   lift: [0.004, 0, 0.006],
-  saturation: 1.05,
+  saturation: 1.04,
 };

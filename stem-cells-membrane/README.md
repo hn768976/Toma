@@ -7,7 +7,7 @@ assets. Created with the Remotion CLI (`npx create-video --blank`).
 | Composition ID                | What it is                                                         | Size      | FPS | Frames |
 | ----------------------------- | ------------------------------------------------------------------ | --------- | --- | ------ |
 | `StemCells-V1-ReferenceMatch` | Version 1 – matches the reference (azure liquid, navy nuclei)       | 3840x2160 | 30  | 299    |
-| `StemCells-V2-OrchidPalette`  | Version 2 – same scene and camera, magenta / orchid colour palette | 3840x2160 | 30  | 299    |
+| `StemCells-V2-OrchidPalette`  | Version 2 – same scene and camera, magenta / orchid colour palette   | 3840x2160 | 30  | 299    |
 
 Duration: the reference clip is 9.96 s. 9.96 s x 30 fps = 298.8 frames, which
 is not a whole number, so the nearest frame count is used: 299 frames
