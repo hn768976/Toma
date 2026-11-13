@@ -63,23 +63,22 @@ float ridged(vec2 p, vec2 per) {
 }
 
 void main() {
-  // Shear by a whole period so the folds spiral gently around the vessel
-  // while the map still tiles in both directions.
-  vec2 sh = vec2(vUv.x + vUv.y, vUv.y);
+  vec2 sh = vUv;
 
-  vec2 perA = vec2(7.0, 9.0);
+  // large, soft, lumpy folds
+  vec2 perA = vec2(5.0, 5.0);
   vec2 qa = sh * perA;
   vec2 w = vec2(fbm(qa + vec2(3.1, 1.7), perA), fbm(qa + vec2(17.7, 9.2), perA));
-  float folds = fbm(qa + 0.9 * w, perA);
+  float folds = fbm(qa + 0.7 * w, perA);
 
-  vec2 perB = vec2(22.0, 18.0);
+  vec2 perB = vec2(16.0, 16.0);
   vec2 qb = sh * perB;
-  float fibres = ridged(qb + 1.5 * w, perB);
+  float fibres = ridged(qb + 1.2 * w, perB);
 
   vec2 perC = vec2(64.0, 64.0);
   float grain = fbm(sh * perC + 4.0 * w, perC);
 
-  float h = 0.5 + 0.9 * folds + 0.3 * (fibres - 0.45) + 0.08 * grain;
+  float h = 0.5 + 1.05 * folds + 0.12 * (fibres - 0.45) + 0.05 * grain;
   gl_FragColor = vec4(h, fibres, grain * 0.5 + 0.5, 1.0);
 }
 `;
@@ -129,10 +128,10 @@ uniform float uGlow1;
 void main() {
   vec4 t0 = texture2D(tTissue, vUv);
   float h = t0.r;
-  vec2 e = uTexel * 3.0;
-  float hb = textureLod(tTissue, vUv, 2.2).r;
-  float hu = textureLod(tTissue, vUv + vec2(e.x, 0.0), 2.2).r - hb;
-  float hv = textureLod(tTissue, vUv + vec2(0.0, e.y), 2.2).r - hb;
+  vec2 e = uTexel * 6.0;
+  float hb = textureLod(tTissue, vUv, 3.0).r;
+  float hu = textureLod(tTissue, vUv + vec2(e.x, 0.0), 3.0).r - hb;
+  float hv = textureLod(tTissue, vUv + vec2(0.0, e.y), 3.0).r - hb;
   vec2 grad = vec2(hu / (e.x * uWorldPerUv.x), hv / (e.y * uWorldPerUv.y));
   vec3 N0 = normalize(vN);
   vec3 N = normalize(N0 - uBump * (grad.x * normalize(vTu) + grad.y * normalize(vTv)));
@@ -148,20 +147,20 @@ void main() {
   float diff = max(dot(N, L), 0.0);
   vec3 Hh = normalize(L + V);
   float ndh = max(dot(N, Hh), 0.0);
-  float spec = pow(ndh, 22.0) * 0.4 + pow(ndh, 5.0) * 0.14;
+  float spec = pow(ndh, 14.0) * 0.16 + pow(ndh, 4.0) * 0.1;
   // sheen from the travelling light, strongest on ridges facing the lens
-  spec += pow(max(dot(N, V), 0.0), 6.0) * 0.1 / (1.0 + d * d * 0.03) / max(att, 0.05);
+  spec += pow(max(dot(N, V), 0.0), 5.0) * 0.07 / (1.0 + d * d * 0.03) / max(att, 0.05);
 
   float head = (0.25 + 0.75 * max(dot(N, V), 0.0)) / (1.0 + d * d * 0.03);
-  float cav = smoothstep(0.05, 0.95, h);            // creases are darker
+  float cav = 0.06 + 0.86 * smoothstep(0.08, 0.92, h); // creases are darker
   vec3 albedo = mix(uColLow, uColHigh, cav);
-  vec3 col = albedo * (uAmbient * 8.0 + uKeyCol * diff * att * 1.7 + uHeadCol * head * 1.5);
-  col += uSpecCol * spec * att * (0.25 + 0.95 * cav) * 0.85;
+  vec3 col = albedo * (uAmbient * 8.0 + uKeyCol * diff * att * 1.7 + uHeadCol * head * 0.86);
+  col += uSpecCol * spec * att * (0.4 + 0.6 * cav) * 0.85;
   col += uAmbient * (0.4 + 0.6 * cav);
 
   // The far end of the vessel is flooded with light.
   float g = smoothstep(uGlow0, uGlow1, d);
-  vec3 glow = uGlowCol * (0.5 + 0.62 * smoothstep(0.1, 0.95, h));
+  vec3 glow = uGlowCol * (0.74 + 0.3 * smoothstep(0.1, 0.95, textureLod(tTissue, vUv, 2.5).r));
   col = mix(col, glow, g * g * (3.0 - 2.0 * g));
   gl_FragColor = vec4(col, 1.0);
 }
@@ -208,7 +207,7 @@ void main() {
 
   // Soft mottling of the membrane.
   float mott = texture2D(tTissue, vObj.xz * 0.37 + vShade * 7.0).b;
-  float m = 0.78 + 0.44 * mott;
+  float m = 0.7 + 0.6 * mott;
 
   vec3 toL = uLightPos - vWorld;
   float dl = length(toL);
@@ -216,15 +215,20 @@ void main() {
   float att = 1.0 / (1.0 + dl * dl * 0.012);
   float wrapL = clamp(dot(N, L) * 0.5 + 0.5, 0.0, 1.0);
 
-  // Thick, slightly translucent body: bright core, dark silhouette edge.
-  float core = pow(ndv, 1.5);
-  float headAtt = 1.0 / (1.0 + d * d * 0.022);
-  vec3 col = uCellCol * (0.13 + 1.15 * core * headAtt) * m * (0.75 + 0.5 * vShade);
-  col += uCellCol * uKeyCol * wrapL * wrapL * att * 0.7;
-  col += uKeyCol * pow(1.0 - ndv, 4.0) * wrapL * att * 0.12;
+  // Front-lit, slightly translucent body: the thin dimple in the middle of
+  // the disc lets light through and glows, the thick rim stays darker.
+  float core = pow(ndv, 1.3);
+  float rObj = length(vObj.xz);
+  float dimple = 1.0 - smoothstep(0.15, 0.85, rObj);
+  float headAtt = 1.0 / (1.0 + d * d * 0.012);
+  float lit = 0.12 + 0.43 * core * (0.5 + 0.5 * headAtt) + 0.38 * dimple * (0.35 + 0.65 * core);
+  vec3 col = uCellCol * lit * m * (0.8 + 0.4 * vShade);
+  col += uCellCol * uKeyCol * wrapL * wrapL * att * 0.5;
+  col += uKeyCol * pow(1.0 - ndv, 4.0) * wrapL * att * 0.06;
 
-  float g = smoothstep(uGlow0 * 1.7, uGlow1 * 2.5, d);
-  col = mix(col, uCellFar * (0.5 + 0.65 * core), g * 0.92);
+  // distant cells dissolve into the glow at the end of the vessel
+  float g = smoothstep(uGlow0 * 1.5, uGlow1 * 2.6, d);
+  col = mix(col, uCellFar * (0.72 + 0.35 * core), g * 0.9);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
