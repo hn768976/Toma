@@ -26,14 +26,14 @@ export const PATH_V1: CamKey[] = [
   { t: 2.3, pos: [0.7, -0.9, 5.4], target: [-0.4, -1.9, 2.5], aperture: 14, roll: 0.05, exposure: 0.56 },
   // tilt up: the helix slides in across the top edge, still out of focus
   { t: 3.3, pos: [-0.5, -0.74, 5.6], target: [-1.8, -1.75, 0.9], aperture: 14, roll: 0.0, exposure: 0.78 },
-  { t: 4.8, pos: [-1.9, -0.52, 5.8], target: [-2.9, -0.8, 0.3], aperture: 13, roll: -0.02, exposure: 0.94 },
+  { t: 5.2, pos: [-1.9, -0.52, 5.8], target: [-2.9, -0.8, 0.3], aperture: 14, roll: -0.02, exposure: 0.94 },
   // rack focus onto the helix, slow pull-back
-  { t: 6.4, pos: [-3.1, -0.3, 6.2], target: [-3.9, 0.02, 0], aperture: 13, roll: -0.01 },
-  { t: 9.0, pos: [-4.0, 0.7, 8.8], target: [-4.0, -0.35, 0], aperture: 13, roll: 0.0 },
+  { t: 7.2, pos: [-3.1, -0.3, 6.2], target: [-3.9, 0.02, 0], aperture: 16, roll: -0.01 },
+  { t: 9.4, pos: [-4.0, 0.7, 8.8], target: [-4.0, -0.35, 0], aperture: 24, roll: 0.0 },
   // drift to a high 3/4 view: helix in the upper third receding right
-  { t: 11.5, pos: [-6.2, 2.0, 9.4], target: [-4.0, -1.0, 0], aperture: 13.5, roll: 0.02 },
-  { t: 14.5, pos: [-9.2, 2.05, 7.2], target: [-2.8, -0.6, 0], aperture: 14, roll: 0.04 },
-  { t: 20.0, pos: [-10.6, 1.85, 5.7], target: [-2.5, -0.5, 0], aperture: 14, roll: 0.05 },
+  { t: 11.8, pos: [-6.0, 1.75, 9.8], target: [-2.4, -0.95, 0], aperture: 28, roll: 0.02 },
+  { t: 14.8, pos: [-7.4, 1.75, 9.8], target: [-1.4, -0.95, 0], aperture: 28, roll: 0.03 },
+  { t: 20.0, pos: [-8.6, 1.65, 9.2], target: [-1.2, -0.9, 0], aperture: 28, roll: 0.04 },
 ];
 
 /**

@@ -61,6 +61,8 @@ void main() {
   float tot = 1.0;
   float radius = uRadScale;
   float ang = 0.0;
+  // largest near-field (foreground) blur that reaches this pixel
+  float nearCover = 0.0;
   for (int i = 0; i < 200; i++) {
     if (radius >= uMaxRadius) break;
     vec2 tc = vUv + vec2(cos(ang), sin(ang)) * uTexel * radius;
@@ -69,12 +71,17 @@ void main() {
     // samples behind the centre pixel may not bleed beyond its own blur
     if (s.a > center.a) sSize = min(sSize, centerSize * 2.0);
     float m = smoothstep(radius - 0.5, radius + 0.5, sSize);
+    if (s.a < 0.0 && sSize > radius) nearCover = max(nearCover, sSize);
     col += mix(col / tot, s.rgb, m);
     tot += 1.0;
     radius += uRadScale / radius;
     ang += GOLDEN_ANGLE;
   }
-  gl_FragColor = vec4(col / tot, center.a);
+  // Report the effective blur: where a defocused foreground object spreads
+  // over this pixel, the composite must use the blurred image, otherwise the
+  // sharp layer shows hard, crawling edges around near bokeh.
+  float effective = max(centerSize, nearCover);
+  gl_FragColor = vec4(col / tot, effective);
 }`;
 
 const DOF_COMPOSITE = /* glsl */ `

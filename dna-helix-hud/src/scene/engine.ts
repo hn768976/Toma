@@ -67,7 +67,7 @@ export const createEngine = (
     emissive: 0x2a2c2a,
     envMapIntensity: 0.75,
     transparent: true,
-    opacity: 0.8,
+    opacity: 0.62,
     depthWrite: false,
   });
   const stickMat = new THREE.MeshStandardMaterial({
@@ -77,7 +77,7 @@ export const createEngine = (
     emissive: 0x222422,
     envMapIntensity: 0.7,
     transparent: true,
-    opacity: 0.72,
+    opacity: 0.6,
     depthWrite: false,
   });
   const rungCount = Math.floor((DNA_X1 - DNA_X0) / RUNG_SPACING) + 1;
@@ -317,7 +317,7 @@ export const createEngine = (
       time: t,
       fade: 1,
       lift,
-      gain: 0.84,
+      gain: 0.8,
       shadowTint,
       highlightTint,
     });
