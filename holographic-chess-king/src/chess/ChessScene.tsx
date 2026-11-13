@@ -42,7 +42,7 @@ const IGNITION_KEYS: [number, number][] = [
 
 const CYAN = new THREE.Color("#35d6ff");
 const HOLO = new THREE.Color("#b8f4ff");
-const GREEN = new THREE.Color("#2dff96");
+const GREEN = new THREE.Color("#2deab0");
 
 /** 0 → 1 king illumination following the reference's flicker keys. */
 const kingLight = (frame: number) =>
@@ -64,7 +64,7 @@ const checkerTexture = () => {
       const lx = x % (size / 2);
       const ly = y % (size / 2);
       const seam = lx < 1 || ly < 1 || lx > size / 2 - 2 || ly > size / 2 - 2;
-      const c = light ? [34, 76, 106] : [6, 14, 22];
+      const c = light ? [30, 64, 88] : [9, 20, 30];
       const k = seam ? 0.55 : 1;
       const i = (y * size + x) * 4;
       data[i] = c[0] * k;
@@ -143,7 +143,7 @@ const buildConstellations = (seed: number): Constellation => {
   const pts: number[] = [];
   const segs: number[] = [];
   const seeds: number[] = [];
-  const clusters = 7;
+  const clusters = 5;
   for (let c = 0; c < clusters; c++) {
     const cx = -2.6 + (c / (clusters - 1)) * 8.5 + (rand() - 0.5) * 1.0;
     const cy = 0.75 + rand() * 0.75;
@@ -247,7 +247,7 @@ export const ChessScene: React.FC<ChessSceneProps> = ({ cameraMode }) => {
       scene.add(mirror);
 
       const darkPiece = new THREE.MeshStandardMaterial({
-        color: 0x2a4d78,
+        color: 0x3a6390,
         roughness: 0.42,
         metalness: 0.12,
       });
@@ -304,7 +304,7 @@ export const ChessScene: React.FC<ChessSceneProps> = ({ cameraMode }) => {
         // Neon base ring (and its reflection).
         for (const parent of [world, mirror]) {
           const r = baseRingRadius[p.kind] * BG_PIECE_SCALE;
-          const ring = makeHoloRing(r - 0.04, r + 0.012, 0.012, { intensity: 2.1, color: CYAN });
+          const ring = makeHoloRing(r - 0.045, r + 0.014, 0.012, { intensity: 2.6, color: CYAN });
           ring.mesh.position.x = p.x;
           ring.mesh.position.z = p.z;
           parent.add(ring.mesh);
@@ -369,9 +369,10 @@ export const ChessScene: React.FC<ChessSceneProps> = ({ cameraMode }) => {
           uniform float uIntensity; uniform vec3 uColor; varying vec3 vWorld;
           void main(){
             vec2 c=floor(vWorld.xz+0.5);
-            float lightSq=mod(c.x+c.y,2.0)<0.5?1.0:0.3;
-            vec2 d=vWorld.xz-vec2(0.4,1.6);
-            float fall=exp(-dot(d*vec2(0.38,0.45),d*vec2(0.38,0.45)));
+            float lightSq=mod(c.x+c.y,2.0)<0.5?1.0:0.55;
+            vec2 d=vWorld.xz-vec2(-0.7,1.2);
+            vec2 k=d*vec2(d.x>0.0?0.62:0.4,0.5);
+            float fall=exp(-dot(k,k));
             float v=fall*lightSq*uIntensity;
             gl_FragColor=vec4(uColor*v,v);
           }`,
@@ -406,7 +407,7 @@ export const ChessScene: React.FC<ChessSceneProps> = ({ cameraMode }) => {
         mesh.position.set(-2.6 + i * 0.6 + rayRand() * 0.4, 3.4, -5.5 - rayRand() * 1.5);
         mesh.rotation.z = 0.72 + (rayRand() - 0.5) * 0.14;
         scene.add(mesh);
-        rays.push({ mesh, mat, base: 0.16 + rayRand() * 0.14 });
+        rays.push({ mesh, mat, base: 0.22 + rayRand() * 0.16 });
       }
 
       // ---------- Constellations ----------
@@ -416,7 +417,7 @@ export const ChessScene: React.FC<ChessSceneProps> = ({ cameraMode }) => {
       nodeGeo.setAttribute("aSeed", new THREE.BufferAttribute(con.seeds, 1));
       const nodeMat = new THREE.ShaderMaterial({
         uniforms: {
-          uSize: { value: 72 },
+          uSize: { value: 130 },
           uPixelScale: { value: pixelScale },
           uTime: { value: 0 },
           uColor: { value: GREEN.clone().multiplyScalar(2.6) },
@@ -437,7 +438,7 @@ export const ChessScene: React.FC<ChessSceneProps> = ({ cameraMode }) => {
         const pos: number[] = [];
         const across: number[] = [];
         const idx: number[] = [];
-        const half = 0.011;
+        const half = 0.06;
         for (let i = 0; i < seg.length; i += 6) {
           const a = new THREE.Vector3(seg[i], seg[i + 1], seg[i + 2]);
           const b = new THREE.Vector3(seg[i + 3], seg[i + 4], seg[i + 5]);
@@ -476,7 +477,7 @@ export const ChessScene: React.FC<ChessSceneProps> = ({ cameraMode }) => {
       composer.setPixelRatio(1);
       composer.setSize(bufferWidth, bufferHeight);
       composer.addPass(new RenderPass(scene, camera));
-      const bokeh = new BokehPass(scene, camera, { focus: 11, aperture: 0.0034, maxblur: 0.014 });
+      const bokeh = new BokehPass(scene, camera, { focus: 11, aperture: 0.0034, maxblur: 0.012 });
       composer.addPass(bokeh);
       const bloom = new UnrealBloomPass(new THREE.Vector2(bufferWidth, bufferHeight), 0.55, 0.45, 0.6);
       composer.addPass(bloom);
@@ -501,10 +502,13 @@ export const ChessScene: React.FC<ChessSceneProps> = ({ cameraMode }) => {
           camera.lookAt(1.02, 0.86, -1.0);
           // The reference opens wide, eases a ~1.28x push-in over f15–60, holds,
           // then eases back out over f240–278.
-          camera.zoom = interpolate(frame, [0, 15, 60, 240, 278, 299], [0.78, 0.78, 1, 1, 0.78, 0.78], {
-            ...clampOpts,
-            easing: Easing.inOut(Easing.sin),
-          });
+          // Zoom keys measured from the reference (1 / framing scale vs the hold).
+          camera.zoom = interpolate(
+            frame,
+            [0, 29, 40, 60, 240, 260, 270, 280, 299],
+            [0.813, 0.9, 0.952, 1, 1, 0.935, 0.909, 0.826, 0.813],
+            { ...clampOpts, easing: Easing.inOut(Easing.sin) },
+          );
         } else {
           camera.zoom = 1;
           // Version 2: crane-down orbit around the king (≈70° arc), king held centre-frame.
@@ -531,7 +535,7 @@ export const ChessScene: React.FC<ChessSceneProps> = ({ cameraMode }) => {
           kingMat.emissiveIntensity = kingMatLit * lit;
           kingRim.value = 0.55 + 0.1 * litClamped;
           kingGlow.intensity = 1.6 * lit;
-          spillMat.uniforms.uIntensity.value = 1.7 * lit;
+          spillMat.uniforms.uIntensity.value = 1.5 * lit;
           fill.intensity = 0.12 + 0.98 * litClamped;
           hemi.intensity = 0.06 + 0.29 * litClamped;
           key.intensity = 0.25 + 0.45 * litClamped;
@@ -552,8 +556,8 @@ export const ChessScene: React.FC<ChessSceneProps> = ({ cameraMode }) => {
 
           const conFade = interpolate(frame, [0, 60], [0.04, 1], { ...clampOpts, easing: Easing.inOut(Easing.quad) });
           nodeMat.uniforms.uTime.value = t;
-          nodeMat.uniforms.uIntensity.value = 1.3 * conFade;
-          lineMat.uniforms.uOpacity.value = 0.4 * conFade;
+          nodeMat.uniforms.uIntensity.value = 0.75 * conFade;
+          lineMat.uniforms.uOpacity.value = 0.16 * conFade;
           constellation.position.set(Math.sin(t * 0.25) * 0.25 - t * 0.04, Math.sin(t * 0.33) * 0.12, 0);
           constellation.rotation.z = Math.sin(t * 0.15) * 0.02;
 

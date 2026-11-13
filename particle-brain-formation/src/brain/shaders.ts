@@ -49,8 +49,7 @@ float snoise(vec3 v){
 const common = /* glsl */ `
 uniform float uTime;
 uniform float uChaos;
-uniform float uWave;
-uniform float uWaveAmt;
+uniform float uGreenSide;
 uniform vec3 uColAnterior;
 uniform vec3 uColTop;
 uniform vec3 uColLow;
@@ -68,7 +67,7 @@ vec3 chaosDisplace(vec3 p){
   vec3 q2=p*2.8+vec3(uTime*0.4,-uTime*0.3,0.0);
   vec3 d2=vec3(snoise(q2+vec3(4.0,1.0,9.0)),snoise(q2+vec3(13.0,-7.0,2.0)),snoise(q2+vec3(-3.0,8.0,-11.0)));
   float c=uChaos;
-  return p*(vec3(1.0)+c*vec3(-0.3,0.38,0.05))+c*(d1*vec3(0.3,0.36,0.34)+d2*0.15);
+  return p*(vec3(1.0)+c*vec3(-0.02,0.32,0.3))+c*(d1*vec3(0.3,0.34,0.36)+d2*0.14);
 }
 
 float bump(float x,float a,float b){
@@ -76,14 +75,19 @@ float bump(float x,float a,float b){
   return 1.0-smoothstep(0.0,w,abs(x-m));
 }
 
+// Colour: cyan body, green on the occipital (screen-left) side, red on the
+// low temporal pole (screen-right). During formation a red wash and then a
+// green wash sweep across from right to left (measured from the reference).
 vec3 brainColor(vec3 p){
-  float ant=smoothstep(0.1,-1.0,p.x);
-  float low=smoothstep(-0.05,-0.55,p.y)*smoothstep(-0.25,0.55,p.x);
-  vec3 col=mix(uColTop,uColAnterior,ant*0.8);
+  float side=smoothstep(0.15,-1.0,p.x);
+  float low=smoothstep(-0.05,-0.55,p.y)*smoothstep(-0.1,0.6,p.x);
+  vec3 col=mix(uColTop,uColAnterior,side*0.85*uGreenSide);
   col=mix(col,uColLow,low*0.9);
-  float d=p.x-uWave;
-  col=mix(col,uWaveCol1,bump(d,-0.05,0.75)*uWaveAmt);
-  col=mix(col,uWaveCol2,bump(d,0.55,1.7)*uWaveAmt);
+  float tl=uTime+0.35*p.x;
+  float red=smoothstep(3.85,4.5,tl)*(1.0-smoothstep(4.95,5.45,tl));
+  float green=smoothstep(4.95,5.45,tl)*(1.0-smoothstep(5.6,7.4,tl));
+  col=mix(col,uWaveCol1,red*0.9);
+  col=mix(col,uWaveCol2,green*0.8);
   return col;
 }
 `;

@@ -72,7 +72,7 @@ uniform float uIntensity;
 varying float vTwinkle;
 void main(){
   float r=length(gl_PointCoord-0.5)*2.0;
-  float core=exp(-r*r*7.0)+0.6*exp(-r*r*40.0);
+  float core=exp(-r*r*4.5)+0.35*exp(-r*r*14.0);
   float v=core*uIntensity*vTwinkle;
   if(v<0.003) discard;
   gl_FragColor=vec4(uColor*v,v);
@@ -83,7 +83,7 @@ export const gradeShader = {
     tDiffuse: { value: null },
     uVignette: { value: 0.55 },
     uAspect: { value: 16 / 9 },
-    uLift: { value: [0.0055, 0.0075, 0.0072] },
+    uLift: { value: [0.005, 0.006, 0.0055] },
   },
   vertexShader: /* glsl */ `varying vec2 vUv; void main(){vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
   fragmentShader: /* glsl */ `

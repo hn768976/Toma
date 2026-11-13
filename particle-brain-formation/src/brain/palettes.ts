@@ -12,13 +12,13 @@ export type BrainPalette = {
 /** Version 1 — matches the reference: cyan-white body, green frontal lobe, red low/back accents, red→green formation wave. */
 export const referencePalette: BrainPalette = {
   name: "Reference (cyan / green / red)",
-  background: "#03060b",
+  background: "#00070b",
   anterior: "#5cf27a",
-  top: "#9fe2ff",
+  top: "#7fd6f2",
   low: "#ff5a45",
   wave1: "#ff6a4f",
   wave2: "#6dff7e",
-  vignette: 0.55,
+  vignette: 0.3,
 };
 
 /** Version 2 — alternative palette: molten gold body, magenta frontal lobe, violet accents, violet→gold wave. */

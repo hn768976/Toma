@@ -25,10 +25,9 @@ export type BrainSceneProps = {
 const FPS = 30;
 
 // Timeline (frames @30fps, 300 total) — measured from the reference clip.
-const CHAOS_HOLD_END = 84; // 0–2.8s: writhing crumpled particle sheets
-const CHAOS_SETTLE_END = 188; // 2.8–6.27s: sheets contract and fold into the brain
-const WAVE_START = 118; // ~3.9s: colour wave (red → green) sweeps back-to-front
-const WAVE_END = 182;
+const CHAOS_HOLD_END = 88; // 0–2.9s: writhing crumpled particle sheets
+const CHAOS_SETTLE_END = 206; // 2.9–6.9s: sheets contract and fold into the brain
+// Colour washes (red ~3.9–5.4s, then green ~5–9s) are timed in brainColor().
 
 const vignetteShader = {
   uniforms: {
@@ -43,7 +42,9 @@ const vignetteShader = {
       vec4 c=texture2D(tDiffuse,vUv);
       vec2 d=(vUv-0.5)*vec2(uAspect,1.0);
       float v=1.0-uStrength*smoothstep(0.35,1.15,length(d));
-      gl_FragColor=vec4(c.rgb*v,1.0);
+      // Static sub-LSB dither so the dark glow falloff doesn't band.
+      float n=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453)-0.5;
+      gl_FragColor=vec4(max(c.rgb*v+n*0.0006,0.0),1.0);
     }`,
 };
 
@@ -64,8 +65,7 @@ export const BrainScene: React.FC<BrainSceneProps> = ({ palette }) => {
       const shared = {
         uTime: { value: 0 },
         uChaos: { value: 1 },
-        uWave: { value: 2 },
-        uWaveAmt: { value: 0 },
+        uGreenSide: { value: 1 },
         uColAnterior: { value: lin(palette.anterior) },
         uColTop: { value: lin(palette.top) },
         uColLow: { value: lin(palette.low) },
@@ -86,7 +86,7 @@ export const BrainScene: React.FC<BrainSceneProps> = ({ palette }) => {
         new THREE.ShaderMaterial({
           uniforms: {
             ...shared,
-            uSize: { value: 4.2 },
+            uSize: { value: 5.0 },
             uPixelScale: { value: pixelScale },
             uFocal: { value: 5.0 },
             uBrightness: { value: brightness },
@@ -114,8 +114,8 @@ export const BrainScene: React.FC<BrainSceneProps> = ({ palette }) => {
       // Two looks are cross-faded: while scrambled, the sheets are see-through
       // (no depth test); once the brain is formed, an invisible depth-only
       // occluder hides the far hemisphere so it reads as a solid object.
-      const pointsFree = makePointsMat(false, 0.27);
-      const pointsSolid = makePointsMat(true, 1.3);
+      const pointsFree = makePointsMat(false, 0.24);
+      const pointsSolid = makePointsMat(true, 0.85);
       const linesFree = makeLinesMat(false, 0.04);
       const linesSolid = makeLinesMat(true, 0.022);
       const occluderMat = new THREE.ShaderMaterial({
@@ -150,7 +150,7 @@ export const BrainScene: React.FC<BrainSceneProps> = ({ palette }) => {
       composer.setPixelRatio(1);
       composer.setSize(bufferWidth, bufferHeight);
       composer.addPass(new RenderPass(scene, camera));
-      const bloom = new UnrealBloomPass(new THREE.Vector2(bufferWidth, bufferHeight), 0.22, 0.3, 0.45);
+      const bloom = new UnrealBloomPass(new THREE.Vector2(bufferWidth, bufferHeight), 0.12, 0.3, 0.5);
       composer.addPass(bloom);
       const vignette = new ShaderPass(vignetteShader);
       vignette.uniforms.uStrength.value = palette.vignette;
@@ -165,28 +165,32 @@ export const BrainScene: React.FC<BrainSceneProps> = ({ palette }) => {
           shared.uChaos.value = interpolate(frame, [CHAOS_HOLD_END, CHAOS_SETTLE_END], [1, 0], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
-            easing: Easing.inOut(Easing.cubic),
+            easing: Easing.inOut(Easing.sin),
           });
-          shared.uWave.value = interpolate(frame, [WAVE_START, WAVE_END], [1.4, -2.4], {
+          // After forming, the green side slowly gives way to cyan.
+          shared.uGreenSide.value = interpolate(frame, [0, 120, 200, 295], [0.6, 0.6, 0.85, 0.62], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
             easing: Easing.inOut(Easing.sin),
           });
-          shared.uWaveAmt.value = interpolate(
-            frame,
-            [WAVE_START - 6, WAVE_START + 4, WAVE_END - 8, WAVE_END + 6],
-            [0, 1, 1, 0],
-            { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-          );
           // Slow continuous turn: frontal lobe swings from 3/4-front to a near-lateral view.
           // Extra tumble while the sheets are scrambled.
           const tumble = shared.uChaos.value;
-          group.rotation.y = interpolate(frame, [0, 299], [0.85, 0.48]) + tumble * 0.35 * Math.sin(t * 0.55 + 0.4);
+          // Near-lateral view; a slow turn that eases out and settles by ~9.5 s.
+          const turn =
+            interpolate(frame, [0, 150], [0.62, 0.42], { extrapolateRight: "clamp" }) -
+            interpolate(frame, [150, 285], [0, 0.28], {
+              extrapolateLeft: "clamp",
+              extrapolateRight: "clamp",
+              easing: Easing.out(Easing.cubic),
+            });
+          group.rotation.y = turn + tumble * 0.35 * Math.sin(t * 0.55 + 0.4);
           group.rotation.x = 0.06 + tumble * 0.12 * Math.sin(t * 0.4);
           group.rotation.z = interpolate(frame, [0, 299], [0.04, -0.02]);
-          group.position.y = 0.04;
+          group.position.y = -0.03;
+          group.scale.set(1, 1, 1);
 
-          const solid = interpolate(shared.uChaos.value, [0.0, 0.45], [1, 0], {
+          const solid = interpolate(shared.uChaos.value, [0.0, 0.6], [1, 0], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
           });

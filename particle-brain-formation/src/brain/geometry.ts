@@ -34,6 +34,8 @@ const hemisphereSdf = (side: 1 | -1): Sdf => (x, y, z) => {
   const temporal = sdEllipsoid(x, y, zl, -0.04, -0.3, 0.47, 0.57, 0.26, 0.31);
   d = smin(d, temporal, 0.07);
   d = Math.max(d, -(y + 0.58)); // flattish base
+  // Occipital underside lifts to make room for the cerebellum.
+  d = Math.max(d, -(y + 0.36) - 1.4 * Math.max(0, 0.32 - x));
   // Orbital (under-frontal) surface sits higher than the temporal lobe.
   d = Math.max(d, -(y + 0.2) - 0.9 * Math.max(0, x + 0.62) - 0.3 * Math.max(0, -zl + 0.25));
   d = Math.max(d, 0.025 - zl); // flat medial wall + longitudinal fissure
@@ -41,8 +43,8 @@ const hemisphereSdf = (side: 1 | -1): Sdf => (x, y, z) => {
 };
 
 const cerebellumSdf: Sdf = (x, y, z) => {
-  const a = sdEllipsoid(x, y, z, 0.55, -0.42, 0.21, 0.36, 0.22, 0.28);
-  const b = sdEllipsoid(x, y, z, 0.55, -0.42, -0.21, 0.36, 0.22, 0.28);
+  const a = sdEllipsoid(x, y, z, 0.6, -0.47, 0.27, 0.38, 0.21, 0.32);
+  const b = sdEllipsoid(x, y, z, 0.6, -0.47, -0.27, 0.38, 0.21, 0.32);
   return smin(a, b, 0.15);
 };
 
@@ -146,12 +148,12 @@ const buildParts = (detail: number, cerebDetail: number, stemSeg: [number, numbe
     const sdf = hemisphereSdf(side);
     const g = icosphere(detail);
     projectToSdf(g, [0.02, 0.06, 0.42 * side], sdf, 1.4);
-    carveFolds(g, sdf, { freq: 2.7, depth: 0.08, width: 0.34, seed: 7 + (side > 0 ? 0 : 50) });
+    carveFolds(g, sdf, { freq: 3.9, depth: 0.065, width: 0.3, seed: 7 + (side > 0 ? 0 : 50) });
     g.computeVertexNormals();
     parts.push(g);
   }
   const cb = icosphere(cerebDetail);
-  projectToSdf(cb, [0.55, -0.42, 0], cerebellumSdf, 0.8);
+  projectToSdf(cb, [0.6, -0.47, 0], cerebellumSdf, 0.9);
   carveFolds(cb, cerebellumSdf, { freq: 70, depth: 0.018, width: 0.35, seed: 3, striated: true });
   cb.computeVertexNormals();
   parts.push(cb);
@@ -290,5 +292,17 @@ export const buildBrain = (pointCount: number): BrainData => {
   occluder.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 10);
 
   [...fine, ...coarse].forEach((g) => g.dispose());
+
+  // Final orientation matches the reference: frontal lobe toward +X (screen
+  // right), occipital lobe and cerebellum toward -X (screen left).
+  const mirrorX = (g: THREE.BufferGeometry, normalAttr: string) => {
+    for (const name of ["position", normalAttr]) {
+      const a = g.attributes[name] as THREE.BufferAttribute;
+      for (let i = 0; i < a.count; i++) a.setX(i, -a.getX(i));
+    }
+  };
+  mirrorX(points, "aNormal");
+  mirrorX(lines, "aNormal");
+  mirrorX(occluder, "aNormal");
   return { points, lines, occluder };
 };
