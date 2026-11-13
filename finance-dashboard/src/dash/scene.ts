@@ -120,11 +120,11 @@ const keyframes = (t: number, keys: [number, number][]) => {
  */
 const REF_KEYS = {
   s: [[0, -0.3], [1, -0.15], [2.5, 0.5], [4, 1.5], [5.5, 2.6], [7.5, 3.25], [10, 3.5]] as [number, number][],
-  d: [[0, 8.9], [1, 7.7], [2.5, 6.3], [4, 5.7], [5.5, 5.3], [7.5, 4.9], [10, 4.75]] as [number, number][],
+  d: [[0, 8.9], [1, 7.7], [2.5, 6.3], [4, 5.85], [5.5, 5.45], [7.5, 5.1], [10, 5.0]] as [number, number][],
   /** camera height (eye line stays about mid-card on the KPI cards) */
   y: [[0, 0.55], [2.5, 0.55], [10, 0.5]] as [number, number][],
   /** height of the look-at point */
-  ly: [[0, -0.05], [2.5, -0.05], [10, -0.2]] as [number, number][],
+  ly: [[0, -0.05], [2.5, 0.0], [4, 0.32], [5.5, 0.48], [10, 0.5]] as [number, number][],
   look: [[0, 0.6], [1, 0.8], [2.5, 1.6], [4, 2.8], [5.5, 3.9], [7.5, 4.6], [10, 5.0]] as [number, number][],
 };
 const referenceRig = (t: number): Rig => {
