@@ -50,14 +50,16 @@ void main() {
     vec2 dd = p - c;
     m += exp(-dot(dd, dd) / (rad * rad));
   }
-  vec2 q = vec2(fbm(p * 1.4 + t * 0.03), fbm(p * 1.4 + vec2(5.2, 1.3) - t * 0.025));
-  float detail = fbm(p * 1.7 + 1.6 * q + vec2(t * 0.04, -t * 0.02));
-  float d = m * (0.1 + 1.45 * detail);
-  d = smoothstep(0.12, 1.6, d);
-  d = pow(d, 1.25);
+  // soft-saturate the mass sum so overlapping masses don't merge into one
+  // big flat blob, then carve wispy structure with higher-frequency warped fBm
+  m = 1.0 - exp(-m * 1.1);
+  vec2 q = vec2(fbm(p * 2.1 + t * 0.03), fbm(p * 2.1 + vec2(5.2, 1.3) - t * 0.025));
+  float detail = fbm(p * 2.6 + 2.0 * q + vec2(t * 0.04, -t * 0.02));
+  float d = m * smoothstep(0.22, 0.85, detail) * 1.6;
+  d = clamp(d, 0.0, 1.0);
   // slow luminous pulsing of the whole cloud bank
   float pulse = 0.85 + 0.15 * sin(t * 0.55) + 0.08 * sin(t * 1.3 + 1.7);
-  vec3 c = mix(uCol, uHi, smoothstep(0.45, 1.0, d)) * d * 0.68 * pulse;
+  vec3 c = mix(uCol, uHi, smoothstep(0.45, 1.0, d)) * d * 0.95 * pulse;
   // vignette keeps the frame edges darker, like the reference
   vec2 v = uv - 0.5;
   c *= 1.0 - dot(v, v) * 1.1;

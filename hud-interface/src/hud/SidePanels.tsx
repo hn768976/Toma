@@ -77,7 +77,7 @@ export const SidePanels: React.FC<{ frame: number; p: Palette }> = ({ frame, p }
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <g key={i}>
             <path
-              d={`M ${250} ${930 + i * 8} C ${400} ${930 + i * 8}, ${450} ${972 + i * 7}, ${652} ${972 + i * 7}`}
+              d={`M ${240} ${918 + i * 7} C ${370} ${918 + i * 7}, ${380} ${1004 + i * 6}, ${520} ${1004 + i * 6} S ${600} ${972 + i * 7}, ${652} ${972 + i * 7}`}
               fill="none"
               stroke={p.line}
               strokeWidth={1}

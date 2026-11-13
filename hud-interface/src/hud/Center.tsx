@@ -1,6 +1,6 @@
 import React from "react";
 import { Easing, interpolate } from "remotion";
-import { boot, code, digits, glitch } from "../lib/anim";
+import { boot, code, digits, glitch, roam } from "../lib/anim";
 import { Palette } from "../palette";
 import { G, Txt } from "./primitives";
 
@@ -145,23 +145,33 @@ export const Center: React.FC<{ frame: number; p: Palette }> = ({ frame, p }) =>
       </G>
 
       {/* floating multi-line data blocks */}
-      {BLOCKS.map(([x, y, n, s0, e], i) => (
-        <G key={`b${i}`} o={boot(frame, Math.round(s0 * 30), Math.round(e * 30), 15) * glitch(frame, 4000 + i, 0.02)}>
+      {BLOCKS.map(([x0, y0, n, s0, e], i) => {
+        const rm = roam(t, 4600 + i, 5 + (i % 4));
+        const x = x0 + rm.dx;
+        const y = y0 + rm.dy;
+        return (
+        <G key={`b${i}`} o={boot(frame, Math.round(s0 * 30), Math.round(e * 30), 15) * glitch(frame, 4000 + i, 0.02) * rm.o}>
           {Array.from({ length: n }, (_, k) => (
             <Txt key={k} x={x + (k === 0 ? 0 : 10)} y={y + k * 11} size={k === 0 ? 8 : 7} fill={p.text} opacity={k === 0 ? 0.75 : 0.5}>
-              {k === 0 ? `■ ${code(4100 + i, 8)} ${code(4200 + i, 5)}` : `${code(4300 + i * 7 + k, 4)}  ${digits(4400 + i * 7 + k, 6, k === 1 ? step8 : 0)}  ${code(4500 + i * 7 + k, 3)}`}
+              {k === 0 ? `■ ${code(4100 + i, 8, rm.slot)} ${code(4200 + i, 5)}` : `${code(4300 + i * 7 + k, 4, rm.slot)}  ${digits(4400 + i * 7 + k, 6, k === 1 ? step8 : rm.slot)}  ${code(4500 + i * 7 + k, 3)}`}
             </Txt>
           ))}
         </G>
-      ))}
+        );
+      })}
 
       {/* floating annotation labels */}
-      {LABELS.map(([x, y, s, e], i) => (
-        <G key={i} o={boot(frame, Math.round(s * 30), Math.round(e * 30), 15) * glitch(frame, 3600 + i, 0.02)}>
-          <Txt x={x} y={y} size={8} fill={p.text} opacity={0.7}>{`▸ ${code(3700 + i, 9)} ${code(3800 + i, 4)} ${digits(3900 + i, 4, i % 2 ? step8 : 0)}`}</Txt>
-          <rect x={x} y={y + 5} width={60} height={1} fill={p.line} opacity={0.4} />
-        </G>
-      ))}
+      {LABELS.map(([x0, y0, s, e], i) => {
+        const rm = roam(t, 4800 + i, 6 + (i % 3));
+        const x = x0 + rm.dx;
+        const y = y0 + rm.dy;
+        return (
+          <G key={i} o={boot(frame, Math.round(s * 30), Math.round(e * 30), 15) * glitch(frame, 3600 + i, 0.02) * rm.o}>
+            <Txt x={x} y={y} size={8} fill={p.text} opacity={0.7}>{`▸ ${code(3700 + i, 9, rm.slot)} ${code(3800 + i, 4)} ${digits(3900 + i, 4, i % 2 ? step8 : rm.slot)}`}</Txt>
+            <rect x={x} y={y + 5} width={60} height={1} fill={p.line} opacity={0.4} />
+          </G>
+        );
+      })}
     </g>
   );
 };

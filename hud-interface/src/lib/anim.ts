@@ -21,9 +21,23 @@ export const boot = (frame: number, start: number, end = Infinity, fade = 20) =>
   return v;
 };
 
-// occasional single-frame dropouts that make the interface feel "live"
+// rare, subtle single-frame dips that make the interface feel "live"
+// (kept shallow so they never read as flicker)
 export const glitch = (frame: number, seed: number, p = 0.015) =>
-  hash(seed, frame) < p ? 0.35 : 1;
+  hash(seed, frame) < p * 0.5 ? 0.75 : 1;
+
+// slow drift + periodic relocation for floating annotations: each element
+// lives in ~6 s slots, fades out/in at slot boundaries and reappears offset.
+export const roam = (t: number, seed: number, period = 6) => {
+  const ph = (hash(seed, 99) * period) % period;
+  const slot = Math.floor((t + ph) / period);
+  const local = (t + ph) / period - slot; // 0..1 within the slot
+  const dx = (hash(seed, slot, 1) - 0.5) * 220 + Math.sin(t * 0.25 + seed) * 18;
+  const dy = (hash(seed, slot, 2) - 0.5) * 120 + local * 14;
+  const edge = Math.min(local, 1 - local) * period; // seconds to nearest boundary
+  const o = Math.min(1, edge / 0.35);
+  return { dx: slot === Math.floor(ph / period) ? Math.sin(t * 0.25 + seed) * 18 : dx, dy: slot === Math.floor(ph / period) ? local * 14 : dy, o, slot };
+};
 
 // smooth deterministic 1D value noise in [0,1]
 export const vnoise = (x: number, seed: number) => {
