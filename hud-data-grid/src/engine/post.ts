@@ -68,8 +68,8 @@ vec3 viewPos(vec2 uv, float d) {
 float cocOf(vec3 v, vec2 uv) {
   float c = (dot(focalPlane.xyz, v) + focalPlane.w) / max(-v.z, 1e-4);
   c = c < 0.0 ? c * nearK : c * farK;
-  // elliptical: a wide horizontal strip of focus (horizontal distance counts half)
-  float d = length((uv - field.xy) * vec2(aspect * 0.5, 1.0));
+  // elliptical: a wide horizontal strip of focus (horizontal distance weighted 0.7)
+  float d = length((uv - field.xy) * vec2(aspect * 0.7, 1.0));
   float extra = max(d - field.z, 0.0) * field.w;
   c += c < 0.0 ? -extra : extra;
   return clamp(c, -maxCoc, maxCoc);

@@ -160,11 +160,9 @@ export class Gauge {
   private value(frame: number) {
     const t = frame / this.fps;
     const step = Math.floor(t * 2.6 + hash(this.seed) * 3);
-    // mostly drifts, sometimes jumps
-    // holds a value, then ticks in short bursts (sparser changes, like the reference)
-    const base = Math.floor(hash(this.seed, Math.floor(step / 8)) * 99);
-    const burst = Math.min(step % 8, 3);
-    return (base + burst) % 100;
+    // a new reading ~2.4 times a second, occasionally holding the previous one
+    const held = hash(this.seed, step, 7) < 0.12 ? step - 1 : step;
+    return Math.floor(hash(this.seed, held) * 99);
   }
 
   update(frame: number) {

@@ -53,12 +53,12 @@ const referenceRig = (): Rig => ({
   azimuth: 46.5,
   roll: -3.5,
   fov: 11.15,
-  focus: new THREE.Vector3(0.0, 0, -0.2),
+  focus: new THREE.Vector3(0.0, 0, 0.6),
   // focal plane tilted along the data rows; the radial field falloff below
   // keeps the sharp zone on the readout + gauges and softens the far ends
   focusAxis: new THREE.Vector3(1, 0, 0),
   focusTilt: 1,
-  field: { center: [0.55, 0.5], radius: 0.38, gain: 34 },
+  field: { center: [0.62, 0.42], radius: 0.36, gain: 40 },
   nearBlur: 88,
   farBlur: 76,
 });
@@ -226,8 +226,8 @@ export const createHudFactory =
           maxCoc: 30,
           bloomStrength: 1.0,
           bloomThreshold: 0.32,
-          exposure: 0.98,
-          vignette: 0.7,
+          exposure: 1.05,
+          vignette: 0.76,
           grain: 0.018,
           saturation: 1.05,
           gain: [0.84, 1.0, 1.02],
