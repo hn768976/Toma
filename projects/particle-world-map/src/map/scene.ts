@@ -18,7 +18,7 @@ const DEG = Math.PI / 180;
 
 // Look: cool white-blue light on teal-black, grey-white speckled map.
 const BG = new THREE.Color(0.0, 0.0165, 0.018); // linear dark teal
-const LIGHT = new THREE.Color(0.8, 0.9, 0.98);
+const LIGHT = new THREE.Color(0.88, 0.92, 0.95);
 const LIGHT_BLUE = new THREE.Color(0.35, 0.55, 0.85);
 const BG_SCREEN = new THREE.Color(0.32, 0.45, 0.5);
 const ORANGE = new THREE.Color(1.0, 0.55, 0.18);
@@ -146,7 +146,7 @@ export const makeWorldMapFactory =
 
     // --- glossy floor under the structure with soft reflections ---
     {
-      const m = glowMat(tex(reflectionTexture(91)), TEAL_HAZE, 0.22, false);
+      const m = glowMat(tex(reflectionTexture(91)), TEAL_HAZE, 0.7, false);
       const floor = new THREE.Mesh(plane(16, 12), m);
       floor.rotation.x = -Math.PI / 2;
       floor.position.set(0.6, -1.35, -6.5);
@@ -188,12 +188,12 @@ export const makeWorldMapFactory =
     for (let i = 0; i < 95; i++) {
       const len = 0.5 + Math.pow(rnd(), 1.6) * 4.5;
       const thick = 0.02 + rnd() * 0.05;
-      const k = 0.15 + Math.pow(rnd(), 3) * 0.5;
+      const k = 0.14 + Math.pow(rnd(), 3) * 0.4;
       const tint = rnd() < 0.45 ? LIGHT_BLUE : LIGHT;
       const m = glowMat(lineTex, tint, k);
       const mesh = new THREE.Mesh(plane(len, thick * 4), m);
       const level = (Math.floor(rnd() * 12) - 6) * 0.19;
-      mesh.position.set(-0.6 + spread() * 3.0, -0.05 + level, -2.6 - rnd() * 8);
+      mesh.position.set(Math.max(-2.6, -0.4 + spread() * 2.8), -0.05 + level, -1.8 - rnd() * 6);
       city.add(mesh);
       addAnimated({
         mesh,
@@ -214,7 +214,7 @@ export const makeWorldMapFactory =
       const m = glowMat(lineTex, LIGHT, k);
       const mesh = new THREE.Mesh(plane(h, 0.18 + rnd() * 0.3), m);
       mesh.rotation.z = Math.PI / 2;
-      mesh.position.set(-0.8 + spread() * 3.0, 0.0 + spread() * 0.6, -3.2 - rnd() * 7);
+      mesh.position.set(-0.6 + spread() * 2.8, 0.0 + spread() * 0.6, -2.2 - rnd() * 6);
       city.add(mesh);
       addAnimated({
         mesh,
@@ -231,10 +231,9 @@ export const makeWorldMapFactory =
     // --- near-focus crisp light bars at the heart of the structure ---
     for (let i = 0; i < 26; i++) {
       const len = 0.15 + Math.pow(rnd(), 1.5) * 1.1;
-      const k = 0.5 + Math.pow(rnd(), 2) * 1.1;
+      const k = 0.3 + Math.pow(rnd(), 2) * 0.45;
       const m = glowMat(lineTex, rnd() < 0.3 ? LIGHT_BLUE : LIGHT, k);
       const mesh = new THREE.Mesh(plane(len, 0.07 + rnd() * 0.06), m);
-      if (rnd() < 0.3) mesh.rotation.z = Math.PI / 2;
       mesh.position.set(-0.2 + spread() * 1.1, 0.42 + spread() * 0.3, -0.5 - rnd() * 1.0);
       scene.add(mesh);
       addAnimated({
@@ -253,13 +252,19 @@ export const makeWorldMapFactory =
     for (let i = 0; i < 5; i++) {
       const haze = new THREE.Mesh(
         plane(7 + rnd() * 6, 3 + rnd() * 3),
-        glowMat(radialTex, i % 2 ? TEAL_HAZE : LIGHT_BLUE, 0.016 + rnd() * 0.016, false),
+        glowMat(radialTex, i % 2 ? TEAL_HAZE : LIGHT_BLUE, 0.008 + rnd() * 0.008, false),
       );
       haze.position.set(-0.6 + gauss() * 2.2, -0.1 + gauss() * 0.6, -4 - rnd() * 5);
       city.add(haze);
     }
 
-    // --- light shafts raking down-left from the core ---
+    // --- vertical light sheet that fades in at 0.5–0.8 s (as in the reference) ---
+    const sheetMat = glowMat(radialTex, LIGHT, 0, false);
+    const sheet = new THREE.Mesh(plane(3.2, 5.5), sheetMat);
+    sheet.position.set(-0.4, 0.2, -2.6);
+    city.add(sheet);
+
+    // --- light shafts raking down-left / down-right from the core ---
     const shafts: Array<{ mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; k: number; ph: number }> = [];
     for (let i = 0; i < 11; i++) {
       const len = 2 + rnd() * 2.2;
@@ -270,7 +275,7 @@ export const makeWorldMapFactory =
       const m = glowMat(shaftTex, LIGHT_BLUE, k * 1.4, false);
       const mesh = new THREE.Mesh(geo, m);
       mesh.position.set(0.8 + gauss() * 0.8, 0.0 + gauss() * 0.4, -2.5 - rnd() * 2);
-      mesh.rotation.z = (196 + rnd() * 20) * DEG;
+      mesh.rotation.z = (i % 2 ? 196 + rnd() * 20 : -22 - rnd() * 18) * DEG;
       city.add(mesh);
       shafts.push({ mesh, mat: m, k, ph: rnd() * 6 });
     }
@@ -382,7 +387,7 @@ export const makeWorldMapFactory =
             float coc = clamp((abs(dist - focusDistance) - focusRange) / blurRange, 0.0, 1.0) * maxBlurPx;
             float total = sizePx + coc;
             gl_PointSize = total + 2.0;
-            float tw = 0.72 + 0.28 * sin(time * (2.0 + fract(aPhase * 3.7) * 4.0) + aPhase);
+            float tw = 0.7 + 0.3 * sin(time * (6.0 + fract(aPhase * 3.7) * 8.0) + aPhase);
             // a slow diagonal light sweep across the continents
             float sweep = exp(-pow((position.x + position.y * 0.6) - sheen, 2.0) * 0.5) * 0.5;
             vA = aBright * tw * (1.0 + sweep) * (sizePx * sizePx) / (total * total);
@@ -446,6 +451,7 @@ export const makeWorldMapFactory =
         beamMat.color.copy(LIGHT).multiplyScalar(1.0 * (0.9 + 0.1 * Math.sin(t * 3.1)));
         blueMat.color.copy(LIGHT_BLUE).multiplyScalar(0.45 * smoothstep(1.0, 1.2, t));
         speckMat.uniforms.time.value = t;
+        sheetMat.color.copy(LIGHT).multiplyScalar(0.22 * smoothstep(0.5, 0.8, t));
 
         const cam = cameraFor(mode, t);
         camera.position.copy(cam.position);
@@ -474,7 +480,7 @@ export const makeWorldMapFactory =
             streakStrength: 0.03,
             streakThreshold: 1.1,
             streakTint: new THREE.Color(0.75, 0.88, 1.0),
-            exposure: 0.95,
+            exposure: 0.9,
             contrast: 1.06,
             saturation: 0.92,
             lift: LIFT,

@@ -35,11 +35,67 @@ export type MapParticles = {
  * perspective-tilted map exactly (fitted to landmark positions measured on the
  * reference: Alaska, Cape Horn, Greenland N/S, Cape Agulhas, Australia, NZ).
  */
-export type Homography = [number, number, number, number, number, number, number, number, number];
+export type Homography = [
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+];
 
 export const REFERENCE_MAP_HOMOGRAPHY: Homography = [
-  8.474522, 0.934195, -5.94696, -1.738304, -6.965612, 3.915727, -0.154765, -0.294681, 1.0,
+  8.474522, 0.934195, -5.94696, -1.738304, -6.965612, 3.915727, -0.154765,
+  -0.294681, 1.0,
 ];
+
+/**
+ * Thin-plate-spline correction on top of the homography (map-plane units),
+ * fitted to Eurasian landmarks (North Cape, Novaya Zemlya, Taimyr, Chukotka,
+ * Kamchatka) where the reference map departs from a single planar tilt.
+ * Control points are Mercator (u, v); weights: n radial terms + affine (1, u, v).
+ */
+const TPS_CTRL: Array<[number, number]> = [
+  [0.038889, 0.26024],
+  [0.311111, 0.683702],
+  [0.377778, 0.2904],
+  [0.555556, 0.603225],
+  [0.813889, 0.562671],
+  [0.894444, 0.530745],
+  [0.983333, 0.625074],
+  [0.394444, 0.043464],
+  [0.994444, 0.253541],
+  [0.788889, 0.148002],
+  [0.688889, 0.155526],
+  [0.571667, 0.214621],
+  [0.935278, 0.334778],
+];
+const TPS_WX = [
+  -0.72388, 1.193493, 6.104995, -1.711526, 5.701217, -7.778863, 1.569856,
+  -0.738239, -11.940456, 22.953789, -8.98645, -12.65613, 7.012193, 0.641419,
+  0.099587, -1.039752,
+];
+const TPS_WY = [
+  1.508257, 0.259453, -5.135664, 3.489502, -8.392211, -0.171007, -0.660644,
+  -3.556156, 8.549801, -14.294891, 1.897256, 13.950127, 2.556176, -0.406969,
+  1.434219, -0.6951,
+];
+
+const tpsCorrection = (u: number, v: number): [number, number] => {
+  const n = TPS_CTRL.length;
+  let dx = TPS_WX[n] + TPS_WX[n + 1] * u + TPS_WX[n + 2] * v;
+  let dy = TPS_WY[n] + TPS_WY[n + 1] * u + TPS_WY[n + 2] * v;
+  for (let i = 0; i < n; i++) {
+    const r = Math.hypot(u - TPS_CTRL[i][0], v - TPS_CTRL[i][1]);
+    const f = r > 0 ? r * r * Math.log(r) : 0;
+    dx += TPS_WX[i] * f;
+    dy += TPS_WY[i] * f;
+  }
+  return [dx, dy];
+};
 
 export const buildWorldParticles = (
   count: number,
@@ -90,10 +146,14 @@ export const buildWorldParticles = (
     if (homography) {
       const H = homography;
       const lat = ((90 - v * 180) * Math.PI) / 180;
-      const vm = 0.5 - Math.log(Math.tan(Math.PI / 4 + lat / 2)) / (2 * Math.PI);
+      const vm =
+        0.5 - Math.log(Math.tan(Math.PI / 4 + lat / 2)) / (2 * Math.PI);
       const w = H[6] * u + H[7] * vm + H[8];
       x = (H[0] * u + H[1] * vm + H[2]) / w;
       y = (H[3] * u + H[4] * vm + H[5]) / w;
+      const [cx, cy] = tpsCorrection(u, vm);
+      x += cx;
+      y += cy;
       // dots grow on the nearer (right) side, like true perspective
       persp = Math.min(1.6, Math.max(0.6, Math.pow(w / 0.8, -1.5)));
     }
@@ -102,7 +162,8 @@ export const buildWorldParticles = (
     positions[n * 3 + 2] = (rnd() - 0.5) * 2 * depthJitter;
     const r = rnd();
     sizes[n] = (0.55 + Math.pow(rnd(), 2.2) * 1.4) * persp;
-    brightness[n] = r > 0.98 ? 1.3 + rnd() * 1.0 : 0.18 + Math.pow(rnd(), 1.4) * 0.72;
+    brightness[n] =
+      r > 0.98 ? 1.3 + rnd() * 1.0 : 0.18 + Math.pow(rnd(), 1.4) * 0.72;
     phases[n] = rnd() * Math.PI * 2;
     n++;
   }
