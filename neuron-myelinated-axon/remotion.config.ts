@@ -15,6 +15,8 @@ Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
+// Tag and encode as standard BT.709 limited-range video (yuv420p) for consistent colour in every player.
+Config.setColorSpace("bt709");
 
 // The scene is drawn with WebGL 2. "swangle" (software ANGLE) works on every
 // machine, including GPU-less servers. On a machine with a GPU you can render
