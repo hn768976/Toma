@@ -6,7 +6,7 @@ on a bright, high-key floor of bevelled tiles.
 
 | Composition ID | What it is |
 | --- | --- |
-| `VoxelBrainAssembly-V1-Match` | Version 1: matches the reference (low frontal camera, slow push-in) |
+| `VoxelBrainAssembly-V1-Match` | Version 1: matches the reference (low frontal camera, slow push-in with a subtle handheld float) |
 | `VoxelBrainAssembly-V2-OrbitCamera` | Version 2: same scene and timing, seen from an elevated three-quarter camera that orbits about 76° around the pedestal while it descends |
 
 **Technology:** Three.js (WebGL 2) driven by Remotion's `useCurrentFrame()`. The scene renders

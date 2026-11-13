@@ -26,8 +26,11 @@ export const cameraAt = (
 ): CameraState => {
   const p = easeInOutCubic(Math.min(Math.max(t / duration, 0), 1));
   if (variant === "match") {
-    const position = new THREE.Vector3(0, 2.43 - 0.04 * p, 13.7 - 0.55 * p);
-    const target = new THREE.Vector3(-1.25, 1.64, 0);
+    // Gentle "handheld" float of a few pixels, measured from the reference.
+    const fx = 0.05 * Math.sin(t * 0.83 + 0.4) + 0.025 * Math.sin(t * 2.07 + 1.3);
+    const fy = 0.035 * Math.sin(t * 1.17 + 2.1) + 0.015 * Math.sin(t * 2.6);
+    const position = new THREE.Vector3(fx, 2.43 - 0.04 * p + fy, 13.7 - 0.55 * p);
+    const target = new THREE.Vector3(-1.25 + fx * 0.4, 1.64 + fy * 0.4, 0);
     return { position, target, fov: 40, focus: position.distanceTo(new THREE.Vector3(0, 1.8, 0)) };
   }
   const center = new THREE.Vector3(0, 2.15, 0);
