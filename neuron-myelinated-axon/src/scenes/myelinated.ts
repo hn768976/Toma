@@ -9,7 +9,7 @@ import { FrameState, Look, MAT_DUST, MAT_LIT, MAT_MYELIN, MAT_TISSUE } from "../
 
 const GREY: V3 = [0.6, 0.56, 0.54];
 const GREY_WARM: V3 = [0.66, 0.55, 0.5];
-const MYELIN: V3 = [0.3, 0.25, 0.22];
+const MYELIN: V3 = [0.21, 0.165, 0.145];
 
 /** Polyline of the axon (soma -> terminal) with a gentle kink at every node of Ranvier. */
 const AXON_DIR: V3 = norm([1, 0.24, -0.06]);
@@ -64,10 +64,11 @@ const buildNeuron = (b: Builder, rng: Rng, detail: number) => {
   // --- soma -------------------------------------------------------------
   // an elongated spindle; one shared seed so the stripe pattern is continuous across its parts
   const tissue = { col: GREY, opacity: 1, mat: MAT_TISSUE, fire: 1, extra: 0 };
+  const somaTissue = { ...tissue, bias: 0.5 };
   const somaSeed = rng.next();
-  b.capsule([-0.75, -0.1, 0.02], 0.4, [0.0, 0.0, 0], 0.56, tissue, somaSeed, -0.75, 0);
-  b.capsule([0.0, 0.0, 0], 0.56, [0.6, 0.08, 0], 0.5, tissue, somaSeed, 0, 0.6);
-  b.capsule([0.6, 0.08, 0], 0.5, SOMA_END, 0.2, tissue, somaSeed, 0.6, 1.2);
+  b.capsule([-0.75, -0.1, 0.02], 0.4, [0.0, 0.0, 0], 0.56, somaTissue, somaSeed, -0.75, 0);
+  b.capsule([0.0, 0.0, 0], 0.56, [0.6, 0.08, 0], 0.5, somaTissue, somaSeed, 0, 0.6);
+  b.capsule([0.6, 0.08, 0], 0.5, SOMA_END, 0.2, somaTissue, somaSeed, 0.6, 1.2);
 
   // --- dendrites ----------------------------------------------------------
   const trunks: V3[] = [
@@ -129,12 +130,12 @@ const buildNeuron = (b: Builder, rng: Rng, detail: number) => {
     const a1 = add(q, mul(d, -0.2));
     b.capsule(p, 0.085, a0, 0.085, tissue, seed, s, s + 0.2);
     b.capsule(a1, 0.085, q, 0.085, tissue, seed, s + SHEATH_LEN - 0.2, s + SHEATH_LEN);
-    b.capsule(a0, 0.215, a1, 0.215, { col: MYELIN, opacity: 1, mat: MAT_MYELIN, fire: 1, glow: i % 3 === 1 ? 0.5 : 0.1 }, rng.next(), s, s + SHEATH_LEN);
+    b.capsule(a0, 0.235, a1, 0.235, { col: MYELIN, opacity: 1, mat: MAT_MYELIN, fire: 1, glow: i % 3 === 1 ? 0.22 : 0.03, bias: 0.7 }, rng.next(), s, s + SHEATH_LEN);
     s += SHEATH_LEN;
     const n = add(q, mul(d, NODE_GAP));
     b.capsule(q, 0.085, n, 0.085, tissue, seed, s, s + NODE_GAP);
     // node of Ranvier: small warm glow
-    b.point(lerp3(q, n, 0.5), 0.1, { col: [1.0, 0.28, 0.2], opacity: 0.7, mat: MAT_LIT, glow: 0.8 }, rng.next(), s);
+    b.point(lerp3(q, n, 0.5), 0.1, { col: [1.0, 0.28, 0.2], opacity: 0.7, mat: MAT_LIT, glow: 0.8, bias: 0.35 }, rng.next(), s);
     p = n;
     s += NODE_GAP;
     if (hero) axonPath.push(p);
@@ -185,8 +186,8 @@ const build = () => {
     b.rot = c.rot;
     b.rotX = c.rotX;
     b.scale = c.scale;
-    b.tint = 0.8;
-    b.fade = 0.85;
+    b.tint = 0.58;
+    b.fade = 0.8;
     buildNeuron(b, makeRng(c.seed), 0.05);
   }
   b.offset = [0, 0, 0];
@@ -266,7 +267,7 @@ const stateV1 = (frame: number, fps: number, dur: number): FrameState => {
     camUp: [Math.sin(lerp(0.04, 0.12, e)), 1, 0],
     fovDeg: 30,
     focusDist: depthOf(camPos, target, [5, 1.1, -0.25]),
-    aperture: lerp(0.06, 0.088, e),
+    aperture: lerp(0.042, 0.088, e),
     time,
     pulse: pulseAt(time),
     pulseWidth: 0.75,

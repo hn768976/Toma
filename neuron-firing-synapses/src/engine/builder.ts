@@ -50,6 +50,12 @@ export type CapsuleStyle = {
   fire?: number;
   glow?: number;
   extra?: number;
+  /**
+   * Draw-order bias in world units: the capsule is sorted as if it were this much closer to the
+   * camera. Used where parts interpenetrate (sheath over axon core, soma over branch roots) so
+   * their paint order can never flip from one frame to the next.
+   */
+  bias?: number;
 };
 
 export class Builder {
@@ -87,7 +93,7 @@ export class Builder {
       B[0], B[1], B[2], rb * this.scale,
       st.col[0] * this.tint, st.col[1] * this.tint, st.col[2] * this.tint, st.opacity * this.fade,
       st.mat, seed, s0, s1,
-      st.fire ?? 0, st.glow ?? 0, st.extra ?? 0, 0,
+      st.fire ?? 0, st.glow ?? 0, st.extra ?? 0, st.bias ?? 0,
     );
     this.count++;
   }

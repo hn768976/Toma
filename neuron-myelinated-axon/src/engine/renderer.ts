@@ -69,7 +69,7 @@ in vec4 iA;
 in vec4 iB;
 in vec4 iCol;
 in vec4 iMisc;   // mat, seed, s0, s1
-in vec4 iExtra;  // fireWeight, glow, unused, unused
+in vec4 iExtra;  // fireWeight, glow, tint/blend amount, draw-order bias (CPU only)
 
 uniform mat4 uView;
 uniform mat4 uProj;
@@ -682,7 +682,7 @@ export class NeuronRenderer {
       const limY = zmax * tanY + margin;
       if ((ya > limY && yb > limY) || (ya < -limY && yb < -limY)) continue;
       const zc = (za + zb) * 0.5;
-      keys[i] = zc;
+      keys[i] = zc - src[o + 19]; // per-capsule draw-order bias
       const layer = coc >= split ? (zc < state.focusDist ? 2 : 1) : 0;
       this.layers[layer].list[n[layer]++] = i;
     }

@@ -64,7 +64,7 @@ const buildNeuron = (b: Builder, rng: Rng, detail: number, pal: Palette, hero: b
   };
 
   // --- soma: a lumpy cluster of lobes --------------------------------------
-  const somaStyle = { col: pal.trunk, opacity: 1, mat: MAT_GLOW, fire: 1 };
+  const somaStyle = { col: pal.trunk, opacity: 1, mat: MAT_GLOW, fire: 1, bias: 0.9 };
   b.capsule([-0.3, -0.05, 0], 0.5, [0.3, 0.1, 0], 0.46, somaStyle, rng.next(), -0.2, 0.2);
   for (let i = 0; i < 11; i++) {
     const d = rng.dir();
@@ -131,7 +131,7 @@ const buildNeuron = (b: Builder, rng: Rng, detail: number, pal: Palette, hero: b
     d = norm(add(add(AXON_DIR, mul(side, wave)), mul(rng.dir(), 0.1)));
     const q = add(p, mul(d, BEAD_LEN));
     // sheath tinted with the firing colour (the axon core is not drawn inside it)
-    b.capsule(add(p, mul(d, 0.13)), 0.18, add(q, mul(d, -0.13)), 0.18, { col: mul(pal.trunk, 0.22), opacity: 0.85, mat: MAT_GLOW, fire: 0.4, extra: 1 }, rng.next(), s, s + BEAD_LEN);
+    b.capsule(add(p, mul(d, 0.13)), 0.18, add(q, mul(d, -0.13)), 0.18, { col: mul(pal.trunk, 0.22), opacity: 0.85, mat: MAT_GLOW, fire: 0.4, extra: 1, bias: 0.6 }, rng.next(), s, s + BEAD_LEN);
     b.capsule(p, 0.08, add(p, mul(d, 0.13)), 0.08, axonStyle, seed, s, s + 0.13);
     b.capsule(add(q, mul(d, -0.13)), 0.08, q, 0.08, axonStyle, seed, s + BEAD_LEN - 0.13, s + BEAD_LEN);
     s += BEAD_LEN;
@@ -186,7 +186,7 @@ const makeBuild = (key: string, pal: Palette) => () => {
     b.offset = c.off;
     b.rot = c.rot;
     b.rotX = c.rotX;
-    b.tint = 0.75;
+    b.tint = 0.5;
     buildNeuron(b, makeRng(c.seed), 0.05, pal, false);
   }
   b.offset = [0, 0, 0];
@@ -241,7 +241,11 @@ const firing = (frame: number) => {
   while (i < RESETS.length - 2 && frame >= RESETS[i + 1]) i++;
   const flash = FLASHES[i];
   const next = RESETS[i + 1];
-  if (frame < flash) return { burst: 0, fire: 0, front: 0 };
+  if (frame < flash) {
+    // right after a reset the particles die away over three frames
+    const since = frame - RESETS[i];
+    return { burst: since < 3 ? [0.42, 0.24, 0.1][since] : 0, fire: 0, front: 0 };
+  }
   const u = (frame - flash) / (next - flash); // 0 at the flash, 1 at the reset
   let burst = 0.2 + 0.42 * u;
   if (frame >= next - 5) burst += 0.19;
@@ -256,7 +260,7 @@ const makeState = () => (frame: number, fps: number, dur: number): FrameState =>
   const t = frame / (dur - 1);
   const time = frame / fps;
   const e = ease(t);
-  const target: V3 = [lerp(1.2, 0.85, e), lerp(0.75, 0.9, e), 0];
+  const target: V3 = [lerp(0.55, 0.3, e), lerp(0.75, 0.9, e), 0];
   const dist = lerp(13.4, 12.0, e);
   const yaw = lerp(-0.09, 0.09, t);
   const pitch = lerp(0.02, 0.05, e);
