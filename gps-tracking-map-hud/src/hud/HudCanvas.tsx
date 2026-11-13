@@ -21,7 +21,9 @@ export const HudCanvas: React.FC<{
   const pxW = Math.round(w * k), pxH = Math.round(h * k);
   const paint = (f: number) => {
     const c = ref.current!;
-    const ctx = c.getContext('2d')!;
+    // willReadFrequently forces the CPU raster path in every tab, so text and lines rasterise
+    // identically whichever tab renders a frame (GPU vs CPU canvas AA differs by sub-pixels).
+    const ctx = c.getContext('2d', { willReadFrequently: true })!;
     // Reset ALL context state every frame (line caps, dashes, alpha, composite...)
     // so a frame never depends on what the previous frame left behind.
     ctx.reset();
