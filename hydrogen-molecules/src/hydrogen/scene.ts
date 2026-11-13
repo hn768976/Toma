@@ -47,8 +47,10 @@ export type Camera = {
   focal: number;
   /** strength of the radial zoom-blur (fraction of frame) */
   zoomBlur: number;
-  /** white-out overlay opacity */
+  /** white-out overlay opacity (whole frame) */
   whiteout: number;
+  /** white wash over the background only (molecules stay saturated) */
+  bgWash: number;
   /** background lattice zoom + parallax */
   bgZoom: number;
   bgShift: [number, number];
@@ -103,8 +105,8 @@ export const buildWorld = (seed: number): Molecule[] => {
   // Two scripted mid-ground molecules that drift in across the frame corners
   // late in the shot (as in the reference). p(t) = p0 + vel * t.
   const scripted: { start: Vec3; vel: Vec3; t0: number; axis: Vec3 }[] = [
-    { start: [-0.75 + 3.75, 1.8, -1.2], vel: [-0.22, -0.03, 0], t0: 6.0, axis: norm([0.3, 1, 0.25]) },
-    { start: [-0.75 - 3.9, -1.75, -1.0], vel: [0.36, 0.05, 0], t0: 10.2, axis: norm([0.6, 0.8, -0.3]) },
+    { start: [-0.75 + 7.6, 2.6, 5.2], vel: [-0.32, -0.03, 0], t0: 6.0, axis: norm([0.3, 1, 0.25]) },
+    { start: [-0.75 - 7.6, -2.5, 5.2], vel: [0.55, 0.06, 0], t0: 10.2, axis: norm([0.6, 0.8, -0.3]) },
   ];
   for (const sc of scripted) {
     mols.push({
@@ -119,8 +121,8 @@ export const buildWorld = (seed: number): Molecule[] => {
     });
   }
   // Fly-through tube along the V1 dolly path (passes the lens at speed).
-  for (let i = 0; i < 620; i++) {
-    const z = -28 - Math.pow(rnd(), 1.25) * 380;
+  for (let i = 0; i < 950; i++) {
+    const z = -28 - Math.pow(rnd(), 0.8) * 380;
     const a = rnd() * Math.PI * 2;
     const r = 1.2 + Math.sqrt(rnd()) * 20;
     push([-0.75 + Math.cos(a) * r * 1.5, Math.sin(a) * r * 0.9, z]);
@@ -150,8 +152,9 @@ export const cameraV1 = (t: number): Camera => {
     // during the fly-through focus stays on the molecules streaming past
     focus: Math.min(dist, 14),
     focal: 0.95,
-    zoomBlur: clamp((speed / dist) * (1 / 60) * 1.6, 0, 0.3),
-    whiteout: 0.9 * (1 - smoothstep(0.0, 0.85, t)),
+    zoomBlur: clamp((speed / dist) * (1 / 60) * 3.4, 0, 0.32),
+    whiteout: 0.95 * Math.pow(1 - smoothstep(0.0, 0.45, t), 1.6),
+    bgWash: 0.92 * (1 - smoothstep(0.35, 2.4, t)),
     bgZoom: lerp(0.72, 1.0, prog) + 0.012 * (t / T_TOTAL),
     bgShift: [-swayX * 0.02, -swayY * 0.02],
   };
@@ -183,6 +186,7 @@ export const cameraV2 = (t: number): Camera => {
     focal: 0.95,
     zoomBlur: 0.05 * speedProxy * speedProxy,
     whiteout: 0.9 * (1 - smoothstep(0.0, 0.55, t)),
+    bgWash: 0,
     bgZoom: lerp(1.25, 1.0, intro) + 0.01 * u,
     bgShift: [Math.sin(yaw) * 0.18, pitch * 0.12],
   };
@@ -206,7 +210,8 @@ const moleculeAtoms = (m: Molecule, t: number): [Vec3, Vec3] => {
     }
     axis = rotate(m.axis0, m.spinAxis, m.spin * t + m.phase);
   }
-  const h = scale(axis, BOND / 2);
+  // the hero's atoms sit closer, almost merging, like the reference
+  const h = scale(axis, (m.hero ? 1.06 : BOND) / 2);
   return [add(center, h), sub(center, h)];
 };
 
@@ -249,8 +254,8 @@ const drawNeck = (ctx: CanvasRenderingContext2D, a: Proj, b: Proj, pal: Palette,
   if (gapEnd <= gapStart) return;
   const uc = (a.r + (d - b.r)) / 2;
   const L = Math.max((gapEnd - gapStart) / 2, 1e-3);
-  const wm = (hero ? 0.13 : 0.17) * rmin;
-  const we = 0.74 * rmin;
+  const wm = (hero ? 0.3 : 0.2) * rmin;
+  const we = 0.8 * rmin;
   const N = 28;
   ctx.save();
   ctx.transform(ux, uy, -uy, ux, a.x, a.y);
@@ -278,7 +283,7 @@ const drawNeck = (ctx: CanvasRenderingContext2D, a: Proj, b: Proj, pal: Palette,
   ctx.fillStyle = g;
   ctx.fill();
   // metallic core where the two shells meet
-  const core = ctx.createRadialGradient(uc, 0, 0, uc, 0, Math.max(L * 0.5, wm * 2.2));
+  const core = ctx.createRadialGradient(uc, 0, 0, uc, 0, wm * 1.1);
   core.addColorStop(0, pal.neckCore);
   core.addColorStop(0.5, pal.neckCore.replace(/[\d.]+\)$/, "0.25)"));
   core.addColorStop(1, "rgba(80,90,100,0)");
@@ -419,6 +424,12 @@ export const renderFrame = (
   const bgW = W * 1.5 * cam.bgZoom;
   const bgH = H * 1.5 * cam.bgZoom;
   ctx.drawImage(bg, W / 2 - bgW / 2 + cam.bgShift[0] * W, H / 2 - bgH / 2 + cam.bgShift[1] * H, bgW, bgH);
+  if (cam.bgWash > 0.001) {
+    ctx.globalAlpha = cam.bgWash;
+    ctx.fillStyle = pal.whiteout;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+  }
 
   // --- camera basis ---------------------------------------------------------
   const f = norm(sub(cam.target, cam.pos));
@@ -456,7 +467,7 @@ export const renderFrame = (
     if (maxx < 0 || minx > W || maxy < 0 || miny > H) continue;
     let coc: number;
     if (z >= zf) coc = 0.008 * W * Math.pow(1 - zf / z, 2.9);
-    else coc = 0.006 * W * Math.pow(zf / z - 1, 1.3);
+    else coc = 0.0045 * W * Math.pow(zf / z - 1, 1.1);
     if (m.hero) coc *= 0.5;
     const fog = 1 - smoothstep(30, 74, z);
     const near = smoothstep(0.35, 1.6, Math.min(a.z, b.z));

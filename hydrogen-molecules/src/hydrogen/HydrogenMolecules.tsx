@@ -15,6 +15,11 @@ import { FONT_FAMILY, SpriteSet, makeSpriteSet } from "./sprites";
 export type HydrogenProps = { variant: "v1" | "v2" };
 
 const world = buildWorld(20261113);
+// Version 2 orbits the hero, so it gets its own clear zone around it and
+// skips the two corner molecules that are choreographed for the V1 framing.
+const worldV2 = world.filter(
+  (m) => m.hero || (!m.scripted && Math.hypot(m.p0[0], m.p0[1], m.p0[2]) > 10.5),
+);
 let sprites: SpriteSet | null = null;
 let fontPromise: Promise<void> | null = null;
 
@@ -58,7 +63,7 @@ export const HydrogenMolecules: React.FC<HydrogenProps> = ({ variant }) => {
     if (!ready || !ref.current || !sprites) return;
     const t = frame / fps;
     const cam: Camera = variant === "v1" ? cameraV1(t) : cameraV2(t);
-    renderFrame(ref.current, t, world, cam, sprites, HYDROGEN_BLUE, variant);
+    renderFrame(ref.current, t, variant === "v1" ? world : worldV2, cam, sprites, HYDROGEN_BLUE, variant);
   }, [frame, fps, ready, variant, bw, bh]);
 
   return (

@@ -40,7 +40,7 @@ export const HYDROGEN_BLUE: Palette = {
   shellTop: "rgba(22,80,140,0.28)",
   outline: "rgba(20,78,132,0.45)",
   label: "#132a48",
-  neckEdge: "#2477bd",
-  neckCenter: "#5fb4e6",
-  neckCore: "rgba(52,62,74,0.85)",
+  neckEdge: "#1f6fb5",
+  neckCenter: "#4aa6e0",
+  neckCore: "rgba(38,72,108,0.75)",
 };
