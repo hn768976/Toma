@@ -15,12 +15,12 @@ export type SceneHandle = {
 };
 
 /** Moment the hologram plate touches the chip (seconds). */
-export const IMPACT = 3.1;
+export const IMPACT = 3.0;
 const CHIP = 4.0; // heat-spreader edge length
 const CHIP_TOP = 0.56;
 
 export const plateHeight = (t: number) =>
-  CHIP_TOP + 0.02 + 7.5 * Math.pow(1 - clamp01((t - 0.7) / (IMPACT - 0.7)), 1.25);
+  CHIP_TOP + 0.02 + 7.5 * Math.pow(1 - clamp01((t - 0.3) / (IMPACT - 0.3)), 1.25);
 
 // Shared lighting: a cool key light, a fake overhead soft box for specular,
 // the white glow of the socket and the blue energy released on impact.
@@ -109,8 +109,8 @@ export const createScene = (
       void main() {
         vec3 v = normalize(cameraPosition - vW);
         float tr = texture2D(uTex, vW.xz / 22.0).r;
-        vec3 albedo = mix(vec3(0.02, 0.023, 0.03), vec3(0.075, 0.085, 0.105), tr);
-        float spec = 0.25 + tr * 0.9;
+        vec3 albedo = mix(vec3(0.02, 0.023, 0.03), vec3(0.05, 0.057, 0.07), tr);
+        float spec = 0.25 + tr * 0.6;
         vec3 col = shade(albedo, spec, vec3(0.0, 1.0, 0.0), vW, v);
         float far = smoothstep(30.0, 70.0, length(vW.xz));
         gl_FragColor = vec4(col * (1.0 - far), 1.0);
@@ -235,18 +235,18 @@ export const createScene = (
   };
   // dark socket frame, glowing gasket, silver heat spreader
   addMesh(new RoundedBoxGeometry(4.9, 0.1, 4.9, 2, 0.04), solidMat([0.04, 0.045, 0.055], 0.5), 0.05);
-  addMesh(new RoundedBoxGeometry(4.24, 0.1, 4.24, 2, 0.05), solidMat([0.8, 0.85, 0.9], 0.2, 0.9), 0.13);
+  addMesh(new RoundedBoxGeometry(4.13, 0.1, 4.13, 2, 0.05), solidMat([0.8, 0.85, 0.9], 0.2, 0.62), 0.13);
   const spreaderMat = solidMat([0.36, 0.375, 0.4], 0.7, 0.03);
   addMesh(new RoundedBoxGeometry(CHIP, 0.4, CHIP, 3, 0.09), spreaderMat, 0.36);
   // corner alignment marks on the board
   {
-    const mat = solidMat([0.55, 0.58, 0.62], 0.8, 0.25);
+    const mat = solidMat([0.45, 0.48, 0.52], 0.8, 0.08);
     for (const sx of [-1, 1])
       for (const sz of [-1, 1]) {
-        const a = addMesh(new THREE.BoxGeometry(0.62, 0.03, 0.12), mat, 0.02);
-        a.position.set(sx * 2.72, 0.02, sz * 2.97);
-        const b = addMesh(new THREE.BoxGeometry(0.12, 0.03, 0.62), mat, 0.02);
-        b.position.set(sx * 2.97, 0.02, sz * 2.72);
+        const a = addMesh(new THREE.BoxGeometry(0.4, 0.03, 0.07), mat, 0.02);
+        a.position.set(sx * 2.8, 0.02, sz * 2.965);
+        const b = addMesh(new THREE.BoxGeometry(0.07, 0.03, 0.4), mat, 0.02);
+        b.position.set(sx * 2.965, 0.02, sz * 2.8);
       }
   }
 
@@ -318,7 +318,7 @@ export const createScene = (
         float txt = texture2D(uText, vUv).r;
         vec3 dark = shade(vec3(0.022, 0.025, 0.032), 0.7, n, vW, v);
         dark += vec3(0.5, 0.56, 0.62) * (step(edge, 0.955) - step(edge, 0.94)) * 0.3;
-        dark = mix(dark, vec3(0.42, 0.66, 1.0) * 1.15, txt);
+        dark = mix(dark, vec3(0.36, 0.56, 1.0) * 0.95, txt);
         // --- hologram skin
         vec3 holo = holoLook(vUv, 1.0);
         vec3 col = mix(silver, holo, uHolo);
@@ -478,7 +478,7 @@ export const createScene = (
       uniform float uTime, uTraceE, uHead;
       ${LIGHT_GLSL}
       void main() {
-        vec3 col = vec3(0.026, 0.03, 0.038);                        // bare copper
+        vec3 col = vec3(0.016, 0.019, 0.025);                       // bare copper
         col += vec3(0.8, 0.88, 1.0) * exp(-vD / 1.3) * uGlow * 0.16;  // lit by the socket
         float behind = smoothstep(uFront + 0.4, uFront - 2.0, vD);
         float flow = 0.55 + 0.45 * sin(vD * 2.2 - uTime * 7.0 + vSeed * 6.283);
@@ -545,7 +545,7 @@ export const createScene = (
   }
 
   // ---------------------------------------------- shock-front light motes
-  const MOTES = 900;
+  const MOTES = 1500;
   const moteMat = new THREE.ShaderMaterial({
     uniforms: { ...L, uPx: { value: 1 } },
     transparent: true,
@@ -558,7 +558,7 @@ export const createScene = (
       uniform float uFront, uRing;
       void main() {
         float r = length(position.xz);
-        vI = exp(-pow((r - uFront) / (1.3 + aSeed), 2.0)) * uRing * (0.4 + aSeed);
+        vI = exp(-pow((r - uFront) / (0.8 + aSeed * 0.5), 2.0)) * uRing * (0.6 + aSeed);
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
         gl_PointSize = clamp((0.16 + aSeed * 0.22) * uPx / -mv.z, 1.0, 120.0);
         gl_Position = projectionMatrix * mv;
@@ -570,7 +570,7 @@ export const createScene = (
       void main() {
         float d = length(gl_PointCoord - 0.5) * 2.0;
         float a = 1.0 - smoothstep(0.55, 1.0, d);
-        gl_FragColor = vec4(vec3(0.16, 0.5, 1.0) * a * vI * 2.4, 1.0);
+        gl_FragColor = vec4(vec3(0.16, 0.5, 1.0) * a * vI * 3.2, 1.0);
       }
     `,
   });
@@ -745,7 +745,7 @@ export const createScene = (
     L.uFront.value = after ? dt * 11.5 : -10;
     L.uRing.value = after ? Math.exp(-dt * 1.0) * smooth(dt / 0.15) : 0;
     traceMat.uniforms.uTraceE.value = after
-      ? (0.1 + 1.0 * Math.exp(-dt * 0.85)) * smooth(dt / 0.25)
+      ? (0.045 + 0.75 * Math.exp(-dt * 1.0)) * smooth(dt / 0.25)
       : 0;
     traceMat.uniforms.uHead.value = after ? Math.exp(-dt * 0.9) * smooth(dt / 0.2) : 0;
     const pxScale = (2 * Math.tan((FOV * Math.PI) / 360)) / pxH;
@@ -760,7 +760,7 @@ export const createScene = (
     plate.rotation.y = 0;
     plate.rotation.z = Math.sin(t * 1.3) * 0.015 * (1 - approach);
     streakMat.uniforms.uPlateY.value = py;
-    streakMat.uniforms.uI.value = after ? 0 : smooth((t - 1.0) / 0.6) * (0.55 + 0.45 * smooth((py - 0.7) / 0.6));
+    streakMat.uniforms.uI.value = after ? 0 : smooth((t - 1.05) / 0.6) * (0.55 + 0.45 * smooth((py - 0.7) / 0.6));
 
     // chip face
     faceMat.uniforms.uHolo.value = after ? 1 : 0;
@@ -775,8 +775,8 @@ export const createScene = (
 
     // depth of field: focus on the chip, wide open during the impact swing
     dof.uniforms.uFocus.value = cam.dist;
-    dof.uniforms.uAperture.value = 1.25 + 0.9 * (after ? Math.exp(-dt * 2.2) : 0);
-    const maxR = 0.0115;
+    dof.uniforms.uAperture.value = 1.9 + 0.9 * (after ? Math.exp(-dt * 2.2) : 0);
+    const maxR = 0.014;
     dof.uniforms.uMaxR.value.set(maxR * (pxH / pxW), maxR);
 
     // depth prepass

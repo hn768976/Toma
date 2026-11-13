@@ -91,31 +91,33 @@ export const buildParts = (): Part[] => {
     box(x + ex, z + ez, rot ? 0.13 : 0.28, 0.17, rot ? 0.28 : 0.13, SILVER, 0.8);
   };
 
-  for (let a = 0; a < 9500; a++) {
+  for (let a = 0; a < 20000; a++) {
     const x = (rand() * 2 - 1) * (EXT - 3);
     const z = (rand() * 2 - 1) * (EXT - 3);
     const r = Math.hypot(x, z);
     const kind = rand();
     const keep = rand();
     // leave room for the glowing traces close to the socket
-    if (r < 12 && keep > 0.7) continue;
-    if (kind < 0.16) {
-      const w = 1.2 + rand() * 2.4;
-      const d = 1.2 + rand() * 2.4;
+    if (r < 10 && keep > 0.8) continue;
+    if (kind < 0.07) {
+      const w = 1.0 + rand() * 1.8;
+      const d = 1.0 + rand() * 1.8;
       if (!free(x, z, w, d, 0.3)) continue;
       ic(x, z, w, d, 0.24 + rand() * 0.25);
-    } else if (kind < 0.24) {
+    } else if (kind < 0.11) {
+      if (r < 15) continue;
       // silver capacitor / crystal can
-      const w = 0.7 + rand() * 0.5;
-      const d = 0.5 + rand() * 0.3;
+      const w = 0.5 + rand() * 0.35;
+      const d = 0.4 + rand() * 0.25;
       if (!free(x, z, w, d, 0.2)) continue;
-      box(x, z, w, 0.4 + rand() * 0.2, d, SILVER, 0.9);
+      box(x, z, w, 0.28 + rand() * 0.15, d, SILVER, 0.9);
       mark(x, z, w, d);
-    } else if (kind < 0.3) {
+    } else if (kind < 0.15) {
+      if (r < 15) continue;
       // steel inductor block
-      const w = 0.9 + rand() * 0.6;
+      const w = 0.7 + rand() * 0.5;
       if (!free(x, z, w, w, 0.2)) continue;
-      box(x, z, w, 0.5 + rand() * 0.3, w, STEEL, 0.5);
+      box(x, z, w, 0.35 + rand() * 0.2, w, STEEL, 0.5);
       mark(x, z, w, w);
     } else if (kind < 0.72) {
       // row of SMD passives
