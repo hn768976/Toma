@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { sampleTrack, Track } from "../engine/keyframes";
-import { clamp, lerp, makeRng, smoothstep } from "../engine/math";
+import { clamp, lerp, makeRng } from "../engine/math";
 import { PostPipeline, defaultPostParams } from "../engine/post";
 import type { StageArgs, StageController } from "../engine/ThreeStage";
 import { buildBrushedTexture, buildDieTexture } from "./dieTexture";
@@ -18,77 +18,75 @@ import type { ChipLook } from "./looks";
 
 const GRID = 3; // units from -GRID..GRID in both directions
 
-// Lighting timeline, keyed in seconds (reference: 301 frames @ 25 fps).
-const f = (frame: number) => frame / 25;
+// Lighting timeline, keyed in seconds.
 
-/** Where the soft specular "hot zone" sits on the sheet, in camera-aligned
- *  ground coordinates relative to the target (x = screen right, y = away). */
+/**
+ * A soft specular "hot zone" travels over the sheet three times, always from
+ * left to right: along the far edge (0-3 s), through the middle (3.5-7 s)
+ * and across the foreground (8-10.5 s). Coordinates are camera-aligned ground
+ * coordinates relative to the target (x = screen right, y = away from camera).
+ * The power drops to zero while the light jumps back to the left.
+ */
 const HOT_X: Track = [
-  [f(0), -5],
-  [f(60), -8],
-  [f(95), -7.5],
-  [f(120), -3.5],
-  [f(140), 1.5],
-  [f(165), 3.5],
-  [f(185), -4],
-  [f(200), -8.5],
-  [f(225), 1.5],
-  [f(250), -9],
-  [f(300), -11],
+  [0, -9],
+  [3.0, 9],
+  [3.3, -10],
+  [7.0, 8],
+  [7.5, -9],
+  [10.5, 7],
+  [12.04, 9],
 ];
 const HOT_Y: Track = [
-  [f(0), 20],
-  [f(60), 9],
-  [f(95), -2.5],
-  [f(120), -2.5],
-  [f(140), 1.5],
-  [f(165), 9],
-  [f(185), -3],
-  [f(200), -6.5],
-  [f(225), -4],
-  [f(250), 0],
-  [f(300), 1],
+  [0, 10],
+  [3.0, 10],
+  [3.3, -3],
+  [7.0, 3],
+  [7.5, -5],
+  [10.5, -2],
+  [12.04, -2],
 ];
 const HOT_POWER: Track = [
-  [f(0), 1.0],
-  [f(60), 0.85],
-  [f(100), 1.25],
-  [f(140), 1.1],
-  [f(165), 0.5],
-  [f(182), 0.3],
-  [f(200), 1.05],
-  [f(226), 0.9],
-  [f(250), 0.3],
-  [f(300), 0.22],
+  [0, 1.7],
+  [2.6, 1.7],
+  [3.1, 0],
+  [3.4, 0],
+  [3.9, 2.1],
+  [6.4, 2.1],
+  [7.1, 0],
+  [7.6, 0],
+  [8.2, 1.4],
+  [10.2, 1.4],
+  [10.8, 0.35],
+  [12.04, 0.3],
 ];
 const ENV_INTENSITY: Track = [
-  [f(0), 1.12],
-  [f(150), 1.05],
-  [f(185), 0.95],
-  [f(300), 0.95],
+  [0, 1.12],
+  [6, 1.05],
+  [7.4, 0.95],
+  [12.04, 0.95],
 ];
 /** 1 = cool blue grade of the opening, 0 = neutral steel of the ending. */
 const COOLNESS: Track = [
-  [f(0), 1],
-  [f(90), 0.95],
-  [f(150), 0.6],
-  [f(200), 0.3],
-  [f(300), 0.16],
+  [0, 1],
+  [3, 0.9],
+  [6, 0.5],
+  [7.5, 0.25],
+  [12.04, 0.08],
 ];
 /** Brightness / saturation of the thin-film colours on the dies. */
 const DIE_LEVEL: Track = [
-  [f(0), 1.2],
-  [f(100), 1.2],
-  [f(135), 1.35],
-  [f(165), 0.85],
-  [f(200), 0.55],
-  [f(300), 0.42],
+  [0, 1.05],
+  [4, 1.1],
+  [5.4, 1.3],
+  [6.6, 0.9],
+  [8, 0.66],
+  [12.04, 0.56],
 ];
 const DIE_SAT: Track = [
-  [f(0), 1.0],
-  [f(135), 1.15],
-  [f(200), 0.9],
-  [f(300), 0.8],
+  [0, 0.72],
+  [5.4, 0.85],
+  [8, 0.6],
+  [12.04, 0.45],
 ];
 
 /**
@@ -126,6 +124,7 @@ uniform vec3 uLightPos;
 uniform float uLightPower;
 uniform float uWallShade;
 uniform vec2 uEnvRot; // cos, sin of the environment yaw
+uniform float uGlint;
 
 void main() {
   vec3 N = normalize(vN);
@@ -157,6 +156,9 @@ void main() {
   vec3 spec = F * (D * G / max(4.0 * ndl * ndv, 1e-3)) * ndl * uLightPower / d2;
 
   vec3 col = F * env * (0.93 + 0.14 * b) + spec;
+  // tiny mirror image of a small, very bright lamp: turns into bokeh discs
+  // wherever the part is out of focus
+  col += F * uGlint * pow(max(dot(R, normalize(vec3(0.25, 0.86, -0.45))), 0.0), 1400.0);
   // side walls of the stamped openings sit in their own shadow
   float wall = 1.0 - smoothstep(0.2, 0.7, N.y);
   col *= mix(1.0, uWallShade, wall * smoothstep(0.0, -0.2, vWorld.y + 0.02));
@@ -183,7 +185,9 @@ void main() {
   // back from the bright sheet right in front of it
   vec3 Re = vec3(R.x * uEnvRot.x - R.z * uEnvRot.y, abs(R.y), R.x * uEnvRot.y + R.z * uEnvRot.x);
   vec3 env = textureLod(tEnv, Re, 3.5).rgb * uEnvIntensity;
-  vec3 col = tx * (env * 0.55 + vec3(uSideLevel));
+  // only the flank that faces the key side of the room lights up
+  float facing = mix(0.22, 1.0, smoothstep(0.3, 0.9, N.x));
+  vec3 col = tx * (env * 0.5 + vec3(uSideLevel) * facing);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -256,7 +260,7 @@ void main() {
   // like a real oxide film seen under an extended light source.
   float across = dot(vWorld.xz - vCentre.xz, uCamRight.xz) / (${DIE_HALF.toFixed(2)} * 1.25);
   float toward = dot(vWorld.xz - vCentre.xz, vec2(-uCamRight.z, uCamRight.x)) / (${DIE_HALF.toFixed(2)} * 1.25);
-  float t = 0.0 + 0.36 * (across + 1.0) - 0.07 * toward + 0.09 * (tx.b - 0.5) + vPhase + 0.1 * (1.0 - ndv);
+  float t = -0.06 + 0.46 * (across + 1.0) - 0.12 * toward + 0.09 * (tx.b - 0.5) + vPhase + 0.1 * (1.0 - ndv);
   vec3 base = film(t);
 
   vec3 col = base * base * (0.22 + 0.95 * tx.r * tx.r);
@@ -283,25 +287,30 @@ uniform float uAmount;   // 0..1 envelope
 uniform float uProgress; // 0..1 travel of the panes, right -> left
 uniform float uAspect;
 
-float pane(vec2 p, float cx, float halfW, float soft, float skew) {
+// soft-edged slab of out-of-focus glass
+float pane(vec2 p, float cx, float halfW, float soft, float skew, float y0, float y1) {
   float x = p.x - cx - (p.y - 0.5) * skew;
-  return smoothstep(halfW + soft, halfW - soft, abs(x));
+  float a = smoothstep(halfW + soft, halfW - soft, abs(x));
+  a *= smoothstep(y0 - 0.12, y0 + 0.12, p.y) * smoothstep(y1 + 0.12, y1 - 0.12, p.y);
+  return a;
 }
 
 void main() {
   vec2 p = vUv;
-  float x0 = mix(1.35, -0.75, uProgress);
-  float a1 = pane(p, x0, 0.2, 0.07, 0.06);
-  float a2 = pane(p, x0 + 0.5, 0.15, 0.09, -0.04) * 0.8;
-  float a3 = pane(p, x0 - 0.42, 0.11, 0.06, 0.1) * 0.65;
-  float panes = clamp(a1 + a2 + a3, 0.0, 1.0);
-  // each pane has a brighter edge, like thick glass seen out of focus
-  float edge = pane(p, x0 - 0.2, 0.012, 0.03, 0.06) + pane(p, x0 + 0.35, 0.012, 0.035, -0.04);
-  vec3 glass = vec3(0.36, 0.5, 0.66) * (0.85 + 0.4 * p.y);
-  vec3 col = glass + vec3(0.9, 0.95, 1.0) * edge * 0.45;
-  float haze = 0.05 * uAmount;
-  float alpha = clamp(panes * 0.36 * smoothstep(0.0, 0.25, uAmount) + haze, 0.0, 0.8);
-  col = mix(vec3(0.62, 0.7, 0.8), col, panes / max(panes + 0.5 * haze, 1e-3));
+  float x0 = mix(1.3, -0.7, uProgress);
+  float a1 = pane(p, x0, 0.17, 0.06, 0.05, 0.42, 1.3);
+  float a2 = pane(p, x0 + 0.42, 0.13, 0.07, -0.03, -0.3, 0.62) * 0.9;
+  float a3 = pane(p, x0 - 0.36, 0.1, 0.05, 0.08, -0.3, 1.3) * 0.75;
+  float a4 = pane(p, x0 + 0.78, 0.09, 0.06, 0.02, 0.2, 1.3) * 0.6;
+  float panes = clamp(a1 + a2 + a3 + a4, 0.0, 1.0);
+  vec3 glass = vec3(0.36, 0.62, 0.84) * (0.8 + 0.45 * p.y);
+  // white bloom low in the frame while the panes pass
+  vec2 q = (p - vec2(0.5, 0.2)) * vec2(uAspect, 1.0);
+  float bloom = exp(-dot(q, q) / 0.18) * uAmount;
+  float aPane = panes * 0.52 * smoothstep(0.0, 0.3, uAmount);
+  float aBloom = bloom * 0.2;
+  float alpha = clamp(aPane + aBloom, 0.0, 0.85);
+  vec3 col = (glass * aPane + vec3(0.92, 0.95, 1.0) * aBloom) / max(aPane + aBloom, 1e-4);
   gl_FragColor = vec4(col, alpha);
 }
 `;
@@ -321,20 +330,18 @@ const buildDieSideTexture = (): THREE.CanvasTexture => {
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d")!;
-  // bulk silicon
-  ctx.fillStyle = "#b9c2d2";
+  // bulk silicon: dark and glassy
+  ctx.fillStyle = "#6f7a92";
   ctx.fillRect(0, 0, W, H);
   // thin dark active layer right under the top surface
+  ctx.fillStyle = "#2c3348";
+  ctx.fillRect(0, 0, W, 10);
+  // row of micro bumps along the bottom edge
   ctx.fillStyle = "#39415a";
-  ctx.fillRect(0, 0, W, 9);
-  // column of micro bumps along the bottom edge
-  ctx.fillStyle = "#f4f7ff";
+  ctx.fillRect(0, 36, W, 28);
+  ctx.fillStyle = "#f6f8ff";
   for (let i = 0; i < 40; i++) {
-    ctx.fillRect(4 + i * 12.7, 30, 7, 30);
-  }
-  ctx.fillStyle = "#59617a";
-  for (let i = 0; i < 40; i++) {
-    ctx.fillRect(4 + i * 12.7 + 7.5, 30, 4.5, 30);
+    ctx.fillRect(4 + i * 12.7, 40, 7, 20);
   }
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -355,8 +362,8 @@ export const createChipScene =
     // -- Environment ---------------------------------------------------------
     const env = buildEnvironment(renderer, {
       cool: new THREE.Color(0.36, 0.46, 0.66),
-      neutral: new THREE.Color(0.085, 0.095, 0.11),
-      ground: new THREE.Color(0.02, 0.026, 0.036),
+      neutral: new THREE.Color(0.09, 0.095, 0.102),
+      ground: new THREE.Color(0.05, 0.058, 0.07),
     });
 
     // -- Instanced lead-frame sheet -------------------------------------------
@@ -385,7 +392,13 @@ export const createChipScene =
       uLightPower: { value: 0 },
       uEnvRot: { value: new THREE.Vector2(1, 0) },
     };
-    const makeMetal = (f0: THREE.Color, rough: number, envLod: number, wallShade: number) =>
+    const makeMetal = (
+      f0: THREE.Color,
+      rough: number,
+      envLod: number,
+      wallShade: number,
+      glint = 0,
+    ) =>
       new THREE.ShaderMaterial({
         vertexShader: METAL_VERT,
         fragmentShader: METAL_FRAG,
@@ -396,10 +409,11 @@ export const createChipScene =
           uRough: { value: rough },
           uEnvLod: { value: envLod },
           uWallShade: { value: wallShade },
+          uGlint: { value: glint },
         },
       });
     const unitGeo = buildUnitGeometry();
-    const sheetMat = makeMetal(new THREE.Color(0.88, 0.9, 0.93), 0.44, 4.3, 0.35);
+    const sheetMat = makeMetal(new THREE.Color(0.9, 0.9, 0.9), 0.44, 4.3, 0.6);
     const sheet = new THREE.InstancedMesh(unitGeo, sheetMat, N);
     sites.forEach((s, i) => {
       m4.makeTranslation(s.x, 0, s.z);
@@ -463,9 +477,10 @@ export const createChipScene =
     scene.add(dies);
 
     // -- Small parts -----------------------------------------------------------
-    const brightMetal = makeMetal(new THREE.Color(1.0, 1.02, 1.05), 0.26, 2.8, 1.0);
+    // slightly warm, polished parts: tie-bar ribs, bond pads, rail dimples
+    const brightMetal = makeMetal(new THREE.Color(1.0, 0.95, 0.87), 0.24, 2.6, 1.0, 26);
     const ties = tieBars();
-    const tieGeo = new THREE.BoxGeometry(1, 0.1, 0.2);
+    const tieGeo = new THREE.BoxGeometry(1, 0.1, 0.16);
     const tieMesh = new THREE.InstancedMesh(tieGeo, brightMetal, N * ties.length);
     const pads = bondPads();
     const padGeo = new THREE.BoxGeometry(0.075, 0.07, 0.15);
@@ -531,10 +546,10 @@ export const createChipScene =
     const away = new THREE.Vector3();
     const rollQ = new THREE.Quaternion();
     const FWD = new THREE.Vector3(0, 0, -1);
-    const coolTint = new THREE.Color(0.88, 0.96, 1.08);
-    const steelTint = new THREE.Color(0.99, 1.0, 1.03);
-    const floorCool = new THREE.Color(0.012, 0.022, 0.045);
-    const floorSteel = new THREE.Color(0.012, 0.015, 0.022);
+    const coolTint = new THREE.Color(0.93, 0.97, 1.04);
+    const steelTint = new THREE.Color(1.0, 1.0, 0.97);
+    const floorCool = new THREE.Color(0.02, 0.032, 0.05);
+    const floorSteel = new THREE.Color(0.03, 0.04, 0.05);
     const skyCool = new THREE.Color(0.45, 0.62, 0.9);
     const skySteel = new THREE.Color(0.3, 0.33, 0.38);
 
@@ -546,7 +561,7 @@ export const createChipScene =
       const el = THREE.MathUtils.degToRad(sampleTrack(look.elevation, t));
       const width = sampleTrack(look.frameWidth, t);
       const dist = width / 2 / (Math.tan(THREE.MathUtils.degToRad(look.fov / 2)) * aspect);
-      target.set(sampleTrack(look.targetX, t), 0.2, sampleTrack(look.targetZ, t));
+      target.set(sampleTrack(look.targetX, t), 0.45, sampleTrack(look.targetZ, t));
       camera.position.set(
         target.x - Math.sin(yaw) * Math.cos(el) * dist,
         target.y + Math.sin(el) * dist,
@@ -586,7 +601,7 @@ export const createChipScene =
       metalUniforms.uEnvRot.value.set(Math.cos(envYaw), -Math.sin(envYaw));
       const cool = clamp(sampleTrack(COOLNESS, t), 0, 1);
       metalUniforms.uEnvIntensity.value = sampleTrack(ENV_INTENSITY, t);
-      dieSideMat.uniforms.uSideLevel.value = lerp(0.85, 0.12, cool);
+      dieSideMat.uniforms.uSideLevel.value = lerp(0.95, 0.1, cool);
       floorMat.color.copy(floorSteel).lerp(floorCool, cool);
       sky.copy(skySteel).lerp(skyCool, cool);
       dieTopMat.uniforms.uLevel.value = sampleTrack(DIE_LEVEL, t);
@@ -596,26 +611,34 @@ export const createChipScene =
       // Foreground wipe
       let wipe = 0;
       let progress = 0;
+      let defocus = 0;
       if (look.wipeWindow) {
         const [w0, w1] = look.wipeWindow;
         progress = clamp((t - w0) / (w1 - w0), 0, 1);
-        wipe = Math.pow(Math.sin(Math.PI * progress), 0.85);
+        const sn = Math.sin(Math.PI * progress);
+        wipe = sn * sn * (1.5 - 0.5 * sn * sn); // smooth at both ends, broad in the middle
+        // the image only drifts out of focus in the second half of the wipe
+        const c = w0 + 0.63 * (w1 - w0);
+        const u = (t - c) / (0.19 * (w1 - w0));
+        defocus = 0.019 * Math.exp(-u * u) * Math.min(1, wipe * 4);
       }
       wipeMat.uniforms.uAmount.value = wipe;
       wipeMat.uniforms.uProgress.value = progress;
 
       params.frame = frameIndex;
-      params.focus = dist * (1 - 0.11 * smoothstep(0, 1, wipe));
+      params.focus = dist;
+      params.nearBlur = 0.66;
+      // the whole image drifts out of focus while the wipe passes
+      params.defocus = defocus;
       params.aperture = sampleTrack(look.aperture, t);
       params.maxCoc = 0.04;
-      params.bloomStrength = 0.26 + 0.12 * wipe;
+      params.bloomStrength = 0.3;
       params.bloomThreshold = 1.0;
-      params.exposure =
-        lerp(0.9, 0.8, cool) * (1 + 0.04 * wipe) * sampleTrack(look.exposure, t);
+      params.exposure = lerp(0.9, 0.8, cool) * sampleTrack(look.exposure, t);
       params.tint.copy(steelTint).lerp(coolTint, cool);
-      params.lift.setRGB(0.004 + 0.004 * cool, 0.006 + 0.006 * cool, 0.012 + 0.01 * cool);
-      params.contrast = 1.1;
-      params.saturation = lerp(0.5, 0.84, cool);
+      params.lift.setRGB(0.011 - 0.002 * cool, 0.015 - 0.002 * cool, 0.019 + 0.002 * cool);
+      params.contrast = 1.03;
+      params.saturation = lerp(0.42, 0.8, cool);
       params.vignette = 0.3;
       params.vignetteColor.setRGB(0.25, 0.3, 0.4);
       params.grain = 0.014;

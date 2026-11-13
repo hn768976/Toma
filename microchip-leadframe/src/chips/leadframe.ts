@@ -6,9 +6,9 @@ import * as THREE from "three";
  * One "unit" is a 10 x 10 square site of the stamped metal sheet:
  *
  *   - a square die paddle in the middle, held by four diagonal tie bars
- *   - 4 x 17 lead fingers fanning out from the paddle to a dam bar
+ *   - 4 x 21 thin lead fingers fanning out from the paddle to a dam bar
  *   - short outer leads between the dam bar and the frame
- *   - a frame rail with tooling slots, pilot holes and a corner hole
+ *   - a frame rail with tooling slots, rounded pilot slots and a corner hole
  *
  * The outline is built as a THREE.Shape with real holes and extruded, so the
  * stamped openings have true side walls that catch the light. Slots that sit
@@ -18,20 +18,20 @@ import * as THREE from "three";
 
 export const UNIT = 10;
 export const HALF = UNIT / 2;
-export const PLATE_THICKNESS = 0.22;
+export const PLATE_THICKNESS = 0.26;
 
 export const PADDLE_HALF = 1.78;
 export const DIE_HALF = 1.55;
-export const DIE_HEIGHT = 0.44;
+export const DIE_HEIGHT = 0.32;
 
 const TIP = 2.02; // inner end of the lead fingers
 const DAM_IN = 3.75; // inner edge of the dam bar
 const DAM_OUT = 3.91;
 const FRAME_IN = 4.32; // inner edge of the frame rail
 const TIE_HALF_WIDTH = 0.13;
-export const FINGERS_PER_SIDE = 17;
-const FINGER_W_IN = 0.085;
-const FINGER_W_OUT = 0.155;
+export const FINGERS_PER_SIDE = 21;
+const FINGER_W_IN = 0.058;
+const FINGER_W_OUT = 0.1;
 
 const SLOT_HALF_LEN = 0.56;
 const SLOT_HALF_DEPTH = 0.26;
@@ -69,6 +69,21 @@ const rectHole = (x0: number, y0: number, x1: number, y1: number, turns: number)
       ] as P[]
     ).map((p) => rot(p, turns)),
   );
+
+/** A rounded ("stadium") slot centred on (cx, cy), long axis along x. */
+const stadiumHole = (cx: number, cy: number, halfLen: number, r: number, turns: number) => {
+  const pts: P[] = [];
+  const SEG = 6;
+  for (let i = 0; i <= SEG; i++) {
+    const a = -Math.PI / 2 + (Math.PI * i) / SEG;
+    pts.push([cx + halfLen - r + Math.cos(a) * r, cy + Math.sin(a) * r]);
+  }
+  for (let i = 0; i <= SEG; i++) {
+    const a = Math.PI / 2 + (Math.PI * i) / SEG;
+    pts.push([cx - halfLen + r + Math.cos(a) * r, cy + Math.sin(a) * r]);
+  }
+  return pathFrom(pts.map((p) => rot(p, turns)));
+};
 
 /** x position of finger k at its inner tip / at the dam bar (side facing +y). */
 const fingerX = (k: number) => {
@@ -138,9 +153,9 @@ export const buildUnitGeometry = (): THREE.BufferGeometry => {
       const x1 = fingerX(k + 1).xo - FINGER_W_OUT / 2;
       shape.holes.push(rectHole(x0, DAM_OUT, x1, FRAME_IN, t));
     }
-    // pilot holes on the rail, between the tooling slots
-    for (const x of [-4.05, -3.6, -1.55, -1.1, 1.1, 1.55, 3.6, 4.05]) {
-      shape.holes.push(rectHole(x - 0.11, 4.6, x + 0.11, 4.82, t));
+    // rounded pilot slots on the rail, between the tooling slots
+    for (const x of [-3.85, -1.33, 1.33, 3.85]) {
+      shape.holes.push(stadiumHole(x, 4.7, 0.3, 0.105, t));
     }
   }
 

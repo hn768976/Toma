@@ -35,77 +35,81 @@ export type ChipLook = {
   wipeWindow: readonly [number, number] | null;
 };
 
-// Reference clip: 301 frames @ 25 fps. Helper to key by reference frame.
-const f = (frame: number) => frame / 25;
-
 /**
  * Version 1 - matches the reference.
- * Values were measured from the reference by tracking the perspective of the
- * centre die: a slow ~60 degree orbit that rises from 19.5 to 24 degrees and
- * pushes in slightly while the die stays in the middle of the frame, on a
+ * Values were measured from the reference (12.04 s) by tracking the
+ * perspective of the centre die: a steady ~73 degree orbit at roughly 5 deg/s
+ * (faster while the foreground wipe passes), rising from 19.5 to 29.5 degrees
+ * and pushing in slightly, with the die kept in the middle of the frame, on a
  * very long lens.
  */
 export const REFERENCE_ORBIT: ChipLook = {
   name: "reference-orbit",
   yaw: [
-    [f(0), 2],
-    [f(60), 0],
-    [f(90), -7],
-    [f(110), -14],
-    [f(126), -19],
-    [f(156), -24],
-    [f(180), -28],
-    [f(200), -35],
-    [f(220), -40],
-    [f(256), -52],
-    [f(275), -55.5],
-    [f(300), -58.5],
+    [0, 7],
+    [1.3, 0],
+    [3, -8],
+    [6, -21],
+    [8, -32],
+    [8.7, -36.5],
+    [10.2, -56],
+    [12.04, -66],
   ],
   elevation: [
-    [f(0), 19.5],
-    [f(60), 19.5],
-    [f(100), 21.5],
-    [f(126), 22.8],
-    [f(156), 23.4],
-    [f(220), 23.6],
-    [f(300), 23.8],
+    [0, 19.5],
+    [3, 21],
+    [6, 24],
+    [8, 25],
+    [8.7, 25.4],
+    [10.2, 28.5],
+    [12.04, 29.5],
   ],
   frameWidth: [
-    [f(0), 16.1],
-    [f(130), 15.9],
-    [f(180), 15.4],
-    [f(222), 14.5],
-    [f(256), 13.5],
-    [f(300), 12.3],
+    [0, 14.7],
+    [3, 15.2],
+    [5.2, 15.6],
+    [8, 14.8],
+    [8.8, 14.5],
+    [10.2, 12.7],
+    [12.04, 12.6],
   ],
   targetX: [
-    [f(0), 0.1],
-    [f(300), -0.1],
+    [0, 0.1],
+    [12.04, -0.1],
   ],
   targetZ: [
-    [f(0), 0.0],
-    [f(300), -0.15],
+    [0, 0.0],
+    [12.04, -0.15],
   ],
   roll: [
     [0, 0],
-    [12, 0],
+    [12.04, 0],
   ],
   fov: 8,
   aperture: [
-    [0, 0.17],
-    [f(150), 0.17],
-    [f(300), 0.16],
+    [0, 0.15],
+    [12.04, 0.15],
   ],
   envYaw: [
     [0, 0],
     [12.1, 0],
   ],
+  // Follows the brightness profile of the reference: a dip while the first
+  // light pass has gone, bright through the wipe, open at the end.
   exposure: [
-    [0, 1],
-    [12.1, 1],
+    [0, 0.75],
+    [6, 0.75],
+    [7, 0.66],
+    [8, 0.68],
+    [8.6, 0.7],
+    [9.0, 0.66],
+    [9.5, 0.72],
+    [10, 0.85],
+    [10.5, 0.9],
+    [12.04, 1.12],
   ],
   hotZone: 1,
-  wipeWindow: [f(214), f(251)],
+  wipeWindow: [8.56, 10.04],
 };
 
 /**
@@ -158,9 +162,9 @@ export const CRANE_DOWN: ChipLook = {
   ],
   fov: 9,
   aperture: [
-    [0, 0.24],
-    [6, 0.2],
-    [12.04, 0.17],
+    [0, 0.22],
+    [6, 0.18],
+    [12.04, 0.15],
   ],
   // The key side of the room follows the orbit part of the way, so the sheet
   // keeps its sheen instead of falling into the dark half of the studio.
@@ -179,6 +183,6 @@ export const CRANE_DOWN: ChipLook = {
     [8.5, 0.88],
     [12.04, 0.86],
   ],
-  hotZone: 0.45,
+  hotZone: 0.32,
   wipeWindow: null,
 };

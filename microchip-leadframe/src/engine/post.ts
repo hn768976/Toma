@@ -6,6 +6,7 @@ import * as THREE from "three";
  *   scene (RGBA16F, 4x MSAA, depth texture)
  *     -> half-res circle-of-confusion pack (rgb = colour, a = signed CoC)
  *     -> half-res bokeh depth of field (golden-angle scatter-as-gather)
+ *     -> tent filter on the blur buffer
  *     -> combine with the full-resolution sharp image
  *     -> bloom (bright pass + two separable gaussian levels)
  *     -> grade (exposure, filmic tone map, tint, vignette, grain, sRGB)
@@ -22,6 +23,11 @@ export type PostParams = {
   aperture: number;
   /** Upper bound of the blur-disc radius (fraction of frame height). */
   maxCoc: number;
+  /** Scales the blur of everything in front of the focus plane (1 = physical). */
+  nearBlur: number;
+  /** Extra blur-disc radius added to every pixel (fraction of frame height):
+   *  takes the whole image out of focus, e.g. for a defocus transition. */
+  defocus: number;
   bloomStrength: number;
   bloomThreshold: number;
   exposure: number;
@@ -41,6 +47,8 @@ export const defaultPostParams = (): PostParams => ({
   focus: 5,
   aperture: 0.02,
   maxCoc: 0.03,
+  nearBlur: 1,
+  defocus: 0,
   bloomStrength: 0.2,
   bloomThreshold: 1,
   exposure: 1,
@@ -73,12 +81,19 @@ uniform float uFar;
 uniform float uFocus;
 uniform float uAperture;
 uniform float uMaxCoc;
+uniform float uNearBlur;
+uniform float uDefocus;
 
 float cocAt(vec2 uv) {
   float d = texture2D(tDepth, uv).r;
   float ndc = d * 2.0 - 1.0;
   float z = (2.0 * uNear * uFar) / (uFar + uNear - ndc * (uFar - uNear));
-  return clamp(uAperture * (z - uFocus) / max(z, 1e-4), -uMaxCoc, uMaxCoc);
+  float c = uAperture * (z - uFocus) / max(z, 1e-4);
+  if (c < 0.0) c *= uNearBlur;
+  // global defocus keeps the sign (in front of / behind the focus plane)
+  float s = c < 0.0 ? -1.0 : 1.0;
+  c = s * sqrt(c * c + uDefocus * uDefocus);
+  return clamp(c, -uMaxCoc, uMaxCoc);
 }
 
 void main() {
@@ -95,7 +110,7 @@ void main() {
 }
 `;
 
-const DOF_TAPS = 72;
+const DOF_TAPS = 96;
 
 /**
  * Scatter-as-gather bokeh blur, evaluated at half resolution.
@@ -153,6 +168,30 @@ void main() {
   }
   float alpha = clamp(wsum, 0.0, 1.0);
   gl_FragColor = vec4(acc / max(wsum, 1e-5) * alpha, alpha);
+}
+`;
+
+/**
+ * Small tent filter over the premultiplied blur buffer. It removes the
+ * residual sampling pattern of the gather without touching sharp areas
+ * (their coverage is zero, so there is nothing to spread).
+ */
+const SMOOTH_FRAG = /* glsl */ `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D tBlur;
+uniform vec2 uStep; // texel-space step
+void main() {
+  vec4 c = texture2D(tBlur, vUv) * 4.0;
+  c += texture2D(tBlur, vUv + vec2( uStep.x, 0.0)) * 2.0;
+  c += texture2D(tBlur, vUv + vec2(-uStep.x, 0.0)) * 2.0;
+  c += texture2D(tBlur, vUv + vec2(0.0,  uStep.y)) * 2.0;
+  c += texture2D(tBlur, vUv + vec2(0.0, -uStep.y)) * 2.0;
+  c += texture2D(tBlur, vUv + vec2( uStep.x,  uStep.y));
+  c += texture2D(tBlur, vUv + vec2(-uStep.x,  uStep.y));
+  c += texture2D(tBlur, vUv + vec2( uStep.x, -uStep.y));
+  c += texture2D(tBlur, vUv + vec2(-uStep.x, -uStep.y));
+  gl_FragColor = c / 16.0;
 }
 `;
 
@@ -285,6 +324,7 @@ export class PostPipeline {
   private sceneRT: THREE.WebGLRenderTarget;
   private cocRT: THREE.WebGLRenderTarget;
   private blurRT: THREE.WebGLRenderTarget;
+  private blur2RT: THREE.WebGLRenderTarget;
   private dofRT: THREE.WebGLRenderTarget;
   private bloomA1: THREE.WebGLRenderTarget;
   private bloomA2: THREE.WebGLRenderTarget;
@@ -295,6 +335,7 @@ export class PostPipeline {
   private quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   private cocMat: THREE.ShaderMaterial;
   private dofMat: THREE.ShaderMaterial;
+  private smoothMat: THREE.ShaderMaterial;
   private combineMat: THREE.ShaderMaterial;
   private brightMat: THREE.ShaderMaterial;
   private blurMat: THREE.ShaderMaterial;
@@ -321,6 +362,7 @@ export class PostPipeline {
       generateMipmaps: true,
     });
     this.blurRT = makeTarget(hw, hh);
+    this.blur2RT = makeTarget(hw, hh);
     this.dofRT = makeTarget(w, h);
     const bw = Math.max(2, Math.round(w / 4));
     const bh = Math.max(2, Math.round(h / 4));
@@ -349,11 +391,17 @@ export class PostPipeline {
       uFocus: { value: 5 },
       uAperture: { value: 0.02 },
       uMaxCoc: { value: 0.03 },
+      uNearBlur: { value: 1 },
+      uDefocus: { value: 0 },
     });
     this.dofMat = mk(DOF_FRAG, {
       tColorCoc: { value: null },
       uResolution: { value: new THREE.Vector2(hw, hh) },
       uMaxCoc: { value: 0.03 },
+    });
+    this.smoothMat = mk(SMOOTH_FRAG, {
+      tBlur: { value: null },
+      uStep: { value: new THREE.Vector2(1 / hw, 1 / hh) },
     });
     this.combineMat = mk(COMBINE_FRAG, {
       tSharp: { value: null },
@@ -418,14 +466,23 @@ export class PostPipeline {
     this.cocMat.uniforms.uFocus.value = p.focus;
     this.cocMat.uniforms.uAperture.value = p.aperture;
     this.cocMat.uniforms.uMaxCoc.value = p.maxCoc;
+    this.cocMat.uniforms.uNearBlur.value = p.nearBlur;
+    this.cocMat.uniforms.uDefocus.value = p.defocus;
     this.pass(this.cocMat, this.cocRT);
 
     // 3. Depth of field
     this.dofMat.uniforms.tColorCoc.value = this.cocRT.texture;
     this.dofMat.uniforms.uMaxCoc.value = p.maxCoc;
     this.pass(this.dofMat, this.blurRT);
+    // step = about half the tap spacing of the gather
+    const spacing =
+      Math.max(p.maxCoc * this.blurRT.height, 1) * Math.sqrt(Math.PI / DOF_TAPS);
+    const step = Math.max(0.75, 0.55 * spacing);
+    this.smoothMat.uniforms.tBlur.value = this.blurRT.texture;
+    this.smoothMat.uniforms.uStep.value.set(step / this.blurRT.width, step / this.blurRT.height);
+    this.pass(this.smoothMat, this.blur2RT);
     this.combineMat.uniforms.tSharp.value = this.sceneRT.texture;
-    this.combineMat.uniforms.tBlur.value = this.blurRT.texture;
+    this.combineMat.uniforms.tBlur.value = this.blur2RT.texture;
     this.pass(this.combineMat, this.dofRT);
 
     // Optional screen-space overlay drawn on top of the focused image
@@ -490,6 +547,7 @@ export class PostPipeline {
       this.sceneRT,
       this.cocRT,
       this.blurRT,
+      this.blur2RT,
       this.dofRT,
       this.bloomA1,
       this.bloomA2,
@@ -502,6 +560,7 @@ export class PostPipeline {
     for (const m of [
       this.cocMat,
       this.dofMat,
+      this.smoothMat,
       this.combineMat,
       this.brightMat,
       this.blurMat,
