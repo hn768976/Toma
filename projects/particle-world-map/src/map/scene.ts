@@ -118,7 +118,6 @@ export const makeWorldMapFactory =
     const animated: Animated[] = [];
     const rnd = mulberry32(31337);
     const gauss = () => (rnd() + rnd() + rnd() - 1.5) / 1.5;
-    const spread = () => (rnd() + rnd() - 1) * 1.6; // flatter than gauss
 
     const addAnimated = (a: Omit<Animated, "base">) => {
       animated.push({ ...a, base: a.mesh.position.clone() });
@@ -144,139 +143,151 @@ export const makeWorldMapFactory =
       city.add(mesh);
     }
 
-    // --- glossy floor under the structure with soft reflections ---
+    // --- the "light hall": a glossy floor of light at eye level, seen almost
+    // edge-on (it reads as the bright horizontal band), with lit panels and
+    // pillars standing on it and their dimmer bluish mirror reflections below.
+    // Rolled slightly with the map tilt; drifts slowly for parallax. ---
+    const HALL = {
+      pos: new THREE.Vector3(-0.7, -0.16, -6.6),
+      rotY: -0.22,
+      roll: -4.5 * DEG,
+      hx: 5.6,
+      hz: 4.2,
+    };
+    const hall = new THREE.Group();
+    const hallInner = new THREE.Group();
+    hall.position.copy(HALL.pos);
+    hall.rotation.set(0, 0, HALL.roll);
+    hallInner.rotation.y = HALL.rotY;
+    hall.add(hallInner);
+    city.add(hall);
+    const hallMats: Array<{ mat: THREE.MeshBasicMaterial; color: THREE.Color; k: number }> = [];
+    const hallMat = (color: THREE.Color, k: number, map: THREE.Texture | null, depth = true) => {
+      const m = glowMat(map ?? lineTex, color, k, depth);
+      if (!map) m.map = null;
+      hallMats.push({ mat: m, color, k });
+      return m;
+    };
+    const Y = new THREE.Vector3(0, 1, 0);
+    const rod = (a: THREE.Vector3, b: THREE.Vector3, r: number, mat: THREE.Material) => {
+      const d = b.clone().sub(a);
+      const g = track(new THREE.CylinderGeometry(r, r, d.length(), 6, 1, true));
+      const m = new THREE.Mesh(g, mat);
+      m.position.copy(a).add(b).multiplyScalar(0.5);
+      m.quaternion.setFromUnitVectors(Y, d.normalize());
+      hallInner.add(m);
+      return m;
+    };
+    const REFL = 0.5; // reflection strength
     {
-      const m = glowMat(tex(reflectionTexture(91)), TEAL_HAZE, 0.7, false);
-      const floor = new THREE.Mesh(plane(16, 12), m);
+      const { hx, hz } = HALL;
+      const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+      // the floor of light (grid), plus a bright leading edge
+      const floor = new THREE.Mesh(plane(hx * 2, hz * 2), hallMat(LIGHT, 0.5, tex(gridTexture(70))));
       floor.rotation.x = -Math.PI / 2;
-      floor.position.set(0.6, -1.35, -6.5);
-      city.add(floor);
-    }
+      hallInner.add(floor);
+      const floor2 = new THREE.Mesh(plane(hx * 2.4, hz * 2.4), hallMat(TEAL_HAZE, 1.0, tex(reflectionTexture(91)), false));
+      floor2.rotation.x = -Math.PI / 2;
+      floor2.position.y = -0.02;
+      hallInner.add(floor2);
+      rod(v(-hx * 0.75, 0.01, hz * 0.55), v(hx, 0.01, hz * 0.55), 0.06, hallMat(LIGHT, 0.9, null));
+      rod(v(-hx * 0.6, 0.01, 0), v(hx, 0.01, 0), 0.05, hallMat(LIGHT, 0.55, null));
 
-    // --- mid screens (glass panels with data cells), some as side walls ---
-    for (let i = 0; i < 50; i++) {
-      const w = 0.8 + rnd() * 2.6;
-      const h = 0.6 + rnd() * 3.0;
-      const bright = 0.5 + rnd() * 0.7;
-      const m = glowMat(tex(screenTexture(100 + i, bright)), LIGHT, 0.3 + rnd() * 0.45);
-      const mesh = new THREE.Mesh(plane(w, h), m);
-      mesh.position.set(-0.6 + spread() * 3.2, 0.1 + spread() * 1.0, -3.5 - rnd() * 8);
-      if (rnd() < 0.35) mesh.rotation.y = (rnd() < 0.5 ? -1 : 1) * (1.2 + rnd() * 0.3);
-      city.add(mesh);
-      addAnimated({
-        mesh,
-        mat: m,
-        intensity: m.color.r / LIGHT.r,
-        color: LIGHT,
-        period: 4 + rnd() * 6,
-        phase: rnd() * 10,
-        speed: 0,
-        permanent: rnd() < 0.6,
-      });
-    }
+      // pillars standing on the floor, with mirrored reflections below
+      for (let i = 0; i < 70; i++) {
+        const x = -hx * 0.75 + rnd() * hx * 1.7;
+        const z = -hz * 0.8 + rnd() * hz * 1.5;
+        const h = 0.4 + Math.pow(rnd(), 1.4) * 2.6;
+        const k = 0.16 + Math.pow(rnd(), 2) * 0.6;
+        const r = 0.018 + rnd() * 0.04;
+        const col = rnd() < 0.25 ? LIGHT_BLUE : LIGHT;
+        const mat = glowMat(lineTex, col, k);
+        mat.map = null;
+        const mesh = rod(v(x, 0, z), v(x, h, z), r, mat);
+        const rmat = glowMat(lineTex, LIGHT_BLUE, k * REFL, false);
+        rmat.map = null;
+        const rmesh = rod(v(x, -h * 0.8, z), v(x, 0, z), r * 1.4, rmat);
+        const period = 3 + rnd() * 5;
+        const phase = rnd() * 10;
+        const permanent = rnd() < 0.5;
+        addAnimated({ mesh, mat, intensity: k, color: col, period, phase, speed: 0, permanent });
+        addAnimated({ mesh: rmesh, mat: rmat, intensity: k * REFL, color: LIGHT_BLUE, period, phase, speed: 0, permanent });
+      }
 
-    // --- perspective light floors (grids seen at grazing angles) ---
-    for (let i = 0; i < 3; i++) {
-      const m = glowMat(tex(gridTexture(70 + i)), LIGHT, 0.35 + i * 0.12);
-      const mesh = new THREE.Mesh(plane(7 + i * 2, 9), m);
-      mesh.rotation.x = -Math.PI / 2 + 0.12;
-      mesh.position.set(0.6 + i * 0.4, -0.55 + i * 0.5, -5.5 - i * 0.5);
-      city.add(mesh);
-    }
+      // horizontal data shelves at various heights (+ reflections)
+      for (let i = 0; i < 26; i++) {
+        const x0 = -hx * 0.7 + rnd() * hx * 1.3;
+        const len = 0.5 + Math.pow(rnd(), 1.5) * 3.5;
+        const y = 0.15 + Math.pow(rnd(), 1.3) * 2.2;
+        const z = -hz * 0.7 + rnd() * hz * 1.4;
+        const k = 0.2 + Math.pow(rnd(), 2) * 0.8;
+        const mat = glowMat(lineTex, LIGHT, k);
+        mat.map = null;
+        const mesh = rod(v(x0, y, z), v(x0 + len, y, z), 0.018 + rnd() * 0.025, mat);
+        const rmat = glowMat(lineTex, LIGHT_BLUE, k * REFL, false);
+        rmat.map = null;
+        const rmesh = rod(v(x0, -y * 0.9, z), v(x0 + len, -y * 0.9, z), 0.03, rmat);
+        const period = 3 + rnd() * 5;
+        const phase = rnd() * 10;
+        const permanent = rnd() < 0.4;
+        addAnimated({ mesh, mat, intensity: k, color: LIGHT, period, phase, speed: 0, permanent });
+        addAnimated({ mesh: rmesh, mat: rmat, intensity: k * REFL, color: LIGHT_BLUE, period, phase, speed: 0, permanent });
+      }
 
-    // --- horizontal light strips ("floors" of data) ---
-    for (let i = 0; i < 95; i++) {
-      const len = 0.5 + Math.pow(rnd(), 1.6) * 4.5;
-      const thick = 0.02 + rnd() * 0.05;
-      const k = 0.14 + Math.pow(rnd(), 3) * 0.4;
-      const tint = rnd() < 0.45 ? LIGHT_BLUE : LIGHT;
-      const m = glowMat(lineTex, tint, k);
-      const mesh = new THREE.Mesh(plane(len, thick * 4), m);
-      const level = (Math.floor(rnd() * 12) - 6) * 0.19;
-      mesh.position.set(Math.max(-2.6, -0.4 + spread() * 2.8), -0.05 + level, -1.8 - rnd() * 6);
-      city.add(mesh);
-      addAnimated({
-        mesh,
-        mat: m,
-        intensity: k,
-        color: tint,
-        period: 3 + rnd() * 6,
-        phase: rnd() * 10,
-        speed: (rnd() - 0.5) * 0.8,
-        permanent: rnd() < 0.3,
-      });
-    }
+      // glass data panels standing on the floor (+ reflections)
+      for (let i = 0; i < 26; i++) {
+        const w = 0.6 + rnd() * 1.8;
+        const h = 0.5 + rnd() * 2.0;
+        const tx = tex(screenTexture(100 + i, 0.6 + rnd() * 0.6));
+        const k = 0.25 + rnd() * 0.35;
+        const m = glowMat(tx, LIGHT, k);
+        const mesh = new THREE.Mesh(plane(w, h), m);
+        const x = -hx * 0.7 + rnd() * hx * 1.6;
+        const z = -hz * 0.8 + rnd() * hz * 1.4;
+        mesh.position.set(x, h / 2 + rnd() * 0.3, z);
+        if (rnd() < 0.3) mesh.rotation.y = (rnd() < 0.5 ? -1 : 1) * 1.3;
+        hallInner.add(mesh);
+        const rm = glowMat(tx, LIGHT_BLUE, k * REFL, false);
+        const rmesh = new THREE.Mesh(plane(w, h), rm);
+        rmesh.position.set(x, -h / 2 - 0.05, z);
+        rmesh.rotation.y = mesh.rotation.y;
+        rmesh.scale.y = -1;
+        hallInner.add(rmesh);
+        const period = 4 + rnd() * 6;
+        const phase = rnd() * 10;
+        const permanent = rnd() < 0.6;
+        addAnimated({ mesh, mat: m, intensity: k, color: LIGHT, period, phase, speed: 0, permanent });
+        addAnimated({ mesh: rmesh, mat: rm, intensity: k * REFL, color: LIGHT_BLUE, period, phase, speed: 0, permanent });
+      }
 
-    // --- vertical beams ---
-    for (let i = 0; i < 46; i++) {
-      const h = 0.4 + Math.pow(rnd(), 1.3) * 2.8;
-      const k = 0.2 + Math.pow(rnd(), 3) * 0.55;
-      const m = glowMat(lineTex, LIGHT, k);
-      const mesh = new THREE.Mesh(plane(h, 0.18 + rnd() * 0.3), m);
-      mesh.rotation.z = Math.PI / 2;
-      mesh.position.set(-0.6 + spread() * 2.8, 0.0 + spread() * 0.6, -2.2 - rnd() * 6);
-      city.add(mesh);
-      addAnimated({
-        mesh,
-        mat: m,
-        intensity: k,
-        color: LIGHT,
-        period: 4 + rnd() * 5,
-        phase: rnd() * 10,
-        speed: 0,
-        permanent: rnd() < 0.4,
-      });
-    }
+      // stacked window dashes on the left (above the floor)
+      for (let i = 0; i < 5; i++) {
+        const mesh = new THREE.Mesh(plane(0.7 + rnd() * 0.5, 0.13), hallMat(LIGHT, 0.9 + rnd() * 0.6, lineTex));
+        mesh.position.set(-hx * 0.62 + rnd() * 0.3, 0.25 + i * 0.3, hz * 0.45);
+        hallInner.add(mesh);
+      }
 
-    // --- near-focus crisp light bars at the heart of the structure ---
-    for (let i = 0; i < 26; i++) {
-      const len = 0.15 + Math.pow(rnd(), 1.5) * 1.1;
-      const k = 0.3 + Math.pow(rnd(), 2) * 0.45;
-      const m = glowMat(lineTex, rnd() < 0.3 ? LIGHT_BLUE : LIGHT, k);
-      const mesh = new THREE.Mesh(plane(len, 0.07 + rnd() * 0.06), m);
-      mesh.position.set(-0.2 + spread() * 1.1, 0.42 + spread() * 0.3, -0.5 - rnd() * 1.0);
-      scene.add(mesh);
-      addAnimated({
-        mesh,
-        mat: m,
-        intensity: k,
-        color: LIGHT,
-        period: 3 + rnd() * 4,
-        phase: rnd() * 10,
-        speed: 0,
-        permanent: rnd() < 0.5,
-      });
+      // soft volume glow just above and below the floor
+      for (let i = 0; i < 4; i++) {
+        const g = new THREE.Mesh(plane(4 + rnd() * 3, 1.4 + rnd()), hallMat(i % 2 ? LIGHT_BLUE : LIGHT, 0.045, radialTex, false));
+        g.position.set(-2 + i * 1.4, (i % 2 ? -0.5 : 0.4), hz * 0.3);
+        hallInner.add(g);
+      }
     }
-
-    // --- bright core glow + volumetric haze ---
-    for (let i = 0; i < 5; i++) {
-      const haze = new THREE.Mesh(
-        plane(7 + rnd() * 6, 3 + rnd() * 3),
-        glowMat(radialTex, i % 2 ? TEAL_HAZE : LIGHT_BLUE, 0.008 + rnd() * 0.008, false),
-      );
-      haze.position.set(-0.6 + gauss() * 2.2, -0.1 + gauss() * 0.6, -4 - rnd() * 5);
-      city.add(haze);
-    }
-
-    // --- vertical light sheet that fades in at 0.5–0.8 s (as in the reference) ---
-    const sheetMat = glowMat(radialTex, LIGHT, 0, false);
-    const sheet = new THREE.Mesh(plane(3.2, 5.5), sheetMat);
-    sheet.position.set(-0.4, 0.2, -2.6);
-    city.add(sheet);
 
     // --- light shafts raking down-left / down-right from the core ---
     const shafts: Array<{ mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; k: number; ph: number }> = [];
     for (let i = 0; i < 11; i++) {
-      const len = 2 + rnd() * 2.2;
-      const wdt = 0.25 + rnd() * 0.7;
-      const k = 0.05 + rnd() * 0.08;
+      const len = 3.5 + rnd() * 3;
+      const wdt = 0.5 + rnd() * 1.1;
+      const k = 0.16 + rnd() * 0.16;
       const geo = plane(len, wdt);
       geo.translate(len / 2, 0, 0); // origin at the bright end
       const m = glowMat(shaftTex, LIGHT_BLUE, k * 1.4, false);
       const mesh = new THREE.Mesh(geo, m);
-      mesh.position.set(0.8 + gauss() * 0.8, 0.0 + gauss() * 0.4, -2.5 - rnd() * 2);
-      mesh.rotation.z = (i % 2 ? 196 + rnd() * 20 : -22 - rnd() * 18) * DEG;
-      city.add(mesh);
+      mesh.position.set(-1.5 + gauss() * 1.4, 0.0, 1.5 + rnd() * 1.5);
+      mesh.rotation.z = (i % 3 ? 198 + rnd() * 22 : -20 - rnd() * 18) * DEG;
+      hall.add(mesh);
       shafts.push({ mesh, mat: m, k, ph: rnd() * 6 });
     }
 
@@ -297,7 +308,8 @@ export const makeWorldMapFactory =
     const speckPos = new Float32Array(speckCount * 3);
     const speckPhase = new Float32Array(speckCount);
     for (let i = 0; i < speckCount; i++) {
-      speckPos.set([0.9 + gauss() * 1.8, 0.5 + gauss() * 0.4, -1.2 - rnd() * 3], i * 3);
+      if (i < 55) speckPos.set([0.2 + gauss() * 2.6, 0.25 + gauss() * 0.4, -4.5 + gauss() * 1.8], i * 3);
+      else speckPos.set([-5 + rnd() * 9, -0.6 + rnd() * 2.8, -0.6 - rnd() * 1.5], i * 3);
       speckPhase[i] = rnd() * 6.28;
     }
     speckGeo.setAttribute("position", new THREE.BufferAttribute(speckPos, 3));
@@ -427,8 +439,11 @@ export const makeWorldMapFactory =
         const t = frame / fps;
 
         // light-structure drift (parallax motion inside the hologram)
-        city.position.set(-1.5 + 0.04 * t, -0.2 + 0.03 * Math.sin(t * 0.4), 0);
-        city.rotation.y = -0.05 + 0.004 * t;
+        hall.position.set(HALL.pos.x + 0.035 * t, HALL.pos.y, HALL.pos.z);
+        hall.rotation.set(0, 0, HALL.roll);
+        hallInner.rotation.y = HALL.rotY + 0.011 * t;
+        const rise = 0.82 + 0.18 * smoothstep(0.45, 0.85, t);
+        for (const h of hallMats) h.mat.color.copy(h.color).multiplyScalar(h.k * rise);
 
         for (const a of animated) {
           let env = 1;
@@ -441,7 +456,7 @@ export const makeWorldMapFactory =
             env = 0.8 + 0.2 * Math.sin(t * (6.28 / a.period) + a.phase);
           }
           a.mesh.position.set(a.base.x + slide, a.base.y, a.base.z);
-          a.mat.color.copy(a.color).multiplyScalar(a.intensity * env);
+          a.mat.color.copy(a.color).multiplyScalar(a.intensity * env * rise);
           a.mesh.visible = env > 0.002;
         }
         for (const s of shafts) {
@@ -451,7 +466,6 @@ export const makeWorldMapFactory =
         beamMat.color.copy(LIGHT).multiplyScalar(1.0 * (0.9 + 0.1 * Math.sin(t * 3.1)));
         blueMat.color.copy(LIGHT_BLUE).multiplyScalar(0.45 * smoothstep(1.0, 1.2, t));
         speckMat.uniforms.time.value = t;
-        sheetMat.color.copy(LIGHT).multiplyScalar(0.22 * smoothstep(0.5, 0.8, t));
 
         const cam = cameraFor(mode, t);
         camera.position.copy(cam.position);
@@ -472,15 +486,15 @@ export const makeWorldMapFactory =
             focusDistance: focus,
             focusRange: 0.8,
             blurRangeNear: 3.0,
-            blurRangeFar: 7,
-            maxBlur: 0.026,
-            bloomStrength: 0.14,
+            blurRangeFar: 6.5,
+            maxBlur: 0.03,
+            bloomStrength: 0.11,
             bloomThreshold: 0.8,
             bloomKnee: 0.4,
             streakStrength: 0.03,
             streakThreshold: 1.1,
             streakTint: new THREE.Color(0.75, 0.88, 1.0),
-            exposure: 0.9,
+            exposure: 0.84,
             contrast: 1.06,
             saturation: 0.92,
             lift: LIFT,
