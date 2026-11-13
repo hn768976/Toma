@@ -1,38 +1,18 @@
 import { BUMP, NOISE } from "../engine/glsl";
 
 // ---------- Yeast cell: egg-shaped body, bud scars, SEM-style shading ----------
+// Body shapes are displaced on the CPU at start-up (see bakeBody in yeast.ts);
+// bud scars are added per pixel in the fragment shader.
 export const CELL_VERT = /* glsl */ `
-in float aSeed; in vec3 aShape; in vec4 aScar1; in vec4 aScar2;
+in vec3 aObj; in float aSeed; in vec4 aScar1; in vec4 aScar2;
 out vec3 vObj; out vec3 vView; out vec3 vNrm; out float vSeed; out float vSize;
 out vec4 vScar1; out vec4 vScar2;
-${NOISE}
-float scarCoarse(vec3 d, vec4 sc){
-  if (sc.w <= 0.) return 0.;
-  float x = acos(clamp(dot(d, sc.xyz), -1., 1.)) / sc.w;
-  float t = (x - 1.) / .3;
-  return .028 * exp(-t * t) - .022 * (1. - smoothstep(.7, 1.05, x));
-}
-vec3 shape(vec3 d){
-  float r = .88 + vnoise(d * 1.5 + aSeed) * .17 + vnoise(d * 3.3 + aSeed * 2.1) * .05;
-  r += scarCoarse(d, aScar1) + scarCoarse(d, aScar2);
-  vec3 p = d * r * aShape;
-  p.xz *= 1. + .13 * d.y; // slightly egg-shaped
-  return p;
-}
 void main(){
-  vec3 d = normalize(position);
-  vec3 t1 = normalize(cross(d, abs(d.y) < .9 ? vec3(0,1,0) : vec3(1,0,0)));
-  vec3 t2 = cross(d, t1);
-  const float e = .05;
-  vec3 p0 = shape(d);
-  vec3 p1 = shape(normalize(d + t1 * e));
-  vec3 p2 = shape(normalize(d + t2 * e));
-  vec3 n = normalize(cross(p1 - p0, p2 - p0));
   mat4 mv = modelViewMatrix * instanceMatrix;
-  vec4 v = mv * vec4(p0, 1.);
-  vObj = d; vView = v.xyz; vSeed = aSeed;
+  vec4 v = mv * vec4(position, 1.);
+  vObj = aObj; vView = v.xyz; vSeed = aSeed;
   vSize = length(instanceMatrix[0].xyz);
-  vNrm = normalize(mat3(mv) * n); // instance matrices are rotation + uniform scale
+  vNrm = normalize(mat3(mv) * normal); // instance matrices are rotation + uniform scale
   vScar1 = aScar1; vScar2 = aScar2;
   gl_Position = projectionMatrix * v;
 }

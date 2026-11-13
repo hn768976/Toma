@@ -1,6 +1,6 @@
 import * as THREE from "three";
 
-// Post pipeline: scene (MSAA + depth) -> circle-of-confusion pack ->
+// Post pipeline: scene (colour + depth) -> circle-of-confusion pack ->
 // two-pass bokeh gather -> grade (vignette / grain) to the canvas.
 
 const VERT = /* glsl */ `
@@ -22,43 +22,67 @@ void main(){
 }
 `;
 
+// Bokeh gather, run at half resolution. Alpha carries the mean blur size of
+// what landed on the pixel so the composite knows where to use the blur.
 const dofFrag = (taps: number) => /* glsl */ `
 precision highp float;
 in vec2 vUv; out vec4 o;
 uniform sampler2D tColor;
-uniform float uMaxCoc, uAspect, uScale, uRot;
+uniform float uMaxCoc, uAspect;
 const int N = ${taps};
 const float GA = 2.39996323;
 void main(){
   vec4 c = texture(tColor, vUv);
   float cc = c.a * 2. - 1.;
   float cs = abs(cc);
-  vec3 acc = c.rgb; float tot = 1.;
+  vec3 acc = c.rgb; float accS = cs; float tot = 1.;
   float soft = 1.2 / sqrt(float(N));
   // per-pixel jitter (interleaved gradient noise) turns tap banding into
   // fine noise that the second pass smooths away
   float ign = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(.06711056, .00583715))));
   for (int i = 0; i < N; i++){
     float r = sqrt((float(i) + ign) / float(N));
-    float a = float(i) * GA + uRot + ign * 6.2831853;
-    vec2 off = vec2(cos(a) / uAspect, sin(a)) * r * uMaxCoc * uScale;
+    float a = float(i) * GA + ign * 6.2831853;
+    vec2 off = vec2(cos(a) / uAspect, sin(a)) * r * uMaxCoc;
     vec4 s = texture(tColor, vUv + off);
     float sc = s.a * 2. - 1.;
     float ss = abs(sc);
     if (sc > cc) ss = min(ss, cs * 2.);
     float m = smoothstep(r - soft, r + soft, ss);
     acc += mix(acc / tot, s.rgb, m);
+    accS += mix(accS / tot, ss, m);
     tot += 1.;
   }
-  o = vec4(acc / tot, c.a);
+  o = vec4(acc / tot, accS / tot);
+}
+`;
+
+// Small disc blur scaled by the local blur size: removes the gather noise.
+const SMOOTH_FRAG = /* glsl */ `
+precision highp float;
+in vec2 vUv; out vec4 o;
+uniform sampler2D tColor;
+uniform float uMaxCoc, uAspect;
+const int N = 14;
+const float GA = 2.39996323;
+void main(){
+  vec4 c = texture(tColor, vUv);
+  float rad = c.a * uMaxCoc * .24;
+  vec4 acc = c;
+  for (int i = 0; i < N; i++){
+    float r = sqrt((float(i) + .5) / float(N));
+    float a = float(i) * GA + 1.3;
+    acc += texture(tColor, vUv + vec2(cos(a) / uAspect, sin(a)) * r * rad);
+  }
+  o = acc / float(N + 1);
 }
 `;
 
 const GRADE_FRAG = /* glsl */ `
 precision highp float;
 in vec2 vUv; out vec4 o;
-uniform sampler2D tColor;
-uniform float uVignette, uGrain, uSeed, uContrast, uSat, uGrainPx;
+uniform sampler2D tColor; uniform sampler2D tSharp;
+uniform float uVignette, uGrain, uSeed, uContrast, uSat, uGrainPx, uMaxCoc;
 uniform vec2 uRes;
 uniform vec3 uLift;
 float h12(vec2 p){
@@ -66,8 +90,32 @@ float h12(vec2 p){
   p3 += dot(p3, p3.yzx + 33.33);
   return fract((p3.x + p3.y) * p3.z);
 }
+float luma(vec3 c){ return dot(c, vec3(.299, .587, .114)); }
+// compact FXAA on the sharp image
+vec3 fxaa(vec2 uv){
+  vec2 px = 1. / uRes;
+  vec3 m = texture(tSharp, uv).rgb;
+  float lNW = luma(texture(tSharp, uv + vec2(-1., -1.) * px).rgb);
+  float lNE = luma(texture(tSharp, uv + vec2( 1., -1.) * px).rgb);
+  float lSW = luma(texture(tSharp, uv + vec2(-1.,  1.) * px).rgb);
+  float lSE = luma(texture(tSharp, uv + vec2( 1.,  1.) * px).rgb);
+  float lM = luma(m);
+  float lMin = min(lM, min(min(lNW, lNE), min(lSW, lSE)));
+  float lMax = max(lM, max(max(lNW, lNE), max(lSW, lSE)));
+  vec2 dir = vec2(-((lNW + lNE) - (lSW + lSE)), (lNW + lSW) - (lNE + lSE));
+  float red = max((lNW + lNE + lSW + lSE) * .03125, .0078125);
+  dir = clamp(dir / (min(abs(dir.x), abs(dir.y)) + red), -8., 8.) * px;
+  vec3 a = .5 * (texture(tSharp, uv + dir * (1. / 3. - .5)).rgb + texture(tSharp, uv + dir * (2. / 3. - .5)).rgb);
+  vec3 b = a * .5 + .25 * (texture(tSharp, uv - dir * .5).rgb + texture(tSharp, uv + dir * .5).rgb);
+  float lB = luma(b);
+  return (lB < lMin || lB > lMax) ? a : b;
+}
 void main(){
-  vec3 c = texture(tColor, vUv).rgb;
+  // composite: sharp full-res image where in focus, half-res bokeh elsewhere
+  vec4 blur = texture(tColor, vUv);
+  vec3 sharp = fxaa(vUv);
+  float px = blur.a * uMaxCoc * uRes.y; // blur radius in output pixels
+  vec3 c = mix(sharp, blur.rgb, smoothstep(.6, 2.6, px));
   vec2 q = vUv - .5;
   float v = 1. - uVignette * smoothstep(.25, .95, length(q * vec2(1.25, 1.)) * 1.35);
   c *= v;
@@ -92,12 +140,15 @@ export type PostOptions = {
   saturation: number;
   lift: [number, number, number];
   frame: number;
+  /** Optional depth-only pre-pass (cuts overdraw of expensive shaders) */
+  prepass?: { material: THREE.Material; hide: THREE.Object3D[] };
 };
 
 export class Post {
   private sceneRT: THREE.WebGLRenderTarget;
   private a: THREE.WebGLRenderTarget;
   private b: THREE.WebGLRenderTarget;
+  private c: THREE.WebGLRenderTarget;
   private quad: THREE.Mesh;
   private qScene = new THREE.Scene();
   private qCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -114,7 +165,7 @@ export class Post {
     const depthTexture = new THREE.DepthTexture(w, h);
     depthTexture.type = THREE.UnsignedIntType;
     this.sceneRT = new THREE.WebGLRenderTarget(w, h, {
-      samples: 4,
+      samples: 0, // edges are anti-aliased by the FXAA step in the composite
       depthTexture,
       minFilter: THREE.LinearFilter,
       magFilter: THREE.LinearFilter,
@@ -125,8 +176,15 @@ export class Post {
         minFilter: THREE.LinearFilter,
         magFilter: THREE.LinearFilter,
       });
+    const mkHalf = () =>
+      new THREE.WebGLRenderTarget(Math.ceil(w / 2), Math.ceil(h / 2), {
+        depthBuffer: false,
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter,
+      });
     this.a = mk();
-    this.b = mk();
+    this.b = mkHalf();
+    this.c = mkHalf();
     const mat = (frag: string, uniforms: Record<string, THREE.IUniform>) =>
       new THREE.ShaderMaterial({
         glslVersion: THREE.GLSL3,
@@ -145,17 +203,17 @@ export class Post {
       uAperture: { value: 0.3 },
       uMaxCoc: { value: 0.03 },
     });
-    const dofU = (tex: THREE.Texture, scale: number, rot: number) => ({
+    const dofU = (tex: THREE.Texture) => ({
       tColor: { value: tex },
       uMaxCoc: { value: 0.03 },
       uAspect: { value: w / h },
-      uScale: { value: scale },
-      uRot: { value: rot },
     });
-    this.dof1 = mat(dofFrag(96), dofU(this.a.texture, 1, 0));
-    this.dof2 = mat(dofFrag(32), dofU(this.b.texture, 0.2, 1.3));
+    this.dof1 = mat(dofFrag(64), dofU(this.a.texture));
+    this.dof2 = mat(SMOOTH_FRAG, dofU(this.b.texture));
     this.grade = mat(GRADE_FRAG, {
-      tColor: { value: this.a.texture },
+      tColor: { value: this.c.texture },
+      tSharp: { value: this.a.texture },
+      uMaxCoc: { value: 0.03 },
       uVignette: { value: 0.3 },
       uGrain: { value: 0.02 },
       uSeed: { value: 0 },
@@ -183,6 +241,13 @@ export class Post {
     const r = this.renderer;
     r.setRenderTarget(this.sceneRT);
     r.clear();
+    if (o.prepass) {
+      o.prepass.hide.forEach((h) => (h.visible = false));
+      scene.overrideMaterial = o.prepass.material;
+      r.render(scene, camera);
+      scene.overrideMaterial = null;
+      o.prepass.hide.forEach((h) => (h.visible = true));
+    }
     r.render(scene, camera);
 
     const cu = this.coc.uniforms;
@@ -194,6 +259,7 @@ export class Post {
     this.dof1.uniforms.uMaxCoc.value = o.maxCoc;
     this.dof2.uniforms.uMaxCoc.value = o.maxCoc;
     const gu = this.grade.uniforms;
+    gu.uMaxCoc.value = o.maxCoc;
     gu.uVignette.value = o.vignette;
     gu.uGrain.value = o.grain;
     gu.uSeed.value = (o.frame % 997) + 1;
@@ -203,7 +269,7 @@ export class Post {
 
     this.pass(this.coc, this.a);
     this.pass(this.dof1, this.b);
-    this.pass(this.dof2, this.a);
+    this.pass(this.dof2, this.c);
     this.pass(this.grade, null);
   }
 
@@ -211,6 +277,7 @@ export class Post {
     this.sceneRT.dispose();
     this.a.dispose();
     this.b.dispose();
+    this.c.dispose();
     this.quad.geometry.dispose();
     [this.coc, this.dof1, this.dof2, this.grade].forEach((m) => m.dispose());
   }

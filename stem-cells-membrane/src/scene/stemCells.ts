@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { bakeSphere, vnoise, worley } from "../engine/bake";
 import { Post } from "../engine/post";
 import type { SceneFactory } from "../engine/ThreeStage";
 import type { Palette } from "./palettes";
@@ -124,6 +125,28 @@ const buildCells = (): Cell[] => {
   return cells;
 };
 
+// Lumpy "blackberry" nucleus: cellular bumps with creases between them.
+const bakeNucleus = (base: THREE.BufferGeometry, seed: number) =>
+  bakeSphere(
+    base,
+    (x, y, z, o) => {
+      const [f1, f2] = worley(x * 2.5 + seed, y * 2.5 + seed, z * 2.5 + seed);
+      const big = vnoise(
+        x * 1.3 + seed * 1.7,
+        y * 1.3 + seed * 1.7,
+        z * 1.3 + seed * 1.7,
+      );
+      const lump = (1 - f1 * f1 * 1.35) * 0.115 + big * 0.09;
+      const r = 0.85 + lump;
+      o[0] = x * r;
+      o[1] = y * r;
+      o[2] = z * r;
+      o[3] = lump;
+      o[4] = f2 - f1;
+    },
+    0.035,
+  );
+
 export const stemCellsFactory: SceneFactory<StemParams> = ({
   renderer,
   width,
@@ -144,11 +167,16 @@ export const stemCellsFactory: SceneFactory<StemParams> = ({
   const post = new Post(renderer, width, height);
 
   const disposables: { dispose: () => void }[] = [];
-  const geoHi = mergeVertices(new THREE.IcosahedronGeometry(1, 34));
-  const geoLo = mergeVertices(new THREE.IcosahedronGeometry(1, 14));
-  const memHi = mergeVertices(new THREE.IcosahedronGeometry(1, 26));
-  const memLo = mergeVertices(new THREE.IcosahedronGeometry(1, 12));
-  disposables.push(geoHi, geoLo, memHi, memLo);
+  const baseHi = mergeVertices(new THREE.IcosahedronGeometry(1, 34));
+  const baseLo = mergeVertices(new THREE.IcosahedronGeometry(1, 14));
+  // a handful of baked nucleus variants, shared between cells
+  const geoHi = [11.3, 27.9, 43.1, 58.7, 71.4, 86.2].map((s) =>
+    bakeNucleus(baseHi, s),
+  );
+  const geoLo = [15.5, 33.3, 64.9].map((s) => bakeNucleus(baseLo, s));
+  const memHi = mergeVertices(new THREE.IcosahedronGeometry(1, 22));
+  const memLo = mergeVertices(new THREE.IcosahedronGeometry(1, 11));
+  disposables.push(baseHi, baseLo, ...geoHi, ...geoLo, memHi, memLo);
 
   // backdrop
   const bgMat = new THREE.ShaderMaterial({
@@ -194,7 +222,10 @@ export const stemCellsFactory: SceneFactory<StemParams> = ({
         uRim: { value: v3(pal.rim) },
       },
     });
-    const nucleus = new THREE.Mesh(far ? geoLo : geoHi, nMat);
+    const nucleus = new THREE.Mesh(
+      far ? geoLo[i % geoLo.length] : geoHi[i % geoHi.length],
+      nMat,
+    );
     nucleus.scale.setScalar(c.r);
     nucleus.position.copy(c.off);
     const mU = () => ({

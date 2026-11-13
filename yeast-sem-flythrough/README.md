@@ -17,8 +17,8 @@ Duration: 300 frames = 10.000 s, identical to the reference clip.
 - Remotion 4 + React 19
 - Three.js (raw WebGL2 renderer, one instanced mesh of ~800 cells, custom
   GLSL ES 3.0 shaders)
-- Post pipeline in `src/engine/post.ts`: 4x MSAA scene pass with depth →
-  circle-of-confusion → two-pass bokeh depth of field → vignette / grain grade
+- Post pipeline in `src/engine/post.ts`: scene pass with depth →
+  circle-of-confusion → half-resolution bokeh depth of field, FXAA → vignette / grain grade
 
 ## Commands
 

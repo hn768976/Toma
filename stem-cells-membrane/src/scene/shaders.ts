@@ -1,31 +1,15 @@
 import { BUMP, NOISE } from "../engine/glsl";
 
 // ---------- Nucleus: lumpy "blackberry" core with fine wrinkles ----------
+// Geometry is displaced on the CPU at start-up (see bakeNucleus in stemCells.ts)
 export const NUCLEUS_VERT = /* glsl */ `
-uniform float uSeed;
+in vec3 aObj; in vec2 aExtra;
 out vec3 vObj; out vec3 vView; out vec3 vNrm; out float vCrease; out float vLump;
-${NOISE}
-vec2 lump(vec3 d){
-  vec2 w = worley(d * 2.5 + uSeed);
-  float h = 1. - w.x * w.x * 1.35;
-  float big = vnoise(d * 1.3 + uSeed * 1.7);
-  return vec2(h * .115 + big * .09, w.y - w.x);
-}
 void main(){
-  vec3 d = normalize(position);
-  vec3 t1 = normalize(cross(d, abs(d.y) < .9 ? vec3(0,1,0) : vec3(1,0,0)));
-  vec3 t2 = cross(d, t1);
-  const float e = .035;
-  vec3 d1 = normalize(d + t1 * e), d2 = normalize(d + t2 * e);
-  vec2 l0 = lump(d);
-  vec3 p0 = d * (.85 + l0.x);
-  vec3 p1 = d1 * (.85 + lump(d1).x);
-  vec3 p2 = d2 * (.85 + lump(d2).x);
-  vec3 n = normalize(cross(p1 - p0, p2 - p0));
-  vObj = d; vCrease = l0.y; vLump = l0.x;
-  vec4 mv = modelViewMatrix * vec4(p0, 1.);
+  vObj = aObj; vLump = aExtra.x; vCrease = aExtra.y;
+  vec4 mv = modelViewMatrix * vec4(position, 1.);
   vView = mv.xyz;
-  vNrm = normalize(normalMatrix * n);
+  vNrm = normalize(normalMatrix * normal);
   gl_Position = projectionMatrix * mv;
 }
 `;

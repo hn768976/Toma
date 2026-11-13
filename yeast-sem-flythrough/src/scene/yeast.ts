@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { bakeSphere, vnoise } from "../engine/bake";
 import { Post } from "../engine/post";
 import type { SceneFactory } from "../engine/ThreeStage";
 import { makeRng } from "./rng";
@@ -13,6 +14,7 @@ const HERO_C = new THREE.Vector3(0, 0, 0);
 // Axis the fly-through camera travels along (towards the hero cluster)
 const AXIS = new THREE.Vector3(0.2, 0.3, 1).normalize();
 const FINAL_DIST = 8.7;
+const HI_DETAIL_RADIUS = 7.5;
 const TRAVEL = 46;
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -53,7 +55,7 @@ const flythrough = (t: number, dur: number): Rig => {
     dHero,
     smooth(3.2, 6.0, t),
   );
-  const aperture = THREE.MathUtils.lerp(0.6, 0.32, smooth(4.5, 6.8, t));
+  const aperture = THREE.MathUtils.lerp(0.6, 0.26, smooth(4.5, 6.8, t));
   return { pos, target, roll: -0.3 * k + 0.03 * (t / dur), focus, aperture };
 };
 
@@ -82,10 +84,46 @@ const orbitPullback = (t: number, dur: number): Rig => {
 export const rigAt = (mode: CameraMode, t: number, dur: number) =>
   mode === "flythrough" ? flythrough(t, dur) : orbitPullback(t, dur);
 
+// Baked body variants: [noise seed, elongation]. Slightly egg-shaped, lumpy.
+const VARIANTS: [number, number][] = [
+  [3.1, 1.04],
+  [9.7, 1.2],
+  [15.3, 1.12],
+  [22.9, 1.06],
+  [31.4, 1.26],
+  [40.2, 1.16],
+  [47.8, 1.02],
+  [55.5, 1.22],
+  [63.1, 1.1],
+  [72.6, 1.3],
+];
+const bakeBody = (base: THREE.BufferGeometry, seed: number, elong: number) =>
+  bakeSphere(
+    base,
+    (x, y, z, o) => {
+      const r =
+        0.88 +
+        vnoise(x * 1.5 + seed, y * 1.5 + seed, z * 1.5 + seed) * 0.17 +
+        vnoise(
+          x * 3.3 + seed * 2.1,
+          y * 3.3 + seed * 2.1,
+          z * 3.3 + seed * 2.1,
+        ) *
+          0.05;
+      const egg = 1 + 0.13 * y;
+      o[0] = x * r * egg;
+      o[1] = y * r * elong;
+      o[2] = z * r * egg;
+      o[3] = 0;
+      o[4] = 0;
+    },
+    0.05,
+  );
+
 type Cell = {
   pos: THREE.Vector3;
   size: number;
-  shape: [number, number, number];
+  variant: number;
   quat: THREE.Quaternion;
   axis: THREE.Vector3;
   spin: number;
@@ -108,7 +146,7 @@ const buildCells = (): Cell[] => {
     return {
       pos: p,
       size,
-      shape: [1, 1.02 + rnd() * 0.28, 1],
+      variant: Math.floor(rnd() * VARIANTS.length),
       quat: new THREE.Quaternion().setFromAxisAngle(rv(), rnd() * 6.28),
       axis: rv(),
       spin: (rnd() - 0.5) * 0.12,
@@ -141,7 +179,7 @@ const buildCells = (): Cell[] => {
     {
       p: toWorld(-2.35, 0.2, -0.2),
       size: 1.2,
-      shape: [1, 1.04, 1],
+      variant: 0,
       tilt: 0.1,
       s1: [...scarDir(-0.05, -0.38), 0.34],
       s2: [...scarDir(0.5, 0.55), 0],
@@ -149,7 +187,7 @@ const buildCells = (): Cell[] => {
     {
       p: toWorld(-0.15, 1.0, 0.75),
       size: 1.22,
-      shape: [1, 1.2, 1],
+      variant: 1,
       tilt: 1.15,
       s1: [...scarDir(0.1, 0.42), 0.3],
       s2: [...scarDir(0.62, 0.3), 0.15],
@@ -157,7 +195,7 @@ const buildCells = (): Cell[] => {
     {
       p: toWorld(2.4, -0.95, 0.35),
       size: 1.3,
-      shape: [1, 1.12, 1],
+      variant: 2,
       tilt: -0.9,
       s1: [...scarDir(0.12, -0.22), 0.4],
       s2: [...scarDir(-0.45, 0.6), 0.14],
@@ -166,7 +204,7 @@ const buildCells = (): Cell[] => {
   const baseQ = new THREE.Quaternion().setFromRotationMatrix(basis);
   hero.forEach((h) => {
     const c = mk(h.p, h.size);
-    c.shape = h.shape as [number, number, number];
+    c.variant = h.variant;
     c.quat = baseQ
       .clone()
       .multiply(
@@ -274,28 +312,10 @@ export const yeastFactory: SceneFactory<YeastParams> = ({
   scene.add(bg);
 
   const cells = buildCells();
-  const geo = mergeVertices(new THREE.IcosahedronGeometry(1, 26));
-  const f32 = (n: number, fn: (c: Cell) => number[]) => {
-    const arr = new Float32Array(cells.length * n);
-    cells.forEach((c, i) => arr.set(fn(c), i * n));
-    return new THREE.InstancedBufferAttribute(arr, n);
-  };
-  geo.setAttribute(
-    "aSeed",
-    f32(1, (c) => [c.seed]),
-  );
-  geo.setAttribute(
-    "aShape",
-    f32(3, (c) => c.shape),
-  );
-  geo.setAttribute(
-    "aScar1",
-    f32(4, (c) => c.scar1),
-  );
-  geo.setAttribute(
-    "aScar2",
-    f32(4, (c) => c.scar2),
-  );
+  // two levels of detail: fine geometry only around the hero cluster, where
+  // cells are ever seen large and in focus
+  const baseHi = mergeVertices(new THREE.IcosahedronGeometry(1, 30));
+  const baseLo = mergeVertices(new THREE.IcosahedronGeometry(1, 12));
   const mat = new THREE.ShaderMaterial({
     glslVersion: THREE.GLSL3,
     vertexShader: CELL_VERT,
@@ -309,9 +329,39 @@ export const yeastFactory: SceneFactory<YeastParams> = ({
       uFogFar: { value: 60 },
     },
   });
-  const mesh = new THREE.InstancedMesh(geo, mat, cells.length);
-  mesh.frustumCulled = false;
-  scene.add(mesh);
+  // one instanced mesh per baked body variant
+  const groups = VARIANTS.flatMap((v, vi) =>
+    [true, false].map((hi) => ({ v, vi, hi })),
+  ).map(({ v, vi, hi }) => {
+    const list = cells.filter(
+      (c) =>
+        c.variant === vi && c.pos.distanceTo(HERO_C) < HI_DETAIL_RADIUS === hi,
+    );
+    // front-to-back along the view axis, so hidden pixels are rejected early
+    list.sort((a, b) => b.pos.dot(AXIS) - a.pos.dot(AXIS));
+    const geo = bakeBody(hi ? baseHi : baseLo, v[0], v[1]);
+    const f32 = (n: number, fn: (c: Cell) => number[]) => {
+      const arr = new Float32Array(list.length * n);
+      list.forEach((c, i) => arr.set(fn(c), i * n));
+      return new THREE.InstancedBufferAttribute(arr, n);
+    };
+    geo.setAttribute(
+      "aSeed",
+      f32(1, (c) => [c.seed]),
+    );
+    geo.setAttribute(
+      "aScar1",
+      f32(4, (c) => c.scar1),
+    );
+    geo.setAttribute(
+      "aScar2",
+      f32(4, (c) => c.scar2),
+    );
+    const mesh = new THREE.InstancedMesh(geo, mat, list.length);
+    mesh.frustumCulled = false;
+    scene.add(mesh);
+    return { list, geo, mesh };
+  });
 
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
@@ -323,19 +373,21 @@ export const yeastFactory: SceneFactory<YeastParams> = ({
   return {
     render: (frame) => {
       const t = frame / fps;
-      cells.forEach((c, i) => {
-        p.set(
-          c.pos.x + Math.sin(t * 0.23 + c.phase) * c.drift.x,
-          c.pos.y + Math.sin(t * 0.19 + c.phase * 1.9) * c.drift.y,
-          c.pos.z + Math.sin(t * 0.21 + c.phase * 2.7) * c.drift.z,
-        );
-        q2.setFromAxisAngle(c.axis, t * c.spin);
-        q.copy(q2).multiply(c.quat);
-        sc.setScalar(c.size);
-        m.compose(p, q, sc);
-        mesh.setMatrixAt(i, m);
-      });
-      mesh.instanceMatrix.needsUpdate = true;
+      for (const g of groups) {
+        g.list.forEach((c, i) => {
+          p.set(
+            c.pos.x + Math.sin(t * 0.23 + c.phase) * c.drift.x,
+            c.pos.y + Math.sin(t * 0.19 + c.phase * 1.9) * c.drift.y,
+            c.pos.z + Math.sin(t * 0.21 + c.phase * 2.7) * c.drift.z,
+          );
+          q2.setFromAxisAngle(c.axis, t * c.spin);
+          q.copy(q2).multiply(c.quat);
+          sc.setScalar(c.size);
+          m.compose(p, q, sc);
+          g.mesh.setMatrixAt(i, m);
+        });
+        g.mesh.instanceMatrix.needsUpdate = true;
+      }
 
       const rig = rigAt(params.camera, t, dur);
       camera.position.copy(rig.pos);
@@ -357,11 +409,15 @@ export const yeastFactory: SceneFactory<YeastParams> = ({
     },
     dispose: () => {
       post.dispose();
-      geo.dispose();
+      baseHi.dispose();
+      baseLo.dispose();
+      groups.forEach((g) => {
+        g.geo.dispose();
+        g.mesh.dispose();
+      });
       mat.dispose();
       bg.geometry.dispose();
       bgMat.dispose();
-      mesh.dispose();
     },
   };
 };
