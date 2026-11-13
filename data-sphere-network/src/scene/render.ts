@@ -22,7 +22,7 @@ import { CORE, SPHERE_R, type Segment, type SphereParticle, type World } from ".
 /** Shutter: 180 degrees at 30 fps -> motion is integrated over 1/60 s. */
 const SHUTTER = 1 / 60;
 /** Lens aperture (world units) for the depth-of-field approximation. */
-const APERTURE = 0.5;
+const APERTURE = 0.7;
 
 const P: Proj = { x: 0, y: 0, z: 0 };
 const Q: Proj = { x: 0, y: 0, z: 0 };
@@ -31,7 +31,8 @@ const fog = (z: number) => clamp((560 - z) / 260) * clamp((z - 0.25) / 1.5);
 
 const spherePos = (s: SphereParticle, t: number, burstStart: number): V3 => {
   // slow spin of the sphere + radial burst
-  const ang = t * 0.22;
+  // spin only until the burst, so streaks radiate symmetrically from the centre
+  const ang = Math.min(t, burstStart) * 0.22;
   const c = Math.cos(ang);
   const sn = Math.sin(ang);
   const x0 = s.p[0] * c - s.p[2] * sn;
@@ -49,6 +50,77 @@ const spherePos = (s: SphereParticle, t: number, burstStart: number): V3 => {
 };
 
 type Ctx = CanvasRenderingContext2D;
+
+// After-flash "light fan": uneven, soft radial streaks that spin and decay.
+// Drawn small and up-scaled with a blur so the wedges have no hard steps.
+const FAN_RAYS = (() => {
+  let a = 99;
+  const r = () => {
+    a = (a * 16807) % 2147483647;
+    return a / 2147483647;
+  };
+  return Array.from({ length: 40 }, () => ({
+    angle: r() * Math.PI * 2,
+    width: 0.06 + r() * 0.3,
+    alpha: 0.3 + r() * 0.7,
+    reach: 0.8 + r() * 0.8,
+  }));
+})();
+let fanA: HTMLCanvasElement | null = null;
+let fanB: HTMLCanvasElement | null = null;
+const drawFan = (ctx: Ctx, width: number, height: number, t: number, a: number) => {
+  const w = Math.round(width / 8);
+  const h = Math.round(height / 8);
+  if (!fanA || fanA.width !== w) {
+    fanA = document.createElement("canvas");
+    fanB = document.createElement("canvas");
+    fanA.width = fanB!.width = w;
+    fanA.height = fanB!.height = h;
+  }
+  const g = fanA.getContext("2d")!;
+  g.globalCompositeOperation = "source-over";
+  g.fillStyle = "#000000";
+  g.fillRect(0, 0, w, h);
+  g.fillStyle = `rgba(70,95,120,${a * 0.6})`;
+  g.fillRect(0, 0, w, h);
+  g.globalCompositeOperation = "lighter";
+  const cx = w / 2;
+  const cy = h / 2;
+  const R = Math.hypot(w, h);
+  const spin = (t - 12.92) * 2.2;
+  for (const ray of FAN_RAYS) {
+    const mid = ray.angle + spin;
+    const grad = g.createRadialGradient(cx, cy, 0, cx, cy, R * 0.5 * ray.reach);
+    grad.addColorStop(0, `rgba(235,244,252,${a * ray.alpha})`);
+    grad.addColorStop(0.5, `rgba(170,195,218,${a * ray.alpha * 0.8})`);
+    grad.addColorStop(1, "rgba(40,70,100,0)");
+    g.fillStyle = grad;
+    g.beginPath();
+    g.moveTo(cx, cy);
+    g.arc(cx, cy, R, mid - ray.width / 2, mid + ray.width / 2);
+    g.closePath();
+    g.fill();
+  }
+  const core = g.createRadialGradient(cx, cy, 0, cx, cy, h * 0.45);
+  core.addColorStop(0, `rgba(255,255,255,${a * a})`);
+  core.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = core;
+  g.fillRect(0, 0, w, h);
+  const b = fanB!.getContext("2d")!;
+  b.globalCompositeOperation = "copy";
+  b.filter = `blur(${Math.max(1, h / 70)}px)`;
+  b.drawImage(fanA, 0, 0);
+  b.filter = "none";
+  ctx.save();
+  ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = 1;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  // overscan hides the soft (transparent) border of the blurred buffer
+  const pad = Math.round(height * 0.06);
+  ctx.drawImage(fanB!, -pad, -pad, width + pad * 2, height + pad * 2);
+  ctx.restore();
+};
 
 let bloomA: HTMLCanvasElement | null = null;
 let bloomB: HTMLCanvasElement | null = null;
@@ -107,14 +179,14 @@ export const renderFrame = (
   ctx.globalCompositeOperation = "source-over";
   ctx.globalAlpha = 1;
   if (tl.black) {
-    ctx.fillStyle = "#01030a";
+    ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, width, height);
     return;
   }
   const bg = ctx.createLinearGradient(0, 0, width * 0.35, height);
-  bg.addColorStop(0, "#031534");
-  bg.addColorStop(0.55, "#020b22");
-  bg.addColorStop(1, "#00040f");
+  bg.addColorStop(0, "#021029");
+  bg.addColorStop(0.55, "#010819");
+  bg.addColorStop(1, "#000309");
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, width, height);
 
@@ -129,7 +201,7 @@ export const renderFrame = (
   {
     const r = height * 0.9;
     const g = ctx.createRadialGradient(coreX, coreY, 0, coreX, coreY, r);
-    const a = 0.36 * tl.haze;
+    const a = 0.28 * tl.haze;
     g.addColorStop(0, `rgba(40,110,230,${a})`);
     g.addColorStop(0.4, `rgba(20,70,190,${a * 0.5})`);
     g.addColorStop(1, "rgba(0,0,0,0)");
@@ -179,7 +251,7 @@ export const renderFrame = (
   };
   drawSegments(world.links, tl.links * 0.55, 1.4);
   drawSegments(world.beams, tl.beams, 2);
-  drawSegments(world.lattice, tl.lattice * 1.2, 2.2);
+  drawSegments(world.lattice, tl.lattice * 0.85, 2.2);
 
   // circuits
   if (tl.circuits > 0.003) {
@@ -224,10 +296,12 @@ export const renderFrame = (
     glow: number,
     streakGain = 1,
     dofScale = 1,
+    streakWidth = 1,
   ) => {
     if (alpha < 0.01 || !project(cam, pos, P)) return;
     const z = P.z;
-    const a0 = alpha * fog(z);
+    // fade elements that get very close to the lens (no giant blobs)
+    const a0 = alpha * fog(z) * clamp((z - 1.5) / 5);
     if (a0 < 0.01) return;
     const s = Math.max(1.5 * k, (size * cam.f) / z);
     if (P.x < -s * 8 || P.x > width + s * 8 || P.y < -s * 8 || P.y > height + s * 8) {
@@ -243,11 +317,11 @@ export const renderFrame = (
     const css = PALETTE[color];
     if (motion > s * 1.3 && motion < width) {
       // motion-blurred streak
-      const w = Math.min(Math.max(s, Math.min(coc, s * 3)), 30 * k);
+      const w = Math.min(Math.max(s * streakWidth, Math.min(coc, s * 3)), 30 * k);
       ctx.globalAlpha = Math.min(1, a0 * clamp((w * 2.2 * streakGain) / motion, 0.25, 1));
       ctx.strokeStyle = css;
       ctx.lineWidth = w;
-      ctx.lineCap = "round";
+      ctx.lineCap = "butt";
       ctx.beginPath();
       ctx.moveTo(Q.x, Q.y);
       ctx.lineTo(P.x, P.y);
@@ -256,7 +330,7 @@ export const renderFrame = (
     }
     if (coc > s * 1.6) {
       // out of focus bokeh disc (energy conserving-ish)
-      const r = Math.min(coc * 0.5 + s * 0.5, height * 0.25);
+      const r = Math.min(coc * 0.5 + s * 0.5, height * 0.045);
       ctx.globalAlpha = Math.min(1, a0 * clamp(((s * s) / (r * r)) * 7, 0.03, 1));
       ctx.drawImage(bokehSprite(color), P.x - r, P.y - r, r * 2, r * 2);
       return;
@@ -280,7 +354,7 @@ export const renderFrame = (
   if (tl.field > 0.003) {
     for (const f of world.field) {
       const tw = 0.75 + 0.25 * Math.sin(t * 2.4 + f.twinkle);
-      drawPoint(f.p, f.p, f.size, f.color, tl.field * tw * 1.1, f.square, 0.8);
+      drawPoint(f.p, f.p, f.size, f.color, tl.field * tw * 1.12, f.square, 0.7);
     }
   }
   for (const n of world.latticeNodes)
@@ -289,6 +363,8 @@ export const renderFrame = (
   // opening sphere + burst
   if (tl.sphereAlpha > 0.003) {
     // stylised long-exposure streaks during the burst (like the reference)
+    // the camera passing through the shell would otherwise flare up
+    const crossDip = 1 - 0.7 * smoothstep(1.2, 1.5, t) * (1 - smoothstep(1.75, 2.05, t));
     const gain = 1 + 3.5 * tl.streak;
     const sh = SHUTTER * gain;
     const prevBurst = makeCamera(path(t - sh), width, height);
@@ -298,7 +374,7 @@ export const renderFrame = (
       const p = spherePos(s, t, tl.burstStart);
       const pp = spherePos(s, t - sh, tl.burstStart);
       const tw = 0.7 + 0.3 * Math.sin(t * 5 + s.twinkle);
-      drawPoint(p, pp, s.size, s.color, tl.sphereAlpha * tw * (0.3 + 0.48 * tl.streak) * (s.inner ? 0.55 : 1), s.square, 0.1 + 0.1 * tl.streak, gain, 0.3);
+      drawPoint(p, pp, s.size, s.color, tl.sphereAlpha * tw * (0.3 + 0.55 * tl.streak) * crossDip * (s.inner ? 0.55 : 1), s.square, 0.1 + 0.1 * tl.streak, gain, 0.3, 1 + 0.8 * tl.streak);
     }
     activePrev = savedPrev;
   }
@@ -307,9 +383,10 @@ export const renderFrame = (
   if (tl.icons > 0.003) {
     for (const ic of world.icons) {
       if (!project(cam, ic.p, P)) continue;
-      const a = tl.icons * fog(P.z);
-      if (a < 0.01) continue;
       const s = (ic.size * cam.f) / P.z;
+      // icons rushing past the lens fade out instead of filling the frame
+      const a = tl.icons * fog(P.z) * clamp((height * 0.09 - s) / (height * 0.04));
+      if (a < 0.01) continue;
       if (P.x < -s || P.x > width + s || P.y < -s || P.y > height + s) continue;
       if (s < 9 * k) {
         // far away: reads as a tiny coloured pixel block
@@ -320,7 +397,7 @@ export const renderFrame = (
         continue;
       }
       const coc = APERTURE * cam.f * Math.abs(1 / P.z - 1 / focus);
-      const blur = coc < s * 0.25 ? 0 : coc < s * 0.8 ? 1 : 2;
+      const blur = coc < s * 0.15 ? 0 : coc < s * 0.5 ? 1 : 2;
       const d = s * 1.28;
       ctx.globalAlpha = Math.min(1, a * (blur === 2 ? 0.7 : 0.95));
       ctx.drawImage(iconSprite(ic.name, ic.color, ic.tile, blur), P.x - d / 2, P.y - d / 2, d, d);
@@ -334,13 +411,13 @@ export const renderFrame = (
 
   // ------------------------------------------------------------ core
   if (coreVisible) {
-    const R = clamp((7 * cam.f) / coreZ, 40 * k, height * 1.5);
+    const R = clamp((5 * cam.f) / coreZ, 34 * k, height * 0.6);
     ctx.globalAlpha = Math.min(1, 0.9 * tl.core);
     ctx.drawImage(glowSprite("cyan"), coreX - R * 2, coreY - R * 2, R * 4, R * 4);
     ctx.drawImage(glowSprite("white"), coreX - R * 0.6, coreY - R * 0.6, R * 1.2, R * 1.2);
     // 4-point star flare
     const fl = R * 3.2;
-    ctx.globalAlpha = 0.5 * tl.core;
+    ctx.globalAlpha = 0.22 * tl.core * (1 - tl.chip * 0.7);
     for (const [w, h] of [
       [fl, 2.4 * k],
       [2.4 * k, fl * 0.6],
@@ -353,7 +430,7 @@ export const renderFrame = (
     }
     // the chip: 3x3 grid of bright cells
     if (tl.chip > 0.01) {
-      const cell = (1.0 * cam.f) / coreZ;
+      const cell = Math.max(5 * k, (2.4 * cam.f) / coreZ);
       const gap = cell * 0.35;
       ctx.globalAlpha = tl.chip;
       ctx.fillStyle = "#eaf8ff";
@@ -364,7 +441,7 @@ export const renderFrame = (
           ctx.fillRect(x - cell / 2, y - cell / 2, cell, cell);
         }
       ctx.globalAlpha = tl.chip * 0.5;
-      const g2 = cell * 6;
+      const g2 = cell * 5;
       ctx.drawImage(glowSprite("ice"), coreX - g2, coreY - g2, g2 * 2, g2 * 2);
     }
   }
@@ -395,7 +472,18 @@ export const renderFrame = (
   }
 
   // ------------------------------------------------------------ bloom
-  applyBloom(ctx, width, height, 0.55 + 0.25 * tl.rays);
+  applyBloom(ctx, width, height, 0.38 + 0.2 * tl.rays);
+  {
+    // lens vignette (dark navy corners like the reference)
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 1;
+    const vg = ctx.createRadialGradient(width / 2, height / 2, height * 0.35, width / 2, height / 2, Math.hypot(width, height) * 0.55);
+    const va = 0.62 * (1 - tl.flashUp);
+    vg.addColorStop(0, "rgba(0,2,8,0)");
+    vg.addColorStop(1, `rgba(0,2,8,${va})`);
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, width, height);
+  }
 
   // ------------------------------------------------------------ flash + fan
   if (tl.flashUp > 0.001) {
@@ -404,45 +492,13 @@ export const renderFrame = (
     ctx.globalAlpha = 1;
     const g = ctx.createRadialGradient(coreX, coreY, 0, coreX, coreY, height * 1.2);
     g.addColorStop(0, `rgba(255,255,255,${f})`);
-    g.addColorStop(0.25, `rgba(190,235,245,${f * 0.92})`);
-    g.addColorStop(1, `rgba(40,150,175,${f * 0.85})`);
+    g.addColorStop(0.35, `rgba(225,245,250,${f * 0.95})`);
+    g.addColorStop(1, `rgba(120,190,215,${f * 0.9})`);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, width, height);
   }
   if (tl.fan > 0) {
-    ctx.globalCompositeOperation = "source-over";
-    ctx.globalAlpha = 1;
-    const a = tl.fan;
-    ctx.fillStyle = "#01030a";
-    ctx.fillRect(0, 0, width, height);
-    ctx.fillStyle = `rgba(70,100,130,${a * 0.55})`;
-    ctx.fillRect(0, 0, width, height);
-    const spin = (t - 12.92) * 2.4;
-    const R = Math.hypot(width, height);
-    const n = 9;
-    // three passes of decreasing width fake soft (motion-blurred) wedge edges
-    for (const [frac, op] of [[0.75, 0.22], [0.62, 0.26], [0.5, 0.3], [0.4, 0.34], [0.3, 0.38]] as const) {
-      for (let i = 0; i < n; i++) {
-        const mid = spin + (i / n) * Math.PI * 2;
-        const half = ((Math.PI * 2) / n) * frac * 0.5;
-        const g = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, R * 0.6);
-        g.addColorStop(0, `rgba(225,238,250,${a * op})`);
-        g.addColorStop(0.35, `rgba(160,190,212,${a * op * 0.85})`);
-        g.addColorStop(1, `rgba(50,80,110,${a * op * 0.4})`);
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.moveTo(width / 2, height / 2);
-        ctx.arc(width / 2, height / 2, R, mid - half, mid + half);
-        ctx.closePath();
-        ctx.fill();
-      }
-    }
-    ctx.globalCompositeOperation = "lighter";
-    const cg = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, height * 0.5);
-    cg.addColorStop(0, `rgba(255,255,255,${a * a})`);
-    cg.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = cg;
-    ctx.fillRect(0, 0, width, height);
+    drawFan(ctx, width, height, t, tl.fan);
   }
   ctx.globalCompositeOperation = "source-over";
   ctx.globalAlpha = 1;

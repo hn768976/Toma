@@ -5,7 +5,7 @@ import { COLOR_NAMES, ICON_NAMES, type ColorName } from "../engine/sprites";
 /** Radius of the opening particle sphere (world units). */
 export const SPHERE_R = 10;
 /** Position of the glowing core / chip at the end of the dive. */
-export const CORE: V3 = [0, 0, 480];
+export const CORE: V3 = [0, 0, 560];
 
 export type Particle = {
   p: V3;
@@ -65,7 +65,7 @@ export const buildWorld = (seed = 7): World => {
   // -- network field: volume of data particles ahead of the camera
   const field: Particle[] = [];
   for (let i = 0; i < 7500; i++) {
-    const z = -40 + Math.pow(rand(), 0.85) * 560;
+    const z = -12 + Math.pow(rand(), 0.85) * 610;
     const spread = 18 + Math.max(0, z) * 0.22;
     field.push({
       p: [(rand() * 2 - 1) * spread * 1.6, (rand() * 2 - 1) * spread, z],
@@ -78,12 +78,12 @@ export const buildWorld = (seed = 7): World => {
 
   // -- social / app icons floating in the network
   const icons: Icon[] = [];
-  for (let i = 0; i < 4200; i++) {
-    const z = 8 + Math.pow(rand(), 0.9) * 470;
+  for (let i = 0; i < 5000; i++) {
+    const z = 8 + Math.pow(rand(), 0.9) * 545;
     const spread = 10 + z * 0.19;
     icons.push({
       p: [(rand() * 2 - 1) * spread * 1.6, (rand() * 2 - 1) * spread, z],
-      size: 0.35 + Math.pow(rand(), 1.7) * 1.0,
+      size: 0.42 + Math.pow(rand(), 1.7) * 1.2,
       name: ICON_NAMES[Math.floor(rand() * ICON_NAMES.length)],
       color: pick(iconColors, iconWeights),
       tile: rand() < 0.35,
@@ -123,7 +123,7 @@ export const buildWorld = (seed = 7): World => {
   // -- long bright data beams that sweep across the frame
   const beams: Segment[] = [];
   for (let i = 0; i < 34; i++) {
-    const z = 20 + rand() * 420;
+    const z = 20 + rand() * 500;
     const spread = 14 + z * 0.22;
     const a: V3 = [(rand() * 2 - 1) * spread * 1.6, (rand() * 2 - 1) * spread, z];
     const dir = randomUnit(rand);
@@ -140,7 +140,7 @@ export const buildWorld = (seed = 7): World => {
   // -- white "circuit trace" polylines (axis aligned, in planes facing camera)
   const circuits: Polyline[] = [];
   for (let i = 0; i < 160; i++) {
-    const z = -30 + rand() * 520;
+    const z = -5 + rand() * 600;
     const spread = 14 + Math.max(0, z) * 0.22;
     let x = (rand() * 2 - 1) * spread * 1.6;
     let y = (rand() * 2 - 1) * spread;
@@ -160,9 +160,9 @@ export const buildWorld = (seed = 7): World => {
   // -- lattice "data-center" corridor around the core
   const lattice: Segment[] = [];
   const latticeNodes: Particle[] = [];
-  const zs = [215, 250, 285, 320, 355, 390, 425, 455, 478];
-  const xs = [-84, -56, -28, 28, 56, 84];
-  const ys = [-48, -32, -16, 16, 32, 48];
+  const zs = [295, 330, 365, 400, 435, 470, 505, 535, 558];
+  const xs = [-120, -90, -60, -30, 30, 60, 90, 120];
+  const ys = [-66, -48, -30, -14, 14, 30, 48, 66];
   const dash = (a: V3, b: V3, color: ColorName, baseAlpha: number, width: number) => {
     // break each beam into dashes with random brightness (glitchy tech look)
     const pieces = 3 + Math.floor(rand() * 6);
@@ -182,8 +182,8 @@ export const buildWorld = (seed = 7): World => {
     }
   };
   for (const z of zs) {
-    for (const x of xs) dash([x, -48, z], [x, 48, z], "blue", 1.0, 0.22);
-    for (const y of ys) dash([-84, y, z], [84, y, z], "blue", 1.0, 0.22);
+    for (const x of xs) dash([x, -66, z], [x, 66, z], "blue", 1.0, 0.22);
+    for (const y of ys) dash([-120, y, z], [120, y, z], "blue", 1.0, 0.22);
     for (const x of xs)
       for (const y of ys)
         if (rand() < 0.6)
@@ -197,11 +197,11 @@ export const buildWorld = (seed = 7): World => {
   const ring: Particle[] = [];
   for (let i = 0; i < 72; i++) {
     const a = (i / 72) * Math.PI * 2 + (rand() - 0.5) * 0.02;
-    const r = 46 + (rand() - 0.5) * 1.8;
+    const r = 50 + (rand() - 0.5) * 1.8;
     ring.push({
-      p: [Math.cos(a) * r, Math.sin(a) * r, CORE[2] - 75],
+      p: [Math.cos(a) * r, Math.sin(a) * r, CORE[2] - 25],
       size: 0.75 + rand() * 0.45,
-      color: rand() < 0.55 ? "white" : rand() < 0.6 ? "yellow" : "ice",
+      color: rand() < 0.5 ? "yellow" : rand() < 0.55 ? "salmon" : "white",
       square: true,
       twinkle: rand() * 6.28,
     });
