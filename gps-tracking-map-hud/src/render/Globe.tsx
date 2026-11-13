@@ -27,6 +27,7 @@ void main() {
 const PT_FS = `
 uniform vec3 uLand;
 uniform vec3 uSea;
+uniform float uSeaA;
 varying float vFacing;
 varying float vLand;
 void main() {
@@ -36,11 +37,11 @@ void main() {
   float face = smoothstep(-0.15, 0.35, vFacing);
   float rim = 0.55 + 0.45 * smoothstep(0.0, 0.9, vFacing);
   vec3 col = vLand > 0.5 ? uLand * rim : uSea;
-  float alpha = a * face * (vLand > 0.5 ? 1.0 : 0.35);
+  float alpha = a * face * (vLand > 0.5 ? 1.0 : uSeaA);
   gl_FragColor = vec4(col * alpha, alpha);
 }`;
 
-function GlobeScene({ landColor, seaColor, lineColor, spin, tilt, size }: { landColor: string; seaColor: string; lineColor: string; spin: number; tilt: number; size: number }) {
+function GlobeScene({ landColor, seaColor, lineColor, spin, tilt, size, seaDot, seaA, arcColor, nArcs }: { landColor: string; seaColor: string; lineColor: string; spin: number; tilt: number; size: number; seaDot: string; seaA: number; arcColor: string; nArcs: number }) {
   const frame = useCurrentFrame();
   const { geom, mat, arcs, rings } = useMemo(() => {
     const pts = globePoints();
@@ -53,11 +54,11 @@ function GlobeScene({ landColor, seaColor, lineColor, spin, tilt, size }: { land
     const mat = new THREE.ShaderMaterial({
       vertexShader: PT_VS, fragmentShader: PT_FS, transparent: true, depthWrite: false,
       blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
-      uniforms: { uSize: { value: size }, uScale: { value: dpr() }, uLand: { value: raw(landColor) }, uSea: { value: raw(seaColor) } },
+      uniforms: { uSize: { value: size }, uScale: { value: dpr() }, uLand: { value: raw(landColor) }, uSea: { value: raw(seaDot) }, uSeaA: { value: seaA } },
     });
     // great-circle arcs lifted off the surface
     const arcs: THREE.BufferGeometry[] = [];
-    for (let a = 0; a < 7; a++) {
+    for (let a = 0; a < nArcs; a++) {
       const r = (i: number) => hash01(a, i);
       const p0 = new THREE.Vector3().setFromSphericalCoords(1, Math.acos(2 * r(1) - 1), r(2) * Math.PI * 2);
       const p1 = new THREE.Vector3().setFromSphericalCoords(1, Math.acos(2 * r(3) - 1), r(4) * Math.PI * 2);
@@ -77,9 +78,12 @@ function GlobeScene({ landColor, seaColor, lineColor, spin, tilt, size }: { land
       rings.push(new THREE.BufferGeometry().setFromPoints(pts3));
     }
     return { geom, mat, arcs, rings };
-  }, [landColor, seaColor, size]);
+  }, [landColor, seaColor, size, seaDot, seaA, nArcs]);
   const rot = (frame / LOOP) * Math.PI * 2 * spin;
   const lineMat = useMemo(() => new THREE.LineBasicMaterial({ color: raw(lineColor), transparent: true, opacity: 0.55 }), [lineColor]);
+  const arcMat = useMemo(() => new THREE.LineBasicMaterial({ color: raw(arcColor), transparent: true, opacity: 0.8 }), [arcColor]);
+  const arcObjs = useMemo(() => arcs.map((g, i) => new THREE.Line(g, i % 3 === 0 ? arcMat : lineMat)), [arcs, lineMat, arcMat]);
+  const ringObjs = useMemo(() => rings.map((g) => new THREE.LineLoop(g, lineMat)), [rings, lineMat]);
   return (
     <>
       <group rotation={[tilt, rot, 0]}>
@@ -88,18 +92,18 @@ function GlobeScene({ landColor, seaColor, lineColor, spin, tilt, size }: { land
           <meshBasicMaterial color={raw(seaColor)} transparent opacity={0.35} />
         </mesh>
         <points geometry={geom} material={mat} />
-        {arcs.map((g, i) => <primitive key={i} object={new THREE.Line(g, lineMat)} />)}
+        {arcObjs.map((o, i) => <primitive key={i} object={o} />)}
       </group>
-      {rings.map((g, i) => (
+      {ringObjs.map((o, i) => (
         <group key={i} rotation={[0.35 + i * 0.5, rot * (i % 2 ? -0.5 : 0.3), 0.3 * i]}>
-          <primitive object={new THREE.LineLoop(g, lineMat)} />
+          <primitive object={o} />
         </group>
       ))}
     </>
   );
 }
 
-export const Globe: React.FC<{ x: number; y: number; d: number; landColor: string; seaColor: string; lineColor: string; spin?: number; tilt?: number; dotSize?: number }> = ({ x, y, d, landColor, seaColor, lineColor, spin = 1, tilt = 0.4, dotSize = 3.2 }) => (
+export const Globe: React.FC<{ x: number; y: number; d: number; landColor: string; seaColor: string; lineColor: string; spin?: number; tilt?: number; dotSize?: number; seaDot?: string; seaA?: number; arcColor?: string; nArcs?: number }> = ({ x, y, d, landColor, seaColor, lineColor, spin = 1, tilt = 0.4, dotSize = 3.2, seaDot, seaA = 0.35, arcColor, nArcs = 7 }) => (
   <div style={{ position: 'absolute', left: x, top: y, width: d, height: d }}>
     <ThreeCanvas
       width={d}
@@ -111,7 +115,7 @@ export const Globe: React.FC<{ x: number; y: number; d: number; landColor: strin
       camera={{ position: [0, 0, 4.2], fov: 38 }}
       style={{ width: d, height: d }}
     >
-      <GlobeScene landColor={landColor} seaColor={seaColor} lineColor={lineColor} spin={spin} tilt={tilt} size={dotSize} />
+      <GlobeScene landColor={landColor} seaColor={seaColor} lineColor={lineColor} spin={spin} tilt={tilt} size={dotSize} seaDot={seaDot ?? seaColor} seaA={seaA} arcColor={arcColor ?? lineColor} nArcs={nArcs} />
     </ThreeCanvas>
   </div>
 );

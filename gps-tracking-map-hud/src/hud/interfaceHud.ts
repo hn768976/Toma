@@ -8,7 +8,7 @@ import { LOOP } from '../city';
 export const IFACE_MAP = { x: 790, y: 212, w: 3010, h: 1620 };
 
 const TH: Theme = {
-  text: '#E6E9EC', dim: '#8C9399', faint: '#5A6066', accent: '#F2F4F5', accent2: '#B9C0C6', panel: '#141618', panelEdge: '#2A2E32',
+  text: '#B9BEC2', dim: '#767C82', faint: '#4A4F54', accent: '#D0D4D7', accent2: '#9AA0A6', panel: '#1C1D1F', panelEdge: '#2A2E32',
 };
 
 function sliders(ctx: Ctx, x: number, y: number, n: number, f: number, id: number) {
@@ -16,6 +16,7 @@ function sliders(ctx: Ctx, x: number, y: number, n: number, f: number, id: numbe
     const yy = y + i * 40;
     const v = wave(id + i, f, 0.15, 0.95, 1 + (i % 2));
     line(ctx, x, yy, x + 330, yy, rgba(TH.faint, 0.9), 2);
+    ctx.fillStyle = '#E8A040'; ctx.beginPath(); ctx.arc(x - 24, yy, 6, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = TH.text;
     ctx.beginPath(); ctx.arc(x + 330 * v, yy, 7, 0, Math.PI * 2); ctx.fill();
     text(ctx, pad(tick(id * 9 + i, f, 30, 5), 5), x + 380, yy + 8, 24, TH.dim);
@@ -35,21 +36,21 @@ function fileIcon(ctx: Ctx, x: number, y: number, label: string) {
 export const drawInterfaceHud = (ctx: Ctx, frame: number) => {
   const f = lf(frame);
   // panels (charcoal) around the map
-  ctx.fillStyle = '#0D0E10';
+  // two-tone background: near-black frame, slightly lighter charcoal panels
+  ctx.fillStyle = '#0A0A0A';
   ctx.fillRect(0, 0, 3840, 2160);
   ctx.clearRect(IFACE_MAP.x, IFACE_MAP.y, IFACE_MAP.w, IFACE_MAP.h);
-  rect(ctx, 0, 0, 3840, 150, TH.panel);
-  rect(ctx, 0, 150, 750, 2010, TH.panel);
-  rect(ctx, 750, 1880, 3090, 280, TH.panel);
-  // map frame
-  rect(ctx, IFACE_MAP.x - 4, IFACE_MAP.y - 4, IFACE_MAP.w + 8, IFACE_MAP.h + 8, undefined, rgba(TH.dim, 0.8), 3);
-  brackets(ctx, IFACE_MAP.x - 18, IFACE_MAP.y - 18, IFACE_MAP.w + 36, IFACE_MAP.h + 36, 44, TH.text, 3);
+  // HUD elements float on black (no lighter panel boxes, as in the reference)
+  void brackets;
 
   // ---- top signal strip
-  waveform(ctx, 40, 38, 1180, 74, f, 3, rgba(TH.text, 0.75));
-  waveform(ctx, 1680, 38, 1200, 74, f + 137, 7, rgba(TH.text, 0.55));
-  ctx.strokeStyle = TH.text; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.arc(1450, 75, 48, 0, Math.PI * 2); ctx.stroke();
+  waveform(ctx, 40, 38, 1180, 74, f, 3, rgba(TH.text, 0.35));
+  waveform(ctx, 1680, 38, 1200, 74, f + 137, 7, rgba(TH.text, 0.28));
+  line(ctx, 40, 128, 3800, 128, rgba(TH.dim, 0.6), 2);
+  line(ctx, 0, 111, 3840, 111, rgba('#FFFFFF', 0.85), 3);
+  for (let i = 0; i <= 94; i++) line(ctx, 40 + i * 40, 128, 40 + i * 40, i % 5 === 0 ? 112 : 120, rgba(TH.dim, 0.6), 2);
+  ctx.strokeStyle = rgba(TH.text, 0.6); ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(1450, 75, 70, 0, Math.PI * 2); ctx.stroke();
   const sweep = (f / LOOP) * Math.PI * 2 * 4;
   line(ctx, 1450, 75, 1450 + Math.cos(sweep) * 44, 75 + Math.sin(sweep) * 44, TH.text, 3);
   for (let i = 0; i < 4; i++) {
@@ -62,16 +63,16 @@ export const drawInterfaceHud = (ctx: Ctx, frame: number) => {
   dataRows(ctx, 60, 215, 5, [4, 2, 3, 4], 11, f, TH, 24, 34);
   segBar(ctx, 470, 200, 220, 14, 12, wave(5, f, 0.3, 0.9), TH);
   segBar(ctx, 470, 240, 220, 14, 12, wave(6, f, 0.2, 0.8), TH);
-  ['VX-207', 'NODE-31', 'VOX-467'].forEach((s, i) => {
+  ['UNIT-207', 'NODE-31', 'CELL-467'].forEach((s, i) => {
     rect(ctx, 50 + i * 230, 395, 205, 46, rgba(TH.text, i === 1 ? 0.14 : 0), rgba(TH.dim, 0.9), 2);
     text(ctx, s, 152 + i * 230, 428, 26, TH.text, { align: 'center' });
   });
   sliders(ctx, 60, 500, 5, f, 20);
-  heading(ctx, 'DATA ANALYSIS', 50, 760, TH, 42);
+  heading(ctx, 'DATA ANALYSIS', 50, 760, TH, 32);
   line(ctx, 50, 778, 700, 778, rgba(TH.faint, 0.9), 2);
   dataRows(ctx, 60, 820, 4, [5, 2, 4, 3, 4], 12, f, TH, 23, 34);
   for (let i = 0; i < 12; i++) rect(ctx, 60 + i * 52, 960, 34, 10, i < 4 + (tick(77, f, 30, 1) % 8) ? TH.text : rgba(TH.faint, 0.5));
-  heading(ctx, 'CORE DATA - 04', 50, 1030, TH, 42);
+  heading(ctx, 'CORE DATA - 04', 50, 1030, TH, 32);
   line(ctx, 50, 1048, 700, 1048, rgba(TH.faint, 0.9), 2);
   dataRows(ctx, 60, 1090, 3, [4, 3, 4, 2], 13, f, TH, 23, 34);
   fileIcon(ctx, 60, 1230, pad(20 + (tick(88, f, 60, 1) % 9), 2));
@@ -84,7 +85,7 @@ export const drawInterfaceHud = (ctx: Ctx, frame: number) => {
     segBar(ctx, 300, 1404 + r * 40, 260, 14, 16, wave(95 + r, f, 0.1, 0.95, 1 + (r % 3)), TH, r % 2 ? TH.dim : TH.text);
     text(ctx, pad(tick(100 + r, f, 12, 3), 3), 590, 1420 + r * 40, 22, TH.text);
   }
-  heading(ctx, 'ENCODING DATA FEED', 50, 1720, TH, 36);
+  heading(ctx, 'ENCODING DATA FEED', 50, 1720, TH, 30);
   line(ctx, 50, 1736, 700, 1736, rgba(TH.faint, 0.9), 2);
   for (let r = 0; r < 4; r++) for (let c = 0; c < 9; c++) {
     const on = hash01(120, r, c, Math.floor(f / 15)) > 0.45;
@@ -100,6 +101,7 @@ export const drawInterfaceHud = (ctx: Ctx, frame: number) => {
   });
   for (let col = 0; col < 3; col++) {
     const x0 = 1150 + col * 560;
+    rect(ctx, x0 - 26, 1907, 14, 14, '#E8A040');
     text(ctx, `SYS - ${pad(col * 3 + 1, 3)} - SECTOR ${pad(Math.floor(hash01(140, col) * 99999), 5)}`, x0, 1925, 24, TH.text);
     for (let r = 0; r < 5; r++) {
       text(ctx, `${pad(Math.floor(hash01(141, col, r) * 9999), 4)} ${pad(tick(142 + col * 10 + r, f, 20, 2), 2)}`, x0, 1972 + r * 36, 22, TH.dim);

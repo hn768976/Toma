@@ -21,11 +21,14 @@ export interface MapStyle {
   bg: string; // land colour
   polys: Partial<Record<PolyKind, string>>;
   classes: Record<RoadClass, ClassStyle>;
+  route?: ClassStyle; // optional highlighted driving route (CITY.routes[0])
   widthZoomExp: number; // how much line width follows zoom (0 = constant px)
   laneFade: [number, number]; // zoom range (4K px per metre) over which lanes fade in
   streetFade: [number, number];
   vignette: number; // 0..1 strength
   vignetteColor?: string;
+  bloom?: number; // 0..1
+  soft?: number; // 0..1 mix toward a 2x-downsampled copy
 }
 
 const LINE_VS = /* glsl */ `#version 300 es
@@ -137,6 +140,8 @@ uniform float uVignette;
 uniform float uFade;
 uniform vec3 uVigColor;
 uniform vec4 uVigShape;
+uniform float uBloom;
+uniform float uSoft;
 out vec4 fragColor;
 float hash(vec2 p) {
   vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -145,6 +150,10 @@ float hash(vec2 p) {
 }
 void main() {
   vec3 c = texture(uTex, vUV).rgb;
+  // filmic softness + bloom from the mip chain of the half-float target
+  vec3 s1 = textureLod(uTex, vUV, 1.0).rgb;
+  vec3 b = textureLod(uTex, vUV, 2.5).rgb * 0.45 + textureLod(uTex, vUV, 4.0).rgb * 0.35 + textureLod(uTex, vUV, 5.5).rgb * 0.2;
+  c = mix(c, s1, uSoft) + b * uBloom;
   vec2 q = (vUV - 0.5 - uVigShape.xy) * vec2(uSize.x / uSize.y, 1.0);
   float r = length(q) / uVigShape.z;
   float v = 1.0 - uVignette * smoothstep(0.25, 1.05, r);
@@ -164,7 +173,8 @@ const CQUAD = () => new Geometry({
 });
 
 interface Chunk { x0: number; y0: number; x1: number; y1: number; mesh: Mesh<Geometry, Shader>; glow?: Mesh<Geometry, Shader> }
-interface ClassLayer { cls: RoadClass; uniforms: UniformGroup; glowUniforms?: UniformGroup; chunks: Chunk[] }
+type LayerKey = RoadClass | 'route';
+interface ClassLayer { cls: LayerKey; uniforms: UniformGroup; glowUniforms?: UniformGroup; chunks: Chunk[] }
 
 const CLASS_ORDER: RoadClass[] = ['lane', 'street', 'rail', 'avenue', 'highway'];
 const CHUNK = 1500;
@@ -208,6 +218,18 @@ function buildGeometryData() {
       list.push({ x0, y0, x1, y1, verts, idx });
     }
     out[cls] = list;
+  }
+  // highlighted route as its own layer
+  {
+    const p = CITY.routes[0].pts;
+    const n = p.length / 2 - 1;
+    const verts = new Float32Array(n * 4 * 7), idx = new Uint32Array(n * 6);
+    for (let i = 0; i < n; i++) {
+      const corners = [[0, -1], [1, -1], [1, 1], [0, 1]];
+      for (let c = 0; c < 4; c++) verts.set([p[i * 2], p[i * 2 + 1], p[i * 2 + 2], p[i * 2 + 3], corners[c][0], corners[c][1], 1], (i * 4 + c) * 7);
+      idx.set([i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3], i * 6);
+    }
+    out.route = [{ x0: -1e9, y0: -1e9, x1: 1e9, y1: 1e9, verts, idx }];
   }
   GEOM_CACHE = out;
   return out;
@@ -265,8 +287,9 @@ export class PixiMap {
     this.scene.addChild(this.world);
 
     const lineContainer = new Container();
-    for (const cls of CLASS_ORDER) {
-      const cs = S.classes[cls];
+    const keys: LayerKey[] = [...CLASS_ORDER, ...(S.route ? (['route'] as const) : [])];
+    for (const cls of keys) {
+      const cs = cls === 'route' ? S.route! : S.classes[cls];
       const mkU = () => new UniformGroup({
         uView: { value: new Matrix(), type: 'mat3x3<f32>' },
         uHalfW: { value: 1, type: 'f32' },
@@ -306,13 +329,15 @@ export class PixiMap {
     this.scene.addChild(lineContainer);
     this.scene.addChild(this.fxLayer);
 
-    this.rt = RenderTexture.create({ width: this.pxW, height: this.pxH, format: 'rgba16float', antialias: true, resolution: 1 });
+    this.rt = RenderTexture.create({ width: this.pxW, height: this.pxH, format: 'rgba16float', antialias: true, resolution: 1, autoGenerateMipmaps: true, scaleMode: 'linear', mipmapFilter: 'linear' } as never);
     this.finalU = new UniformGroup({
       uSize: { value: new Float32Array([this.pxW, this.pxH]), type: 'vec2<f32>' },
       uVignette: { value: S.vignette, type: 'f32' },
       uFade: { value: 1, type: 'f32' },
       uVigColor: { value: new Float32Array(hex(S.vignetteColor ?? '#000000')), type: 'vec3<f32>' },
       uVigShape: { value: new Float32Array([0, 0, 1, 0]), type: 'vec4<f32>' },
+      uBloom: { value: S.bloom ?? 0.25, type: 'f32' },
+      uSoft: { value: S.soft ?? 0.2, type: 'f32' },
     });
     const fs = Shader.from({
       gl: { vertex: FINAL_VS, fragment: FINAL_FS, name: 'map-final' },
@@ -364,8 +389,8 @@ export class PixiMap {
     const vy0 = Math.min(...cs.map((p) => p.y)) - 200, vy1 = Math.max(...cs.map((p) => p.y)) + 200;
 
     for (const l of this.layers) {
-      const st = S.classes[l.cls];
-      let a = st.alpha * (opts.classAlpha?.[l.cls] ?? 1);
+      const st = l.cls === 'route' ? S.route! : S.classes[l.cls];
+      let a = st.alpha * (l.cls === 'route' ? 1 : (opts.classAlpha?.[l.cls] ?? 1));
       if (l.cls === 'lane') a *= sm(S.laneFade[0], S.laneFade[1], zr);
       if (l.cls === 'street' || l.cls === 'rail') a *= sm(S.streetFade[0], S.streetFade[1], zr);
       const col = hex(st.color);
@@ -386,7 +411,7 @@ export class PixiMap {
         gu.uSigma = sig;
         gu.uMode = 1;
         const gc = hex(st.glow.color);
-        const ga = st.glow.alpha * (opts.classAlpha?.[l.cls] ?? 1);
+        const ga = st.glow.alpha * (l.cls === 'route' ? 1 : (opts.classAlpha?.[l.cls] ?? 1));
         const g = gu.uLineColor as Float32Array;
         g[0] = gc[0] * ga; g[1] = gc[1] * ga; g[2] = gc[2] * ga; g[3] = ga;
         l.glowUniforms.update();
@@ -419,6 +444,11 @@ export class PixiMap {
 
     const r = this.app.renderer;
     r.render({ container: this.scene, target: this.rt, clear: true, clearColor: [0, 0, 0, 1] });
+    // resolve MSAA into the texture now, then build the mip chain used for bloom/softness
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rts = r.renderTarget as any;
+    rts.adaptor.finishRenderPass(rts.getRenderTarget(this.rt));
+    this.rt.source.updateMipmaps();
     const fu = this.finalU.uniforms;
     fu.uFade = opts.fade ?? 1;
     const vs = opts.vigShape ?? [0, 0, 1];

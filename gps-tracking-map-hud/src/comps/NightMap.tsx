@@ -4,12 +4,12 @@ import { AbsoluteFill } from 'remotion';
 import { MapCanvas } from '../render/MapCanvas';
 import type { PixiMap } from '../render/pixiMap';
 import { NIGHT } from '../looks/styles';
-import { LOOP, MAP_W, MAP_H } from '../city';
+import { CITY, LOOP, MAP_W, MAP_H } from '../city';
 import { HudCanvas } from '../hud/HudCanvas';
 import { type Ctx, type Theme, text, line, rect, tick, pad, wave, rgba, cross, lf, TAU } from '../hud/kit';
 import { hash01 } from '../lib/rng';
 
-const TH: Theme = { text: '#F2F6FA', dim: '#9DB0C2', faint: '#5A7086', accent: '#FFFFFF', accent2: '#C8D6E2', panel: '#0A121A', panelEdge: '#3A4A5A' };
+const TH: Theme = { text: '#A9BACB', dim: '#6F8498', faint: '#4E6276', accent: '#FFFFFF', accent2: '#C8D6E2', panel: '#0A121A', panelEdge: '#3A4A5A' };
 const sm = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 // brightness envelope (periodic, 0 at the loop point)
@@ -25,9 +25,9 @@ const view = (frame: number) => {
   const f = lf(frame);
   const a = (f / LOOP) * TAU;
   return {
-    cx: MAP_W * 0.5 + 900 * Math.cos(a) - 300,
-    cy: MAP_H * 0.47 + 520 * Math.sin(a),
-    zoom: 0.36 * (1 + 0.16 * (0.5 - 0.5 * Math.cos(a))),
+    cx: MAP_W * 0.52 + 400 * Math.cos(a),
+    cy: MAP_H * 0.48 + 250 * Math.sin(a),
+    zoom: 0.25 * (1 + 0.14 * (0.5 - 0.5 * Math.cos(a))),
     rot: 0.06 * Math.sin(a),
   };
 };
@@ -55,14 +55,28 @@ const drawHud = (ctx: Ctx, frame: number) => {
   // HUD flickers on as the map brightens, holds, and fades with it
   const flick = b > 0.55 ? 1 : b > 0.3 ? (hash01(77, Math.floor(f / 2)) > 0.45 ? 0.85 : 0.15) : b * 0.6;
   ctx.globalAlpha = Math.min(1, flick * (0.35 + 0.65 * b));
+  // sparse pinpoints + small annotation clusters anchored to the map
+  const v = view(frame);
+  CITY.pois.slice(0, 40).filter((_, i) => i % 3 === 0).forEach((p, i) => {
+    const x = 1920 + (p.x - v.cx) * v.zoom, y = 1080 + (p.y - v.cy) * v.zoom;
+    if (x < 60 || x > 3780 || y < 60 || y > 2100) return;
+    ctx.fillStyle = rgba('#FFFFFF', 0.85);
+    ctx.beginPath(); ctx.arc(x, y, 2.5, 0, TAU); ctx.fill();
+    if (i % 4 === 0) {
+      line(ctx, x, y, x + 50, y - 50, rgba(TH.text, 0.5), 1.5);
+      line(ctx, x + 50, y - 50, x + 210, y - 50, rgba(TH.text, 0.5), 1.5);
+      text(ctx, `${p.code}  ${pad(Math.floor(hash01(590, i) * 999), 3)}`, x + 56, y - 60, 16, TH.text);
+      text(ctx, `${pad(p.e, 6)} ${pad(p.n, 6)}`, x + 56, y - 30, 14, TH.dim);
+    }
+  });
   // corner crosses + top ticks
-  for (const [x, y] of [[240, 180], [3600, 180], [240, 1980], [3600, 1980], [1300, 640], [2580, 1500]]) cross(ctx, x, y, 22, rgba(TH.text, 0.8), 2);
-  for (let i = 0; i < 28; i++) line(ctx, 420 + i * 60, 40, 420 + i * 60, i % 5 === 0 ? 78 : 58, rgba(TH.text, 0.6), 2);
+  for (const [x, y] of [[1300, 640], [2580, 1500]]) cross(ctx, x, y, 12, rgba(TH.text, 0.45), 2);
+  for (let i = 0; i < 28; i++) line(ctx, 420 + i * 60, 40, 420 + i * 60, i % 5 === 0 ? 62 : 52, rgba(TH.text, 0.35), 2);
   rect(ctx, 940, 40, 18, 18, undefined, rgba(TH.text, 0.7), 2);
   // scale bar across the middle with ticks
   const sy = 1080;
-  line(ctx, 500, sy, 3330, sy, rgba(TH.text, 0.75), 2);
-  for (let i = 0; i <= 40; i++) line(ctx, 500 + i * 70.75, sy, 500 + i * 70.75, sy + (i % 10 === 0 ? 26 : i % 5 === 0 ? 16 : 9), rgba(TH.text, 0.7), 2);
+  line(ctx, 500, sy, 3330, sy, rgba(TH.text, 0.5), 2);
+  for (let i = 0; i <= 40; i++) line(ctx, 500 + i * 70.75, sy, 500 + i * 70.75, sy + (i % 10 === 0 ? 16 : i % 5 === 0 ? 10 : 6), rgba(TH.text, 0.45), 2);
   text(ctx, '0', 500, sy + 56, 20, TH.dim);
   text(ctx, '2.5 KM', 3330, sy + 56, 20, TH.dim, { align: 'right' });
   text(ctx, 'ACTIVE SEARCH', 3360, 630, 24, TH.text, { font: 'label' });
@@ -73,12 +87,12 @@ const drawHud = (ctx: Ctx, frame: number) => {
   smallBlock(ctx, 630, 630, 530, f, 2);
   // vertical indicator on the left
   const vx = 330;
-  line(ctx, vx, 420, vx, 1500, rgba(TH.text, 0.7), 2);
-  for (let i = 0; i <= 24; i++) line(ctx, vx, 420 + i * 45, vx + (i % 4 === 0 ? 24 : 12), 420 + i * 45, rgba(TH.text, 0.6), 2);
+  line(ctx, vx, 420, vx, 1500, rgba(TH.text, 0.4), 2);
+  for (let i = 0; i <= 24; i++) line(ctx, vx, 420 + i * 45, vx + (i % 4 === 0 ? 16 : 8), 420 + i * 45, rgba(TH.text, 0.35), 2);
   const vy = 420 + 1080 * wave(540, f, 0.15, 0.85);
   ctx.fillStyle = TH.text;
   ctx.beginPath(); ctx.moveTo(vx - 6, vy); ctx.lineTo(vx - 26, vy - 12); ctx.lineTo(vx - 26, vy + 12); ctx.closePath(); ctx.fill();
-  text(ctx, pad(Math.floor((1 - (vy - 420) / 1080) * 999), 3), vx - 34, vy + 8, 20, TH.text, { align: 'right' });
+  text(ctx, pad(Math.floor((1 - (vy - 420) / 1080) * 999), 3), vx - 34, vy + 7, 15, TH.dim, { align: 'right' });
   // top-right text blocks with bars
   for (let c = 0; c < 3; c++) {
     const x0 = 2600 + c * 400;
@@ -100,13 +114,13 @@ const drawHud = (ctx: Ctx, frame: number) => {
   for (let i = 0; i < 6; i++) {
     const x0 = 60 + i * 230;
     text(ctx, `SECTOR - ${pad(Math.floor(hash01(570, i) * 99), 2)}`, x0, 1840, 18, TH.dim);
-    text(ctx, pad(tick(571 + i, f, 40, 2), 2), x0, 1890, 40, TH.text);
-    rect(ctx, x0, 1905, 150, 14, rgba(TH.text, 0.4));
+    text(ctx, pad(tick(571 + i, f, 40, 2), 2), x0, 1880, 28, TH.text);
+    for (let r = 0; r < 2; r++) text(ctx, `${pad(Math.floor(hash01(575, i, r) * 9999), 4)} ${pad(tick(576 + i * 2 + r, f, 20, 3), 3)}`, x0, 1916 + r * 24, 16, TH.dim);
   }
   for (let i = 0; i < 3; i++) {
     const x0 = 1500 + i * 270;
     text(ctx, `SECTOR - ${pad(Math.floor(hash01(580, i) * 99), 2)}`, x0, 1840, 18, TH.dim);
-    text(ctx, pad(tick(581 + i, f, 40, 2), 2), x0, 1890, 40, TH.text);
+    text(ctx, pad(tick(581 + i, f, 40, 2), 2), x0, 1880, 28, TH.text);
   }
   valueBoxes(ctx, 1500, 1950, 3, 590, f);
   valueBoxes(ctx, 2350, 1950, 3, 600, f);
@@ -118,7 +132,7 @@ const drawHud = (ctx: Ctx, frame: number) => {
 export const NightMap: React.FC = () => {
   const draw = (m: PixiMap, frame: number) => {
     const v = view(frame);
-    m.render(v, { fade: nightBright(frame), vigShape: [0.08, 0.05, 0.95] });
+    m.render(v, { fade: nightBright(frame), vigShape: [0.04, 0.02, 0.88] });
   };
   return (
     <AbsoluteFill style={{ background: '#000' }}>

@@ -15,24 +15,24 @@ import { hash01 } from '../lib/rng';
 export const SHOT = 75;
 const MAP = { x: 0, y: 236, w: 3000, h: 1676 };
 const SHOTS = [
-  { poi: 3, zoom: 0.26, dx: -0.06, dy: 0.04 },
-  { poi: 11, zoom: 0.42, dx: 0.05, dy: -0.03 },
-  { poi: 7, zoom: 0.62, dx: -0.04, dy: -0.04 },
+  { poi: 3, zoom: 0.27, dx: -0.06, dy: 0.04 },
+  { poi: 11, zoom: 0.36, dx: 0.05, dy: -0.03 },
+  { poi: 7, zoom: 0.5, dx: -0.04, dy: -0.04 },
   { poi: 19, zoom: 0.3, dx: 0.06, dy: 0.02 },
-  { poi: 25, zoom: 0.85, dx: 0.03, dy: 0.05 },
-  { poi: 14, zoom: 0.48, dx: -0.05, dy: 0.03 },
+  { poi: 25, zoom: 0.62, dx: 0.03, dy: 0.05 },
+  { poi: 14, zoom: 0.4, dx: -0.05, dy: 0.03 },
   { poi: 30, zoom: 0.28, dx: 0.04, dy: -0.05 },
-  { poi: 5, zoom: 0.7, dx: -0.03, dy: -0.02 },
+  { poi: 5, zoom: 0.55, dx: -0.03, dy: -0.02 },
 ];
 // first POI (from index i) whose framing stays inside the generated city
 const fitCache = new Map<string, number>();
-export function fitPoi(i: number, zoom: number, w: number, h: number, margin = 1900) {
+export function fitPoi(i: number, zoom: number, w: number, h: number, margin = 2100) {
   const key = `${i}|${zoom}|${w}|${h}`;
   if (fitCache.has(key)) return CITY.pois[fitCache.get(key)!];
   for (let k = 0; k < CITY.pois.length; k++) {
     const j = (i + k) % CITY.pois.length;
     const p = CITY.pois[j];
-    const hw = (w / zoom) * 0.62, hh = (h / zoom) * 0.62;
+    const hw = (w / zoom) * 0.56, hh = (h / zoom) * 0.56;
     if (p.x - hw > -margin && p.x + hw < MAP_W + margin && p.y - hh > -margin && p.y + hh < MAP_H + margin) {
       fitCache.set(key, j);
       return p;
@@ -48,12 +48,12 @@ const counterOf = (s: number) => {
 
 export interface AnalysisTheme { th: Theme; accent: string; mapEdge: string; globeLand: string; globeSea: string; globeLine: string; lock: string }
 const BLUE: AnalysisTheme = {
-  th: { text: '#EAF6FF', dim: '#7FA6C0', faint: '#3E5C70', accent: '#4AB8F0', accent2: '#F0A030', panel: '#0C141A', panelEdge: '#2A4558' },
-  accent: '#F0A030', mapEdge: '#9FD4F5', globeLand: '#CFEFFF', globeSea: '#0E2A3C', globeLine: '#7FC8F0', lock: '#FFD27A',
+  th: { text: '#C4D2DC', dim: '#7F98AA', faint: '#3E5C70', accent: '#4AB8F0', accent2: '#F0A030', panel: '#0C141A', panelEdge: '#2A4558' },
+  accent: '#F0A030', mapEdge: '#9FD4F5', globeLand: '#8ACBD8', globeSea: '#0B1E2A', globeLine: '#6AA8C8', lock: '#FFF0B0',
 };
 const AMBER: AnalysisTheme = {
-  th: { text: '#FFF1DC', dim: '#C09A6A', faint: '#6A4A28', accent: '#F0A03A', accent2: '#3AD8F0', panel: '#150D07', panelEdge: '#5A3A1C' },
-  accent: '#3AD8F0', mapEdge: '#F5C890', globeLand: '#FFE2B8', globeSea: '#3A2410', globeLine: '#F0B060', lock: '#7AF0FF',
+  th: { text: '#E4D4BE', dim: '#AA8A62', faint: '#6A4A28', accent: '#F0A03A', accent2: '#3AD8F0', panel: '#150D07', panelEdge: '#5A3A1C' },
+  accent: '#3AD8F0', mapEdge: '#F5C890', globeLand: '#D8B888', globeSea: '#2A1A0A', globeLine: '#C89050', lock: '#7AF0FF',
 };
 
 function shotView(s: number, t: number) {
@@ -91,11 +91,11 @@ const drawHud = (at: AnalysisTheme) => (ctx: Ctx, frame: number) => {
   ctx.stroke();
 
   // ---- header
-  heading(ctx, 'GPS NAVIGATION ANALYSIS', 60, 92, th, 54);
+  heading(ctx, 'GPS NAVIGATION ANALYSIS', 60, 86, th, 42);
   dataRows(ctx, 64, 140, 3, [4, 2, 5, 3], 300 + s, frame, th, 22, 30, 1);
   ['SECTOR-04', 'SECTOR-11', 'SECTOR-16', 'SECTOR-19'].forEach((l, i) => {
     text(ctx, l, 800 + i * 175, 80, 24, th.dim, { font: 'label' });
-    text(ctx, pad(tick(310 + i, frame, 25, 2), 2), 800 + i * 175, 140, 52, th.text);
+    text(ctx, pad(tick(310 + i, frame, 25, 2), 2), 800 + i * 175, 136, 44, th.dim);
   });
   // rolling coordinate counter
   const from = s === 0 ? '000-0000-0-000' : counterOf(s - 1);
@@ -111,31 +111,32 @@ const drawHud = (at: AnalysisTheme) => (ctx: Ctx, frame: number) => {
   const e = 1 - Math.pow(1 - lockT, 3);
   const startX = MAP.x + MAP.w * (0.25 + 0.5 * hash01(s, 9));
   const chx = startX + (tx - startX) * e;
-  line(ctx, chx, MAP.y + 6, chx, MAP.y + MAP.h - 6, rgba('#FFFFFF', 0.85), 3);
+  line(ctx, chx, MAP.y + 6, chx, MAP.y + MAP.h - 6, rgba('#FFFFFF', 1), 4);
   const locked = lf >= 22;
   if (locked) {
     const k = lf - 22;
     const flash = Math.max(0, 1 - k / 8);
     if (flash > 0) {
       ctx.fillStyle = rgba(at.lock, 0.55 * flash);
-      ctx.beginPath(); ctx.arc(tx, ty, 40 + 60 * (1 - flash), 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(tx, ty, 16 + 30 * (1 - flash), 0, TAU); ctx.fill();
     }
     const pulse = (k % 25) / 25;
-    ctx.strokeStyle = rgba(at.lock, 0.9 * (1 - pulse));
+    ctx.strokeStyle = rgba(at.lock, 0.5 * (1 - pulse));
     ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(tx, ty, 26 + 70 * pulse, 0, TAU); ctx.stroke();
-    // labels on leader lines (left and right)
+    ctx.beginPath(); ctx.arc(tx, ty, 18 + 34 * pulse, 0, TAU); ctx.stroke();
+    // tiny text labels with underlines around the lock
     const p = v.p;
     const lw = Math.min(1, k / 10);
-    line(ctx, tx + 30, ty - 30, tx + 30 + 140 * lw, ty - 30, rgba('#FFFFFF', 0.9), 2);
-    rect(ctx, tx + 40, ty - 76, 330 * lw, 38, rgba('#FFFFFF', 0.92));
-    if (lw >= 1) text(ctx, `${p.code}  ${pad(p.e % 100000, 5)}`, tx + 52, ty - 47, 26, '#05080B');
-    rect(ctx, tx - 40 - 260 * lw, ty + 34, 260 * lw, 30, rgba('#FFFFFF', 0.85));
-    if (lw >= 1) text(ctx, `N ${pad(p.n, 6)}`, tx - 290, ty + 58, 22, '#05080B');
-    rect(ctx, chx - 120, MAP.y + MAP.h - 260, 240 * lw, 26, rgba('#FFFFFF', 0.8));
+    const lab = (dx: number, dy: number, str: string, wpx: number) => {
+      line(ctx, tx + dx, ty + dy + 8, tx + dx + wpx * lw, ty + dy + 8, rgba('#FFFFFF', 0.85), 2);
+      if (lw >= 1) text(ctx, str, tx + dx, ty + dy, 22, rgba('#FFFFFF', 0.92));
+    };
+    lab(50, -60, `${p.code}  ${pad(p.e % 100000, 5)}`, 280);
+    lab(-330, 50, `N ${pad(p.n, 6)}  E ${pad(p.e, 6)}`, 290);
+    lab(60, 150, `LOCK ${pad(tick(395, frame, 5, 4), 4)}  SIG ${pad(Math.floor(hash01(s, 5) * 99), 2)}`, 250);
+    lab(-260, -150, `SECTOR ${pad(Math.floor(hash01(s, 6) * 99), 2)}`, 180);
   }
-  rect(ctx, tx - 13, ty - 13, 26, 26, at.lock);
-  rect(ctx, tx - 22, ty - 22, 44, 44, undefined, rgba(at.lock, 0.9), 3);
+  rect(ctx, tx - 9, ty - 9, 18, 18, at.lock);
   cross(ctx, chx, MAP.y + 70, 14, rgba('#FFFFFF', 0.8), 2);
 
   // ---- right column
@@ -152,8 +153,8 @@ const drawHud = (at: AnalysisTheme) => (ctx: Ctx, frame: number) => {
   const ga = (frame / 600) * TAU;
   ctx.beginPath(); ctx.arc(3420, 590, 375, ga, ga + 0.7); ctx.stroke();
   // flat world map
-  rect(ctx, R, 960, 740, 300, rgba(th.panel, 0.9), rgba(th.faint, 0.8), 2);
-  worldMap(ctx, R + 14, 972, 712, 276, rgba(th.dim, 0.75), 10, 3);
+  rect(ctx, R, 960, 740, 300, rgba(th.panel, 0.9), rgba(th.faint, 0.4), 2);
+  worldMap(ctx, R + 14, 972, 712, 276, rgba(th.dim, 0.4), 10, 3);
   const arcP = (u: number) => ({ x: R + 120 + 500 * u, y: 1110 - 90 * Math.sin(Math.PI * u) });
   ctx.strokeStyle = rgba(at.accent, 0.9); ctx.lineWidth = 2.5; ctx.setLineDash([10, 8]);
   ctx.beginPath(); for (let i = 0; i <= 40; i++) { const q = arcP(i / 40); if (i) ctx.lineTo(q.x, q.y); else ctx.moveTo(q.x, q.y); } ctx.stroke();
@@ -172,7 +173,7 @@ const drawHud = (at: AnalysisTheme) => (ctx: Ctx, frame: number) => {
     text(ctx, `${pad(Math.floor(hash01(343, r) * 99999), 5)} ${pad(Math.floor(hash01(344, r) * 9999), 4)}`, R, 1510 + r * 40, 22, th.dim);
     const vv = wave(345 + r, frame, 0.3, 0.98, 1 + (r % 2));
     for (let k = 0; k < 18; k++) rect(ctx, R + 280 + k * 22, 1500 + r * 40, 14, 4, k / 18 < vv ? rgba(th.text, 0.8) : rgba(th.faint, 0.6));
-    ctx.fillStyle = at.accent; ctx.beginPath(); ctx.arc(R + 280 + 18 * 22 * vv, 1502 + r * 40, 7, 0, TAU); ctx.fill();
+    rect(ctx, R + 680, 1495 + r * 40, 14, 14, at.accent);
   }
   heading(ctx, 'DATA ANALYSIS', R, 1745, th, 36); ctx.fillStyle = at.accent; ctx.beginPath(); ctx.arc(R + 290, 1733, 6, 0, TAU); ctx.fill();
   dataRows(ctx, R, 1790, 3, [4, 2, 5, 4, 3], 350, frame, th, 20, 30);
@@ -194,6 +195,13 @@ const drawHud = (at: AnalysisTheme) => (ctx: Ctx, frame: number) => {
   for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) rect(ctx, 1900 + c * 24, 1990 + r * 24, 12, 12, hash01(380, r, c, Math.floor(frame / 15)) > 0.5 ? rgba(th.text, 0.7) : rgba(th.faint, 0.6));
   for (let i = 0; i < 6; i++) numBox(ctx, 2140 + i * 140, 1975, 124, 130, pad(tick(390 + i, frame, 25, 2), 2), `${pad(Math.floor(hash01(391, i) * 99), 2)}.${pad(Math.floor(hash01(392, i) * 999), 3)}`, th);
   segBar(ctx, 60, 2110, 1000, 10, 40, wave(399, frame, 0.3, 0.9), th, rgba(th.text, 0.6));
+  // tiny labels around the globe ring
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * TAU + 0.4;
+    const gx = 3420 + Math.cos(a) * 300, gy = 590 + Math.sin(a) * 300;
+    ctx.fillStyle = at.accent; ctx.beginPath(); ctx.arc(gx, gy, 5, 0, TAU); ctx.fill();
+    text(ctx, `${['NODE', 'LINK', 'SAT', 'GRID', 'REL', 'HUB'][i]}-${pad(Math.floor(hash01(396, i) * 99), 2)}`, gx + (Math.cos(a) > 0 ? 12 : -12), gy + 6, 16, rgba(th.text, 0.75), { align: Math.cos(a) > 0 ? 'left' : 'right' });
+  }
 };
 
 export const GPSAnalysis: React.FC<{ variant: 'blue' | 'amber' }> = ({ variant }) => {
@@ -205,7 +213,7 @@ export const GPSAnalysis: React.FC<{ variant: 'blue' | 'amber' }> = ({ variant }
     const t = (frame - s * SHOT) / SHOT;
     const v = shotView(s, t);
     m.render({ cx: v.cx, cy: v.cy, zoom: v.zoom, rot: 0 }, {
-      fx: [{ kind: 'glow', x: v.p.x, y: v.p.y, r: 60, color: lockCol, alpha: 0.5, world: true }],
+      fx: [{ kind: 'glow', x: v.p.x, y: v.p.y, r: 22, color: lockCol, alpha: 0.35, world: true }],
       vigShape: [-0.05, 0, 1.1],
     });
   };
@@ -214,7 +222,7 @@ export const GPSAnalysis: React.FC<{ variant: 'blue' | 'amber' }> = ({ variant }
       <MapCanvas style={style} x={MAP.x} y={MAP.y} w={MAP.w} h={MAP.h} draw={draw} />
       <HudCanvas draw={drawHud(at)} />
       <div style={{ position: 'absolute', zIndex: 3, left: 0, top: 0 }}>
-        <Globe x={3420 - 290} y={590 - 290} d={580} landColor={at.globeLand} seaColor={at.globeSea} lineColor={at.globeLine} spin={0.75} dotSize={5.5} />
+        <Globe x={3420 - 290} y={590 - 290} d={580} landColor={at.globeLand} seaColor={at.globeSea} lineColor={at.globeLine} spin={0.75} dotSize={5.5} seaDot={at.globeLine} seaA={0.45} arcColor={at.accent} nArcs={12} />
       </div>
     </AbsoluteFill>
   );

@@ -53,7 +53,7 @@ const drawHud = (red: boolean) => (ctx: Ctx, frame: number) => {
   const v = view(frame);
   const tc = red ? '#FF3A3A' : '#FFD03A';
   // ---- left panel
-  ctx.fillStyle = rgba('#1B1D20', 0.88);
+  ctx.fillStyle = rgba('#0E0F10', 0.94);
   roundRect(ctx, -20, 114, 836, 1690, 18); ctx.fill();
   ctx.strokeStyle = rgba(TH.text, 0.45); ctx.lineWidth = 2;
   ctx.beginPath(); ctx.arc(414, 495, 330, 0, TAU); ctx.stroke();
@@ -108,7 +108,8 @@ const drawHud = (red: boolean) => (ctx: Ctx, frame: number) => {
   ctx.beginPath(); for (let i = 0; i <= 50; i++) { const q = arcP(i / 50); if (i) ctx.lineTo(q.x, q.y); else ctx.moveTo(q.x, q.y); } ctx.stroke();
   ctx.setLineDash([]);
   const sp = arcP(0.42);
-  ctx.strokeStyle = tc; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(sp.x, sp.y, 12 + 6 * Math.sin((f / 30) * TAU), 0, TAU); ctx.stroke();
+  ctx.strokeStyle = '#F06AA8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(sp.x, sp.y, 12 + 6 * Math.sin((f / 30) * TAU), 0, TAU); ctx.stroke();
+  ctx.fillStyle = '#F06AA8'; ctx.beginPath(); ctx.arc(sp.x, sp.y, 5, 0, TAU); ctx.fill();
   text(ctx, `GPS ${pad(tick(760, f, 60, 4), 4)} ${pad(tick(761, f, 60, 3), 3)}`, sp.x + 24, sp.y - 16, 18, TH.text);
   // ETA box + toggles + teal bars + gauges
   rect(ctx, 3300, 1410, 230, 40, undefined, rgba(TH.text, 0.7), 2);
@@ -122,6 +123,13 @@ const drawHud = (red: boolean) => (ctx: Ctx, frame: number) => {
   line(ctx, 3300, 1600, 3300, 1880, rgba(TH.accent, 0.6), 2);
   for (let i = 0; i < 4; i++) cGauge(ctx, 2885 + i * 120, 1800, 36, wave(770 + i, f, 0.3, 1, 2), TH, TH.accent, 8);
 
+  // static amber callouts at the panel edge (as in the reference)
+  [[890, 1095, 900], [800, 1995, 901]].forEach(([x, y, id]) => {
+    ctx.fillStyle = rgba('#F0A030', 0.3); ctx.beginPath(); ctx.arc(x, y, 18, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#F5B040'; ctx.beginPath(); ctx.arc(x, y, 8, 0, TAU); ctx.fill();
+    text(ctx, `${pad(tick(id, f, 30, 6), 6)}  ${pad(tick(id + 1, f, 60, 5), 5)}  ${pad(tick(id + 2, f, 15, 6), 6)}`, x + 40, y + 9, 26, TH.text);
+  });
+  line(ctx, 795, 1800, 795, 2030, rgba(TH.text, 0.45), 2);
   // ---- bottom ruler (scrolling ticks, periodic)
   const ry = 2040;
   line(ctx, 120, ry, 3720, ry, rgba(TH.text, 0.4), 2);
@@ -131,6 +139,11 @@ const drawHud = (red: boolean) => (ctx: Ctx, frame: number) => {
     line(ctx, x, ry - (i % 10 === 0 ? 26 : 10), x, ry + (i % 10 === 0 ? 10 : 0), rgba(TH.text, 0.6), 2);
   }
   text(ctx, `002  ${pad(tick(780, f, 10, 10), 10)}  ${pad(tick(781, f, 15, 6), 6)}  00`, 120, 2010, 22, TH.dim);
+  for (let i = 0; i < 6; i++) {
+    const x = 120 + ((i * 600 + 300 - off * 1.5) % 3600 + 3600) % 3600;
+    ctx.fillStyle = i % 2 ? '#F06AA8' : rgba('#F0A030', 0.9); ctx.beginPath(); ctx.arc(x, ry, 6, 0, TAU); ctx.fill();
+    text(ctx, pad(Math.floor(hash01(782, i) * 99999), 5), x + 12, ry - 14, 16, TH.dim);
+  }
   ctx.strokeStyle = rgba(TH.text, 0.35); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(2750, 2030, 80, 0, TAU); ctx.stroke();
 
   // ---- targets
@@ -159,6 +172,7 @@ const drawHud = (red: boolean) => (ctx: Ctx, frame: number) => {
       line(ctx, s.x + half, s.y - half, s.x + half + (lx - s.x - half) * L, s.y - half + (ly - s.y + half) * L, rgba(TH.text, 0.85), 2);
       if (L >= 1) {
         line(ctx, lx, ly, lx + 330, ly, rgba(TH.text, 0.6), 2);
+        ctx.fillStyle = rgba(tc, 0.25); ctx.beginPath(); ctx.arc(lx, ly, 20, 0, TAU); ctx.fill();
         ctx.fillStyle = tc; ctx.beginPath(); ctx.arc(lx, ly, 8, 0, TAU); ctx.fill();
         text(ctx, p.code, lx + 22, ly - 14, 30, tc);
         text(ctx, `${pad(p.e, 6)}  ${pad(p.n, 6)}`, lx + 22, ly + 34, 24, TH.text);
@@ -171,8 +185,8 @@ const drawHud = (red: boolean) => (ctx: Ctx, frame: number) => {
       const k = ease(a / 16);
       const cx = ps.x + (s.x - ps.x) * k, cy = ps.y + (s.y - ps.y) * k;
       const al = a < 40 ? 0.55 : 0.55 * (1 - (a - 40) / 20);
-      line(ctx, cx, 0, cx, 2160, rgba(TH.text, al), 2);
-      line(ctx, 816, cy, 3840, cy, rgba(TH.text, al * 0.6), 2);
+      line(ctx, cx, 0, cx, 2160, rgba(TH.text, al * 0.6), 1.5);
+      line(ctx, 816, cy, 3840, cy, rgba(TH.text, al * 0.35), 1.5);
     }
     ctx.globalAlpha = 1;
     if (red && a < 6) {
@@ -189,7 +203,7 @@ export const TargetLocator: React.FC<{ variant: 'grey' | 'red' }> = ({ variant }
       <MapCanvas style={GREY} w={3840} h={2160} draw={draw} />
       <HudCanvas draw={drawHud(variant === 'red')} />
       <div style={{ position: 'absolute', zIndex: 3, left: 0, top: 0 }}>
-        <Globe x={414 - 300} y={495 - 300} d={600} landColor="#BFE8F2" seaColor="#14262E" lineColor="#C8D8E0" spin={1} dotSize={5} />
+        <Globe x={414 - 300} y={495 - 300} d={600} landColor="#E8FCFF" seaColor="#14262E" lineColor="#E0ECF2" spin={1} dotSize={6} seaDot="#9AD8EA" seaA={0.7} arcColor="#FFFFFF" nArcs={16} />
       </div>
     </AbsoluteFill>
   );

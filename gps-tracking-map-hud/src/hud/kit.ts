@@ -166,9 +166,17 @@ export function waveform(ctx: Ctx, x: number, y: number, w: number, h: number, f
 
 // small "thumbnail" box with a big number and a caption
 export function numBox(ctx: Ctx, x: number, y: number, w: number, h: number, value: string, caption: string, th: Theme) {
-  rect(ctx, x, y, w, h, rgba(th.panel, 0.9), rgba(th.dim, 0.7), 2);
-  text(ctx, value, x + w / 2, y + h * 0.62, h * 0.48, th.text, { align: 'center' });
-  text(ctx, caption, x + w / 2, y + h - 10, h * 0.16, th.dim, { align: 'center' });
+  // grey gradient tile, small number top-right, caption bottom-left, corner notch
+  const g = ctx.createLinearGradient(x, y, x, y + h);
+  g.addColorStop(0, rgba(th.dim, 0.55));
+  g.addColorStop(1, rgba(th.faint, 0.18));
+  ctx.fillStyle = g;
+  ctx.fillRect(x, y, w, h);
+  rect(ctx, x, y, w, h, undefined, rgba(th.dim, 0.6), 2);
+  text(ctx, value, x + w - 10, y + h * 0.42, h * 0.34, th.text, { align: 'right' });
+  text(ctx, caption, x + 10, y + h - 12, h * 0.15, th.text);
+  ctx.fillStyle = rgba(th.text, 0.7);
+  ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x + 14, y + h); ctx.lineTo(x, y + h - 14); ctx.fill();
 }
 
 export function heading(ctx: Ctx, s: string, x: number, y: number, th: Theme, size = 40, color?: string) {
@@ -207,13 +215,13 @@ export function odometer(ctx: Ctx, x: number, y: number, from: string, to: strin
     const stagger = Math.min(1, Math.max(0, e * 1.25 - (i / to.length) * 0.25));
     const pos = a + total * stagger;
     const d0 = Math.floor(pos) % 10, fr = pos - Math.floor(pos);
-    rect(ctx, cx, y - size * 0.95, cw * 0.86, size * 1.2, rgba(boxColor, 0.18), rgba(boxColor, 0.55), 2);
+    rect(ctx, cx, y - size * 0.95, cw * 0.86, size * 1.2, 'rgba(60,64,70,0.55)', rgba(boxColor, 0.3), 2);
     ctx.save();
     ctx.beginPath();
     ctx.rect(cx, y - size * 0.95, cw * 0.86, size * 1.2);
     ctx.clip();
-    text(ctx, String(d0), cx + cw * 0.43, y - fr * size * 1.2, size, th.text, { align: 'center' });
-    text(ctx, String((d0 + 1) % 10), cx + cw * 0.43, y + (1 - fr) * size * 1.2, size, th.text, { align: 'center' });
+    text(ctx, String(d0), cx + cw * 0.43, y - fr * size * 1.2, size, rgba(th.text, 0.85), { align: 'center' });
+    text(ctx, String((d0 + 1) % 10), cx + cw * 0.43, y + (1 - fr) * size * 1.2, size, rgba(th.text, 0.85), { align: 'center' });
     ctx.restore();
     ctx.fillStyle = dotColor;
     ctx.fillRect(cx + cw * 0.86 + 2, y + size * 0.12, 6, 6);

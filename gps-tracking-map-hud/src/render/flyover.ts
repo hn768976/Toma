@@ -66,7 +66,7 @@ void main() {
   float sy = gl_FragCoord.y / uRes.y;
   float bias = uBlur + uFocus * smoothstep(0.62, 1.0, sy) * 2.2;
   vec3 c = texture2D(uMap, vUv, bias).rgb;
-  c *= 1.0 - 0.28 * smoothstep(0.55, 1.0, sy);
+  c *= 1.0 - 0.15 * smoothstep(0.6, 1.0, sy);
   gl_FragColor = vec4(c, 1.0);
 }`;
 
@@ -103,6 +103,9 @@ void main() {
   vec3 a = texture2D(uA, u2).rgb;
   vec3 b = texture2D(uB, u2).rgb;
   vec3 c = mix(a, b, uMix);
+  // soft bloom from the mip chain of the half-float targets
+  vec3 bl = mix(texture2D(uA, u2, 3.0).rgb * 0.6 + texture2D(uA, u2, 5.0).rgb * 0.4, texture2D(uB, u2, 3.0).rgb * 0.6 + texture2D(uB, u2, 5.0).rgb * 0.4, uMix);
+  c = mix(c, mix(texture2D(uA, u2, 1.0).rgb, texture2D(uB, u2, 1.0).rgb, uMix), 0.25) + bl * 0.28;
   if (uGlitch > 0.0 && off != 0.0) {
     c.r = mix(a, b, uMix).r;
     c.b = mix(texture2D(uA, u2 + vec2(0.004 * uGlitch, 0.0)).b, texture2D(uB, u2 + vec2(0.004 * uGlitch, 0.0)).b, uMix);
@@ -251,15 +254,15 @@ export function moves(): [Shot, Shot][] {
   const d2r = Math.PI / 180;
   return [
     // 1 glide along the coast, looking inland
-    [{ tx: coastA.x + 900, ty: coastA.y - 1500, yaw: along - 0.75, pitch: 56 * d2r, dist: 4600 }, { tx: coastB.x + 900, ty: coastB.y - 1500, yaw: along - 0.65, pitch: 56 * d2r, dist: 4600 }],
+    [{ tx: coastA.x + 900, ty: coastA.y - 1500, yaw: along - 0.75, pitch: 52 * d2r, dist: 5800 }, { tx: coastB.x + 900, ty: coastB.y - 1500, yaw: along - 0.65, pitch: 52 * d2r, dist: 5800 }],
     // 2 push towards the central district
-    [{ tx: c.x + 600, ty: c.y - 400, yaw: -1.15, pitch: 52 * d2r, dist: 7200 }, { tx: c.x + 400, ty: c.y - 300, yaw: -1.1, pitch: 56 * d2r, dist: 4700 }],
+    [{ tx: c.x + 600, ty: c.y - 400, yaw: -1.15, pitch: 48 * d2r, dist: 8600 }, { tx: c.x + 400, ty: c.y - 300, yaw: -1.1, pitch: 52 * d2r, dist: 5800 }],
     // 3 turn over a highway junction
-    [{ tx: j.x, ty: j.y, yaw: -0.4, pitch: 55 * d2r, dist: 5000 }, { tx: j.x, ty: j.y, yaw: 0.45, pitch: 55 * d2r, dist: 5000 }],
+    [{ tx: j.x, ty: j.y, yaw: -0.4, pitch: 50 * d2r, dist: 6200 }, { tx: j.x, ty: j.y, yaw: 0.45, pitch: 50 * d2r, dist: 6200 }],
     // 4 high pull-back
-    [{ tx: c.x + 1800, ty: c.y - 600, yaw: -0.9, pitch: 46 * d2r, dist: 5200 }, { tx: c.x + 1900, ty: c.y - 700, yaw: -0.85, pitch: 40 * d2r, dist: 9800 }],
+    [{ tx: c.x + 1800, ty: c.y - 600, yaw: -0.9, pitch: 48 * d2r, dist: 6200 }, { tx: c.x + 1900, ty: c.y - 700, yaw: -0.85, pitch: 45 * d2r, dist: 10500 }],
     // 5 low glide
-    [{ tx: c.x + 3400, ty: c.y - 1700, yaw: 2.35, pitch: 60 * d2r, dist: 4400 }, { tx: c.x + 2600, ty: c.y - 900, yaw: 2.3, pitch: 60 * d2r, dist: 4400 }],
+    [{ tx: c.x + 3400, ty: c.y - 1700, yaw: 2.35, pitch: 55 * d2r, dist: 5200 }, { tx: c.x + 2600, ty: c.y - 900, yaw: 2.3, pitch: 55 * d2r, dist: 5200 }],
   ];
 }
 

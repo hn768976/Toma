@@ -61,7 +61,7 @@ export function globePoints(n = 26000): Float32Array {
     const lat = (Math.asin(y) * 180) / Math.PI;
     const lon = (Math.atan2(x, z) * 180) / Math.PI;
     const l = isLand(lon, lat) ? 1 : 0;
-    if (l || i % 5 === 0) out.push(x, y, z, l);
+    if (l || i % 2 === 0) out.push(x, y, z, l);
   }
   sphere = new Float32Array(out);
   return sphere;

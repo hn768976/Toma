@@ -24,34 +24,52 @@ export const drawFlyoverHud = (th: FlyTheme, fsOf: FS) => (ctx: Ctx, frame: numb
   const fs = fsOf(frame);
   const gl = fs.glitch;
   // fine square grid over the whole frame
-  ctx.strokeStyle = rgba(th.grid, 0.13);
+  ctx.strokeStyle = rgba(th.grid, 0.2);
   ctx.lineWidth = 2;
   ctx.beginPath();
-  for (let x = 0; x <= 3840; x += 160) { ctx.moveTo(x, 0); ctx.lineTo(x, 2160); }
-  for (let y = 40; y <= 2160; y += 160) { ctx.moveTo(0, y); ctx.lineTo(3840, y); }
+  for (let x = 0; x <= 3840; x += 120) { ctx.moveTo(x, 0); ctx.lineTo(x, 2160); }
+  for (let y = 0; y <= 2160; y += 120) { ctx.moveTo(0, y); ctx.lineTo(3840, y); }
   ctx.stroke();
-  ctx.strokeStyle = rgba(th.grid, 0.22);
-  ctx.beginPath();
-  for (let x = 0; x <= 3840; x += 160) for (let y = 40; y <= 2160; y += 160) { ctx.moveTo(x - 8, y); ctx.lineTo(x + 8, y); ctx.moveTo(x, y - 8); ctx.lineTo(x, y + 8); }
-  ctx.stroke();
+  ctx.fillStyle = rgba(th.grid, 0.55);
+  for (let x = 0; x <= 3840; x += 120) for (let y = 0; y <= 2160; y += 120) ctx.fillRect(x - 3, y - 3, 6, 6);
+  // glints: a few bright specks that blink (periodic)
+  for (let i = 0; i < 40; i++) {
+    if (((f + i * 17) % 50) > 30) continue;
+    ctx.fillStyle = rgba('#FFFFFF', 0.7);
+    ctx.fillRect(Math.floor(hash01(970, i) * 3840), Math.floor(hash01(971, i) * 2160), 4, 4);
+  }
   // centre lines + locator ring
-  line(ctx, 1920, 0, 1920, 2160, rgba(th.grid, 0.3), 2);
-  line(ctx, 0, 1080, 3840, 1080, rgba(th.grid, 0.2), 2);
+  line(ctx, 1920, 0, 1920, 2160, rgba(th.grid, 0.5), 3);
+  line(ctx, 0, 1080, 3840, 1080, rgba(th.grid, 0.35), 2);
   const pr = (f % 45) / 45;
   ctx.strokeStyle = rgba(th.ring, 0.95); ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.arc(1920, 1080, 46, 0, TAU); ctx.stroke();
+  ctx.beginPath(); ctx.arc(1920, 1080, 30, 0, TAU); ctx.stroke();
   ctx.strokeStyle = rgba(th.ring, 0.7 * (1 - pr)); ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.arc(1920, 1080, 46 + 90 * pr, 0, TAU); ctx.stroke();
-  ctx.fillStyle = th.ring; ctx.beginPath(); ctx.arc(1920, 1080, 12, 0, TAU); ctx.fill();
-  for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU + 0.785; line(ctx, 1920 + Math.cos(a) * 64, 1080 + Math.sin(a) * 64, 1920 + Math.cos(a) * 96, 1080 + Math.sin(a) * 96, th.ring, 3); }
+  ctx.beginPath(); ctx.arc(1920, 1080, 30 + 60 * pr, 0, TAU); ctx.stroke();
+  ctx.fillStyle = th.ring; ctx.beginPath(); ctx.arc(1920, 1080, 9, 0, TAU); ctx.fill();
+  for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU + 0.785; line(ctx, 1920 + Math.cos(a) * 42, 1080 + Math.sin(a) * 42, 1920 + Math.cos(a) * 62, 1080 + Math.sin(a) * 62, th.ring, 3); }
 
+  // orange callouts around the centre (dots on leader lines with tiny labels)
+  [[-210, -300], [160, -110], [-160, 80], [120, 330]].forEach(([dx, dy], i) => {
+    const on = ((f + i * 23) % 90) < 70;
+    if (!on) return;
+    const x = 1920 + dx, y = 1080 + dy;
+    ctx.fillStyle = '#F0A030'; ctx.beginPath(); ctx.arc(x, y, 8, 0, TAU); ctx.fill();
+    ctx.fillStyle = rgba('#F0A030', 0.25); ctx.beginPath(); ctx.arc(x, y, 18, 0, TAU); ctx.fill();
+    line(ctx, x + 12, y, x + 200, y, rgba(th.text, 0.7), 2);
+    text(ctx, `${pad(Math.floor(hash01(960, i) * 9999), 4)} ${pad(tick(961 + i, f, 15, 3), 3)} ${['NODE', 'GRID', 'LINK', 'SCAN'][i]}`, x + 20, y - 10, 18, th.text);
+  });
+  // top-centre bracket widget
+  ctx.strokeStyle = rgba(th.text, 0.6); ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(2400, 120); ctx.lineTo(2400, 70); ctx.lineTo(2560, 70); ctx.moveTo(3260, 120); ctx.lineTo(3260, 70); ctx.lineTo(3100, 70); ctx.stroke();
+  ctx.fillStyle = '#FFD040'; ctx.beginPath(); ctx.arc(2480 + 700 * ((f % 120) / 120), 70, 6, 0, TAU); ctx.fill();
   // top strips (glitchy bars)
   for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) text(ctx, `${pad(Math.floor(hash01(800, r, c) * 9999), 4)} ${pad(tick(801 + r * 6 + c, f, 15, 3), 3)}`, 40 + c * 300 + (c > 2 ? 1500 : 0), 40 + r * 28, 18, rgba(th.text, 0.7));
   strip(ctx, 150, f, th, 810, gl);
   strip(ctx, 188, f + 7, th, 811, gl);
 
   // left blocks
-  ['EMC', 'ATC', 'GTA'].forEach((l, i) => {
+  ['CH-A', 'CH-B', 'CH-C'].forEach((l, i) => {
     text(ctx, l, 40, 400 + i * 66, 30, th.text, { font: 'label' });
     text(ctx, `${pad(tick(820 + i, f, 20, 3), 3)}.${pad(tick(823 + i, f, 6, 1), 1)}  ${pad(Math.floor(hash01(826, i) * 9999), 4)}`, 140, 400 + i * 66, 22, th.dim);
   });
@@ -65,7 +83,7 @@ export const drawFlyoverHud = (th: FlyTheme, fsOf: FS) => (ctx: Ctx, frame: numb
     ctx.beginPath(); ctx.arc(cx, 650, 24, -1.2, -1.2 + TAU * wave(840 + i, f, 0.55, 0.95)); ctx.stroke();
     line(ctx, cx + 34, 650, cx + 90, 650, rgba(th.text, 0.4), 2);
   }
-  heading(ctx, 'DCS - 062', 40, 800, th, 40);
+  heading(ctx, 'DAT - 062', 40, 800, th, 40);
   for (let r = 0; r < 4; r++) text(ctx, `${pad(Math.floor(hash01(850, r) * 99), 2)}  ${pad(tick(851 + r, f, 20, 4), 4)}  ${pad(Math.floor(hash01(855, r) * 999999), 6)}`, 50, 850 + r * 30, 20, th.dim);
   for (let r = 0; r < 2; r++) segBar(ctx, 50, 1000 + r * 30, 360, 10, 24, wave(860 + r, f, 0.3, 0.95), th, th.text);
   [0, 1, 2].forEach((i) => {
@@ -93,8 +111,9 @@ export const drawFlyoverHud = (th: FlyTheme, fsOf: FS) => (ctx: Ctx, frame: numb
   });
   ['A1', 'A2', 'A3', 'A4', 'A5'].forEach((l, i) => {
     const y = 1440 + i * 70;
-    rect(ctx, 3060, y, 80, 46, rgba(th.accent, i === (Math.floor(f / 60) % 5) ? 0.5 : 0.15), th.accent, 2);
-    text(ctx, l, 3100, y + 33, 26, th.text, { align: 'center' });
+    ctx.fillStyle = rgba(th.accent, i === (Math.floor(f / 60) % 5) ? 0.7 : 0.42);
+    ctx.beginPath(); ctx.moveTo(3072, y); ctx.lineTo(3128, y); ctx.lineTo(3142, y + 23); ctx.lineTo(3128, y + 46); ctx.lineTo(3072, y + 46); ctx.lineTo(3058, y + 23); ctx.closePath(); ctx.fill();
+    text(ctx, l, 3100, y + 33, 26, '#06121A', { align: 'center' });
     text(ctx, `${['GRID', 'SCAN', 'NODE', 'LINK', 'TRACE'][i]} ${pad(Math.floor(hash01(920, i) * 999), 3)} ACTIVE`, 3170, y + 22, 18, th.dim);
     line(ctx, 3170, y + 34, 3170 + 400 * wave(921 + i, f, 0.3, 1), y + 34, rgba(th.text, 0.5), 2);
   });
@@ -104,7 +123,9 @@ export const drawFlyoverHud = (th: FlyTheme, fsOf: FS) => (ctx: Ctx, frame: numb
   }
   // bottom strip
   strip(ctx, 2050, f + 3, th, 940, gl);
-  line(ctx, 2600, 2100, 3800, 2100, rgba(th.accent, 0.8), 4);
-  line(ctx, 2900, 2120, 3600, 2120, rgba(th.accent, 0.5), 3);
+  for (const [yy, w, a] of [[2062, 7, 1], [2090, 6, 0.85], [2116, 5, 0.7]] as const) {
+    line(ctx, 2850, yy, 3790, yy, rgba('#60F0A8', a * 0.25), w + 12);
+    line(ctx, 2850, yy, 3790, yy, rgba('#70F8B8', a), w);
+  }
   text(ctx, `REF ${pad(tick(950, f, 30, 6), 6)}   LAYER 04   ${pad(tick(951, f, 10, 4), 4)}`, 40, 2120, 20, rgba(th.text, 0.7));
 };

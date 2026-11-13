@@ -22,10 +22,14 @@ export const HudCanvas: React.FC<{
   const paint = (f: number) => {
     const c = ref.current!;
     const ctx = c.getContext('2d')!;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // Reset ALL context state every frame (line caps, dashes, alpha, composite...)
+    // so a frame never depends on what the previous frame left behind.
+    ctx.reset();
     ctx.clearRect(0, 0, pxW, pxH);
     ctx.setTransform(pxW / w, 0, 0, pxH / h, 0, 0);
+    ctx.save();
     drawRef.current(ctx, f);
+    ctx.restore();
   };
   useEffect(() => {
     const handle = delayRender('Loading HUD fonts');

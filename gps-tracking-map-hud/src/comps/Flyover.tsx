@@ -14,25 +14,27 @@ THREE.ColorManagement.enabled = false;
 export const FLY_BLUE: FlyStyle = {
   land: '#3A6A88', dark: '#08141C', water: '#061017', runway: '#4E86A6',
   roads: {
-    highway: { color: '#CFEFFF', w: 26, a: 1 },
-    avenue: { color: '#A6DDF8', w: 15, a: 1 },
-    street: { color: '#7AC8F0', w: 8, a: 0.95 },
-    lane: { color: '#7AC8F0', w: 5, a: 0.75 },
+    highway: { color: '#CFEFFF', w: 20, a: 1 },
+    avenue: { color: '#A6DDF8', w: 11, a: 1 },
+    street: { color: '#7AC8F0', w: 6, a: 0.92 },
+    lane: { color: '#7AC8F0', w: 4, a: 0.7 },
     rail: { color: '#7AC8F0', w: 3.5, a: 0.7 },
   },
 };
 export const FLY_AMBER: FlyStyle = {
   land: '#8A5A2A', dark: '#1C1006', water: '#140B04', runway: '#A87440',
   roads: {
-    highway: { color: '#FFF0D8', w: 26, a: 1 },
-    avenue: { color: '#FFD8A0', w: 15, a: 1 },
-    street: { color: '#F8C07A', w: 8, a: 0.95 },
-    lane: { color: '#F8C07A', w: 5, a: 0.75 },
+    highway: { color: '#FFF0D8', w: 20, a: 1 },
+    avenue: { color: '#FFD8A0', w: 11, a: 1 },
+    street: { color: '#F8C07A', w: 6, a: 0.92 },
+    lane: { color: '#F8C07A', w: 4, a: 0.7 },
     rail: { color: '#F8C07A', w: 3.5, a: 0.7 },
   },
 };
 
 const MV = moves();
+// the reference is darker and lower in contrast than the raw palette; expose down in the post pass
+const EXPOSURE = 0.52;
 // transitions at the 4 cuts: odd = soft-focus dissolve, even = glitch
 const DISSOLVE = 9; // half-width in frames
 
@@ -88,7 +90,7 @@ function FlyoverScene({ style }: { style: FlyStyle }) {
     post.uniforms.uMix.value = fs.mix;
     post.uniforms.uGlitch.value = fs.glitch;
     post.uniforms.uSeed.value = f;
-    post.uniforms.uBright.value = fs.bright;
+    post.uniforms.uBright.value = fs.bright * EXPOSURE;
   };
 
   useLayoutEffect(() => {
@@ -101,7 +103,7 @@ function FlyoverScene({ style }: { style: FlyStyle }) {
       scene.background = raw(style.dark);
       scene.add(ground.group);
       const cam = new THREE.PerspectiveCamera(32, size.x / size.y, 50, 60000);
-      const opts = { type: THREE.HalfFloatType, samples: 4, depthBuffer: false, colorSpace: THREE.NoColorSpace } as const;
+      const opts = { type: THREE.HalfFloatType, samples: 4, depthBuffer: false, colorSpace: THREE.NoColorSpace, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter } as const;
       const rtA = new THREE.WebGLRenderTarget(size.x, size.y, opts);
       const rtB = new THREE.WebGLRenderTarget(size.x, size.y, opts);
       post.uniforms.uRes.value.set(size.x, size.y);
@@ -131,7 +133,7 @@ function FlyoverScene({ style }: { style: FlyStyle }) {
   );
 }
 
-const BLUE_T: FlyTheme = { text: '#E6F6FF', dim: '#8FC4E0', faint: '#5A8CAA', accent: '#5CE0F0', accent2: '#FFFFFF', panel: '#0A1A24', panelEdge: '#3A6A88', grid: '#BFE6FF', ring: '#FFD27A' };
+const BLUE_T: FlyTheme = { text: '#E6F6FF', dim: '#8FC4E0', faint: '#5A8CAA', accent: '#5CF0C8', accent2: '#FFFFFF', panel: '#0A1A24', panelEdge: '#3A6A88', grid: '#BFE6FF', ring: '#FFD27A' };
 const AMBER_T: FlyTheme = { text: '#FFF4E4', dim: '#E8B880', faint: '#A07040', accent: '#FFE07A', accent2: '#FFFFFF', panel: '#1C1006', panelEdge: '#8A5A2A', grid: '#FFE2B8', ring: '#7AF0FF' };
 
 export const Flyover: React.FC<{ variant: 'blue' | 'amber' }> = ({ variant }) => {
