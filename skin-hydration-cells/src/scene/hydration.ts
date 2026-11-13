@@ -368,6 +368,8 @@ export const createHydrationScene =
       memMat.uniforms.uPulse.value = keys(f, [[12, 0], [22, 1], [36, 0.55], [60, 0.2], [90, 0]])[0];
       memMat.uniforms.uRipple.value = clamp01((f - 17) / 50);
       membrane.visible = f < 93;
+      // the sheet recedes together with its cells
+      membrane.position.y = H + 0.29 + cellMat.uniforms.uLift.value;
 
       // ----- drop -----
       const dk = keys(f, [
