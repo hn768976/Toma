@@ -67,9 +67,13 @@ export const buildWorld = (seed = 7): World => {
   const field: Particle[] = [];
   for (let i = 0; i < 7500; i++) {
     const z = -12 + Math.pow(rand(), 0.85) * 610;
-    const spread = 18 + Math.max(0, z) * 0.22;
+    const spread = 22 + Math.max(0, z) * 0.22;
+    // elliptical cross-section with a soft edge (a box would show its edges
+    // as a hazy rectangle when the camera is inside the volume)
+    const rr = Math.sqrt(rand()) * 1.15;
+    const th = rand() * Math.PI * 2;
     field.push({
-      p: [(rand() * 2 - 1) * spread * 1.6, (rand() * 2 - 1) * spread, z],
+      p: [Math.cos(th) * rr * spread * 1.6, Math.sin(th) * rr * spread, z],
       size: 0.07 + Math.pow(rand(), 2.2) * 0.32,
       color: pick(fieldColors, fieldWeights),
       square: rand() < 0.7,
@@ -173,10 +177,10 @@ export const buildWorld = (seed = 7): World => {
 
   // -- dim blue circuit-board backdrop seen behind the opening sphere
   const backdrop: Polyline[] = [];
-  for (let i = 0; i < 260; i++) {
+  for (let i = 0; i < 700; i++) {
     const z = 45 + rand() * 60;
-    let x = (rand() * 2 - 1) * 70;
-    let y = (rand() * 2 - 1) * 40;
+    let x = (rand() * 2 - 1) * 150;
+    let y = (rand() * 2 - 1) * 85;
     const pts: V3[] = [[x, y, z]];
     let horiz = rand() < 0.6;
     const n = 2 + Math.floor(rand() * 4);
