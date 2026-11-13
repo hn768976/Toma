@@ -11,7 +11,9 @@ Config.setColorSpace("bt709");
 Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
-Config.setCrf(16);
+Config.setCrf(12);
+// The reference clip carries a (silent) audio track, so the output does too.
+Config.setEnforceAudioTrack(true);
 
 // The scene is WebGL. "angle" (GPU) is used on macOS / Windows; on Linux,
 // where render machines are usually headless and GPU-less, the software

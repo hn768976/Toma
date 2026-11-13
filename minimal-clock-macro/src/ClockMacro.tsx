@@ -23,6 +23,19 @@ const camera = () => {
   return { f, u, r, c, focus };
 };
 
+/**
+ * Quartz second hand: holds still, then steps 6 degrees over two frames once
+ * a second (the reference ticks ~0.12 s after each whole second). Starts at
+ * 237 deg (pointing to the bottom of the frame) and ends 30 ticks later.
+ */
+const secondAngle = (t: number) => {
+  const u = t - 0.12;
+  const k = Math.floor(u);
+  const f = Math.min(1, (u - k) / (2 / 30));
+  const ease = f * f * (3 - 2 * f);
+  return 237 - 6 * (k + ease);
+};
+
 type GLState = {
   gl: WebGL2RenderingContext;
   program: WebGLProgram;
@@ -98,6 +111,7 @@ export const ClockMacro: React.FC<{ variant: Variant }> = ({ variant }) => {
     gl.viewport(0, 0, width, height);
     gl.uniform2f(loc("uRes"), width, height);
     gl.uniform1f(loc("uTime"), frame / fps);
+    gl.uniform1f(loc("uSecAngle"), secondAngle(frame / fps));
     gl.uniform1f(loc("uSeed"), frame + 1);
     gl.uniform3fv(loc("uCam"), cam.c);
     gl.uniform3fv(loc("uCamR"), cam.r);
@@ -112,6 +126,7 @@ export const ClockMacro: React.FC<{ variant: Variant }> = ({ variant }) => {
     gl.uniform3fv(loc("uDialB"), pal.dialB);
     gl.uniform3fv(loc("uRing"), pal.ring);
     gl.uniform3fv(loc("uInk"), pal.ink);
+    gl.uniform3fv(loc("uSecond"), pal.second);
     gl.uniform3fv(loc("uMetalHi"), pal.metalHi);
     gl.uniform3fv(loc("uMetalMid"), pal.metalMid);
     gl.uniform3fv(loc("uMetalLo"), pal.metalLo);

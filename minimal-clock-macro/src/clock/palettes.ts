@@ -7,6 +7,7 @@ export type Palette = {
   dialB: RGB;
   ring: RGB;
   ink: RGB;
+  second: RGB;
   metalHi: RGB;
   metalMid: RGB;
   metalLo: RGB;
@@ -24,11 +25,12 @@ const hex = (h: string): RGB => {
 /** Version 1 – the cool, airy blue-on-white look of the reference. */
 export const frost: Palette = {
   bgA: hex("#8fabc6"),
-  bgB: hex("#6f93b4"),
-  dialA: hex("#f3f6fd"),
-  dialB: hex("#d3ddef"),
-  ring: hex("#a9b9cc"),
+  bgB: hex("#7799b8"),
+  dialA: hex("#f1f5fb"),
+  dialB: hex("#d2deec"),
+  ring: hex("#b9c8d8"),
   ink: hex("#3d5673"),
+  second: hex("#465f7e"),
   metalHi: hex("#fbfcff"),
   metalMid: hex("#c9d6e8"),
   metalLo: hex("#6f89a8"),
@@ -46,6 +48,7 @@ export const midnightGold: Palette = {
   dialB: hex("#101115"),
   ring: hex("#3a3531"),
   ink: hex("#f1c98a"),
+  second: hex("#ffe2b0"),
   metalHi: hex("#ffe9c2"),
   metalMid: hex("#d9a35c"),
   metalLo: hex("#6b4520"),

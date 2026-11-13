@@ -19,6 +19,7 @@ out vec4 outColor;
 
 uniform vec2 uRes;
 uniform float uTime;      // seconds
+uniform float uSecAngle;  // second-hand angle in degrees (ticks once a second)
 uniform float uSeed;      // per-frame grain seed
 uniform vec3 uCam, uCamR, uCamU, uCamF;
 uniform float uTanHalf;   // tan(fovY / 2)
@@ -30,6 +31,7 @@ uniform vec3 uBgA, uBgB;          // backdrop centre / edge
 uniform vec3 uDialA, uDialB;      // dial lit / shaded
 uniform vec3 uRing;               // chapter ring
 uniform vec3 uInk;                // ticks + hour dots
+uniform vec3 uSecond;             // second-hand needle
 uniform vec3 uMetalHi, uMetalMid, uMetalLo; // bezel, hands, hub
 uniform vec3 uWall;               // inner bezel wall
 uniform vec3 uShadow;             // multiplied under hands
@@ -100,8 +102,8 @@ void main() {
   gDir = uCamF + uCamR * ndc.x + uCamU * ndc.y;   // un-normalised: ray param == depth
 
   // hand angles (dial space, counter-clockwise from +x). The second hand
-  // sweeps continuously at real-time speed: 6 degrees per second.
-  float aSec = radians(231.0 - 6.0 * uTime);
+  // is a quartz movement: it steps 6 degrees once a second (see ClockMacro.tsx).
+  float aSec = radians(uSecAngle);
   float aMin = radians(175.0 - 0.1 * uTime);
   float aHour = radians(156.0 - 0.1 / 12.0 * uTime);
   // direction the shadows fall in (towards the bottom of the frame)
@@ -164,9 +166,10 @@ void main() {
     float k = floor(ai + 0.5);
     float da = abs(ai - k) * (2.0 * PI / 60.0) * r;
     float major = step(abs(mod(k + 0.5, 5.0) - 0.5), 0.1);
-    float hw = mix(0.0045, 0.0075, major);
-    float hl = mix(0.02, 0.032, major);
-    float tick = slab(da, hw, w) * slab(abs(r - 0.925), hl, w);
+    float hw = 0.0075;
+    float hl = 0.032;
+    // sparse hour dashes only, as on the reference dial
+    float tick = major * slab(da, hw, w) * slab(abs(r - 0.925), hl, w);
     dc = mix(dc, uInk, tick * 0.9);
 
     // hour dots on the face
@@ -176,13 +179,18 @@ void main() {
     float dotA = (1.0 - smoothstep(max(dr - w, 0.0), dr + w, length(p - dc0)))
                * min(1.0, (dr * dr) / (w * w) * 1.6);
     dc = mix(dc, uInk, dotA * 0.85);
+    // small catch-light makes the markers read as raised metal studs
+    vec2 hlOff = normalize(uCamU.xy) * 0.006 - normalize(uCamR.xy) * 0.004;
+    float studHi = (1.0 - smoothstep(max(0.007 - w, 0.0), 0.007 + w, length(p - dc0 - hlOff)))
+                 * min(1.0, (0.007 * 0.007) / (w * w) * 1.6);
+    dc = mix(dc, uMetalHi, studHi * 0.75);
 
     // contact shadows of hands and hub
     float sh = 0.0; float ac;
     float sw = w + 0.012;
     sh = max(sh, hand(p - shDir * 0.045, aHour, 0.55, 0.03, 0.026, 0.011, sw, ac));
     sh = max(sh, hand(p - shDir * 0.065, aMin, 0.80, 0.03, 0.02, 0.008, sw + 0.004, ac));
-    sh = max(sh, 0.6 * hand(p - shDir * 0.085, aSec, 0.86, 0.24, 0.0105, 0.0075, sw + 0.008, ac));
+    sh = max(sh, 0.6 * hand(p - shDir * 0.085, aSec, 0.86, 0.24, 0.0052, 0.0036, sw + 0.008, ac));
     sh = max(sh, edge(length(p - shDir * 0.06) - 0.062, sw + 0.01));
     dc = mix(dc, dc * uShadow, sh * uShadowAmt);
 
@@ -230,8 +238,8 @@ void main() {
     col = mix(col, uMetalLo, edge(length(h.p) - 0.058, h.w));
 
     h = plane(0.058);
-    a = hand(h.p, aSec, 0.86, 0.24, 0.0105, 0.0075, h.w, ac);
-    col = mix(col, metal(ac * 0.6, 1.0), a);
+    a = hand(h.p, aSec, 0.86, 0.24, 0.0052, 0.0036, h.w, ac);
+    col = mix(col, uSecond * (1.0 - 0.12 * ac), a);
 
     h = plane(0.075);
     float hr = length(h.p);
@@ -245,7 +253,7 @@ void main() {
   // ---------------- lens: vignette + fine grain ----------------
   col *= 1.0 - 0.16 * smoothstep(0.25, 1.05, vg);
   float grain = hash(frag) + hash(frag + vec2(4096.0, 2304.0)) - 1.0;
-  col += grain * 0.012;
+  col += grain * 0.015;
 
   outColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

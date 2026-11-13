@@ -19,15 +19,15 @@ const SCROLL_PER_FRAME = 0.2;
 
 const EGO = new THREE.Vector3(0, 0, 0);
 const CAR_POS = new THREE.Vector3(-3.3, 0, -7.4);
-const TRUCK_POS = new THREE.Vector3(2.7, 0, -9.0);
+const TRUCK_POS = new THREE.Vector3(2.55, 0, -7.6);
 const LIDAR = new THREE.Vector3(0, 1.72, 0.35);
 
 const C = (r: number, g: number, b: number) => new THREE.Color(r, g, b);
 
 const palette = {
-  wire: C(0.42, 0.68, 1.0),
-  detail: C(0.25, 0.5, 1.0),
-  fill: C(0.1, 0.32, 0.95),
+  wire: C(0.62, 0.82, 1.0),
+  detail: C(0.4, 0.66, 1.0),
+  fill: C(0.22, 0.45, 0.9),
   accent: C(0.8, 0.92, 1.0),
   box: C(0.55, 1.0, 0.45),
   tail: C(1.0, 0.16, 0.12),
@@ -35,7 +35,7 @@ const palette = {
   grid: C(0.3, 0.55, 1.0),
   lane: C(0.6, 0.85, 1.0),
   ring: C(0.45, 0.9, 1.0),
-  sweep: C(0.03, 0.42, 0.6),
+  sweep: C(0.02, 0.33, 0.52),
 };
 
 type Ctx = {
@@ -110,11 +110,13 @@ const boxSegments = (sx: number, sy: number, sz: number) => {
 /** A vehicle group; `k` scales brightness (used for the floor reflection). */
 const vehicleGroup = (ctx: Ctx, v: Vehicle, k: number, withBox: boolean) => {
   const g = new THREE.Group();
-  g.add(fill(v.body, palette.fill, 0.045 * k));
-  g.add(fill(v.detail, palette.fill, 0.02 * k));
-  g.add(lines(ctx, v.body.wire, palette.wire, 1.5, 0.26 * k));
-  g.add(lines(ctx, v.detail.wire, palette.detail, 1.3, 0.2 * k));
-  if (v.accent.tris.length) {
+  const mirror = k < 1;
+  // the floor reflection is mostly wire, with only a hint of fill
+  g.add(fill(v.body, palette.fill, (mirror ? 0.012 : 0.038)));
+  g.add(fill(v.detail, palette.fill, (mirror ? 0.004 : 0.016)));
+  g.add(lines(ctx, v.body.wire, palette.wire, 1.5, 0.3 * k));
+  g.add(lines(ctx, v.detail.wire, palette.detail, 1.3, 0.22 * k));
+  if (v.accent.tris.length && !mirror) {
     g.add(fill(v.accent, palette.accent, 0.3 * k));
     g.add(lines(ctx, v.accent.wire, palette.accent, 1.6, 0.8 * k));
   }
@@ -160,16 +162,17 @@ const coneSegments = (time: number, from: THREE.Vector3, to: THREE.Vector3) => {
   for (let i = 0; i < RINGS; i++) {
     const ph = (i + ((time * 1.5) % 1)) / RINGS;
     const d = 0.5 + ph * (len - 0.5);
-    const r = 0.1 + ph * 1.5;
+    const r = 0.12 + ph * 1.7;
     const a = Math.sin(Math.min(1, ph * 6) * Math.PI * 0.5) * (1 - Math.pow(ph, 3)) * 0.6;
     const centre = from.clone().addScaledVector(axis, d);
     for (let j = 0; j < N; j++) {
       for (const jj of [j, j + 1]) {
-        const t = (jj / N) * Math.PI * 2;
+        // partial arcs (upper ~250 degrees) rather than closed hoops
+        const t = -0.6 + (jj / N) * (Math.PI + 1.2);
         const p = centre
           .clone()
           .addScaledVector(side, Math.cos(t) * r)
-          .addScaledVector(up, Math.sin(t) * r * 0.9);
+          .addScaledVector(up, Math.sin(t) * r * 0.75);
         pos.push(p.x, Math.max(0.02, p.y), p.z);
         col.push(palette.cone.r * a, palette.cone.g * a, palette.cone.b * a);
       }
@@ -182,17 +185,19 @@ const cameraFor = (variant: Variant, frame: number, aspect: number) => {
   const cam = new THREE.PerspectiveCamera(50, aspect, 0.1, 800);
   if (variant === "v1") {
     // Locked-off elevated chase view, matched to the reference framing.
-    cam.position.set(-2.1, 4.7, 9.2);
-    const dir = new THREE.Vector3(0.142, -0.272, -0.952);
+    // A barely perceptible hand-held style drift keeps it from feeling frozen.
+    const ph = (frame / DURATION_FRAMES) * Math.PI * 2;
+    cam.position.set(-2.1 + 0.07 * Math.sin(ph), 4.7 + 0.03 * Math.sin(ph * 2 + 1), 9.2);
+    const dir = new THREE.Vector3(0.142 + 0.003 * Math.sin(ph + 0.8), -0.272, -0.952);
     cam.lookAt(cam.position.clone().addScaledVector(dir, 20));
   } else {
     // Alternative: low three-quarter orbit that swings around the ego car
     // while slowly craning up and pushing in.
     const t = frame / (DURATION_FRAMES - 1);
     const e = t * t * (3 - 2 * t);
-    const az = THREE.MathUtils.degToRad(THREE.MathUtils.lerp(64, 14, e));
+    const az = THREE.MathUtils.degToRad(THREE.MathUtils.lerp(66, 30, e));
     const radius = THREE.MathUtils.lerp(13.5, 11.0, e);
-    const h = THREE.MathUtils.lerp(1.7, 2.7, e);
+    const h = THREE.MathUtils.lerp(1.9, 3.1, e);
     cam.fov = 46;
     cam.position.set(Math.sin(az) * radius, h, Math.cos(az) * radius + 0.5);
     cam.lookAt(0, 0.9, -3.6);
@@ -232,17 +237,8 @@ export const buildScene = (
   scene.add(withReflection(ctx, sedan, CAR_POS, true, 1.12));
   scene.add(withReflection(ctx, truck, TRUCK_POS, true, 1.28));
 
-  // tracking beams from the lidar to the truck
-  const tb = TRUCK_POS;
-  const beam = [
-    LIDAR.x, LIDAR.y, LIDAR.z, tb.x - 1.3, 0.7, tb.z + 3.6,
-    LIDAR.x, LIDAR.y, LIDAR.z, tb.x + 1.3, 0.7, tb.z + 3.6,
-    LIDAR.x, LIDAR.y, LIDAR.z, tb.x - 1.3, 4.0, tb.z + 3.6,
-    LIDAR.x, LIDAR.y, LIDAR.z, tb.x + 1.3, 4.0, tb.z + 3.6,
-  ];
-  scene.add(lines(ctx, beam, palette.cone, 1.6, 0.4));
-
-  const coneTarget = CAR_POS.clone().add(new THREE.Vector3(0.3, 1.2, 1.4));
+  // the sensor fan opens toward the gap between the two tracked vehicles
+  const coneTarget = new THREE.Vector3(-1.0, 1.5, -7.0);
   const first = coneSegments(0, LIDAR, coneTarget);
   const cone = lines(ctx, first.pos, palette.cone, 3.6, 1, first.col);
   scene.add(cone);

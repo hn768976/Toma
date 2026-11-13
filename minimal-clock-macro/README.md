@@ -1,6 +1,6 @@
 # Minimal Clock Macro
 
-Shallow depth-of-field macro shot of a minimalist clock with a real-time sweeping
+Shallow depth-of-field macro shot of a minimalist clock with a ticking quartz
 second hand, built with **Remotion 4 + a single WebGL 2 fragment shader**.
 No assets: the dial, bezel, case, hands, shadows and the lens blur are all
 computed analytically per pixel (ray / plane + signed-distance shapes whose edge
@@ -12,7 +12,8 @@ softness equals the circle of confusion), so it is noise-free and sharp at 4K.
 | `ClockMacro-V2` | 3840 × 2160 | 30  | 899    | 29.967 s | Alternative palette: champagne gold on midnight    |
 
 The reference clip is 749 frames at 25 fps (29.96 s); 899 frames is the closest
-whole-frame length at 30 fps. The second hand turns 6° per second, exactly real time.
+whole-frame length at 30 fps. The second hand is a quartz movement: it steps 6° once per second (real time),
+as in the reference. The MP4 carries a silent AAC track, like the reference.
 
 ## Requirements
 
@@ -38,7 +39,7 @@ Output goes to `out/`. Equivalent raw CLI call:
 npx remotion render ClockMacro-V1 out/v1.mp4 --scale=0.5
 ```
 
-Encoding defaults live in `remotion.config.ts`: H.264, yuv420p, BT.709, CRF 16, PNG intermediate frames.
+Encoding defaults live in `remotion.config.ts`: H.264, yuv420p, BT.709, CRF 12, PNG intermediate frames.
 
 ### WebGL backend
 
