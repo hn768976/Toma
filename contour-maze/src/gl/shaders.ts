@@ -231,15 +231,19 @@ void main() {
   float F0 = sampleF((ro + rd * t0).xy);
   float L0 = floor(F0 / uDelta);
 
-  for (int i = 1; i <= 160; i++) {
-    if (i > n) break;
-    float t1 = tTop + dt * float(i);
+  // Over the core the maze walls are short and tightly packed, so the march
+  // takes quarter steps there; otherwise wall ends are undersampled and break
+  // up into comb-like teeth.
+  for (int i = 1; i <= 640; i++) {
+    if (t0 >= tBot - 1e-6) break;
+    float t1 = min(t0 + dt * (F0 > 0.98 ? 0.25 : 1.0), tBot);
+    float dtc = t1 - t0;
     float F1 = sampleF((ro + rd * t1).xy);
     float L1 = floor(F1 / uDelta);
     if (L1 != L0) {
       float dir = sign(L1 - L0);
       int cnt = min(int(abs(L1 - L0)), 4);
-      float slope = (F1 - F0) / dt;
+      float slope = (F1 - F0) / dtc;
       for (int j = 0; j < 4; j++) {
         if (j >= cnt) break;
         float lvl = dir > 0.0 ? L0 + 1.0 + float(j) : L0 - float(j);
@@ -251,7 +255,7 @@ void main() {
         if (e < 4.0 * (uRimR + aa) / max(hl, 0.2)) {
           // One secant refinement step for crisp, smooth rims.
           float Fc = sampleF((ro + rd * tc).xy);
-          tc = clamp(tc - (Fc - b) / slope, t0 - dt, t1 + dt);
+          tc = clamp(tc - (Fc - b) / slope, t0 - dtc, t1 + dtc);
           e = ro.z + rd.z * tc - h;
         }
         vec3 pc = ro + rd * tc;
