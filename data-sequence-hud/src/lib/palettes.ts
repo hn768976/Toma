@@ -10,6 +10,8 @@ export type Palette = {
   text: string;
   /** Secondary / dim text. */
   dim: string;
+  /** Dim digits in the main number grid. */
+  gridDim: string;
   /** Very dim text (tiny captions). */
   faint: string;
   /** Main accent (orange in the reference). */
@@ -46,6 +48,7 @@ export const REFERENCE: Palette = {
   vignette: "rgba(0,0,0,0.55)",
   text: "#e4e4e2",
   dim: "#8e8f8f",
+  gridDim: "#6e7070",
   faint: "#5d5f60",
   accent: "#f2a33a",
   accentDim: "#7a5426",
@@ -70,6 +73,7 @@ export const NEON: Palette = {
   vignette: "rgba(2,0,12,0.7)",
   text: "#d8f1ff",
   dim: "#6f8fb8",
+  gridDim: "#54709a",
   faint: "#3b4f75",
   accent: "#ff3d9a",
   accentDim: "#6e1d4c",

@@ -270,8 +270,8 @@ const drawLeftColumn = (ctx: Ctx, f: number, p: Palette) => {
   microRow(ctx, labelX, 265.5, 52, 761, f, p, { size: 2.6, bright: 0.2 });
 
   // orange progress lines
-  rect(ctx, 9, 279.6, animatedBar(f, 780, 120, 141), 0.6, p.accent);
-  rect(ctx, 9, 284.6, animatedBar(f, 781, 60, 110), 0.6, p.accent);
+  rect(ctx, 9, 279.6, animatedBar(f, 780, 95, 114), 0.6, p.accent);
+  rect(ctx, 9, 284.6, animatedBar(f, 781, 55, 105), 0.6, p.accent);
   text(ctx, digits(5, 782, epoch(f, 782, 8, 20)), 127, 281, 4.2, p.text, 700);
   text(ctx, digits(5, 783, epoch(f, 783, 8, 20)), 141, 281, 4.2, p.dim, 700);
   text(ctx, digits(5, 784, epoch(f, 784, 8, 20)), 133, 286.5, 4.2, p.text, 700);
@@ -534,7 +534,7 @@ const drawGrid = (ctx: Ctx, f: number, p: Palette) => {
         const v = randInt(10, id, ep);
         const cr = rand(id, Math.floor((i + randInt(3, ci, ri)) / 3), ep, 1);
         const cr2 = rand(id, ep, 2);
-        ctx.fillStyle = cr < 0.2 ? p.accent : cr2 < 0.3 ? p.text : p.dim;
+        ctx.fillStyle = cr < 0.2 ? p.accent : cr2 < 0.3 ? p.text : p.gridDim;
         ctx.fillText(String(v), c.x + i * PITCH + 2.2, y + 0.4);
       }
     });
