@@ -8,10 +8,10 @@ export const DURATION_IN_FRAMES = 259;
 // ---- timeline (frames) -----------------------------------------------------
 export const SCOPE_MOVE_START = 6;
 export const SCOPE_MOVE_END = 152;
-export const RING_IN_START = 50;
-export const RING_IN_END = 70;
-export const RING_OUT_START = 174;
-export const RING_OUT_END = 200;
+export const RING_IN_START = 45;
+export const RING_IN_END = 64;
+export const RING_OUT_START = 186;
+export const RING_OUT_END = 208;
 
 // ---- world layout ----------------------------------------------------------
 export const TUBE_RADIUS = 1;

@@ -112,7 +112,7 @@ export const ColonoscopyPolypDetection: React.FC<{ camera: CameraMode }> = ({
       // locked-off cutaway view, looking slightly down into the open colon
       camera.fov = 24;
       camera.position.set(0.15, 2.95, 7.4);
-      camera.lookAt(0.15, 0.42, 0);
+      camera.lookAt(0.15, 0.33, 0);
     } else {
       // alternative: low three-quarter view that follows the scope from behind,
       // orbiting to the right while pushing in on the polyp.

@@ -29,18 +29,21 @@ float ridge(float d, float amp) {
 
 float H(vec2 p) {
   float x = p.x / ASPECT;
-  // A soft mound anchored right of centre that sways and "breathes" in place.
-  // Only sin/cos of uPhase are used => the motion loops perfectly.
-  float sway = 0.085 * sin(uPhase);
-  float th = 6.28318 * (x - 0.76 - sway) / 0.66;
-  float amp = mix(0.05, 0.21, smoothstep(0.05, 0.80, x)) * (0.86 + 0.14 * cos(uPhase));
-  float yc = 0.47 + amp * (cos(th) - 0.2 * sin(2.0 * th))
-           + 0.055 * sin(uPhase + 6.28318 * x * 0.8 + 0.6);
-  float h = ridge(p.y - yc, 0.30);
-  // a second, fainter ridge above the frame that dips into the top-left corner
-  h += ridge(p.y - yc - 1.08 - 0.07 * sin(uPhase + 2.0), 0.20);
+  // A soft mound anchored right of centre. It mostly "breathes" (rises and
+  // sinks) with a slight sideways sway. Only sin/cos of uPhase are used, so
+  // the motion loops perfectly.
+  float breath = 0.5 + 0.5 * cos(uPhase);
+  float x0 = 0.735 + 0.05 * sin(uPhase);
+  float dx = (x - x0) / 0.21;
+  float hump = exp(-dx * dx);
+  float yc = 0.41 + 0.19 * hump * (0.08 + 0.92 * breath)
+           + 0.03 * sin(6.28318 * x * 0.8 + uPhase + 0.6)
+           - 0.26 * smoothstep(x0 + 0.06, 1.08, x);
+  // the fold is shallow on the left and deepest under the mound
+  float depth = 0.30 * (0.42 + 0.58 * smoothstep(0.10, 0.70, x));
+  float h = ridge(p.y - yc, depth);
   // slow swell for large-scale variation
-  h += 0.04 * sin(p.x * 2.4 + p.y * 2.0 + uPhase + 2.0);
+  h += 0.035 * sin(p.x * 2.4 + p.y * 2.0 + uPhase + 2.0);
   return h;
 }
 
@@ -65,10 +68,10 @@ vec3 shade(vec2 frag) {
 
   // --- studio environment -------------------------------------------------
   // big overhead soft box: surfaces tilted upwards are bright
-  float sky = smoothstep(-0.66, 0.26, r.y);
+  float sky = smoothstep(-0.70, 0.20, r.y);
   // horizontal falloff: flute flanks pick up the darker sides of the room
   float side = smoothstep(1.05, 0.12, abs(r.x + 0.22));
-  float lum = sky * (0.50 + 0.50 * side) + 0.16 * side;
+  float lum = sky * (0.60 + 0.40 * side) + 0.18 * side;
 
   // narrow strip light -> the thin white wisps that slide inside each flute
   float s1 = (r.x - 0.30 + r.y * 0.9) * 6.0;
@@ -86,8 +89,10 @@ vec3 shade(vec2 frag) {
   // soft contact shadow on the right flank of each flute
   col *= 1.0 - 0.16 * smoothstep(0.15, 0.5, f);
 
-  // persistent darker band on the right edge, slightly darker left edge
-  col *= 1.0 - 0.34 * smoothstep(0.90, 0.975, uv.x) - 0.12 * smoothstep(0.07, 0.0, uv.x);
+  // static studio falloff: brightest upper-left, gradually darker to the right
+  col *= 1.0 - 0.36 * smoothstep(0.45, 1.0, uv.x) * smoothstep(0.45, 1.0, uv.x)
+             - 0.12 * smoothstep(0.35, 0.0, uv.x);
+  col *= 1.0 + 0.16 * smoothstep(0.35, 1.0, uv.y) * smoothstep(0.75, 0.1, uv.x);
   return col;
 }
 

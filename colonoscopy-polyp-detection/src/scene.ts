@@ -122,18 +122,18 @@ void main() {
   float bA = arc(t, 0.05, 0.245 * uReveal, ta);                  // lavender: top
   float wA = arc(t, 0.31, 0.325 * uReveal, ta);                  // white: left
   vec3 green = vec3(0.52, 1.0, 0.46);
-  vec3 white = vec3(1.0, 0.99, 0.97);
-  vec3 lav   = vec3(0.80, 0.82, 1.0);
+  vec3 white = vec3(0.90, 0.91, 1.0);
+  vec3 lav   = vec3(0.72, 0.76, 1.0);
   float seg = clamp(gA + bA + wA, 0.0, 1.0);
   vec3 col = (green * gA + white * wA + lav * bA) * mainBand;
-  float a = mainBand * seg;
+  float a = mainBand * seg * 0.78;
   // brighter core line for a glassy look
   col += vec3(0.22) * band(r, 0.65, 0.69, aa) * seg;
 
   // thin pink-white outline hugging the band
   float outline = band(r, 0.752, 0.768, aa) * uReveal;
-  col += vec3(1.0, 0.84, 0.90) * outline * 0.7;
-  a += outline * 0.6;
+  col += vec3(1.0, 0.84, 0.90) * outline * 0.22;
+  a += outline * 0.15;
 
   // tick marks on the inside of the top (lavender) arc
   float tickA = fract(t * 40.0);
@@ -211,6 +211,8 @@ export const buildScene = (): SceneHandles => {
   ); // points to the tube axis
   const polypMat = new THREE.MeshPhysicalMaterial({
     color: 0xee9c74,
+    emissive: 0x6a2f1c,
+    emissiveIntensity: 0.4,
     roughness: 0.38,
     clearcoat: 0.6,
     clearcoatRoughness: 0.3,
@@ -227,7 +229,7 @@ export const buildScene = (): SceneHandles => {
     let yy = Math.cos(ang) * head + 0.09;
     if (t > 0.55) {
       const k = (t - 0.55) / 0.45;
-      rr += k * k * k * 0.035;
+      rr += k * k * 0.085;
       yy -= k * 0.035;
     }
     profile.push(new THREE.Vector2(Math.max(rr, 0.0001), yy));

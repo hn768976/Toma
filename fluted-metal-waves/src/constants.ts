@@ -16,14 +16,14 @@ export const PALETTES: Record<
 > = {
   // cool neutral chrome
   silver: {
-    shadow: [0.27, 0.29, 0.31],
+    shadow: [0.34, 0.36, 0.38],
     mid: [0.66, 0.68, 0.7],
     light: [0.9, 0.91, 0.925],
     spec: [1.0, 1.0, 1.0],
   },
   // warm polished gold
   gold: {
-    shadow: [0.3, 0.15, 0.03],
+    shadow: [0.36, 0.19, 0.04],
     mid: [0.8, 0.54, 0.16],
     light: [0.98, 0.82, 0.45],
     spec: [1.0, 0.97, 0.84],

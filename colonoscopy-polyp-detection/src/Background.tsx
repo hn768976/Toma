@@ -32,10 +32,10 @@ export const Background: React.FC<{ drift?: number }> = ({ drift = 0 }) => {
         y: rnd(),
         size: 12 + depth * depth * 30,
         stretch: 1.5 + rnd() * 1.6,
-        alpha: 0.2 + rnd() * 0.6,
-        vx: -(0.0004 + depth * 0.0014),
-        vy: (rnd() - 0.5) * 0.0005,
-        twinkle: 0.02 + rnd() * 0.05,
+        alpha: 0.28 + rnd() * 0.65,
+        vx: -(0.0011 + depth * 0.0034),
+        vy: (rnd() - 0.5) * 0.0012,
+        twinkle: 0.05 + rnd() * 0.12,
         phase: rnd() * Math.PI * 2,
       });
     }
@@ -47,7 +47,7 @@ export const Background: React.FC<{ drift?: number }> = ({ drift = 0 }) => {
         rx: 0.06 + rnd() * 0.12,
         ry: 0.04 + rnd() * 0.08,
         a: 0.18 + rnd() * 0.3,
-        vx: -(0.0003 + rnd() * 0.0006),
+        vx: -(0.0008 + rnd() * 0.0014),
       });
     }
     const sprite = document.createElement("canvas");
@@ -66,7 +66,7 @@ export const Background: React.FC<{ drift?: number }> = ({ drift = 0 }) => {
     const ctx = ref.current!.getContext("2d")!;
     ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = 1;
-    ctx.fillStyle = "#010409";
+    ctx.fillStyle = "#070c12";
     ctx.fillRect(0, 0, width, height);
 
     const wrap = (v: number) => ((v % 1.2) + 1.2) % 1.2 - 0.1;
