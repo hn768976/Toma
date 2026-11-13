@@ -206,7 +206,8 @@ void main() {
   vec2 b = vAB.zw;
   vec2 ab = b - a;
   float L2 = dot(ab, ab);
-  float t = L2 > 1e-4 ? clamp(dot(p - a, ab) / L2, 0.0, 1.0) : 0.0;
+  float tu = L2 > 1e-4 ? dot(p - a, ab) / L2 : 0.0; // unclamped: keeps patterns continuous across joints
+  float t = clamp(tu, 0.0, 1.0);
   vec2 q = a + ab * t;
   vec2 dq = p - q;
   float d = length(dq);
@@ -216,7 +217,7 @@ void main() {
 
   float mat = vMisc.x;
   float seed = vMisc.y;
-  float s = mix(vMisc.z, vMisc.w, t);
+  float s = mix(vMisc.z, vMisc.w, tu);
   bool isPoint = (mat > 2.5 && mat < 3.5) || mat > 4.5;
 
   float cov;
