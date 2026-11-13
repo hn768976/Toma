@@ -14,6 +14,9 @@ export const PALETTE = {
   salmon: "#ff9a6b",
   yellow: "#ffd76a",
   green: "#8cff9a",
+  gold: "#ffb52e",
+  amber: "#ff8a2a",
+  navy: "#2457b8",
 } as const;
 export type ColorName = keyof typeof PALETTE;
 export const COLOR_NAMES = Object.keys(PALETTE) as ColorName[];

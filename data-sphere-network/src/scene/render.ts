@@ -59,8 +59,9 @@ type Ctx = CanvasRenderingContext2D;
 const BURST_ALPHA: Array<[number, number]> = [
   [0, 0.3],
   [1.15, 0.3],
-  [1.45, 0.24],
-  [1.8, 0.34],
+  [1.45, 0.2],
+  [1.6, 0.24],
+  [1.85, 0.34],
   [2.15, 0.8],
   [2.45, 1.15],
   [3.0, 1.15],
@@ -266,7 +267,7 @@ export const renderFrame = (
       const w0 = Math.max(minW * k, (s.width * cam.f) / zA);
       // depth of field for line work: defocused lines get wider and dimmer
       const coc = APERTURE * cam.f * Math.abs(1 / zA - 1 / focus);
-      const w = Math.max(w0, Math.min(coc * 0.6, 24 * k));
+      const w = Math.max(w0, Math.min(coc * 0.9, 30 * k));
       ctx.globalAlpha = Math.min(1, a * Math.min(1, (w0 / k) * 0.8) * Math.sqrt(w0 / w));
       ctx.strokeStyle = PALETTE[s.color];
       ctx.lineWidth = Math.min(w, 6 * k);
@@ -418,7 +419,7 @@ export const renderFrame = (
   if (tl.sphereAlpha > 0.003) {
     // stylised long-exposure streaks during the burst (like the reference)
     // shorter shutter while crossing the shell keeps the icons crisp there
-    const crossing = smoothstep(1.2, 1.4, t) * (1 - smoothstep(1.65, 1.85, t));
+    const crossing = smoothstep(1.15, 1.3, t) * (1 - smoothstep(1.42, 1.58, t));
     const gain = (1 + 5 * tl.streak) * (1 - 0.65 * crossing);
     const sh = SHUTTER * gain;
     const prevBurst = makeCamera(path(t - sh), width, height);
@@ -439,7 +440,7 @@ export const renderFrame = (
       if (!project(cam, ic.p, P)) continue;
       const s = (ic.size * cam.f) / P.z;
       // icons rushing past the lens fade out instead of filling the frame
-      const a = tl.icons * fog(P.z) * clamp((height * 0.09 - s) / (height * 0.04));
+      const a = tl.icons * fog(P.z) * clamp((height * 0.13 - s) / (height * 0.05));
       if (a < 0.01) continue;
       if (P.x < -s || P.x > width + s || P.y < -s || P.y > height + s) continue;
       if (s < 9 * k) {

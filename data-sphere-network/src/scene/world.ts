@@ -91,6 +91,19 @@ export const buildWorld = (seed = 7): World => {
     });
   }
 
+  // extra icons hugging the camera path so they sweep past the lens
+  for (let i = 0; i < 900; i++) {
+    const z = 30 + rand() * 300;
+    const spread = 5 + z * 0.045;
+    icons.push({
+      p: [(rand() * 2 - 1) * spread * 1.6, (rand() * 2 - 1) * spread, z],
+      size: 0.35 + Math.pow(rand(), 1.6) * 0.9,
+      name: ICON_NAMES[Math.floor(rand() * ICON_NAMES.length)],
+      color: pick(iconColors, iconWeights),
+      tile: rand() < 0.35,
+    });
+  }
+
   // -- plexus links between nearby nodes
   const hubs = field.filter((_, i) => i % 3 === 0).map((f) => f.p);
   const links: Segment[] = [];
@@ -202,8 +215,8 @@ export const buildWorld = (seed = 7): World => {
     }
   };
   for (const z of zs) {
-    for (const x of xs) dash([x, -66, z], [x, 66, z], "blue", 1.0, 0.22);
-    for (const y of ys) dash([-120, y, z], [120, y, z], "blue", 1.0, 0.22);
+    for (const x of xs) dash([x, -66, z], [x, 66, z], "navy", 0.9, 0.22);
+    for (const y of ys) dash([-120, y, z], [120, y, z], "navy", 0.9, 0.22);
     for (const x of xs)
       for (const y of ys)
         if (rand() < 0.6)
@@ -211,7 +224,7 @@ export const buildWorld = (seed = 7): World => {
   }
   for (const x of xs)
     for (const y of ys)
-      if (Math.abs(x) > 40 || Math.abs(y) > 24 || rand() < 0.3) dash([x, y, zs[0]], [x, y, zs[zs.length - 1]], "blue", 0.9, 0.2);
+      if (Math.abs(x) > 40 || Math.abs(y) > 24 || rand() < 0.3) dash([x, y, zs[0]], [x, y, zs[zs.length - 1]], "navy", 0.8, 0.2);
 
   // -- ring of dots framing the core
   const ring: Particle[] = [];
@@ -221,7 +234,7 @@ export const buildWorld = (seed = 7): World => {
     ring.push({
       p: [Math.cos(a) * r, Math.sin(a) * r, CORE[2] - 25],
       size: 0.75 + rand() * 0.45,
-      color: rand() < 0.6 ? "yellow" : rand() < 0.75 ? "salmon" : "white",
+      color: rand() < 0.65 ? "gold" : rand() < 0.7 ? "amber" : "white",
       square: true,
       twinkle: rand() * 6.28,
     });
