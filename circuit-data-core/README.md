@@ -16,13 +16,17 @@ the same 450 frames last 15.000 s, so the timing matches the reference frame for
 
 - **Remotion 4** (`@remotion/three` `ThreeCanvas`), **React Three Fiber**, **Three.js**
 - **WebGL 2 shaders** (`src/scene/shaders.ts`):
-  - circuit floor: tiled PCB, pulsing energy in the traces, a light pool from the
-    core, depth haze, and a fake depth of field that blends three pre-blurred
-    texture levels by circle of confusion
+  - circuit floor: tiled PCB, pulsing energy in the traces, blinking pads, a
+    light pool from the core and depth haze
   - data-core shells: procedural memory-cell grid, flickering bits, scan band,
     etched circuitry, fresnel glass, bevel glow. Five nested additive shells
     over a dark indigo body, plus a floor reflection
   - floating motes rendered as bokeh discs sized by the circle of confusion
+- **Post-process depth of field** (`src/scene/dof.ts`): the scene renders into
+  a 4× MSAA target with a depth texture. It is prefiltered to quarter resolution
+  with the circle of confusion in alpha, gather-blurred along a golden-angle
+  spiral and blended back over the sharp 4K image. Focus follows the core's
+  nearest top corner, as on the reference lens.
 - **Canvas 2D**: the circuit-board textures (and their blurred focus levels) are
   drawn procedurally at runtime. No external images or fonts are used.
 - Seeded PRNG, so renders are deterministic.
@@ -51,7 +55,8 @@ Output is H.264 MP4 (`yuv420p`, CRF 16), as set in `remotion.config.ts`.
 - The WebGL canvas always renders at the full 4K composition resolution. The
   1080p deliverables are that 4K image downsampled (`--scale=0.5`).
 - On CPU-only machines a 4K frame takes several seconds; add `--concurrency=N`
-  to use more cores.
+  to use more cores. Each concurrent tab needs about 2.5 GB of RAM with the
+  software renderer, so keep N × 2.5 GB below your free memory.
 - If Remotion can't download its Chrome Headless Shell (offline or sandboxed
   machines), point it at a local one:
   `REMOTION_BROWSER_EXECUTABLE=/path/to/chrome-headless-shell npm run render:v1:1080p`
@@ -66,5 +71,6 @@ src/
   scene/constants.ts        timing, resolution, scene dimensions
   scene/circuitTextures.ts  procedural PCB + cube-trace textures (Canvas 2D)
   scene/shaders.ts          GLSL shaders (floor, core shells, motes)
+  scene/dof.ts              post-process depth of field
   scene/random.ts           seeded PRNG
 ```
