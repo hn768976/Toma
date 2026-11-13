@@ -121,10 +121,10 @@ const keyframes = (t: number, keys: [number, number][]) => {
 const REF_KEYS = {
   s: [[0, -0.3], [1, -0.15], [2.5, 0.5], [4, 1.5], [5.5, 2.6], [7.5, 3.25], [10, 3.5]] as [number, number][],
   d: [[0, 8.9], [1, 7.7], [2.5, 6.3], [4, 5.7], [5.5, 5.3], [7.5, 4.9], [10, 4.75]] as [number, number][],
-  /** camera height: rises late in the move so the KPI cards are seen from above */
-  y: [[0, 0.55], [2.5, 0.6], [4, 0.8], [5.5, 1.1], [7.5, 1.3], [10, 1.35]] as [number, number][],
+  /** camera height (eye line stays about mid-card on the KPI cards) */
+  y: [[0, 0.55], [2.5, 0.55], [10, 0.5]] as [number, number][],
   /** height of the look-at point */
-  ly: [[0, -0.05], [2.5, -0.1], [4, -0.2], [5.5, -0.3], [7.5, -0.38], [10, -0.4]] as [number, number][],
+  ly: [[0, -0.05], [2.5, -0.05], [10, -0.2]] as [number, number][],
   look: [[0, 0.6], [1, 0.8], [2.5, 1.6], [4, 2.8], [5.5, 3.9], [7.5, 4.6], [10, 5.0]] as [number, number][],
 };
 const referenceRig = (t: number): Rig => {
@@ -147,7 +147,7 @@ export const createDashFactory =
     scene.background = new THREE.Color(...p.bg);
     const camera = new THREE.PerspectiveCamera(42, pixelWidth / pixelHeight, 0.1, 200);
     const yawCard = WALL_ANGLE * 1.0;
-    const yawTall = WALL_ANGLE * 1.05;
+    const yawTall = WALL_ANGLE * 1.35;
 
     const cards: Card[] = [];
     // background wall plane (static texture, tiled)
@@ -170,7 +170,7 @@ export const createDashFactory =
       scene.add(wall);
     }
     // big violet chart card high on the back layer
-    cards.push(makeCard(BACK_W, BACK_H, 14, onWall(3.0, 5.7, -3.0), WALL_ANGLE, (c, t) => drawBackCard(c, p, t), 4, 1));
+    cards.push(makeCard(BACK_W, BACK_H, 14, onWall(3.0, 5.3, -3.0), WALL_ANGLE, (c, t) => drawBackCard(c, p, t), 4, 1));
     // system list far left
     cards.push(makeCard(LIST_W, LIST_H, 2.8, onWall(-4.4, 0.4, -1.5), WALL_ANGLE, (c, t) => drawSystemList(c, p, t), 3));
     // main card
@@ -181,7 +181,7 @@ export const createDashFactory =
     for (let i = 0; i < 7; i++) {
       const s = 4.35 + i * 1.8;
       cards.push(
-        makeCard(TALL_W, TALL_H, 1.85, onWall(s, -1.05, -0.15), yawTall, (c, t) => drawTallCard(c, p, t, i), 6),
+        makeCard(TALL_W, TALL_H, 2.2, onWall(s, -1.0, -0.15), yawTall, (c, t) => drawTallCard(c, p, t, i), 6),
       );
     }
     cards.forEach((cd) => scene.add(cd.mesh));
