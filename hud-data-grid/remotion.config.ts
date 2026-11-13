@@ -16,6 +16,8 @@ Config.setJpegQuality(95);
 Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
+// Standard broadcast-range BT.709 output (avoids full-range yuvj420p files).
+Config.setColorSpace("bt709");
 Config.setCrf(18);
 Config.setConcurrency(3);
 // Generous timeout: the first frame compiles shaders and builds textures.
