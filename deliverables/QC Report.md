@@ -30,7 +30,8 @@ These were checked with `qc/qc_videos.py`, which uses ffprobe/ffmpeg to count ev
 | Full decode, zero errors | ✔ | ✔ | ✔ | ✔ |
 | No black frames (blackdetect) | ✔ | ✔ | ✔ | ✔ |
 | No frozen frames (freezedetect) | ✔ | ✔ | ✔ | ✔ |
-| No flicker or corrupted-frame spikes (per-frame luma and frame-difference scan) | ✔ max Δluma 0.10 | ✔ 0.10 | ✔ 0.21 | ✔ 0.31 |
+| No flicker or corrupted-frame spikes (per-frame luma and frame-difference scan) | ✔ max Δluma 0.10 | ✔ 0.10 | ✔ 0.42 | ✔ 0.66 |
+| No local flashes or pops (`qc/popscan.py`: 16×9 grid, any area that jumps and returns within 1–3 frames) | ✔ 0 | ✔ 0 | ✔ 0 | ✔ see note¹ |
 | Audio | none, same as reference | none | none | none |
 
 ## Project ZIPs: PASS
@@ -52,11 +53,13 @@ A separate review agent compared each render with its reference at matching time
 |---|---|---|---|
 | 1. Dashboard V1 | 6/10 | **8/10** | Pass. Content, colours, curve and line timing, light bar and camera roll all match. Remaining: framing is slightly close and right-shifted in 0–7 s, a little extra roll at the very end, and the image is slightly darker. |
 | 2. Dashboard V2 | pass | **pass** | Clearly distinct palette. Geometry, timing and camera are identical to V1 frame for frame. Clean. |
-| 3. World Map V1 | 5/10 | **7/10** | Pass. Map geometry matches the reference within 1–2% of the frame (fitted perspective Mercator plus spline correction). Camera locked off, brightness matched (luma 36.7 vs 36.7), blue bar timing matched. Remaining: the light structure sits a little left of the reference's and is less detailed; floor reflections and particle twinkle are subtler. |
-| 4. World Map V2 | pass | **pass** | Clearly distinct, smooth orbital crane (no jerks; largest jump between neighbouring frames is 1.31×). Whole map is in frame at the end. Minor: oblique crop in the first 1.5 s, and the blue bar sweeps across the frame through parallax. |
+| 3. World Map V1 | 5/10 | **8/10** | Pass, no flashes or pops. Map geometry matches the reference within 1–2% of the frame (fitted perspective Mercator plus spline correction). Camera locked off. Brightness, highlights, early brightening and blue bar timing all match. The light structure was rebuilt to match the reference: a glossy floor of light at eye level, pillars and data shelves standing on it, bluish reflections below, crisp near detail, warm stacked dashes, amber specks, and rays down-left and down-right. Remaining: the structure's top surface is a little softer than the reference's, and the particle twinkle is about two-thirds as strong. |
+| 4. World Map V2 | pass | **pass** | Clearly distinct, smooth orbital crane (no jerks; largest jump between neighbouring frames is 1.23×). Whole map is in frame at the end. Minor: a thin light line shimmers briefly at about 4.8 s (note¹), the beam's red end dot reaches the frame edge in the last second, and the map is cropped in the first 1–2 s. |
 
 **Fixed during review:**
 - **Dashboard:** framing and camera height, panel saturation, candle colours, yellow-line timing, curve end state, light bar visible from frame 0, exposure.
-- **World map:** map tilt and Eurasia shape, camera drift, clipped highlights, beam length, blue bar timing, dark background shapes.
+- **World map:** map tilt and Eurasia shape, camera drift, clipped highlights, beam length, blue bar timing, dark background shapes. After a second look at the reference, the light structure was rebuilt, and two flashes (frames 72–73 and 242–243) were found and fixed. Their cause was animated elements being hidden for about 2 frames, which changed the depth-of-field result for those frames.
+
+¹ World Map V2 shows one 3.4-level dip at frames 142–145. It comes from a thin light column passing through focus at peak camera speed, not from anything switching on or off, and is low severity.
 
 No watermark from the stock references was reproduced.
