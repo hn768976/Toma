@@ -17,4 +17,6 @@ Config.setJpegQuality(95);
 Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
+// Standard HD delivery: BT.709 matrix, TV (limited) range, tagged in the file.
+Config.setColorSpace("bt709");
 Config.setCrf(16);
