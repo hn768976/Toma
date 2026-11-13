@@ -3,6 +3,7 @@ import {
   CameraKey,
   cameraMatrix,
   clamp01,
+  curve,
   distance,
   lerp,
   ramp,
@@ -29,25 +30,33 @@ type Drop = {
   flat: number; // frames to flatten into a lens
   fade: number; // frames for the lens to be absorbed
   r?: number;
+  /** optional keyframed height of the drop's underside above the skin */
+  gap?: [number, number][];
 };
 
 // Positions and timings follow the reference: three drops early, three later.
 const DROPS: Drop[] = [
-  { x: 0.05, z: 0.75, land: 36, v: 0.0072, a: 0.00004, sink: 56, flat: 20, fade: 18 },
-  { x: -1.95, z: -0.95, land: 52, v: 0.016, a: 0.0002, sink: 46, flat: 22, fade: 24 },
-  { x: 1.7, z: -2.15, land: 48, v: 0.021, a: 0.0002, sink: 48, flat: 22, fade: 24 },
-  { x: 1.5, z: 1.75, land: 118, v: 0.017, a: 0.00012, sink: 32, flat: 28, fade: 20, r: 0.47 },
-  { x: -2.35, z: 0.55, land: 100, v: 0.019, a: 0.00018, sink: 40, flat: 22, fade: 22 },
-  { x: 2.75, z: -2.5, land: 142, v: 0.02, a: 0.0002, sink: 24, flat: 18, fade: 24 },
+  // hero drop: falls quickly at first, then settles onto the skin in slow motion
+  { x: 0.05, z: 0.75, land: 38, v: 0, a: 0, sink: 56, flat: 20, fade: 18, gap: [[0, 0.22], [22, 0.04], [38, 0]] },
+  { x: -1.6, z: -0.2, land: 52, v: 0.02, a: 0.0002, sink: 46, flat: 22, fade: 24 },
+  { x: 1.25, z: -1.0, land: 57, v: 0.022, a: 0.0002, sink: 42, flat: 22, fade: 24 },
+  { x: 1.2, z: 1.65, land: 112, v: 0, a: 0, sink: 36, flat: 30, fade: 18, gap: [[50, 3.4], [60, 2.8], [78, 1.9], [96, 1.0], [112, 0]] },
+  { x: -2.25, z: 0.7, land: 103, v: 0, a: 0, sink: 40, flat: 24, fade: 20, gap: [[40, 4.2], [56, 2.4], [80, 1.1], [103, 0]] },
+  { x: 2.4, z: -1.7, land: 150, v: 0, a: 0, sink: 24, flat: 20, fade: 14, gap: [[0, 6.0], [100, 3.6], [122, 2.2], [150, 0]] },
 ];
 
+// Fast crane-up / tilt-down while the first drops land, a slow push while
+// they are absorbed, then a rolling pull-back that reveals the slab edge.
 const CAMERA: CameraKey[] = [
   { f: 0, pos: [0.15, 1.25, 5.3], target: [0.0, 0.0, 0.65], roll: 0, fov: 30 },
-  { f: 32, pos: [0.12, 1.52, 5.15], target: [0.0, 0.0, 0.62], roll: 0, fov: 30 },
-  { f: 70, pos: [0.1, 1.85, 5.0], target: [0.0, 0.0, 0.6], roll: 0, fov: 30 },
-  { f: 128, pos: [0.2, 2.5, 5.0], target: [0.05, 0.0, 0.75], roll: 0.6, fov: 30 },
-  { f: 178, pos: [0.6, 4.6, 6.9], target: [0.1, 0.0, 1.1], roll: 3.6, fov: 30 },
-  { f: 226, pos: [0.95, 6.7, 8.95], target: [0.12, 0.0, 1.36], roll: 6.2, fov: 30 },
+  { f: 12, pos: [0.14, 1.45, 5.2], target: [0.0, 0.0, 0.5], roll: 0, fov: 30 },
+  { f: 25, pos: [0.13, 1.72, 5.05], target: [0.0, 0.0, -0.2], roll: 0, fov: 30 },
+  { f: 48, pos: [0.1, 3.75, 3.78], target: [0.0, 0.0, -0.38], roll: 0, fov: 30 },
+  { f: 105, pos: [0.15, 3.85, 3.95], target: [0.02, 0.0, 0.7], roll: 0.3, fov: 30 },
+  { f: 128, pos: [0.22, 4.1, 4.5], target: [0.05, 0.0, 0.9], roll: 1.2, fov: 30 },
+  { f: 165, pos: [0.6, 5.3, 7.2], target: [0.1, 0.0, 1.1], roll: 3.8, fov: 30 },
+  { f: 192, pos: [0.85, 6.3, 8.4], target: [0.12, 0.0, 1.3], roll: 5.6, fov: 30 },
+  { f: 226, pos: [1.0, 6.95, 9.15], target: [0.12, 0.0, 1.38], roll: 6.5, fov: 30 },
   { f: 250, pos: [1.05, 7.1, 9.3], target: [0.12, 0.0, 1.4], roll: 6.8, fov: 30 },
 ];
 
@@ -67,7 +76,9 @@ export const dropState = (d: Drop, frame: number): DropState => {
   const r = d.r ?? R;
   const tau = frame - d.land;
   if (tau < 0) {
-    const y = r + d.v * -tau + 0.5 * d.a * tau * tau;
+    const y = d.gap
+      ? r + curve(d.gap, frame)
+      : r + d.v * -tau + 0.5 * d.a * tau * tau;
     return {
       center: [d.x, y, d.z],
       rx: r,
@@ -75,7 +86,7 @@ export const dropState = (d: Drop, frame: number): DropState => {
       strength: 1,
       healRadius: 0,
       shadow: 1,
-      glow: 0.26 * ramp(tau, -10, 0) * 0.3,
+      glow: 0.55 * ramp(tau, -10, 0) * 0.3,
       ring: 0,
       sheen: 0,
     };
@@ -83,20 +94,18 @@ export const dropState = (d: Drop, frame: number): DropState => {
   const u = smooth(tau / d.sink);
   const w = smooth((tau - d.sink) / d.flat);
   const z = smooth((tau - d.sink - d.flat) / d.fade);
-  // tiny elastic settle on touch-down
-  const settle = 1 - 0.05 * Math.exp(-tau / 5) * Math.cos(tau / 2.6);
-  const cy = r * (1 - u) * settle;
-  const ry = r * lerp(lerp(1, 0.12, w), 0.02, z) * settle;
-  const rx = r * lerp(lerp(1, 0.94, w), 0.4, z) * (2 - settle);
+  const cy = r * (1 - u);
+  const ry = r * lerp(lerp(1, 0.12, w), 0.02, z);
+  const rx = r * lerp(lerp(1, 0.94, w), 0.4, z);
   return {
     center: [d.x, cy, d.z],
     rx,
     ry,
-    strength: lerp(1, 0.8, w) * (1 - z),
+    strength: 1 - z,
     healRadius: 3.6 * smooth((tau - 6) / 115),
     shadow: 1 - u,
-    glow: 0.26 * (0.3 + 0.7 * ramp(tau, 0, 14)) * (1 - z),
-    ring: 0.32 * Math.sin(Math.PI * clamp01(z)) + 0.10 * w * (1 - z),
+    glow: 0.55 * (0.3 + 0.7 * ramp(tau, 0, 14)) * (1 - 0.78 * w) * (1 - z),
+    ring: 0.32 * Math.sin(Math.PI * clamp01(z)) + 0.26 * w * (1 - z),
     sheen: ramp(tau, d.sink * 0.5, d.sink + d.flat + d.fade + 25),
   };
 };
@@ -115,7 +124,7 @@ export const sceneUniforms = (frame: number) => {
 
   // focus: first hero drop, then the point the camera looks at
   const hero = states[0].center;
-  const k = ramp(frame, 40, 110);
+  const k = ramp(frame, 46, 100);
   const focusPoint: Vec3 = [
     lerp(hero[0], cam.target[0], k),
     lerp(hero[1], cam.target[1], k),
@@ -129,8 +138,9 @@ export const sceneUniforms = (frame: number) => {
     uSphA: a,
     uSphB: b,
     uSphC: c,
-    uGlobalHeal: ramp(frame, 160, 220),
+    uGlobalHeal: clamp01((frame - 112) / (206 - 112)),
+    uWetTone: ramp(frame, 84, 176),
     uFocus: distance(cam.pos, focusPoint),
-    uAperture: lerp(3.0, 4.2, ramp(frame, 150, 250)),
+    uAperture: lerp(1.5, 4.0, ramp(frame, 40, 230)),
   };
 };

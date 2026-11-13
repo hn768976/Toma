@@ -52,14 +52,19 @@ uniform vec3 uDropShadow;
 uniform vec3 uCellCol;
 uniform vec3 uCellDeep;
 uniform vec3 uStripCol;
+uniform vec3 uFrontCol;
+uniform vec3 uFilmCol;
+uniform float uWetTone;
+
+float gMicroScale = 1.0;
 
 const int NS = ${MAX_DROPS};
 const float TILE = 10.0;    // world size of one macro (crack) tile
 const float MTILE = 1.9;    // world size of one micro-relief tile
 const float ZF = 3.9;       // front edge of the skin slab
-const float ZB = -3.6;      // far edge of the skin slab
+const float ZB = -3.85;      // far edge of the skin slab
 const float SLAB_H = 0.17;  // thickness of the top skin sheet
-const float H_TOP = 0.040;
+const float H_TOP = 0.066;
 const float H_BOT = -0.042;
 
 float hash11(float p) {
@@ -76,19 +81,22 @@ vec3 env(vec3 rd) {
   float sun = max(dot(rd, uLightDir), 0.0);
   c += uLightCol * (pow(sun, 32.0) * 1.3 + pow(sun, 5.0) * 0.22);
   // bright studio strip along the horizon
-  c += uStripCol * 0.55 * exp(-pow(y / 0.045, 2.0));
+  c += uStripCol * 0.75 * exp(-pow(y / 0.022, 2.0));
   return c;
 }
 
 // ---------------------------------------------------------------- skin
 
 float healField(vec2 xz, float n) {
-  float keep = 1.0 - uGlobalHeal;
+  // the final sweep closes the remaining cracks from the near side to the
+  // far right corner; drops only thin the cracks around them
+  float sweep = clamp((3.9 - xz.y + 0.45 * xz.x) / 9.0, 0.0, 1.0);
+  float keep = 1.0 - smoothstep(sweep * 0.62, sweep * 0.62 + 0.38, uGlobalHeal);
   for (int i = 0; i < NS; i++) {
     float R = uSphB[i].z;
     if (R > 0.001) {
-      float d = length(xz - uSphA[i].xz) + (n - 0.5) * 1.1;
-      keep *= smoothstep(R * 0.4, R, d);
+      float d = length(xz - uSphA[i].xz) + (n - 0.5) * 0.5;
+      keep *= mix(1.0, smoothstep(R * 0.3, R, d), 0.8);
     }
   }
   return 1.0 - keep;
@@ -96,7 +104,7 @@ float healField(vec2 xz, float n) {
 
 // crack half-width (cell units) and presence for a macro sample
 float crackW(vec4 m, float dry) {
-  return (0.005 + 0.036 * smoothstep(0.34, 0.56, m.a) * m.a) * dry + 1e-4;
+  return (0.004 + 0.028 * smoothstep(0.34, 0.56, m.a) * m.a) * dry + 1e-4;
 }
 
 float mapH(vec2 xz, float lod, float dry, out vec4 m) {
@@ -104,10 +112,10 @@ float mapH(vec2 xz, float lod, float dry, out vec4 m) {
   float pres = smoothstep(0.34, 0.56, m.a);
   float g = (1.0 - smoothstep(0.0, crackW(m, dry), m.r)) * pres;
   // flaking: plates curl up (or sink) towards their cracked border
-  float lift = (m.g - 0.45) * exp(-m.r / 0.06) * pres;
+  float lift = (m.g - 0.42) * exp(-m.r / 0.085) * pres;
   // hairline secondary cracks
   float g2 = (1.0 - smoothstep(0.0, 0.006 * dry + 1e-4, m.b)) * smoothstep(0.50, 0.70, m.a);
-  return (-0.036 * g + 0.066 * lift - 0.006 * g2) * dry;
+  return (-0.036 * g + 0.112 * lift - 0.006 * g2) * dry;
 }
 
 vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
@@ -129,13 +137,13 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
   float t = tMid;
   vec4 m;
   float h0 = mapH(Pm.xz, lod, dry, m);
-  bool nearCrack = dry > 0.003 && (m.r < 0.24 || m.b < 0.02);
+  bool nearCrack = dry > 0.003 && (m.r < 0.30 || m.b < 0.02);
   if (nearCrack) {
     float tA = max((H_TOP - ro.y) / rd.y, 0.0);
     float tB = (H_BOT - ro.y) / rd.y;
     float span = tB - tA;
     float horiz = span * sqrt(max(1.0 - rd.y * rd.y, 0.0));
-    int steps = int(clamp(ceil(horiz / max(0.014, foot * 1.5)), 3.0, 14.0));
+    int steps = int(clamp(ceil(horiz / max(0.012, foot * 1.5)), 3.0, 22.0));
     float dt = span / float(steps);
     float tp = tA;
     vec3 p = ro + rd * tp;
@@ -148,7 +156,7 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
       if (dc < 0.0) {
         // secant refinement
         float ta = tp, tb = tc, da = dp, db = dc;
-        for (int k = 0; k < 2; k++) {
+        for (int k = 0; k < 4; k++) {
           float tm = ta + (tb - ta) * da / (da - db);
           p = ro + rd * tm;
           float dm = p.y - mapH(p.xz, lod, dry, m);
@@ -174,12 +182,12 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
     mi = textureLod(uMicro, P.xz / MTILE, mLod);
   }
   vec2 grad = vec2(0.0);
-  if (dry > 0.003 && m.r < 0.30) {
+  if (dry > 0.003 && m.r < 0.36) {
     float hx = mapH(P.xz + vec2(e, 0.0), lod, dry, mm) - mapH(P.xz - vec2(e, 0.0), lod, dry, mm);
     float hz = mapH(P.xz + vec2(0.0, e), lod, dry, mm) - mapH(P.xz - vec2(0.0, e), lod, dry, mm);
     grad = vec2(hx, hz) / (2.0 * e);
   }
-  float microAmp = mix(0.0042, 0.0016, heal);
+  float microAmp = mix(0.0050, 0.0030, heal) * gMicroScale;
   grad += mi.gb * (microAmp / MTILE);
   // large soft undulation so the smooth skin never looks like a flat plane
   vec4 lo = textureLod(uMacro, P.xz / TILE * 0.5 + 0.37, 5.0);
@@ -194,14 +202,17 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
   float hair = (1.0 - smoothstep(0.0, 0.007 * dry + 1e-4, m.b)) * smoothstep(0.50, 0.70, m.a) * dry;
 
   // --- albedo
-  vec3 alb = mix(uSkinDry, uSkinWet, heal);
+  // tone warms up gradually over the whole surface (no visible colour front)
+  vec3 alb = mix(uSkinDry, uSkinWet, heal * uWetTone);
   alb *= 0.93 + 0.14 * mi.a;
-  alb *= 1.0 + 0.22 * (lo.a - 0.5) * heal;
+  alb *= 1.0 + 0.08 * (lo.a - 0.5) * heal;
   alb *= 0.965 + 0.07 * mi.r * dry;
   // dry plates are slightly chalky, each plate a touch different
   alb = mix(alb, alb * (0.94 + 0.12 * m.g), dry * 0.8);
-  alb = mix(alb, uCrackCol, clamp(groove * 0.55 + depthK * 0.75, 0.0, 1.0));
+  alb = mix(alb, uCrackCol, clamp(groove * 0.45 + depthK * 0.60, 0.0, 1.0));
   alb = mix(alb, uCrackCol, hair * 0.45);
+  // steep faces = exposed edge / underside of a lifted flake
+  alb = mix(alb, uCrackCol * 0.96, smoothstep(0.75, 0.35, N.y) * dry * 0.6);
 
   // --- shadows from the height field (flakes) and from the drops
   vec3 L = uLightDir;
@@ -212,7 +223,7 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
       float occ = mapH(q.xz, lod, dry, mm) - q.y;
       sh = min(sh, 1.0 - smoothstep(0.0, 0.012, occ));
     }
-    sh = mix(1.0, sh, 0.75);
+    sh = mix(1.0, sh, 0.5);
   }
   float dropSh = 1.0;
   vec3 dropTint = vec3(1.0);
@@ -227,13 +238,13 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
     vec3 v = c - P;
     float tp2 = dot(v, L);
     float dl = length(v - L * tp2);
-    float pen = 0.18 + 0.45 * clamp(c.y / 2.2, 0.0, 1.0);
+    float pen = 0.14 + 0.30 * clamp(c.y / 2.2, 0.0, 1.0);
     float s = (1.0 - smoothstep(r * (1.0 - pen), r * (1.0 + pen * 1.6), dl)) * ss * step(0.0, tp2);
-    dropSh *= 1.0 - 0.24 * s;
+    dropSh *= 1.0 - 0.085 * s * (1.0 - 0.6 * clamp(c.y / 2.5, 0.0, 1.0));
     dropTint = mix(dropTint, uDropShadow, s * 0.75);
     caustic += ss * exp(-pow(dl / (0.45 * r), 2.0)) * (0.40 - 0.35 * clamp(c.y / 2.0, 0.0, 1.0)) * step(0.0, tp2);
     float dh = length(P.xz - c.xz);
-    glow += uDropCore * uSphC[i].x * exp(-pow(dh / (1.45 * r), 2.0));
+    glow += mix(uDropCore, uDropBody, 0.35) * uSphC[i].x * exp(-pow(dh / (1.75 * r), 2.0));
     glow += uDropCore * uSphC[i].y * exp(-pow((dh - r) / 0.055, 2.0));
     sheen += uSphC[i].z * exp(-pow(dh / 2.4, 2.0));
   }
@@ -243,11 +254,11 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
   float wrap = clamp((ndl + 0.45) / 1.45, 0.0, 1.0);
   float lit = wrap * sh * dropSh;
   vec3 amb = mix(uBounceCol, uSkyCol, N.y * 0.5 + 0.5);
-  float ao = 1.0 - 0.55 * depthK;
+  float ao = 1.0 - 0.22 * depthK;
   vec3 col = alb * (uLightCol * lit * dropTint + amb * ao);
   // cheap subsurface: warm bleed where light is blocked
-  col += alb * uSssCol * (1.0 - sh * dropSh) * 0.22;
-  col += alb * uSssCol * depthK * 0.10;
+  col += alb * uSssCol * (1.0 - sh) * 0.10;
+  col += alb * uSssCol * depthK * 0.05;
 
   // speculars: broad moist sheen + tighter highlight on hydrated skin
   vec3 H = normalize(L + V);
@@ -260,14 +271,22 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
   col += uSkyCol * fres * (0.10 + 0.12 * wet);
   col += alb * uLightCol * sheen * 0.07;
   // broad soft band of studio light across the hydrated skin
-  float band = exp(-pow((dot(P.xz, vec2(0.45, 0.89)) - 0.6) / 1.5, 2.0));
-  col += alb * uLightCol * 0.30 * band * heal;
+  // studio shaping of the hydrated skin: a broad pale highlight band running
+  // from the upper left to the lower right, falling off to the left / bottom
+  float streak = exp(-pow(dot(vUv - 0.5, vec2(0.41, 0.91)) / 0.24, 2.0));
+  float fall = (1.0 - 0.16 * smoothstep(0.55, 0.0, vUv.x)) * (1.0 - 0.10 * smoothstep(0.5, 0.0, vUv.y));
+  float shaping = mix(1.0, (0.74 + 0.30 * streak) * fall, heal * uWetTone);
+  col *= shaping;
+  col += uLightCol * 0.09 * streak * heal * uWetTone;
+  // pale glow where the moisture front is advancing
+  col += uFrontCol * heal * (1.0 - heal) * 4.0 * (1.0 - uGlobalHeal);
   col += uLightCol * caustic * 0.30 * alb;
   col += glow;
 
   // rim light on the far edge of the slab, soft bevel on the near edge
-  float rim = exp(-max(P.z - ZB, 0.0) / 0.35);
-  col = mix(col, uStripCol * 1.05, rim * 0.75);
+  float rim = exp(-max(P.z - ZB, 0.0) / 0.9);
+  col = mix(col, uStripCol * 1.2, rim * 0.85);
+  col += uStripCol * 0.5 * exp(-max(P.z - ZB, 0.0) / 0.12);
   col += uSkyCol * 0.25 * smoothstep(ZF - 0.07, ZF, P.z);
   return col;
 }
@@ -276,16 +295,16 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
 
 float cellHeight(vec2 q, out float id) {
   // staggered rows of rounded "pillow" cells, rows run parallel to the edge
-  vec2 cs = vec2(1.05, 0.56);
+  vec2 cs = vec2(0.74, 0.40);
   float row = floor(q.y / cs.y);
   float xo = q.x / cs.x + 0.5 * mod(row, 2.0) + 0.23 * hash11(row + 3.0);
   id = hash11(floor(xo) * 7.13 + row * 3.77);
   vec2 f = vec2(fract(xo) - 0.5, fract(q.y / cs.y) - 0.5) * cs;
-  float rad = 0.21;
-  vec2 hb = cs * 0.5 - 0.030 - 0.015 * id;
+  float rad = 0.16;
+  vec2 hb = cs * 0.5 - 0.004 - 0.004 * id;
   vec2 dd = abs(f) - (hb - rad);
   float sd = length(max(dd, 0.0)) + min(max(dd.x, dd.y), 0.0) - rad;
-  float k = clamp(-sd / 0.21, 0.0, 1.0);
+  float k = clamp(-sd / 0.16, 0.0, 1.0);
   return sqrt(1.0 - (1.0 - k) * (1.0 - k));
 }
 
@@ -296,22 +315,27 @@ vec3 shadeCells(vec3 P, vec3 rd) {
   float e = 0.006;
   float hx = cellHeight(q + vec2(e, 0.0), id2) - cellHeight(q - vec2(e, 0.0), id2);
   float hz = cellHeight(q + vec2(0.0, e), id2) - cellHeight(q - vec2(0.0, e), id2);
-  vec3 N = normalize(vec3(-hx / (2.0 * e) * 0.15, 1.0, -hz / (2.0 * e) * 0.15));
+  vec3 N = normalize(vec3(-hx / (2.0 * e) * 0.13, 1.0, -hz / (2.0 * e) * 0.13));
   vec3 V = -rd;
   vec3 L = uLightDir;
   vec3 alb = mix(uCellDeep, uCellCol, smoothstep(0.0, 0.85, h));
   alb *= 0.92 + 0.16 * id;
   float wrap = clamp((dot(N, L) + 0.5) / 1.5, 0.0, 1.0);
   vec3 amb = mix(uBounceCol, uSkyCol, N.y * 0.5 + 0.5);
-  float ao = mix(0.62, 1.0, smoothstep(0.0, 0.6, h));
+  float ao = mix(0.55, 1.0, smoothstep(0.0, 0.5, h));
   // the skin sheet above shades the first rows
   float under = mix(0.66, 1.0, smoothstep(0.0, 0.8, q.y));
   vec3 col = alb * (uLightCol * wrap + amb * 0.9) * ao * under;
   vec3 H = normalize(L + V);
-  float spec = pow(max(dot(N, H), 0.0), 70.0) * 0.9 + pow(max(dot(N, H), 0.0), 12.0) * 0.12;
+  float spec = pow(max(dot(N, H), 0.0), 55.0) * 1.5 + pow(max(dot(N, H), 0.0), 10.0) * 0.22;
+  // second, frontal light: white streaks on the camera-facing edge of each cell
+  vec3 H2 = normalize(normalize(vec3(0.15, 0.45, 0.88)) + V);
+  spec += pow(max(dot(N, H2), 0.0), 90.0) * 2.2;
   float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
   col += uLightCol * spec * smoothstep(0.15, 0.6, h) * under;
-  col += uSkyCol * fres * 0.30 * h;
+  col += uSkyCol * fres * 0.45 * h;
+  // pearly sheen on the crown of every cell
+  col += uSkyCol * 0.22 * smoothstep(0.55, 1.0, h);
   return col;
 }
 
@@ -335,7 +359,7 @@ vec3 shadeScene(vec3 ro, vec3 rd, out float dist) {
   if (rd.y > -1e-4) return env(rd);
   float tTop = -ro.y / rd.y;
   vec3 P = ro + rd * tTop;
-  if (P.z < ZB) return env(rd);
+  if (P.z < ZB) return env(rd) + uStripCol * 1.5 * exp(-(ZB - P.z) / 0.45);
   if (P.z <= ZF) return shadeSkin(ro, rd, dist);
   if (rd.z < 0.0) {
     float tF = (ZF - ro.z) / rd.z;
@@ -396,6 +420,9 @@ void main() {
     float ior = mix(1.0, 1.33, s);
     float cosi = max(dot(-rd, N1), 0.0);
     float F = (0.02 + 0.98 * pow(1.0 - cosi, 5.0)) * s;
+    vec3 ocn = (ro - c) / rad;
+    vec3 dn = normalize(rd / rad);
+    float bn = length(cross(ocn, dn));
     vec3 R = reflect(rd, N1);
     vec3 reflCol = R.y > 0.0 ? env(R) : mix(uSkinDry, uSkinWet, 0.5) * (uLightCol * 0.6 + uSkyCol * 0.5);
     vec3 rdi = refract(rd, N1, 1.0 / ior);
@@ -414,17 +441,25 @@ void main() {
       ro2 = P2; rd2 = rdo; pathLen = tOut;
     }
     float d2;
+    gMicroScale = 0.12;   // keep the refracted view clean (no magnified grain)
     vec3 through = shadeScene(ro2, rd2, d2);
     // absorption tint, milky scattering and bright refractive core
     through *= exp(-(1.0 - uDropTint) * pathLen * 1.5 * s);
-    vec3 ocn = (ro - c) / rad;
-    vec3 dn = normalize(rd / rad);
-    float bn = length(cross(ocn, dn));
-    float core = exp(-pow(bn / 0.62, 2.0));
-    float body = 0.36 + 0.62 * core;
-    vec3 inner = mix(uDropBody, uDropCore * 1.12, core);
+    // "roundness": 1 for a sphere, -> 0 as the drop flattens into a lens
+    float round_ = smoothstep(0.08, 0.75, rad.y / rad.x);
+    float core = exp(-pow(bn / 0.52, 2.0)) * round_;
+    float body = mix(0.10, 0.26, round_) + 0.66 * core;
+    vec3 inner = mix(uDropBody, uDropCore * 1.35, core);
+    // a thin lens has a soft, translucent edge instead of a hard silhouette
+    s *= mix(smoothstep(0.0, 0.10, 1.0 - bn), 1.0, round_);
+    F *= mix(0.3, 1.0, round_);
     col = mix(through, inner, s * body);
-    col *= mix(vec3(1.0), uDropRim, pow(1.0 - cosi, 2.5) * s * 0.75);
+    col += uDropCore * 0.45 * core * core * s;
+    // absorbed film: a grey-teal translucent lens over the wet skin
+    col = mix(col, col * uFilmCol, (1.0 - round_) * s);
+    // lower half catches more light
+    col += uDropCore * 0.16 * smoothstep(0.25, -0.7, N1.y) * round_ * s;
+    col *= mix(vec3(1.0), uDropRim, pow(1.0 - cosi, 2.0) * s * 0.9 * round_);
     col = mix(col, reflCol, F * 0.75);
     // highlights: key light + small secondary "bubble" glint
     vec3 Hh = normalize(uLightDir - rd);

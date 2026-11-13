@@ -28,6 +28,9 @@ uniform float uGlowR;     // radius reached by the light front
 uniform float uHealR;     // radius inside which the cracks have closed
 uniform float uGlowI;     // glow intensity
 uniform float uGlobalHeal;
+uniform float uUnderHeal; // cracks under the melting drop close first
+uniform float uFrontBias;
+uniform float uToneGlobal; // overall warm-up of the skin tone / lighting // how far the light front leads on the right side
 uniform float uTime;
 uniform float uFocus;
 uniform float uAperture;
@@ -46,8 +49,12 @@ uniform vec3 uStripCol;
 uniform vec3 uDropCol;
 uniform vec3 uDropSss;
 uniform vec3 uGlowCol;
+uniform vec3 uHazeCol;
+uniform vec3 uBgCenter;
 
-const float TILE = 13.0;    // world size of one macro (crack) tile, 12 plates across
+float gMicroScale = 1.0;
+
+const float TILE = 12.0;    // world size of one macro (crack) tile, 12 plates across
 const float MTILE = 2.4;    // world size of one micro-relief tile
 const float ZB = -10.8;     // far edge of the skin
 const float H_TOP = 0.046;
@@ -58,6 +65,7 @@ vec3 backdrop(vec3 rd) {
   vec3 right = uCamMat[0];
   float sx = dot(rd, right);
   vec3 c = mix(uBgLeft, uBgRight, smoothstep(-0.45, 0.45, sx));
+  c = mix(c, uBgCenter, exp(-pow(sx / 0.24, 2.0)));
   c *= 1.0 - 0.10 * smoothstep(0.0, 0.3, rd.y);
   return c;
 }
@@ -74,20 +82,26 @@ vec3 env(vec3 rd) {
 
 float ripple(vec2 xz) {
   float r = length(xz);
-  float env = smoothstep(uRipple.z, uRipple.z - 1.3, r) * smoothstep(0.3, 0.8, r);
-  return uRipple.x * sin(19.0 * r - uRipple.y) * env / (1.0 + 0.45 * r);
+  // swells start at the rim of the drop (nothing underneath it)
+  float env = smoothstep(uRipple.z, uRipple.z - 1.3, r) * smoothstep(uRipple.w * 0.95, uRipple.w * 1.3 + 0.1, r);
+  return uRipple.x * sin(9.5 * r - uRipple.y) * env / (1.0 + 0.30 * r);
 }
 
 float crackW(vec4 m, float dry) {
-  return (0.013 + 0.024 * m.a) * dry + 1e-4;
+  return (0.008 + 0.017 * m.a) * dry + 1e-4;
 }
 
 float mapH(vec2 xz, float lod, float dry, out vec4 m) {
-  m = textureLod(uMacro, xz / TILE, lod);
-  float g = 1.0 - smoothstep(0.0, crackW(m, dry), m.r);
-  float dome = smoothstep(0.0, 0.20, m.r);
+  float rp = ripple(xz);
+  // the swell drags the surface with it: cracks visibly bend as it passes
+  vec2 uv = (xz + normalize(xz + 1e-4) * rp * 2.2) / TILE;
+  m = textureLod(uMacro, uv, lod);
+  float w = crackW(m, dry);
+  float g = 1.0 - smoothstep(0.0, w, m.r);
+  // plates bulge slightly and have a light raised lip along every crack
+  float dome = smoothstep(0.0, 0.20, m.r) + 0.55 * smoothstep(w, w * 1.7, m.r) * (1.0 - smoothstep(w * 1.7, w * 4.0, m.r));
   float g2 = (1.0 - smoothstep(0.0, 0.007 * dry + 1e-4, m.b)) * smoothstep(0.45, 0.65, m.a);
-  return (-0.042 * g * (0.55 + 0.45 * g) + 0.011 * dome - 0.006 * g2) * dry + ripple(xz);
+  return (-0.042 * g * (0.55 + 0.45 * g) + 0.011 * dome - 0.006 * g2) * dry + rp;
 }
 
 vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
@@ -105,14 +119,21 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
   float r0 = length(Pm.xz);
   vec2 dir = Pm.xz / max(r0, 1e-3);
   vec4 lo = textureLod(uMacro, Pm.xz / TILE * 0.5 + 0.37, 4.0);
-  float rr = r0 + (lo.a - 0.5) * 2.2 + (mi.a - 0.5) * 0.5 - 0.30 * dot(dir, vec2(0.85, 0.35));
+  float rr = r0 + (lo.a - 0.5) * 1.3 + (mi.a - 0.5) * 0.5 - uFrontBias * dot(dir, vec2(0.85, 0.35));
   // the side facing the camera (+z) closes last, as in the reference
-  float rh = rr + 0.32 * Pm.z;
+  float rh = rr + 0.9 * max(Pm.z, 0.0) + 0.2 * max(-Pm.z, 0.0);
   float heal = max(uGlobalHeal, 1.0 - smoothstep(uHealR - 1.5, uHealR, rh));
+  // the skin directly under the melting drop is repaired first
+  heal = max(heal, uUnderHeal * (1.0 - smoothstep(uGround.w * 0.45, uGround.w * 1.35, r0 + (mi.a - 0.5) * 0.5)));
   float dry = 1.0 - heal;
-  float lit = smoothstep(uGlowR, uGlowR - 0.75, rr) * uGlowI;
+  // tone and lighting change gradually over the whole surface, so no patch
+  // boundary is visible where the cracks have just closed
+  float tone = mix(heal, uToneGlobal, 0.8);
+  float lit = smoothstep(uGlowR, uGlowR - 0.6, rr) * uGlowI;
+  // the far field never lights up: those cracks simply close at the end
+  lit *= smoothstep(-5.2, -3.0, Pm.z);
   // no light directly underneath the drop while it is still there
-  lit *= mix(1.0, smoothstep(uDropB.w * 0.85, uDropB.w * 1.2, r0), uDropB.z);
+  lit *= mix(1.0, smoothstep(uDropB.w * 0.9, uDropB.w * 1.15, r0), uDropB.z);
 
   // --- height-field intersection
   float t = tMid;
@@ -164,7 +185,7 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
   float hx = mapH(P.xz + vec2(e, 0.0), lod, dry, mm) - mapH(P.xz - vec2(e, 0.0), lod, dry, mm);
   float hz = mapH(P.xz + vec2(0.0, e), lod, dry, mm) - mapH(P.xz - vec2(0.0, e), lod, dry, mm);
   vec2 grad = vec2(hx, hz) / (2.0 * e);
-  float microAmp = mix(0.0105, 0.0085, heal);
+  float microAmp = mix(0.0080, 0.0042, tone) * gMicroScale;
   grad += mi.gb * (microAmp / MTILE);
   grad += (vec2(lo.a, lo.g) - 0.5) * 0.06 * heal;
   vec3 N = normalize(vec3(-grad.x, 1.0, -grad.y));
@@ -177,9 +198,9 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
   float hair = (1.0 - smoothstep(0.0, 0.008 * dry + 1e-4, m.b)) * smoothstep(0.45, 0.65, m.a) * dry;
 
   // --- albedo
-  vec3 alb = mix(uSkinDry, uSkinWet, heal);
-  alb *= 0.92 + 0.16 * mi.a;
-  alb *= 0.90 + 0.14 * mi.r;
+  vec3 alb = mix(uSkinDry, uSkinWet, tone);
+  alb *= 0.94 + 0.12 * mi.a;
+  alb *= 0.94 + 0.08 * mi.r;
   alb *= 1.0 + 0.16 * (lo.g - 0.5);
   alb = mix(alb, alb * (0.92 + 0.16 * m.g), dry);
   alb = mix(alb, uCrackCol, clamp(groove * 0.60 + depthK * 0.75, 0.0, 1.0));
@@ -200,8 +221,8 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
   // --- drop contact shadow / glow / absorbed ring
   float rD = length(P.xz + L.xz * 0.25);
   float cs = 1.0 - uGround.x * exp(-pow(rD / (1.25 * max(uDropB.w, 0.35)), 2.0));
-  float contact = uGround.y * exp(-pow(r0 / (1.6 * max(uDropB.w, 0.3)), 2.0));
-  float ring = uGround.z * exp(-pow((r0 - uDropB.w) / 0.035, 2.0));
+  float contact = uGround.y * exp(-pow(r0 / (0.95 * max(uDropB.w, 0.3)), 2.0));
+  float ring = uGround.z * exp(-pow((r0 - uDropB.w) / 0.024, 2.0));
 
   // --- lighting
   float ndl = dot(N, L);
@@ -215,27 +236,38 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
   vec3 H = normalize(L + V);
   float ndh = max(dot(N, H), 0.0);
   float ndv = max(dot(N, V), 0.0);
-  float spec = pow(ndh, 10.0) * (0.10 + 0.22 * heal) + pow(ndh, 70.0) * 0.12 * heal;
+  float spec = pow(ndh, 10.0) * (0.10 + 0.22 * tone) + pow(ndh, 70.0) * 0.12 * tone;
   float fres = pow(1.0 - ndv, 3.0);
   col += uLightCol * spec * sh * (1.0 - depthK);
-  col += uSkyCol * fres * (0.30 + 0.45 * heal);
-  col += uGlowCol * 0.10 * (contact + ring * 2.5);
+  col += uSkyCol * fres * (0.30 + 0.45 * tone);
+  col += uGlowCol * (0.07 * contact + 0.42 * ring);
   // crests of the ripples catch the light
-  col *= 1.0 + 4.5 * ripple(P.xz);
+  col *= 1.0 + 5.0 * ripple(P.xz);
 
   // --- light filling the cracks
   if (lit > 0.001) {
     float fn = textureLod(uMicro, P.xz / MTILE * 0.23 + vec2(uTime * 0.05, -uTime * 0.035), 2.0).a;
-    float fk = smoothstep(0.34, 0.66, fn);
-    float flick = 0.22 + 1.7 * fk * fk;
-    float coreG = 1.0 - smoothstep(0.0, w * 0.95 + 0.004, m.r);
-    float halo = exp(-m.r / 0.045);
-    float gl = (coreG * 1.0 + halo * 0.10) * lit * sqrt(dry) * flick;
-    // brightest right behind the advancing front
-    gl *= 0.55 + 0.75 * smoothstep(uGlowR - 2.4, uGlowR - 0.6, rr);
-    col = mix(col, uGlowCol, clamp(coreG * lit * sqrt(dry), 0.0, 1.0) * 0.85);
+    float fk = smoothstep(0.30, 0.68, fn);
+    // intensity varies along every crack, with hot sparkling spots
+    float flick = 0.45 + 2.6 * fk * fk;
+    // while the crack closes the line of light breaks up into dashes and points
+    float dash = smoothstep(heal * 1.15 - 0.22, heal * 1.15 + 0.03, fk + 0.2 * (1.0 - heal));
+    dash *= smoothstep(0.0, 0.12, dry);
+    // thin, hot core (clips to white and blooms) with a faint cool halo
+    float coreG = 1.0 - smoothstep(0.0, w * 0.6 + 0.0026, m.r);
+    float halo = exp(-m.r / 0.022);
+    float gl = (coreG * 1.7 + halo * 0.04) * lit * dash * flick;
+    gl *= 0.85 + 0.45 * smoothstep(uGlowR - 2.4, uGlowR - 0.5, rr);
+    col = mix(col, uGlowCol * 0.5, clamp(coreG * lit * dash, 0.0, 1.0) * 0.9);
     col += uGlowCol * gl;
   }
+
+  // studio shaping of the repaired skin: bright towards the horizon and the
+  // left, falling off towards the bottom of the frame
+  float shape = (mix(0.70, 0.86, smoothstep(0.0, 0.62, vUv.y)) + 0.20 * smoothstep(0.55, 0.92, vUv.y)) * (1.0 + 0.16 * (0.5 - vUv.x));
+  col *= mix(1.0, shape, tone);
+  // bright atmospheric haze in the distance
+  col = mix(col, uHazeCol, (1.0 - exp(-max(t - 4.0, 0.0) * 0.055)) * mix(0.38, 0.8, tone));
 
   // soft highlight on the far edge of the skin
   float rim = exp(-max(P.z - ZB, 0.0) / 0.25);
@@ -270,15 +302,14 @@ float sdRoundCone(vec3 p, float r1, float r2, float h) {
 }
 
 float sdDrop(vec3 p) {
+  // one smooth profile: a round cone from the body sphere up to the tip.
+  // When the tip sinks into the body it degenerates to the plain sphere cap.
   vec3 q = p - vec3(0.0, uDropA.y, 0.0);
-  float d1 = length(q) - uDropA.x;
   float h = uDropA.z - uDropA.y;
-  float r1 = uDropA.x * 0.72;
-  if (h > r1 - uDropA.w + 0.02) {
-    float d2 = sdRoundCone(q, r1, uDropA.w, h);
-    d1 = smin(d1, d2, uDropB.y);
+  if (h > uDropA.x - uDropA.w + 0.02) {
+    return sdRoundCone(q, uDropA.x, uDropA.w, h);
   }
-  return d1;
+  return length(q) - uDropA.x;
 }
 
 void main() {
@@ -309,7 +340,7 @@ void main() {
         vec3 p = ro + rd * t;
         float d = sdDrop(p);
         if (d < 0.0012) { hit = true; break; }
-        t += d * 0.92;
+        t += d * 0.9;
         if (t > tEnd) break;
       }
       tHit = t;
@@ -336,25 +367,27 @@ void main() {
     vec3 rdi = refract(rd, N, 1.0 / mix(1.0, 1.28, vis));
     if (rdi.y > -0.04) rdi = normalize(vec3(rdi.x, -0.04, rdi.z));
     float d2;
+    gMicroScale = 0.15;
     vec3 through = shadeScene(P, rdi, d2);
+    // soften what is seen through the gel (no hard refracted lines)
+    through = mix(through, uDropSss * 0.86, 0.45 * vis);
 
-    // milky body: soft wrapped light, skin bounce from below, bright core
+    // translucent gel: milky near the base, see-through and skin-tinted above
     float wrap = clamp((dot(N, L) + 0.75) / 1.75, 0.0, 1.0);
     vec3 amb = mix(uBounceCol * 1.5, uSkyCol * 1.25, N.y * 0.5 + 0.5);
-    vec3 milk = uDropCol * (0.80 + 0.22 * wrap) + amb * 0.05;
-    float low = 1.0 - smoothstep(0.0, 0.55, P.y);
+    vec3 milk = uDropCol * (0.84 + 0.20 * wrap) + amb * 0.04;
     float melt = 1.0 - op;
-    milk = mix(milk, uDropSss, clamp(low * 0.20 + pow(1.0 - cosi, 2.0) * 0.22 + melt * 0.75, 0.0, 1.0));
-    milk += uDropCol * 0.08 * pow(cosi, 3.0);
-
-    col = mix(through, milk, op * vis);
-    // thin serum picks up a touch of gloss tint when transparent
-    col = mix(col, col * vec3(1.03, 1.0, 1.0) + 0.02, (1.0 - op) * vis);
-    col = mix(col, refl, F * (0.30 + 0.35 * (1.0 - op)) * vis);
+    milk = mix(milk, uDropSss, clamp(0.10 + pow(1.0 - cosi, 2.0) * 0.25 + melt * 0.7, 0.0, 1.0));
+    float baseK = 1.0 - smoothstep(0.05, 0.75, P.y);         // bright, denser lower third
+    float density = clamp(op * (0.66 + 0.36 * baseK + 0.20 * pow(1.0 - cosi, 2.0)), 0.0, 1.0);
+    col = mix(through * mix(vec3(1.0), uDropSss * 1.08, 0.5 * vis), milk, density * vis);
+    col += uDropCol * 0.10 * baseK * op * vis;
+    col = mix(col, refl, F * (0.35 + 0.35 * melt) * vis);
+    // glints and a thin bright rim line
     vec3 H = normalize(L + V);
     float ndh = max(dot(N, H), 0.0);
-    col += uLightCol * (pow(ndh, 140.0) * 1.6 + pow(ndh, 14.0) * 0.16) * vis;
-    col += uStripCol * pow(1.0 - cosi, 3.0) * 0.38 * vis;
+    col += uLightCol * (pow(ndh, 90.0) * 0.7 + pow(ndh, 16.0) * 0.16) * vis;
+    col += uStripCol * pow(1.0 - cosi, 3.0) * 0.85 * vis;
     dist = tHit;
   }
 
