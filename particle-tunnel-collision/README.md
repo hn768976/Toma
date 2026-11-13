@@ -6,7 +6,7 @@ particle-string tunnel whose concentric rings bend, curl and finally tangle into
 | Composition ID | What it is |
 | --- | --- |
 | `ParticleTunnelCollision-V1-Match` | Version 1: matches the reference (cyan/teal strings on deep navy) |
-| `ParticleTunnelCollision-V2-EmberPalette` | Version 2: same motion and camera with an "ember nebula" palette (amber → magenta → violet on plum) |
+| `ParticleTunnelCollision-V2-EmberPalette` | Version 2: same motion and camera with an "ember" palette (amber → red-orange → crimson on warm black) |
 
 **Technology:** Canvas 2D, drawn per frame at full composition resolution. The renderer
 uses manual 3D perspective projection, seeded simplex-noise displacement and a

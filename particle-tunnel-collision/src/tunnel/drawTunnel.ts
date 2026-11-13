@@ -20,7 +20,7 @@ export const RING_COUNT = 80;
 const Q = 1.042; // depth ratio between neighbouring rings
 const Z0 = 0.42; // nearest ring depth (world units, ring radius = 1)
 const FOCAL = 900; // focal length in 1920-wide design pixels
-const RING_DRIFT = 0.9; // rings per second travelling towards the camera
+const RING_DRIFT = 1.55; // rings per second travelling towards the camera
 const BEADS_PER_RING = 190;
 
 const noiseX1 = createNoise3D(11);
@@ -83,16 +83,18 @@ const displace = (
   const s = Math.sin(ang);
   // Sampling noise on a circle keeps every ring a closed loop.
   const f1 = 1.25;
-  const f2 = 3.2;
-  const k1 = ringKey * 0.173 + field.w1;
-  const k2 = ringKey * 0.211 + field.w2;
+  const f2 = 2.7;
+  // Large per-ring offsets decorrelate neighbouring strings so each one
+  // wanders on its own instead of the whole tunnel bending as one shape.
+  const k1 = ringKey * 0.47 + field.w1;
+  const k2 = ringKey * 1.13 + field.w2;
   const dx =
     field.a1 * noiseX1(c * f1, s * f1, k1) +
     field.a2 * noiseX2(c * f2, s * f2, k2);
   const dy =
     field.a1 * noiseY1(c * f1, s * f1, k1) +
     field.a2 * noiseY2(c * f2, s * f2, k2);
-  const dz = field.a2 * 0.6 * noiseZ(c * f2 + 7.1, s * f2, k2);
+  const dz = field.a2 * 0.35 * noiseZ(c * f2 + 7.1, s * f2, k2);
   out[0] = c + dx;
   out[1] = s + dy;
   out[2] = dz;
@@ -125,13 +127,16 @@ export const drawTunnel = (
   const p = clamp(timeSec / durationSec, 0, 1);
 
   const field: Field = {
-    a1: 0.012 + 0.11 * Math.pow(p, 0.9),
-    a2: 0.24 * Math.pow(smoothstep(0.12, 1.0, p), 1.1),
+    // Low-frequency wobble eases in from the first second (strands cross by
+    // ~2 s); the high-frequency curls build steadily to a full tangle at the end.
+    a1: 0.01 + 0.075 * (1 - Math.pow(1 - p, 2.2)),
+    a2: 0.25 * Math.pow(smoothstep(0.08, 1.0, p), 1.05),
     w1: timeSec * 0.1,
     w2: timeSec * 0.22,
     rot: timeSec * 0.025,
   };
-  const intensity = 0.8 + 0.75 * Math.pow(p, 1.3);
+  // Brightness holds for the first ~3.5 s, then builds to the end.
+  const intensity = 1.05 + 0.75 * Math.pow(smoothstep(0.3, 1.0, p), 1.4);
 
   // ---- Strings + beads on a transparent FX layer --------------------------
   const fx = getCanvas("fx", W, H);
@@ -156,7 +161,7 @@ export const drawTunnel = (
   for (const { k, z } of order) {
     const nearFade = smoothstep(0.3, 0.55, z);
     const lineFar = 1 - smoothstep(1.4, 4.2, z);
-    const dotFar = 1 - smoothstep(8.2, 12.8, z);
+    const dotFar = 1 - smoothstep(10.0, 14.5, z);
     if (nearFade <= 0 || dotFar <= 0) continue;
     // Deep rings stay calmer so the vanishing point keeps its ordered dot field.
     const ringField: Field = {
@@ -170,10 +175,15 @@ export const drawTunnel = (
         : mix(palette.lineMid, palette.lineFar, smoothstep(2.4, 8, z));
 
     // --- string
-    const lineAlpha = intensity * nearFade * lineFar * 0.8;
+    // Centre-weighted: the mid-radius band is brightest, the outskirts dimmer.
+    const rDesign = FOCAL / z;
+    const radial =
+      (1 - (0.72 + 0.12 * p) * smoothstep(620, 1300, rDesign)) *
+      (1 + 0.35 * p * (1 - smoothstep(380, 900, rDesign)));
+    const lineAlpha = intensity * nearFade * lineFar * radial * 0.75;
     if (lineAlpha > 0.004) {
       const rPx = F / z;
-      const n = Math.round(clamp((Math.PI * 2 * rPx) / (4 * K), 180, 1500));
+      const n = Math.round(clamp((Math.PI * 2 * rPx) / (2.5 * K), 240, 2600));
       g.beginPath();
       for (let i = 0; i <= n; i++) {
         const theta = (i / n) * Math.PI * 2;
@@ -185,7 +195,7 @@ export const drawTunnel = (
         else g.lineTo(x, y);
       }
       g.closePath();
-      const width = K * clamp(1.5 / z, 0.6, 4.6) * (1 + 0.45 * p);
+      const width = K * clamp(3.4 / z, 1.5, 7.5) * (1 + 0.3 * p);
       g.lineWidth = width;
       g.strokeStyle = rgba(lineColor, lineAlpha);
       g.stroke();
@@ -197,7 +207,7 @@ export const drawTunnel = (
       palette.beadFar,
       smoothstep(0.7, 6.5, z),
     );
-    const beadBase = K * clamp(1.9 / z, 1.05, 5.2);
+    const beadBase = K * clamp(3.4 / z, 1.9, 8.0);
     const ringBeads = beads[k];
     for (let j = 0; j < ringBeads.length; j++) {
       const b = ringBeads[j];
@@ -207,7 +217,12 @@ export const drawTunnel = (
       const x = cx + (F * tmp[0]) / zz;
       const y = cy + (F * tmp[1]) / zz;
       if (x < -20 || y < -20 || x > W + 20 || y > H + 20) continue;
-      const a = b.bright * nearFade * dotFar * (0.7 + 0.3 * intensity);
+      // Dense, bright speckle band around the core, fading softly into it.
+      const coreFade =
+        Math.pow(smoothstep(60, 340, rDesign), 1.3) *
+        (1 + 0.3 * (1 - smoothstep(300, 600, rDesign)));
+      const a =
+        b.bright * nearFade * dotFar * radial * coreFade * (0.75 + 0.25 * intensity) * (1 + 0.3 * p);
       if (a < 0.01) continue;
       const r = beadBase * b.size;
       g.fillStyle = rgba(beadColor, a);
@@ -225,7 +240,7 @@ export const drawTunnel = (
   bg.setTransform(1, 0, 0, 1, 0, 0);
   bg.globalCompositeOperation = "source-over";
   bg.clearRect(0, 0, bw, bh);
-  bg.filter = `blur(${(3 * K).toFixed(2)}px)`;
+  bg.filter = `blur(${(3.5 * K).toFixed(2)}px)`;
   bg.drawImage(fx, 0, 0, bw, bh);
   bg.filter = "none";
 
@@ -244,24 +259,34 @@ export const drawTunnel = (
 
   ctx.globalCompositeOperation = "lighter";
   ctx.drawImage(fx, 0, 0);
-  ctx.globalAlpha = 0.65 + 0.6 * p;
+  ctx.globalAlpha = 0.8 + 0.7 * smoothstep(0.3, 1.0, p);
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(bloom, 0, 0, W, H);
   ctx.globalAlpha = 1;
 
   // Dark core at the vanishing point.
   ctx.globalCompositeOperation = "source-over";
-  const hole = ctx.createRadialGradient(cx, cy, 0, cx, cy, 215 * K);
-  hole.addColorStop(0, rgba(palette.bgCenter, 0.96));
-  hole.addColorStop(0.45, rgba(palette.bgCenter, 0.7));
+  // Soft, slightly wide dark core (feathered, not a hard disc); late
+  // tangles are allowed to bleed into it.
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(1.3, 1);
+  const holeR = 150 * K;
+  const hole = ctx.createRadialGradient(0, 0, 0, 0, 0, holeR);
+  const core = 0.94 - 0.18 * smoothstep(0.6, 1.0, p);
+  hole.addColorStop(0, rgba(palette.bgCenter, core));
+  hole.addColorStop(0.22, rgba(palette.bgCenter, core * 0.88));
+  hole.addColorStop(0.55, rgba(palette.bgCenter, core * 0.4));
   hole.addColorStop(1, rgba(palette.bgCenter, 0));
   ctx.fillStyle = hole;
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillRect(-holeR, -holeR, holeR * 2, holeR * 2);
+  ctx.restore();
 
-  // Gentle vignette.
-  const vig = ctx.createRadialGradient(cx, cy, diag * 0.55, cx, cy, diag);
+  // Vignette: corners about 50% darker, as in the reference.
+  const vig = ctx.createRadialGradient(cx, cy, diag * 0.3, cx, cy, diag);
   vig.addColorStop(0, "rgba(0,0,0,0)");
-  vig.addColorStop(1, "rgba(0,0,0,0.35)");
+  vig.addColorStop(0.5, "rgba(0,0,0,0.2)");
+  vig.addColorStop(1, "rgba(0,0,0,0.62)");
   ctx.fillStyle = vig;
   ctx.fillRect(0, 0, W, H);
 };
