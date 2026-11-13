@@ -170,7 +170,7 @@ export class Gauge {
   update(frame: number) {
     const v = this.value(frame);
     const t = frame / this.fps;
-    const rot = Math.floor(t * 2.5);
+    const rot = Math.floor(t * 1.2);
     const key = v * 1000 + (rot % 1000);
     if (key === this.last) return;
     this.last = key;

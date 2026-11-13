@@ -58,9 +58,9 @@ const referenceRig = (): Rig => ({
   // keeps the sharp zone on the readout + gauges and softens the far ends
   focusAxis: new THREE.Vector3(1, 0, 0),
   focusTilt: 1,
-  field: { center: [0.6, 0.5], radius: 0.46, gain: 34 },
-  nearBlur: 105,
-  farBlur: 90,
+  field: { center: [0.55, 0.5], radius: 0.38, gain: 34 },
+  nearBlur: 88,
+  farBlur: 76,
 });
 
 /**
@@ -226,8 +226,8 @@ export const createHudFactory =
           maxCoc: 30,
           bloomStrength: 1.0,
           bloomThreshold: 0.32,
-          exposure: 0.9,
-          vignette: 0.62,
+          exposure: 0.98,
+          vignette: 0.7,
           grain: 0.018,
           saturation: 1.05,
           gain: [0.84, 1.0, 1.02],

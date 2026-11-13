@@ -132,7 +132,7 @@ void main() {
     // text-like rows
     float RP = 0.078;
     float row = floor(c.y / RP);
-    float rowLen = cs.x * mix(0.35, 1.0, h21(vec2(row, gid.x + gid.y * 3.0)));
+    float rowLen = cs.x * mix(0.35, 1.0, h21(vec2(row, gid.x + gid.y * 3.0 + isLive * floor(stepT * 0.25))));
     float WP = 0.26;
     float word = floor(c.x / WP);
     float wl = WP * mix(0.3, 0.9, h21(vec2(word, row) + gid * 1.1));
@@ -141,7 +141,8 @@ void main() {
     float mf = smoothstep(0.4, 1.0, fw.x / 0.03);
     chars = mix(chars, 0.7, mf);
     float lineOn = pulseAA(c.y, RP, 0.026, fw.y) * boxAA(c.y, 0.0, cs.y, fw.y);
-    float flick = mix(1.0, step(0.3, h21(vec2(row, stepT) + gid)), isLive);
+    // rows and individual words flicker on live blocks (data refreshing)
+    float flick = mix(1.0, step(0.3, h21(vec2(row, stepT) + gid)) * step(0.22, h21(vec2(row * 7.0 + word, stepT) + gid * 1.3)), isLive);
     float v = wOn * chars * lineOn * inside * bb * mix(0.55, 1.0, h21(vec2(row, gid.y))) * flick;
     ink += v;
   } else if (bt < 0.86) {
