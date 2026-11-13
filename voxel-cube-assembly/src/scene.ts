@@ -36,51 +36,51 @@ const LOOKS: Record<Variant, Look> = {
   v1: {
     background: 0xb9babd,
     floorNear: 0xdad9dc,
-    floorFar: 0xc4c5c9,
-    wallBottom: 0xc4c5c9,
-    wallMid: 0xb7b8bb,
-    wallTop: 0xb9babd,
-    shadow: 0.27,
+    floorFar: 0xbcbdc0,
+    wallBottom: 0xbcbdc0,
+    wallMid: 0xb1b2b5,
+    wallTop: 0xb1b2b5,
+    shadow: 0.33,
     floorGlow: 0x000000,
     floorGlowStrength: 0,
     hemiSky: 0xffffff,
     hemiGround: 0xc9ccd4,
-    hemiIntensity: 0.62,
-    keyIntensity: 1.55,
+    hemiIntensity: 0.5,
+    keyIntensity: 1.0,
     fillColor: 0xdfe8ff,
-    fillIntensity: 0.3,
-    envIntensity: 0.42,
-    primary: [0.62, 0.06, 0.8, 0.12],
-    secondary: [0.6, 0.07, 0.09, 0.1],
-    accent: [0.59, 0.7, 0.7, 0.1],
+    fillIntensity: 0.4,
+    envIntensity: 0.68,
+    primary: [0.62, 0.06, 0.77, 0.1],
+    secondary: [0.6, 0.07, 0.1, 0.1],
+    accent: [0.595, 0.62, 0.6, 0.1],
     accentEmissive: 0x7fb2f0,
-    accentEmissiveIntensity: 0.12,
+    accentEmissiveIntensity: 0.04,
     chrome: 0xe6eaf0,
   },
   // Alternative look: graphite / steel voxels with glowing amber accents
   // in a dark studio
   v2: {
     background: 0x101114,
-    floorNear: 0x2b2d33,
+    floorNear: 0x363940,
     floorFar: 0x121317,
     wallBottom: 0x121317,
     wallMid: 0x0c0d10,
     wallTop: 0x131418,
-    shadow: 0.55,
+    shadow: 0.62,
     floorGlow: 0xff8a1f,
     floorGlowStrength: 0.05,
     hemiSky: 0xcfd8ff,
     hemiGround: 0x2a2420,
-    hemiIntensity: 0.5,
-    keyIntensity: 2.1,
+    hemiIntensity: 0.45,
+    keyIntensity: 1.25,
     fillColor: 0xffb070,
-    fillIntensity: 0.55,
-    envIntensity: 0.6,
+    fillIntensity: 0.45,
+    envIntensity: 0.7,
     primary: [0.62, 0.1, 0.045, 0.05],
     secondary: [0.6, 0.08, 0.3, 0.14],
     accent: [0.07, 1.0, 0.42, 0.06],
     accentEmissive: 0xff7a14,
-    accentEmissiveIntensity: 0.5,
+    accentEmissiveIntensity: 0.42,
     chrome: 0xf2e6d8,
   },
 };
@@ -107,9 +107,9 @@ const mulberry32 = (seed: number) => {
 // ---------------------------------------------------------------------------
 // Scene constants
 // ---------------------------------------------------------------------------
-const GRID = 6; // 6 x 6 x 6 voxels
-const CELL = 1; // spacing between voxel centres
-const VOXEL = 0.975; // voxel edge length (leaves a hairline gap)
+const GRID = 7; // 7 x 7 x 7 voxels
+const CELL = 6 / GRID; // spacing between voxel centres (cube edge = 6 units)
+const VOXEL = CELL * 0.975; // voxel edge length (leaves a hairline gap)
 const FLOOR_Y = -6.4;
 const ROOM_RADIUS = 60;
 
@@ -120,10 +120,11 @@ const CYCLE_PEAK = 2.0; // time of the first peak
 type Kind = "white" | "dark" | "blue" | "chrome";
 
 type Voxel = {
+  /** integer lattice coordinates */
+  i: number;
+  j: number;
+  k: number;
   home: THREE.Vector3;
-  axis: THREE.Vector3;
-  amplitude: number;
-  delay: number;
   kind: Kind;
   shade: number;
   index: number;
@@ -140,42 +141,22 @@ const buildVoxels = (): Voxel[] => {
     chrome: 0,
   };
 
-  for (let x = 0; x < GRID; x++) {
-    for (let y = 0; y < GRID; y++) {
-      for (let z = 0; z < GRID; z++) {
+  for (let i = 0; i < GRID; i++) {
+    for (let j = 0; j < GRID; j++) {
+      for (let k = 0; k < GRID; k++) {
         const home = new THREE.Vector3(
-          x - half,
-          y - half,
-          z - half,
+          i - half,
+          j - half,
+          k - half,
         ).multiplyScalar(CELL);
-
-        // Each voxel slides along exactly one of the cube's own axes
-        const axisIndex = Math.floor(rand() * 3);
-        const coord = home.getComponent(axisIndex);
-        const outward =
-          coord === 0 ? (rand() < 0.5 ? -1 : 1) : Math.sign(coord);
-        const direction = rand() < 0.86 ? outward : -outward;
-        const axis = new THREE.Vector3();
-        axis.setComponent(axisIndex, direction);
-
-        // Outer voxels travel further than inner ones so that the cube
-        // "breathes" open instead of self-intersecting
-        const depth = Math.abs(coord) / half; // 0 (centre) .. 1 (surface)
         const r = rand();
-        const amplitude =
-          direction === outward
-            ? (0.1 + 1.15 * r * r) * (0.45 + 0.75 * depth)
-            : 0.15 + 0.35 * r;
-
-        const k = rand();
         const kind: Kind =
-          k < 0.55 ? "white" : k < 0.76 ? "dark" : k < 0.95 ? "blue" : "chrome";
-
+          r < 0.58 ? "white" : r < 0.81 ? "dark" : r < 0.98 ? "blue" : "chrome";
         voxels.push({
+          i,
+          j,
+          k,
           home,
-          axis,
-          amplitude,
-          delay: rand() * 0.9,
           kind,
           shade: rand(),
           index: counters[kind]++,
@@ -186,14 +167,79 @@ const buildVoxels = (): Voxel[] => {
   return voxels;
 };
 
-/** 0 = perfectly assembled cube, 1 = fully scattered */
-const scatterAmount = (t: number) => {
-  const phase = ((t - CYCLE_PEAK) / CYCLE_PERIOD) * Math.PI * 2;
-  const wave = 0.5 + 0.5 * Math.cos(phase);
-  // the clip ends on a loosely re-assembled cube, so the last peak is damped
+/**
+ * The cube opens the way a sliding puzzle does, never by letting voxels
+ * pass through each other:
+ *
+ *  1. every bar of voxels along the cube's X axis slides along X as a rigid
+ *     piece (optionally split in two segments that drift apart), and
+ *  2. every Z layer additionally slides sideways along Y as a whole slab.
+ *
+ * Parallel bars stay in their own lanes and layers stay in their own planes,
+ * so the motion is collision-free for any combination of the two amounts.
+ * The two envelopes run half a cycle apart, so the lattice is never fully
+ * closed. New random offsets are drawn each cycle, exactly when the
+ * respective envelope is zero, so there is never a jump.
+ */
+const wave = (t: number, peak: number) =>
+  Math.pow(
+    0.5 + 0.5 * Math.cos(((t - peak) / CYCLE_PERIOD) * Math.PI * 2),
+    1.15,
+  );
+const cycleIndex = (t: number, peak: number) =>
+  Math.floor((t - peak) / CYCLE_PERIOD + 0.5);
+
+const BAR_PEAK = CYCLE_PEAK;
+const SLAB_PEAK = CYCLE_PEAK + CYCLE_PERIOD / 2;
+
+type BarMove = { offset: number; cut: number; gap: number };
+const barMoveCache = new Map<number, BarMove>();
+const barMove = (j: number, k: number, cycle: number): BarMove => {
+  const key = (cycle + 8) * 4096 + j * 64 + k;
+  let move = barMoveCache.get(key);
+  if (!move) {
+    const rand = mulberry32(key * 7919 + 13);
+    rand();
+    const offset = (rand() * 2 - 1) * 1.15;
+    const split = rand() < 0.6;
+    move = {
+      offset,
+      cut: split ? 1 + Math.floor(rand() * (GRID - 1)) : GRID,
+      gap: split ? 0.35 + 0.75 * rand() : 0,
+    };
+    barMoveCache.set(key, move);
+  }
+  return move;
+};
+const slabOffset = (k: number, cycle: number) => {
+  const rand = mulberry32((cycle + 8) * 131 + k * 17 + 5);
+  rand();
+  return (rand() * 2 - 1) * 0.8;
+};
+const barDelay = (j: number, k: number) => {
+  const rand = mulberry32(j * 97 + k * 389 + 3);
+  rand();
+  return rand() * 0.7;
+};
+
+/** Displacement of a voxel from its home position, in cube space */
+const scatterOffset = (v: Voxel, t: number, out: THREE.Vector3) => {
+  // 1. bars sliding along X (the clip ends on a loosely closed cube, so the
+  //    last peak is damped)
+  const tb = t - barDelay(v.j, v.k);
   const t01 = Math.min(1, Math.max(0, (t - 16.5) / 3.5));
-  const damp = 1 - 0.62 * t01 * t01 * (3 - 2 * t01);
-  return Math.pow(wave, 1.15) * damp;
+  const damp = 1 - 0.55 * t01 * t01 * (3 - 2 * t01);
+  const sBar = wave(tb, BAR_PEAK) * damp;
+  const move = barMove(v.j, v.k, cycleIndex(tb, BAR_PEAK));
+  const x = move.offset + (v.i >= move.cut ? move.gap * 0.5 : -move.gap * 0.5);
+
+  // 2. layers sliding along Y
+  const ts = t - v.k * 0.09;
+  const sSlab = wave(ts, SLAB_PEAK);
+  const y = slabOffset(v.k, cycleIndex(ts, SLAB_PEAK));
+
+  out.set(x * sBar * CELL, y * sSlab * CELL, 0);
+  return sBar;
 };
 
 // ---------------------------------------------------------------------------
@@ -207,7 +253,7 @@ const floorMaterial = (look: Look) =>
       uGlowStrength: { value: look.floorGlowStrength },
       uFar: { value: new THREE.Color(look.floorFar) },
       uRadius: { value: ROOM_RADIUS },
-      uShadowCenter: { value: new THREE.Vector2(0, 0) },
+      uShadowCenter: { value: new THREE.Vector2(0, 2.6) },
       uShadowSize: { value: new THREE.Vector2(7.5, 5.0) },
       uShadowStrength: { value: 0.3 },
     },
@@ -231,14 +277,18 @@ const floorMaterial = (look: Look) =>
       varying vec3 vWorld;
       void main() {
         float r = length(vWorld.xz) / uRadius;
-        vec3 col = mix(uNear, uFar, smoothstep(0.1, 0.8, r));
+        vec3 col = mix(uNear, uFar, smoothstep(0.08, 0.6, r));
         // soft contact shadow under the floating cube
         vec2 d = (vWorld.xz - uShadowCenter) / uShadowSize;
         float s = exp(-dot(d, d) * 1.1);
+        s = s * (0.55 + 0.45 * s);
         col *= 1.0 - uShadowStrength * s;
         col += uGlow * uGlowStrength * exp(-dot(d, d) * 0.28);
         gl_FragColor = vec4(col, 1.0);
         #include <colorspace_fragment>
+        // noise dither: keeps the smooth gradients free of banding
+        float n = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+        gl_FragColor.rgb += (n - 0.5) / 255.0;
       }
     `,
   });
@@ -269,10 +319,13 @@ const wallMaterial = (look: Look) =>
       void main() {
         float h = vWorld.y - uFloorY;
         // blurred floor/wall seam, then a gentle lift towards the ceiling
-        vec3 col = mix(uBottom, uMid, smoothstep(0.0, 9.0, h));
+        vec3 col = mix(uBottom, uMid, smoothstep(0.0, 4.5, h));
         col = mix(col, uTop, smoothstep(9.0, 45.0, h));
         gl_FragColor = vec4(col, 1.0);
         #include <colorspace_fragment>
+        // noise dither: keeps the smooth gradients free of banding
+        float n = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+        gl_FragColor.rgb += (n - 0.5) / 255.0;
       }
     `,
   });
@@ -343,23 +396,23 @@ export const createVoxelScene = (
   // Voxels
   const voxels = buildVoxels();
   const count = (kind: Kind) => voxels.filter((v) => v.kind === kind).length;
-  const geometry = new RoundedBoxGeometry(VOXEL, VOXEL, VOXEL, 3, 0.022);
+  const geometry = new RoundedBoxGeometry(VOXEL, VOXEL, VOXEL, 3, 0.018);
 
   const materials: Record<Kind, THREE.MeshStandardMaterial> = {
     white: new THREE.MeshStandardMaterial({
       color: 0xffffff,
-      roughness: 0.32,
-      metalness: 0.0,
+      roughness: 0.14,
+      metalness: 0.06,
     }),
     dark: new THREE.MeshStandardMaterial({
       color: 0xffffff,
-      roughness: 0.22,
-      metalness: 0.35,
+      roughness: 0.1,
+      metalness: 0.5,
     }),
     blue: new THREE.MeshStandardMaterial({
       color: 0xffffff,
-      roughness: 0.25,
-      metalness: 0.0,
+      roughness: 0.1,
+      metalness: 0.1,
       emissive: look.accentEmissive,
       emissiveIntensity: look.accentEmissiveIntensity,
     }),
@@ -420,6 +473,7 @@ export const createVoxelScene = (
   const target = new THREE.Vector3();
   const matrix = new THREE.Matrix4();
   const position = new THREE.Vector3();
+  const offset = new THREE.Vector3();
 
   const placeCamera = (t: number, duration: number) => {
     if (variant === "v1") {
@@ -446,19 +500,13 @@ export const createVoxelScene = (
   };
 
   const render = (t: number) => {
-    // Slow multi-axis tumble of the whole assembly
-    cube.rotation.set(
-      0.15 + 0.03 * t + 0.006 * t * t,
-      0.3 + 0.02 * t + 0.008 * t * t,
-      0.1 + 0.16 * t,
-      "ZXY",
-    );
+    // Slow, constant-rate multi-axis tumble of the whole assembly
+    cube.rotation.set(0.62 + 0.17 * t, 0.7 + 0.21 * t, 0.22 + 0.1 * t, "ZXY");
 
     let spread = 0;
     for (const v of voxels) {
-      const s = scatterAmount(t - v.delay);
-      spread += s;
-      position.copy(v.home).addScaledVector(v.axis, v.amplitude * s);
+      spread += scatterOffset(v, t, offset);
+      position.copy(v.home).add(offset);
       matrix.makeTranslation(position.x, position.y, position.z);
       meshes[v.kind].setMatrixAt(v.index, matrix);
     }
@@ -469,8 +517,8 @@ export const createVoxelScene = (
 
     // The contact shadow widens and softens when the cube opens up
     floorMat.uniforms.uShadowSize.value.set(
-      7.6 + 2.2 * spread,
-      5.2 + 1.6 * spread,
+      5.0 + 1.2 * spread,
+      3.4 + 0.9 * spread,
     );
     floorMat.uniforms.uShadowStrength.value = look.shadow * (1 - 0.18 * spread);
 

@@ -54,7 +54,7 @@ export const VoxelCube: React.FC<VoxelCubeProps> = ({ variant }) => {
         style={{
           background:
             variant === "v1"
-              ? "radial-gradient(ellipse 75% 85% at 50% 45%, rgba(0,0,0,0) 45%, rgba(20,22,28,0.13) 100%)"
+              ? "radial-gradient(ellipse 85% 120% at 50% 105%, rgba(0,0,0,0) 62%, rgba(20,22,28,0.1) 100%)"
               : "radial-gradient(ellipse 75% 85% at 50% 45%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.5) 100%)",
         }}
       />

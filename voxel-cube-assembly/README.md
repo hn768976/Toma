@@ -1,7 +1,7 @@
 # Voxel Cube Assembly – Remotion + Three.js (4K)
 
-A 6x6x6 cube of white, charcoal, pale-blue and chrome voxels floats in a
-soft grey studio, tumbling slowly while its voxels slide apart and snap
+A 7x7x7 cube of white, charcoal, pale-blue and chrome voxels floats in a
+soft grey studio, tumbling slowly while its rows and slabs of voxels slide apart and
 back together in a ~6 second cycle.
 
 Built with [Remotion](https://www.remotion.dev) (project scaffolded with
