@@ -1,0 +1,40 @@
+{
+  "name": "serum-drop-skin-repair",
+  "version": "1.0.0",
+  "description": "Serum Drop Repairing Cracked Skin - 4K Remotion compositions (WebGL 2 shaders)",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.543",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.543"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.543",
+    "@types/react": "19.3.0",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "render:v1": "remotion render SerumDrop-V1 \"out/Version 1 - Serum Drop Repairing Cracked Skin - 1080p.mp4\" --scale=0.5",
+    "render:v2": "remotion render SerumDrop-V2 \"out/Version 2 - Serum Drop Repairing Cracked Skin - Orbit Camera - 1080p.mp4\" --scale=0.5",
+    "render": "npm run render:v1 && npm run render:v2",
+    "render:v1:4k": "remotion render SerumDrop-V1 \"out/Version 1 - Serum Drop Repairing Cracked Skin - 4K.mp4\"",
+    "render:v2:4k": "remotion render SerumDrop-V2 \"out/Version 2 - Serum Drop Repairing Cracked Skin - Orbit Camera - 4K.mp4\"",
+    "still:4k": "remotion still SerumDrop-V1 out/still-4k.png --frame=90",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}
