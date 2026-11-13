@@ -20,7 +20,7 @@ import {
 const VESSEL_RADIUS = 1;
 const CAMERA_START = 3;
 const CAMERA_SPEED = 2.1; // radii per second
-const VIEW_AHEAD = 46; // how much vessel exists in front of the camera
+const VIEW_AHEAD = 84; // how much vessel exists in front of the camera
 const LOOK_AHEAD = 19; // distance of the glowing "end" that the camera frames
 const FOV = 37;
 const TISSUE_V_LENGTH = 12; // world length of one tissue-map period along the vessel
@@ -101,7 +101,7 @@ export const createBloodScene =
       FOV,
       bufferWidth / bufferHeight,
       0.03,
-      80,
+      160,
     );
 
     // -- Vessel path -------------------------------------------------------
@@ -240,6 +240,32 @@ export const createBloodScene =
     wall.frustumCulled = false;
     scene.add(wall);
 
+    // Close the far end of the tube with a disc in the glow colour, so a long
+    // straight stretch of vessel never shows a hole at its end.
+    const capFrame = path.sample(pathLength - 0.3);
+    const capGeo = new THREE.CircleGeometry(VESSEL_RADIUS * 1.6, 48);
+    const capMat = new THREE.ShaderMaterial({
+      side: THREE.DoubleSide,
+      uniforms: { uGlowCol: { value: palette.glow } },
+      vertexShader: /* glsl */ `
+        void main() {
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        precision highp float;
+        uniform vec3 uGlowCol;
+        void main() {
+          gl_FragColor = vec4(uGlowCol * 0.85, 1.0);
+        }
+      `,
+    });
+    const cap = new THREE.Mesh(capGeo, capMat);
+    cap.position.copy(capFrame.p);
+    cap.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), capFrame.t);
+    cap.frustumCulled = false;
+    scene.add(cap);
+
     // -- Red blood cells ---------------------------------------------------
     const rng = makeRng(20240611);
     const cellGeo = makeCellGeometry();
@@ -312,6 +338,7 @@ export const createBloodScene =
         uLightPos: { value: lightPos },
         uCellCol: { value: palette.cell },
         uCellFar: { value: palette.cellFar },
+        uGlowCol: { value: palette.glow },
         uKeyCol: { value: palette.keyLight },
         uGlow0: { value: GLOW0 },
         uGlow1: { value: GLOW1 },
@@ -363,7 +390,9 @@ export const createBloodScene =
       // The measured track is a smoothed centroid, which under-reads the
       // swing of the glow; PAN_GAIN restores the reference amplitude.
       const sx = clamp(0.5 + (sampleSeries(TRACK_X, trackIndex) - 0.5) * PAN_GAIN_X, 0.08, 0.92);
-      const sy = clamp(0.5 + (sampleSeries(TRACK_Y, trackIndex) - 0.5) * PAN_GAIN_Y, 0.07, 0.93);
+      // (only the sharp upward swings are under-read; the low plateau is not)
+      const ty = sampleSeries(TRACK_Y, trackIndex) - 0.5;
+      const sy = clamp(0.5 + ty * (ty < 0 ? PAN_GAIN_Y : 1), 0.07, 0.93);
       dCam.set((2 * sx - 1) * tanH2, (1 - 2 * sy) * tanV2, -1).normalize();
       qRel.setFromUnitVectors(FORWARD, dCam);
       camera.quaternion.copy(qLook).multiply(qRel.invert());
@@ -421,6 +450,8 @@ export const createBloodScene =
         post.dispose();
         wallGeo.dispose();
         wallMat.dispose();
+        capGeo.dispose();
+        capMat.dispose();
         cellGeo.dispose();
         cellMat.dispose();
         cellMesh.dispose();

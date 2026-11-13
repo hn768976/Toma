@@ -197,6 +197,7 @@ uniform sampler2D tTissue;
 uniform vec3 uLightPos;
 uniform vec3 uCellCol;
 uniform vec3 uCellFar;
+uniform vec3 uGlowCol;
 uniform vec3 uKeyCol;
 uniform float uGlow0;
 uniform float uGlow1;
@@ -236,6 +237,9 @@ void main() {
   // distant cells dissolve into the glow at the end of the vessel
   float g = smoothstep(uGlow0 * 1.5, uGlow1 * 2.6, d);
   col = mix(col, uCellFar * (0.72 + 0.35 * core), g * 0.9);
+  // ...and the farthest ones vanish in it completely, so the far end of the
+  // vessel is an even glow rather than a wall of pale cells
+  col = mix(col, uGlowCol * 0.85, smoothstep(19.0, 34.0, d));
   gl_FragColor = vec4(col, 1.0);
 }
 `;
