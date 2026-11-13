@@ -44,11 +44,11 @@ void main(){
   float lit = clamp(dot(N, L) * .5 + .5, 0., 1.);
   lit *= lit;
   float glit = clamp(dot(G, L) * .5 + .5, 0., 1.);
-  float wallLight = clamp(.1 + .5 * gfres + .55 * lit + .45 * glit * glit, 0., 1.) * ao;
+  float wallLight = clamp(.2 + .5 * gfres + .55 * lit + .45 * glit * glit, 0., 1.) * ao;
   vec3 wallCol = mix(uMid, uRim, wallLight);
   vec3 col = mix(uDeep, uMid, clamp((1. - pit) * .3 * ao + gfres * .3 + glit * glit * .25 * ao, 0., 1.));
   col = mix(col, wallCol, wall * mix(.5, .9, lod) * (.25 + .75 * wallLight));
-  col += uRim * pow(1. - gndv, 2.5) * (.12 + 1.0 * glit * glit);
+  col += uRim * pow(1. - gndv, 2.5) * (.2 + 1.5 * glit * glit);
   float fog = smoothstep(uFogNear, uFogFar, dist);
   col = mix(col, uFog, fog * .6);
   o = vec4(col, 1.);
@@ -91,17 +91,17 @@ void main(){
   // slow ripples over the whole shell
   float h = vnoise(q * 3.6 + uSeed + uTime * .10) * .6
           + vnoise(q * 8.5 + uSeed * 2. - uTime * .08) * .4;
-  vec3 N = bumpNormal(vView, G, h, .26 * uScale);
+  vec3 N = bumpNormal(vView, G, h, .34 * uScale);
   float ndv = abs(dot(N, V));
   float fres = pow(1. - ndv, 2.2);
   float gfres = pow(1. - gndv, 2.6);
-  float alpha = clamp(.03 + fres * .48 + gfres * .3 + edge * .22, 0., .88);
+  float alpha = clamp(.03 + fres * .52 + gfres * .34 + edge * .38, 0., .9);
   vec3 L = normalize(vec3(.35, -.75, .45));
   vec3 R = reflect(-V, N);
   float spec = pow(max(dot(R, L), 0.), 22.) + .6 * pow(max(dot(R, normalize(vec3(-.5, .6, .6))), 0.), 30.);
   vec3 col = mix(uTint, uRim, clamp(fres * .9 + edge * .45, 0., 1.));
-  col += uRim * spec * .5;
-  alpha = clamp(alpha + spec * .35, 0., .92);
+  col += uRim * spec * .85;
+  alpha = clamp(alpha + spec * .5, 0., .94);
   if (uBack > .5) alpha *= .5;
   float fog = smoothstep(uFogNear, uFogFar, dist);
   col = mix(col, uFog, fog * .5);
@@ -130,7 +130,7 @@ void main(){
   // light sources: upper right, and a softer one lower left
   float hot = smoothstep(.95, 0., length(p - vec2(.55, .42)));
   float hot2 = smoothstep(.8, 0., length(p - vec2(-.62, -.3)));
-  c = mix(c, uBgC, clamp(hot * hot * .6 + hot2 * hot2 * .4, 0., 1.));
+  c = mix(c, uBgC, clamp(hot * hot * .85 + hot2 * hot2 * .6, 0., 1.));
   o = vec4(c, 1.);
 }
 `;

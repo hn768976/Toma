@@ -23,7 +23,8 @@ const ASPECT = 16 / 9;
 // Camera move: slow, constant-speed pull-back that drifts down-left while
 // panning with it - the cells slide up and to the right through the frame.
 const CAM_START = new THREE.Vector3(0.0, 0.05, 7.9);
-const CAM_END = new THREE.Vector3(-6.8, -3.5, 16.2);
+const CAM_END = new THREE.Vector3(-8.2, -4.2, 18.4);
+const PULL = 2.3; // end distance / start distance
 const AIM_START = new THREE.Vector3(0.0, 0.0, 0);
 const AIM_END = new THREE.Vector3(-2.7, -1.7, 0);
 
@@ -42,7 +43,7 @@ type Cell = {
 // Hand-placed cells reproduce the opening layout of the reference.
 const HERO: [number, number, number, number][] = [
   [0, 0, 0, 1.0],
-  [-1.95, 1.5, -1.3, 0.98],
+  [-2.6, 2.0, -2.6, 0.98],
   [-3.7, 1.75, 1.0, 1.02],
   [3.65, -0.85, 0.7, 1.05],
   [-3.4, -2.35, 1.3, 1.0],
@@ -99,7 +100,7 @@ const buildCells = (): Cell[] => {
   const tmp = new THREE.Vector3();
   const closest = new THREE.Vector3();
   let tries = 0;
-  while (cells.length < 130 && tries++ < 40000) {
+  while (cells.length < 96 && tries++ < 40000) {
     const p = new THREE.Vector3(
       -36 + rnd() * 56,
       -24 + rnd() * 38,
@@ -119,7 +120,7 @@ const buildCells = (): Cell[] => {
     seg.closestPointToPoint(p, true, closest);
     if (closest.distanceTo(p) < 4.0) continue;
     const mr = r * 1.75;
-    if (cells.some((c) => c.pos.distanceTo(p) < (c.m + mr) * 0.74)) continue;
+    if (cells.some((c) => c.pos.distanceTo(p) < (c.m + mr) * 0.98)) continue;
     cells.push(mk(p.x, p.y, p.z, r));
   }
   return cells;
@@ -321,7 +322,10 @@ export const stemCellsFactory: SceneFactory<StemParams> = ({
   return {
     render: (frame) => {
       const t = frame / fps;
-      const u = frame / total;
+      // geometric pull-back: the picture shrinks at a constant rate, so the
+      // move never appears to ease out
+      const lin = frame / total;
+      const u = (Math.pow(PULL, lin) - 1) / (PULL - 1);
       camera.position.lerpVectors(CAM_START, CAM_END, u);
       aim.lerpVectors(AIM_START, AIM_END, u);
       camera.up.set(Math.sin(-0.05 + u * 0.11), Math.cos(-0.05 + u * 0.11), 0);

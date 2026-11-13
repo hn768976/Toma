@@ -15,14 +15,14 @@ export type Palette = {
 // Version 1 - the reference look: cyan / azure liquid, navy nuclei.
 export const AZURE: Palette = {
   deep: "#04123c",
-  mid: "#2a6f95",
+  mid: "#2f7ba2",
   rim: "#9fe9e6",
   tint: "#5cc4f5",
   memRim: "#d6f8ff",
   fog: "#2f9fe2",
   bgA: "#0b6dbd",
   bgB: "#17a0ea",
-  bgC: "#8adfff",
+  bgC: "#a8eaff",
   lift: [0, 0, 0],
   saturation: 1.04,
 };
@@ -37,8 +37,8 @@ export const ORCHID: Palette = {
   memRim: "#ffeaf4",
   fog: "#d655ac",
   bgA: "#7a1c8c",
-  bgB: "#dc4faa",
-  bgC: "#ffb3dc",
+  bgB: "#e35db3",
+  bgC: "#ffc6e6",
   lift: [0.004, 0, 0.006],
   saturation: 1.04,
 };
