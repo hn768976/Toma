@@ -98,6 +98,10 @@ A separate reviewer agent compared frame grabs, motion and timing of each render
 
 **After the fix:**
 - The automated layout check reports 0 connector conflicts.
+- The reviewer agent re-checked both re-rendered videos and found no black cable or connector crossing or overlapping another. It checked:
+  - frames 200–300 at full resolution, with close-ups around the RJ45;
+  - frames 120–200, every 8th frame plus selected frames at full resolution.
+  The X-shaped crossing that used to appear at about 5 s is gone, nothing has regressed, and both versions are approved.
 - Both fiber versions were re-rendered, re-mastered and re-tested; all technical checks above pass.
 - The largest brightness step (4.6 on V1, 5.6 on V2, at frame 178) is a gradual 5-frame rise as the fibres fill the frame mid-swing. It is not a single-frame flash.
 - The server room videos and their ZIP are unchanged; the server ZIP is byte-identical.
