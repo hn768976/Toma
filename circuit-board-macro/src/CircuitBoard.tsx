@@ -7,13 +7,13 @@ import { COLOR, MONO, Palette } from "./scene/palette";
 
 // ---- shot description (all distances in board units; QFP lid = 4 x 4) ----
 const FOV = 27; // vertical field of view, degrees
-const DIST = 8.3; // camera distance to the look-at point
-const ELEV = (19 * Math.PI) / 180; // camera elevation above the board
+const DIST = 9.8; // camera distance to the look-at point
+const ELEV = (26 * Math.PI) / 180; // camera elevation above the board
 const TRUCK_FROM = -1.85; // lateral camera offset at t = 0 s
 const TRUCK_TO = 1.85; // lateral camera offset at t = 10 s
 const LOOK_S = -0.75; // look-at point, slightly in front of the chip centre
-const APERTURE = 0.044;
-const MAX_COC = 0.042;
+const APERTURE = 0.024;
+const MAX_COC = 0.034;
 
 function softbox(color: THREE.Color, w: number, h: number, pos: THREE.Vector3) {
   const m = new THREE.Mesh(
@@ -135,7 +135,7 @@ const makeFactory =
     // ---- floating dust -------------------------------------------------------
     const rand = rng(4242);
     const specks: Speck[] = [];
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0; i < 36; i++) {
       specks.push({
         r: (rand() - 0.5) * 15,
         s: -3.2 + rand() * 7.5,
@@ -143,7 +143,7 @@ const makeFactory =
         vr: (rand() - 0.5) * 0.09,
         vs: (rand() - 0.5) * 0.06,
         vy: 0.015 + rand() * 0.05,
-        size: 0.007 + rand() * rand() * 0.014,
+        size: 0.005 + rand() * rand() * 0.009,
         ph: rand() * Math.PI * 2,
       });
     }
@@ -272,7 +272,7 @@ const makeFactory =
             maxCoc: MAX_COC,
             bloomStrength: 0.35,
             bloomThreshold: 0.85,
-            vignette: 0.42,
+            vignette: 0.3,
             grain: 0.022,
             seed: frame,
             exposure: palette.post.exposure,
