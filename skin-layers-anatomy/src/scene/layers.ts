@@ -10,10 +10,10 @@ const wave = (x: number, z: number, p: number, amp: number) =>
 /** Interfaces between layers, bottom to top, in the stacked state. */
 export const interfaces: ((x: number, z: number) => number)[] = [
   () => -0.8,
-  (x, z) => -0.56 + wave(x, z, 0.4, 0.06),
-  (x, z) => -0.29 + wave(x, z, 2.1, 0.1),
-  (x, z) => 0.26 + wave(x, z, 4.4, 0.14),
-  (x, z) => 0.34 + wave(x, z, 4.5, 0.15),
+  (x, z) => -0.6 + wave(x, z, 0.4, 0.06),
+  (x, z) => -0.38 + wave(x, z, 2.1, 0.1),
+  (x, z) => 0.3 + wave(x, z, 4.4, 0.14),
+  (x, z) => 0.37 + wave(x, z, 4.5, 0.15),
   (x, z) => 0.68 + wave(x, z, 1.2, 0.04),
   (x, z) => 0.78 + wave(x, z, 3.3, 0.022),
 ];
@@ -30,7 +30,7 @@ export type LayerDef = {
   id: LayerId;
   /** index of bottom interface; top is index + 1 */
   index: number;
-  /** vertical travel when fully exploded */
+  /** vertical travel when fully exploded (the top sheet stays put) */
   offset: number;
   /** mean y of bottom / top in the stacked state */
   y0: number;
@@ -38,12 +38,12 @@ export type LayerDef = {
 };
 
 export const LAYERS: LayerDef[] = [
-  { id: "muscle", index: 0, offset: -0.42, y0: -0.8, y1: -0.56 },
-  { id: "hypodermis", index: 1, offset: -0.23, y0: -0.56, y1: -0.29 },
-  { id: "dermis", index: 2, offset: -0.05, y0: -0.29, y1: 0.26 },
-  { id: "basal", index: 3, offset: 0.16, y0: 0.26, y1: 0.34 },
-  { id: "squamous", index: 4, offset: 0.31, y0: 0.34, y1: 0.68 },
-  { id: "corneum", index: 5, offset: 0.57, y0: 0.68, y1: 0.78 },
+  { id: "muscle", index: 0, offset: -1.0, y0: -0.8, y1: -0.6 },
+  { id: "hypodermis", index: 1, offset: -0.81, y0: -0.6, y1: -0.38 },
+  { id: "dermis", index: 2, offset: -0.62, y0: -0.38, y1: 0.3 },
+  { id: "basal", index: 3, offset: -0.41, y0: 0.3, y1: 0.37 },
+  { id: "squamous", index: 4, offset: -0.26, y0: 0.37, y1: 0.68 },
+  { id: "corneum", index: 5, offset: 0, y0: 0.68, y1: 0.78 },
 ];
 
 export const layerById = (id: LayerId) => LAYERS.find((l) => l.id === id)!;

@@ -11,8 +11,8 @@ float vnoise(vec3 p){
 }
 float fbm(vec3 p){ return 0.55 * vnoise(p) + 0.3 * vnoise(p * 2.1 + 3.1) + 0.15 * vnoise(p * 4.3 + 7.7); }
 
-const float ALONG = 58.0;   // cuticle scales along the strand
-const float AROUND = 17.0;  // cuticle scales around the strand
+const float ALONG = 92.0;   // cuticle scales along the strand
+const float AROUND = 27.0;  // cuticle scales around the strand
 
 // Lifted, broken cuticle scales. Returns (lift, distance to scale edge, id).
 vec3 cuticle(vec2 uv, vec3 p){
@@ -45,7 +45,7 @@ void main(){
   vMask = smoothstep(uFront - 0.0012, uFront + 0.0012, uv.x + jag);
   vec3 c = cuticle(uv, position);
   float rough = fbm(position * 6.0);
-  float amp = 0.11 * aRadius + 0.035;
+  float amp = 0.065 * aRadius + 0.018;
   float disp = vMask * amp * (0.2 + 1.2 * c.x + 1.5 * rough) * smoothstep(0.0, 0.25, aRadius);
   vec3 p = position + normal * disp;
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
@@ -80,13 +80,13 @@ void main(){
   healthy = mix(healthy, uHealthyHighlight, 0.6 * pow(d, 10.0));
   healthy *= 1.0 + 0.08 * streak;
   vec3 Hh = normalize(L + V);
-  healthy += uHealthyHighlight * 0.35 * pow(max(dot(N, Hh), 0.0), 40.0);
+  healthy += uHealthyHighlight * 0.75 * pow(max(dot(N, Hh), 0.0), 90.0);
   float ndv = max(dot(N, V), 0.0);
   healthy += uHealthyHighlight * 0.22 * pow(1.0 - ndv, 3.0) * max(dot(N, L2) + 0.4, 0.0);
 
   // ---- damaged strand: lifted, cracked, dusty cuticle ----
   vec3 Nf = normalize(cross(dFdx(vViewPos), dFdy(vViewPos)));
-  vec3 Nd = normalize(mix(N, Nf, 0.8));
+  vec3 Nd = normalize(mix(N, Nf, 0.6));
   vec3 c = cuticle(vUv, vObj);
   float n = fbm(vObj * 9.0);
   float grain = vnoise(vObj * 38.0);
@@ -94,7 +94,7 @@ void main(){
   damaged = mix(damaged, uDamagedLight, 0.5 * pow(c.x, 2.0) + 0.1 * smoothstep(0.55, 0.9, grain));
   damaged *= 0.45 + 0.55 * smoothstep(0.0, 0.16, c.y);
   float dd = clamp(dot(Nd, L) * 0.75 + 0.25, 0.0, 1.0);
-  damaged *= 0.22 + 1.25 * dd;
+  damaged *= 0.2 + 1.05 * dd;
   damaged *= 0.85 + 0.3 * grain;
   damaged *= 0.65 + 0.7 * fbm(vObj * 23.0);
 
@@ -102,8 +102,7 @@ void main(){
 
   // hot seam where the molecules are sealing the cuticle
   float seam = exp(-abs(vUv.x - uFront) * 420.0);
-  float wide = exp(-abs(vUv.x - uFront) * 45.0);
-  col += uFrontGlow * uGlow * (0.14 * seam + 0.02 * wide);
+  col += uFrontGlow * uGlow * (0.05 * seam);
 
   gl_FragColor = vec4(col, 1.0);
   #include <colorspace_fragment>

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { HALF, interfaces, LAYERS, LayerId } from "./layers";
+import { HALF, interfaces, layerById, LAYERS, LayerId } from "./layers";
 import { slabGeometry } from "./slab";
 import {
   mottledTexture,
@@ -66,7 +66,7 @@ export const buildSkinScene = (): SkinScene => {
       roughness: 0.42,
     }),
     hypodermis: new THREE.MeshStandardMaterial({
-      color: 0xeec23e,
+      color: 0xecc85a,
       roughness: 0.6,
     }),
     dermis: new THREE.MeshStandardMaterial({
@@ -87,7 +87,7 @@ export const buildSkinScene = (): SkinScene => {
       roughness: 0.55,
     }),
     corneum: new THREE.MeshStandardMaterial({
-      color: 0xd69a70,
+      color: 0xe6ae86,
       map: mottB,
       roughness: 0.6,
       transparent: true,
@@ -96,6 +96,7 @@ export const buildSkinScene = (): SkinScene => {
   };
 
   const groups = {} as Record<LayerId, THREE.Group>;
+  const hairs: { mesh: THREE.Mesh; tipY: number; rootY: number }[] = [];
   for (const layer of LAYERS) {
     const g = new THREE.Group();
     const geo = track(
@@ -111,8 +112,8 @@ export const buildSkinScene = (): SkinScene => {
   // ---------- adipose globules ----------
   {
     const rnd = makeRng(77);
-    const count = 3400;
-    const geo = track(new THREE.IcosahedronGeometry(1, 2));
+    const count = 6200;
+    const geo = track(new THREE.IcosahedronGeometry(1, 1));
     const mat = track(
       new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.38 }),
     );
@@ -124,7 +125,7 @@ export const buildSkinScene = (): SkinScene => {
     const top = interfaces[2];
     for (let i = 0; i < count; i++) {
       let x: number, y: number, z: number;
-      const r = 0.045 + rnd() * 0.05;
+      const r = 0.032 + rnd() * 0.034;
       const pick = rnd();
       if (pick < 0.42) {
         x = (rnd() * 2 - 1) * HALF;
@@ -145,7 +146,7 @@ export const buildSkinScene = (): SkinScene => {
         new THREE.Vector3(r, r * (0.8 + rnd() * 0.3), r),
       );
       inst.setMatrixAt(i, m);
-      col.setHSL(0.128 + rnd() * 0.025, 0.95, 0.5 + rnd() * 0.13);
+      col.setHSL(0.13 + rnd() * 0.02, 0.88, 0.58 + rnd() * 0.12);
       inst.setColorAt(i, col);
     }
     inst.instanceMatrix.needsUpdate = true;
@@ -189,12 +190,12 @@ export const buildSkinScene = (): SkinScene => {
     };
     const blue = 0x2456e0;
     const red = 0xe3202c;
-    addLoop(blue, 0.046, 0.16, 0.17, 0.07, 5);
-    addLoop(blue, 0.046, -0.08, 0.2, 0.08, 7);
-    addLoop(blue, 0.042, -0.3, 0.12, 0.06, 6);
-    addLoop(red, 0.03, 0.2, 0.17, 0.11, 6);
-    addLoop(red, 0.03, 0.0, 0.2, 0.12, 8);
-    addLoop(red, 0.028, -0.2, 0.17, 0.1, 5);
+    addLoop(blue, 0.027, 0.16, 0.2, 0.035, 5);
+    addLoop(blue, 0.027, -0.08, 0.24, 0.04, 7);
+    addLoop(blue, 0.025, -0.3, 0.14, 0.03, 6);
+    addLoop(red, 0.019, 0.2, 0.2, 0.05, 6);
+    addLoop(red, 0.019, 0.0, 0.24, 0.055, 8);
+    addLoop(red, 0.018, -0.2, 0.2, 0.045, 5);
   }
 
   // ---------- hairs + follicles (attached to the dermis) ----------
@@ -221,8 +222,6 @@ export const buildSkinScene = (): SkinScene => {
       [-0.2, 0.7],
       [0.5, -1.2],
       [1.2, 0.4],
-      [-1.6, -1.4],
-      [0.1, -1.7],
       [1.4, -1.0],
       [-0.7, 1.4],
     ];
@@ -232,7 +231,7 @@ export const buildSkinScene = (): SkinScene => {
       const z = rz === HALF ? rz + 0.035 : rz;
       const lean = 0.1 + rnd() * 0.24;
       const leanZ = rz === HALF ? 0 : -0.1 - rnd() * 0.25;
-      const len = 2.55 + rnd() * 0.6;
+      const len = 2.05 + rnd() * 0.45;
       const y0 = -0.2 + rnd() * 0.1;
       const curve = new THREE.CatmullRomCurve3([
         new THREE.Vector3(x - lean * 0.12, y0, z),
@@ -241,9 +240,12 @@ export const buildSkinScene = (): SkinScene => {
         new THREE.Vector3(x + lean * 1.0, y0 + len, z + leanZ),
       ]);
       const geo = track(
-        taperedTube(curve, 40, 8, (u) => 0.027 * (1 - 0.72 * u * u) + 0.002),
+        taperedTube(curve, 40, 8, (u) => 0.037 * (1 - 0.75 * u * u) + 0.002),
       );
-      groups.dermis.add(new THREE.Mesh(geo, hairMat));
+      const hairMesh = new THREE.Mesh(geo, hairMat);
+      // tips stay fixed while the roots follow the dermis downwards
+      hairs.push({ mesh: hairMesh, tipY: y0 + len, rootY: y0 });
+      scene.add(hairMesh);
       // knobbly follicle bulb / sweat gland at the root
       const onFace = rx === HALF || rz === HALF;
       if (onFace || rnd() > 0.5) {
@@ -276,7 +278,7 @@ export const buildSkinScene = (): SkinScene => {
     const geo = track(new THREE.PlaneGeometry(8.5, 8.5));
     const plane = new THREE.Mesh(geo, mat);
     plane.rotation.x = -Math.PI / 2;
-    plane.position.set(0.4, -2.1, -0.2);
+    plane.position.set(0.5, -2.75, -0.3);
     plane.renderOrder = -1;
     scene.add(plane);
   }
@@ -286,6 +288,12 @@ export const buildSkinScene = (): SkinScene => {
     setExplode: (e) => {
       for (const layer of LAYERS) {
         groups[layer.id].position.y = layer.offset * e;
+      }
+      const drop = layerById("dermis").offset * e;
+      for (const h of hairs) {
+        const s = (h.tipY - (h.rootY + drop)) / (h.tipY - h.rootY);
+        h.mesh.scale.y = s;
+        h.mesh.position.y = h.tipY * (1 - s);
       }
     },
     dispose: () => disposables.forEach((d) => d.dispose()),

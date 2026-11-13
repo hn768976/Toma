@@ -22,7 +22,7 @@ const make = () => {
 export const squamousTexture = () => {
   const { canvas, ctx } = make();
   const rnd = makeRng(11);
-  ctx.fillStyle = "#d8455c";
+  ctx.fillStyle = "#e0566a";
   ctx.fillRect(0, 0, SIZE, SIZE);
   const n = 34;
   const cell = SIZE / n;
@@ -31,8 +31,8 @@ export const squamousTexture = () => {
       const cx = (i + 0.5 + (rnd() - 0.5) * 0.7) * cell;
       const cy = (j + 0.5 + (rnd() - 0.5) * 0.7) * cell;
       const r = cell * (0.4 + rnd() * 0.16);
-      const l = 68 + rnd() * 12;
-      ctx.fillStyle = `hsl(${350 + rnd() * 8}, 82%, ${l}%)`;
+      const l = 66 + rnd() * 8;
+      ctx.fillStyle = `hsl(${352 + rnd() * 8}, 80%, ${l}%)`;
       ctx.beginPath();
       const k = 7;
       for (let a = 0; a < k; a++) {
@@ -116,10 +116,10 @@ export const shadowTexture = () => {
     SIZE / 2,
     SIZE / 2,
   );
-  g.addColorStop(0, "rgba(70,68,72,0.5)");
-  g.addColorStop(0.35, "rgba(80,78,82,0.3)");
-  g.addColorStop(0.7, "rgba(90,88,92,0.1)");
-  g.addColorStop(1, "rgba(90,88,92,0)");
+  g.addColorStop(0, "rgba(96,78,70,0.46)");
+  g.addColorStop(0.35, "rgba(104,86,78,0.27)");
+  g.addColorStop(0.7, "rgba(112,94,86,0.08)");
+  g.addColorStop(1, "rgba(112,94,86,0)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, SIZE, SIZE);
   const tex = new THREE.CanvasTexture(canvas);

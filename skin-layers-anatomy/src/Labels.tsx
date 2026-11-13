@@ -63,8 +63,8 @@ export const Labels: React.FC<{ t: number; variant: Variant }> = ({
     return project(cam, -HALF, y, HALF).y;
   });
   tickYs.push(project(cam, -HALF, yOf("muscle", 0), HALF).y);
-  const railX = 190 * U;
-  const tickX = 160 * U;
+  const railX = 158 * U; // bracket spine
+  const tickX = 190 * U; // ticks point towards the model
   const stroke = 0.9 * U;
 
   return (
@@ -94,7 +94,7 @@ export const Labels: React.FC<{ t: number; variant: Variant }> = ({
               fontFamily={FONT_FAMILY}
               fontWeight={500}
               fontSize={11.6 * U}
-              fill={INK}
+              fill="#45454a"
             >
               {c.text}
             </text>
@@ -119,7 +119,7 @@ export const Labels: React.FC<{ t: number; variant: Variant }> = ({
               strokeWidth={stroke}
             />
             <text
-              x={141 * U}
+              x={143 * U}
               y={(y0 + y1) / 2}
               textAnchor="end"
               dominantBaseline="central"

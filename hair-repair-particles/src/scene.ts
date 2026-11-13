@@ -26,7 +26,7 @@ export type HairScene = {
 };
 
 const col = (hex: string) => new THREE.Color(hex);
-const FLARE_SCALE = 1.5;
+const FLARE_SCALE = 1.25;
 
 const radialTexture = (
   size: number,
@@ -274,12 +274,11 @@ export const buildHairScene = (palette: Palette): HairScene => {
     flare.push({ sprite, mat, base, dx: dx * k * FLARE_SCALE, flick });
   };
   addFlare(palette.flareTint, 0.5, 0.42, 0.34); // soft halo
-  addFlare(palette.flareTint, 0.95, 0.05, 0.85); // long anamorphic streak
-  addFlare(palette.flareCore, 0.5, 0.022, 1.0); // hot streak core
-  addFlare(palette.flareCore, 0.17, 0.1, 1.0); // core
-  addFlare(palette.flareTint, 0.16, 0.014, 0.8, 0.24, 1); // glints to the right
-  addFlare(palette.flareCore, 0.07, 0.02, 0.7, 0.33, 2);
-  addFlare(palette.flareTint, 0.1, 0.012, 0.6, -0.2, 3);
+  addFlare(palette.flareTint, 0.62, 0.05, 0.85); // long anamorphic streak
+  addFlare(palette.flareCore, 0.36, 0.024, 1.0); // hot streak core
+  addFlare(palette.flareCore, 0.2, 0.12, 1.0); // core
+  addFlare(palette.flareTint, 0.1, 0.014, 0.7, 0.2, 1); // glints beside the core
+  addFlare(palette.flareTint, 0.08, 0.012, 0.5, -0.17, 3);
 
   const tmpM = new THREE.Matrix4();
   const tmpQ = new THREE.Quaternion();
@@ -297,7 +296,11 @@ export const buildHairScene = (palette: Palette): HairScene => {
     const rHair = hairRadius(u);
 
     hairMat.uniforms.uFront.value = u >= 1 ? 1.01 : u;
-    const flareLevel = 1 - ramp(t, T.flareOutStart, T.flareOutEnd);
+    const flareLevel =
+      (1 - 0.8 * ramp(t, T.flareDipStart, T.flareDipEnd)) *
+      (1 - ramp(t, T.flareOutStart, T.flareOutEnd));
+    // molecules start small and tight, opening up as the camera pulls back
+    const grow = 0.55 + 0.45 * ramp(t, 1.8, 3.4);
     hairMat.uniforms.uGlow.value = flareLevel;
 
     // background + bokeh parallax
@@ -325,10 +328,10 @@ export const buildHairScene = (palette: Palette): HairScene => {
         T.beadsOutStart + b.out * 0.55,
         T.beadsOutStart + b.out * 0.55 + (T.beadsOutEnd - T.beadsOutStart - 0.55),
       );
-      const s = b.size * (1 - gone) * (1 - gone);
+      const s = b.size * grow * (1 - gone) * (1 - gone);
       const a = b.a0 + b.w * t;
       const r = ringR * b.rad * (1 - 0.6 * gone);
-      const y = b.y * (1 - 0.5 * gone) + 0.13 * Math.sin(t * b.bobF + b.bobP);
+      const y = b.y * grow * (1 - 0.5 * gone) + 0.13 * Math.sin(t * b.bobF + b.bobP);
       pos.set(center.x + Math.cos(a) * r, center.y + y, center.z + Math.sin(a) * r);
       if (b.partner >= 0) {
         dir.copy(b.bondDir).applyAxisAngle(up, a * 0.8);

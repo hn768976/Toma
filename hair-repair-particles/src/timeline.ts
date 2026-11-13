@@ -34,7 +34,7 @@ export const HAIR_LENGTH = hairCurve.getLength();
 /** Hair radius at arc parameter u (0 = root end, 1 = tip). */
 export const hairRadius = (u: number) => {
   const d = (1 - u) * HAIR_LENGTH; // distance from the tip
-  return 0.074 * d * (0.55 + 0.45 * clamp01(d / 2.5)) + 0.004;
+  return 0.064 * d * (0.55 + 0.45 * clamp01(d / 2.5)) + 0.004;
 };
 
 /** Timing (seconds), measured from the reference clip. */
@@ -43,8 +43,10 @@ export const T = {
   ringAtTip: 7.0,
   beadsOutStart: 6.2,
   beadsOutEnd: 7.25,
-  flareOutStart: 7.6,
-  flareOutEnd: 8.5,
+  flareDipStart: 6.75, // flare drops as the ring leaves the tip…
+  flareDipEnd: 7.1,
+  flareOutStart: 7.45, // …lingers faintly, then dies
+  flareOutEnd: 7.85,
   cameraStart: 1.5,
   cameraEnd: 8.2,
 };
@@ -63,8 +65,8 @@ export const cameraProgress = (t: number) =>
 
 const camera = new THREE.PerspectiveCamera(FOV, WIDTH / HEIGHT, 0.1, 400);
 
-const START_POS = new THREE.Vector3(5.9, -9.6, 7.4);
-const START_TARGET = new THREE.Vector3(6.75, -1.6, 0);
+const START_POS = new THREE.Vector3(6.0, -9.6, 6.6);
+const START_TARGET = new THREE.Vector3(6.6, -2.5, 0);
 const END_DIST = 5 / Math.tan(THREE.MathUtils.degToRad(FOV / 2));
 const END_POS = new THREE.Vector3(8.89, 5, END_DIST);
 const END_TARGET = new THREE.Vector3(8.89, 5, 0);

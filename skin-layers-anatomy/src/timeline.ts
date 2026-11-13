@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { easeInOutCubic, easeInOutSine, lerp, ramp } from "./scene/util";
+import { easeInOutSine, lerp, ramp } from "./scene/util";
 
 export const FPS = 30;
 export const DURATION_SECONDS = 12;
@@ -11,21 +11,21 @@ export type Variant = "reference" | "orbit";
 
 /** Timing (seconds), measured from the reference clip. */
 export const T = {
-  explodeStart: 0.3,
-  explodeEnd: 1.5,
-  labelsStart: 1.3,
-  labelStagger: 0.14,
-  labelFade: 0.3,
+  explodeStart: 0.0,
+  explodeEnd: 1.95,
+  labelsStart: 1.2,
+  labelStagger: 0.12,
+  labelFade: 0.28,
   labelsOutStart: 8.35,
   labelsOutEnd: 8.9,
-  collapseStart: 8.7,
-  collapseEnd: 10.0,
+  collapseStart: 8.4,
+  collapseEnd: 10.4,
 };
 
 /** 0 = layers stacked, 1 = layers fully separated. */
 export const explodeAmount = (t: number) =>
-  easeInOutCubic(ramp(t, T.explodeStart, T.explodeEnd)) *
-  (1 - easeInOutCubic(ramp(t, T.collapseStart, T.collapseEnd)));
+  easeInOutSine(ramp(t, T.explodeStart, T.explodeEnd)) *
+  (1 - easeInOutSine(ramp(t, T.collapseStart, T.collapseEnd)));
 
 /** Opacity of the label with the given stagger index. */
 export const labelOpacity = (t: number, index: number) => {
@@ -54,7 +54,7 @@ export const getCamera = (t: number, variant: Variant) => {
   }
   const az = THREE.MathUtils.degToRad(azimuth);
   const el = THREE.MathUtils.degToRad(elevation);
-  const target = new THREE.Vector3(0.12, 0.5, 0);
+  const target = new THREE.Vector3(0.12, -0.02, 0);
   camera.position.set(
     target.x + radius * Math.cos(el) * Math.sin(az),
     target.y + radius * Math.sin(el),
