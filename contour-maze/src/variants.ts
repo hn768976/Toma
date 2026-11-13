@@ -31,6 +31,9 @@ type Look = {
   bloomB: number;
   bloomThreshold: number;
   hazeColor: Vec3;
+  // Extra exposure gained over the shot (0 = none), so the scene keeps
+  // brightening as the core unrolls, as in the reference.
+  brightRamp: number;
 };
 
 // Palette stops are keyed on the field value of each contour level:
@@ -54,6 +57,7 @@ export const LOOKS: Record<VariantName, Look> = {
     floorLo: 0.13,
     floorHi: 0.95,
     exposure: 1.15,
+    brightRamp: 0.85,
     bloomA: 0.45,
     bloomB: 0.35,
     bloomThreshold: 0.8,
@@ -77,6 +81,7 @@ export const LOOKS: Record<VariantName, Look> = {
     floorLo: 0.13,
     floorHi: 0.95,
     exposure: 1.15,
+    brightRamp: 0.0,
     bloomA: 0.45,
     bloomB: 0.35,
     bloomThreshold: 0.8,
@@ -196,6 +201,11 @@ const corePath = (morph: number, time: number): Vec3[] => {
   return catmull(keys, 5);
 };
 
+const ss = (a: number, b: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
 export const frameParams = (frame: number, variant: VariantName): FrameParams => {
   const time = frame / FPS;
   const total = DURATION_IN_FRAMES / FPS;
@@ -246,7 +256,10 @@ export const frameParams = (frame: number, variant: VariantName): FrameParams =>
     floorHi: look.floorHi,
     streaks,
     streakCenter: [cx, cy],
-    exposure: look.exposure * lerp(1.15, 1.42, e),
+    exposure:
+      look.exposure *
+      lerp(1.15, 1.42, e) *
+      (1 + look.brightRamp * (ss(15, 140, frame) + 0.3 * progress)),
     bloomA: look.bloomA * lerp(0.9, 1.3, e),
     bloomB: look.bloomB * lerp(0.9, 1.4, e),
     bloomThreshold: look.bloomThreshold,
