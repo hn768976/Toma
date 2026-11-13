@@ -125,11 +125,10 @@ const buildNeuron = (b: Builder, rng: Rng, detail: number) => {
     // kink at the node, pulled back toward the overall axon direction
     d = norm(add(add(d, mul(rng.dir(), 0.2)), mul(AXON_DIR, 0.35)));
     const q = add(p, mul(d, SHEATH_LEN));
-    // the axon core is only drawn where it shows (sheath ends), never inside the sheath
+    // The axon core is never drawn inside a sheath (its rounded end-caps reach the node gap),
+    // only in the gap itself - so the core can never show through a sheath.
     const a0 = add(p, mul(d, 0.2));
     const a1 = add(q, mul(d, -0.2));
-    b.capsule(p, 0.085, a0, 0.085, tissue, seed, s, s + 0.2);
-    b.capsule(a1, 0.085, q, 0.085, tissue, seed, s + SHEATH_LEN - 0.2, s + SHEATH_LEN);
     b.capsule(a0, 0.235, a1, 0.235, { col: MYELIN, opacity: 1, mat: MAT_MYELIN, fire: 1, glow: i % 3 === 1 ? 0.22 : 0.03, bias: 0.7 }, rng.next(), s, s + SHEATH_LEN);
     s += SHEATH_LEN;
     const n = add(q, mul(d, NODE_GAP));
