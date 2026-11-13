@@ -152,14 +152,14 @@ void main() {
 
   // --- hydrated: luminous aqua pearl ---
   vec3 rim = mix(vec3(0.90, 0.875, 0.905), vec3(0.955, 0.94, 0.95), hl);
-  vec3 aqua = vec3(0.42, 0.87, 0.93);
+  vec3 aqua = vec3(0.34, 0.86, 0.94);
   vec3 wet = mix(rim, aqua, pow(f, 1.7) * 0.9);
   wet = mix(wet, vec3(0.86, 0.995, 1.0), pow(f, 6.0) * 0.6);
   wet = mix(wet, vec3(0.80, 0.84, 0.90), (1.0 - hl) * 0.25 * (1.0 - f));
   wet = mix(wet, vec3(0.66, 0.72, 0.84), pow(1.0 - hl, 1.6) * 0.55 * (1.0 - 0.5 * f)); // cool shaded side
   wet += vec3(0.07, 0.02, 0.05) * fres;            // faint rosy edge
   float wspec = pow(max(dot(N, normalize(normalize(vec3(-0.35, 0.8, 0.5)) + V)), 0.0), 14.0);
-  wet = mix(wet, vec3(1.0), clamp(wspec * 0.7 + spec * 0.3, 0.0, 1.0));
+  wet = mix(wet, vec3(1.0), clamp(wspec * 0.95 + spec * 0.4, 0.0, 1.0));
 
   vec3 col = mix(dry, pearl, vTone);
   col = mix(col, wet, smoothstep(0.15, 0.95, vShape));
@@ -168,7 +168,7 @@ void main() {
   // aerial haze: distant cells dissolve into the bright background
   float dist = length(cameraPosition - vW);
   float fog = smoothstep(16.0, 50.0, dist);
-  col = mix(col, uFog, fog * 0.3);
+  col = mix(col, uFog, fog * mix(0.3, 0.14, vShape));
   gl_FragColor = vec4(toLin(col), 1.0);
 }`;
 
@@ -312,7 +312,7 @@ void main() {
   vec3 col = mix(vec3(0.66, 0.93, 0.99), vec3(0.16, 0.62, 0.84), wall);
   col = mix(col, vec3(0.08, 0.38, 0.60), outline * 0.9);
   col = mix(col, vec3(1.0), clamp(spec + spec2 * 0.55, 0.0, 1.0));
-  float a = mix(0.42, 0.97, wall);
+  float a = mix(0.6, 0.98, wall);
   a = max(a, clamp(spec + spec2 * 0.5, 0.0, 1.0));
   gl_FragColor = vec4(toLin(col), a * vAlpha);
 }`;

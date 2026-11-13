@@ -30,11 +30,11 @@ function cameraReference(f: number): CamState {
   // The camera sinks through the edge of the top layer and keeps descending
   // past the second and third layers, easing to a stop above the fourth.
   const k = keys(f, [
-    [0, 2.0, 1.22, 6.9, 0.19],
-    [18, 2.0, 1.17, 7.0, 0.18],
-    [32, 1.9, 0.98, 7.8, 0.12],
-    [46, 1.8, 0.72, 8.4, 0.05],
-    [52, 1.75, 0.55, 8.4, 0.04],
+    [0, 2.0, 1.25, 6.9, 0.2],
+    [16, 2.0, 1.15, 7.0, 0.17],
+    [28, 1.9, 0.98, 7.8, 0.12],
+    [40, 1.8, 0.72, 8.4, 0.05],
+    [50, 1.75, 0.55, 8.4, 0.04],
     [60, 1.7, 0.36, 8.4, 0.04],
     [72, 1.7, 0.22, 8.4, 0.04],
     [80, 1.65, 0.1, 8.4, 0.04],
@@ -56,7 +56,7 @@ function cameraReference(f: number): CamState {
     target: [0.2, (k[1] - k[3]) * H, -7],
     roll: -0.56,
     fov: 32,
-    focus: 9.6,
+    focus: 10.4,
   };
 }
 
@@ -183,9 +183,9 @@ export const createHydrationScene =
     const pts: THREE.Vector2[] = [];
     for (let i = 0; i <= 48; i++) {
       const th = (i / 48) * Math.PI;
-      const r = Math.sin(th) * Math.pow(Math.sin(th / 2), 1.0) * 1.0;
+      const r = Math.sin(th) * Math.pow(Math.sin(th / 2), 2.2) * 1.0;
       // tall pointed tip
-      const y = Math.cos(th) * (th < Math.PI / 2 ? 1.3 : 1.0);
+      const y = Math.cos(th) * (th < Math.PI / 2 ? 1.5 : 1.0);
       pts.push(new THREE.Vector2(Math.max(r, 0.0001), y));
     }
     pts.reverse();
@@ -215,13 +215,13 @@ export const createHydrationScene =
     const bursts =
       variant === "reference"
         ? [
-            [30, 30, 0],
-            [52, 14, 0],
-            [78, 16, 1],
-            [98, 14, 1],
-            [118, 12, 1],
-            [140, 16, 2],
-            [158, 12, 2],
+            [25, 40, 0],
+            [48, 22, 0],
+            [74, 24, 1],
+            [94, 20, 1],
+            [114, 18, 1],
+            [136, 24, 2],
+            [154, 18, 2],
           ]
         : [
             [30, 34, 0],
@@ -243,7 +243,7 @@ export const createHydrationScene =
           layer,
           x: Math.cos(a) * rr,
           z: Math.sin(a) * rr * 0.8,
-          r: 0.055 + Math.pow(brand(), 2.0) * 0.12,
+          r: 0.075 + Math.pow(brand(), 2.0) * 0.13,
           ph: brand(),
           speed: 0.8 + brand() * 0.5,
           inDrop: 0,
@@ -351,7 +351,7 @@ export const createHydrationScene =
       cellMat.uniforms.uTone.value = tone;
       // lower layers lose some of their dry colour before the water reaches them
       cellMat.uniforms.uPale.value =
-        variant === "reference" ? [0, 0, 0.65 * smooth(56, 92, f), 0.6 * smooth(100, 150, f)] : [0, 0, 0, 0];
+        variant === "reference" ? [0, 0, 0.8 * smooth(56, 92, f), 0.85 * smooth(96, 134, f)] : [0, 0, 0, 0];
       cellMat.uniforms.uFrame.value = f;
       // once the camera is below the top layer it recedes, so its underside reads as a fine grid
       cellMat.uniforms.uLift.value = variant === "reference" ? 1.1 * H * smooth(42, 72, f) : 0;
@@ -376,14 +376,15 @@ export const createHydrationScene =
         // [frame, height above impact, squash-y, widen, alpha]
         [0, 2.35, 1.04, 0.98, 1],
         [10, 1.6, 1.06, 0.97, 1],
-        [18, 1.0, 1.0, 1.0, 1],
-        [24, 0.52, 0.86, 1.08, 1],
-        [32, 0.1, 0.74, 1.06, 1],
-        [38, -0.3, 0.6, 0.98, 0.75],
-        [45, -0.8, 0.5, 0.9, 0.0],
+        [18, 1.05, 1.0, 1.0, 1],
+        // the drop flattens onto the surface and is absorbed; it never shows below it
+        [24, 0.9, 0.86, 1.06, 1],
+        [32, 0.62, 0.6, 1.1, 1],
+        [37, 0.34, 0.3, 1.05, 0.7],
+        [41, 0.16, 0.12, 0.95, 0.0],
       ]);
       const dropR = 0.98;
-      drop.visible = f < 46;
+      drop.visible = f < 41;
       drop.position.set(IMPACT.x, IMPACT.y + dk[0], IMPACT.z);
       drop.scale.set(dropR * dk[2], dropR * dk[1], dropR * dk[2]);
       // slight lean, like the reference drop
@@ -447,7 +448,7 @@ export const createHydrationScene =
 
       post.render(scene, camera, {
         focus: c.focus,
-        aperture: variant === "reference" ? 0.016 - 0.007 * smooth(160, 196, f) : 0.014,
+        aperture: variant === "reference" ? 0.016 - 0.009 * smooth(160, 196, f) : 0.014,
         maxCoc: 0.019,
         bloomStrength: 0.22,
         bloomThreshold: 0.93,

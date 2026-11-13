@@ -7,13 +7,13 @@ import { COLOR, MONO, Palette } from "./scene/palette";
 
 // ---- shot description (all distances in board units; QFP lid = 4 x 4) ----
 const FOV = 27; // vertical field of view, degrees
-const DIST = 9.8; // camera distance to the look-at point
-const ELEV = (26 * Math.PI) / 180; // camera elevation above the board
+const DIST = 9.0; // camera distance to the look-at point
+const ELEV = (22 * Math.PI) / 180; // camera elevation above the board
 const TRUCK_FROM = -1.85; // lateral camera offset at t = 0 s
 const TRUCK_TO = 1.85; // lateral camera offset at t = 10 s
-const LOOK_S = 0.1; // look-at point, close to the chip centre
-const APERTURE = 0.027;
-const MAX_COC = 0.038;
+const LOOK_S = -0.75; // look-at point, close to the chip centre
+const APERTURE = 0.028;
+const MAX_COC = 0.04;
 
 function softbox(color: THREE.Color, w: number, h: number, pos: THREE.Vector3) {
   const m = new THREE.Mesh(
