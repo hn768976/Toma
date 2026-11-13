@@ -157,7 +157,9 @@ export const createEngine = (
   layers.forEach((L) => {
     const tex = makeHudTexture({ seed: L.seed, bigLabels: L.bigLabels, density: L.density }, renderer);
     tex.repeat.set(L.repeat[0], L.repeat[1]);
-    const geo = new THREE.PlaneGeometry(L.size[0], L.size[1]);
+    // Tessellate large planes: software rasterisers (SwiftShader) can mis-
+    // interpolate UVs when clipping huge two-triangle quads at grazing angles.
+    const geo = new THREE.PlaneGeometry(L.size[0], L.size[1], Math.ceil(L.size[0] / 2), Math.ceil(L.size[1] / 2));
     const m = new THREE.MeshBasicMaterial({
       map: tex,
       color: new THREE.Color(1, 1, 1).multiplyScalar(L.intensity * 1.25),
@@ -177,7 +179,7 @@ export const createEngine = (
   });
 
   // --- light streaks and travelling pulses on the floor -------------------
-  const streakGeo = new THREE.PlaneGeometry(1, 1);
+  const streakGeo = new THREE.PlaneGeometry(1, 1, 48, 1); // tessellated (see HUD layers)
   const streakMat = new THREE.MeshBasicMaterial({
     color: new THREE.Color(0.75, 0.76, 0.8),
     transparent: true,
