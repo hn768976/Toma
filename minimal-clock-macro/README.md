@@ -39,7 +39,7 @@ Output goes to `out/`. Equivalent raw CLI call:
 npx remotion render ClockMacro-V1 out/v1.mp4 --scale=0.5
 ```
 
-Encoding defaults live in `remotion.config.ts`: H.264, yuv420p, BT.709, CRF 12, PNG intermediate frames.
+Encoding defaults live in `remotion.config.ts`: H.264, yuv420p, BT.709, CRF 17, PNG intermediate frames.
 
 ### WebGL backend
 
