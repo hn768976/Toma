@@ -2,15 +2,16 @@
 
 Glowing "contour-wall" landscape: every iso-line of a slowly morphing scalar
 field is extruded into a thin neon wall (contour spacing 0.06). The glowing
-core is a raised, icy-blue plateau whose maze is a set of nested offset rings
-of a winding ribbon, with one large spiral. The ribbon starts as a tightly
-folded serpentine and unrolls into a diagonal hook (a narrow arm at the top
-left sweeping down and right into a wide body whose tail curls back in).
-Ember-orange terrain walls hug the core outline and step down away from it:
-a few broad, tall, glowing terraces at the start that multiply into dense
-wavy contours as the core unrolls. A warm glow hangs around the core while
-the camera eases in and tilts from an oblique view to a steeper one. Light
-pulses run along individual walls.
+core is a raised, icy-white plateau whose maze is a set of nested offset rings
+of a winding ribbon (white neon rims over darker slate channels), with one
+large spiral. The ribbon starts as a tightly folded serpentine and unrolls at
+once, easing out into a diagonal hook (a narrow arm at the top left sweeping
+down and right into a wide body whose tail curls back in). Ember-orange
+terrain walls hug the core outline in tight golden rings and step down away
+from it: a few broad, tall, glowing terraces at the start that multiply into
+dense wavy contours as the core unrolls. A warm glow hangs around the core,
+the shot brightens steadily, and the camera eases in from a low oblique view
+to a slightly steeper one. Light pulses run along individual walls.
 
 | Composition      | Size        | FPS | Frames | Duration | Look |
 |------------------|-------------|-----|--------|----------|------|

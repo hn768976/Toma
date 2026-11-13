@@ -42,11 +42,11 @@ export const LOOKS: Record<VariantName, Look> = {
       { pos: -0.6, color: hex("#3a0f04") },
       { pos: 0.2, color: hex("#7e300d") },
       { pos: 0.62, color: hex("#d85a0e") },
-      { pos: 0.88, color: hex("#f57a12") },
-      { pos: 0.965, color: hex("#ffb020") },
+      { pos: 0.8, color: hex("#f57a12") },
+      { pos: 0.925, color: hex("#ffb020") },
       { pos: 1.0, color: hex("#fff2d6") },
       { pos: 1.03, color: hex("#e6eeff") },
-      { pos: 1.09, color: hex("#a9c0ff") },
+      { pos: 1.09, color: hex("#bcd8ff") },
     ],
     streakColor: hex("#a8c8ff"),
     hazeColor: hex("#ff9a2a"),
@@ -65,8 +65,8 @@ export const LOOKS: Record<VariantName, Look> = {
       { pos: -0.6, color: hex("#020d1c") },
       { pos: 0.2, color: hex("#05324a") },
       { pos: 0.62, color: hex("#007f96") },
-      { pos: 0.88, color: hex("#13c4d6") },
-      { pos: 0.965, color: hex("#7ff0e4") },
+      { pos: 0.8, color: hex("#13c4d6") },
+      { pos: 0.925, color: hex("#7ff0e4") },
       { pos: 1.0, color: hex("#f2fff9") },
       { pos: 1.03, color: hex("#ffe3f1") },
       { pos: 1.09, color: hex("#ff6fb4") },
@@ -201,16 +201,16 @@ export const frameParams = (frame: number, variant: VariantName): FrameParams =>
   const total = DURATION_IN_FRAMES / FPS;
   const progress = Math.min(1, Math.max(0, time / total));
   const look = LOOKS[variant];
-  // The core unrolls with an ease-in-out between frames ~15 and ~190.
-  const m = Math.min(1, Math.max(0, (frame - 15) / 175));
-  const morph = m * m * (3 - 2 * m);
+  // The core starts unrolling at once and eases out by frame ~230.
+  const m = Math.min(1, Math.max(0, frame / 230));
+  const morph = 1 - Math.pow(1 - m, 2.2);
 
   // Camera: slow push and a gentle tilt towards a steeper view, easing out.
   const e = 1 - Math.pow(1 - progress, 2.0);
   const yaw = lerp(-1.66, -1.56, e);
-  const pitch = lerp(0.8, 1.06, e);
-  const dist = lerp(3.3, 3.1, e);
-  const target: Vec3 = [lerp(0.02, 0.08, e), lerp(0.15, 0.0, e), 0.15];
+  const pitch = lerp(0.72, 0.9, e);
+  const dist = lerp(3.75, 3.6, e);
+  const target: Vec3 = [lerp(0.05, 0.1, e), lerp(0.3, 0.12, e), 0.15];
   const camPos: Vec3 = [
     target[0] + Math.cos(yaw) * Math.cos(pitch) * dist,
     target[1] + Math.sin(yaw) * Math.cos(pitch) * dist,
@@ -246,7 +246,7 @@ export const frameParams = (frame: number, variant: VariantName): FrameParams =>
     floorHi: look.floorHi,
     streaks,
     streakCenter: [cx, cy],
-    exposure: look.exposure * lerp(1.3, 1.2, e),
+    exposure: look.exposure * lerp(1.15, 1.42, e),
     bloomA: look.bloomA * lerp(0.9, 1.3, e),
     bloomB: look.bloomB * lerp(0.9, 1.4, e),
     bloomThreshold: look.bloomThreshold,

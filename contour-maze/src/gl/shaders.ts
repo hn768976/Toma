@@ -65,7 +65,7 @@ float fieldF(vec2 p) {
   // terraces far away, plus slow waves and meanders that grow with distance.
   float so = max(sd, 0.0);
   float gain = mix(0.12, 0.26, uProgress);
-  float outer = 1.0 - gain * log(1.0 + so / 0.26);
+  float outer = 1.0 - 0.8 * gain * log(1.0 + so / 0.12);
   float far = smoothstep(0.25, 1.2, so);
   // Scaled with the fall-off so the far terrain never climbs to core level.
   float farA = far * gain / 0.26;
@@ -164,7 +164,7 @@ const float CORE_F = 1.035;
 float wallH(float v) {
   // Terrain ribbons step down away from the core (a terraced hill); the core
   // outline stands just above the plateau, the maze walls on it are short.
-  if (v > 1.05) return HP + 0.1;
+  if (v > 1.05) return HP + 0.045;
   if (v > 1.0) return HP + 0.16;
   return HP * (0.42 + 0.53 * smoothstep(0.1, 1.0, v));
 }
@@ -176,6 +176,9 @@ vec3 shadeFloor(vec2 p) {
   float fr = fract(F / uDelta);
   float d = min(fr, 1.0 - fr) * uDelta / max(length(g), 1e-3);
   float ao = smoothstep(0.0, 0.10, d);
+  // Channels between the maze walls on the core are a darker slate, so the
+  // white maze walls read as separate ribbons instead of one bright mass.
+  if (lv > 1.04) return palette(lv) * 0.5 * (0.45 + 0.55 * smoothstep(0.0, 0.05, d));
   float bright = mix(uFloorLo, uFloorHi, smoothstep(1.0, 1.12, lv));
   return palette(lv) * bright * (0.4 + 0.6 * ao);
 }
