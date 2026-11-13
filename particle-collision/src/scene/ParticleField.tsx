@@ -231,7 +231,9 @@ export const ParticleField: React.FC<{ variant: Variant }> = ({ variant }) => {
     // 3) tone map to canvas
     ctx.quad.material = ctx.toneMat;
     ctx.toneMat.uniforms.uFrame.value = frame;
-    ctx.toneMat.uniforms.uExposure.value = 1.3;
+    // the reference fades up over its first ~4 s
+    const ramp = Math.min(1, 0.8 + (0.2 * t) / 4);
+    ctx.toneMat.uniforms.uExposure.value = 1.3 * ramp;
     ctx.toneMat.uniforms.uBloomStrength.value = 2.0;
     renderer.setRenderTarget(null);
     renderer.render(ctx.quadScene, ctx.quadCam);

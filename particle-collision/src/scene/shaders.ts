@@ -165,7 +165,7 @@ void main() {
   // fine display mesh (like a screen-door / LED grid) that reads on bright areas
   vec2 g = mod(gl_FragCoord.xy, uGrid);
   float mesh = step(uGrid - uGridW, g.x) + step(uGrid - uGridW, g.y);
-  c *= 1.0 - 0.18 * clamp(mesh, 0.0, 1.0);
+  c *= 1.0 - 0.10 * clamp(mesh, 0.0, 1.0);
   c += (h(gl_FragCoord.xy) - 0.5) / 255.0;
   outColor = vec4(c, 1.0);
 }

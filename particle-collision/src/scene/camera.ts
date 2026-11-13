@@ -56,16 +56,16 @@ export const getCamera = (variant: Variant, t: number): CameraState => {
     // from a bright apex at upper right), swings round into the "X" by ~7 s,
     // then keeps tilting down until the sheets read as edge-on filaments.
     const K = [0, 7, 10, 20];
-    const az = spline(K, [-65, -6, 4, 14], sec) * deg;
+    const az = spline(K, [-40, -6, 4, 14], sec) * deg;
     const el = spline(K, [30, 16, 12, 4], sec) * deg;
     const dist = spline(K, [10.2, 11.0, 11.5, 13], sec);
     return {
       position: orbit(target, dist, az, el),
       target,
       fov: 42,
-      roll: spline(K, [-8, 0, 2, 7], sec) * deg,
+      roll: spline(K, [-4, 0, 2, 7], sec) * deg,
       focus: dist,
-      screen: [spline(K, [0.72, 0.56, 0.52, 0.46], sec), spline(K, [0.55, 0.72, 0.77, 0.72], sec)],
+      screen: [spline(K, [0.74, 0.56, 0.52, 0.46], sec), spline(K, [0.58, 0.72, 0.77, 0.72], sec)],
     };
   }
   // V2: a reverse-angle orbit - the camera circles behind the collision,

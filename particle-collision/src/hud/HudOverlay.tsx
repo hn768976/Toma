@@ -55,11 +55,12 @@ const makeRows = () => {
   };
   // grouped like the reference: a dense left-middle field and a top-right
   // field, with sparse rows elsewhere; many are defocused/smeared
-  zone(44, 0, 640, 260, 860, 0.5); // left-middle field
-  zone(34, 1100, 1880, 30, 430, 0.45); // top-right field
+  zone(30, 0, 640, 100, 650, 0.8); // upper-left field: heavily smeared
+  zone(34, 0, 640, 300, 880, 0.6); // left-middle field
+  zone(28, 1100, 1880, 30, 430, 0.25); // top-right field (mostly crisp)
   zone(8, 300, 1100, 20, 240, 0.5); // top band
   zone(10, 0, 1500, 880, 1060, 0.5); // bottom band
-  zone(8, 1200, 1880, 560, 880, 0.5); // right-lower
+  zone(6, 1200, 1880, 560, 880, 0.3); // right-lower
   return rows;
 };
 
