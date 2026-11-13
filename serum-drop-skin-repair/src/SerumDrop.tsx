@@ -29,7 +29,7 @@ export const SerumDrop: React.FC<SerumDropProps> = ({
         name: "uMicro",
         size: 2048,
         frag: BAKE_FRAG,
-        uniforms: { uMode: 1, uCells: 84, uJitter: 1.0, uWarp: 1.0, uSize: 2048 },
+        uniforms: { uMode: 1, uCells: 60, uJitter: 1.0, uWarp: 1.0, uSize: 2048 },
       },
     ],
     [],

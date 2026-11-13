@@ -20,8 +20,9 @@ uniform float uTanHalfFov;
 uniform sampler2D uMacro;
 uniform sampler2D uMicro;
 
-uniform vec4 uDropA;      // cap sphere radius, cap centre y, tip y, tip radius
-uniform vec4 uDropB;      // opacity, blend k, visible, base radius on the skin
+uniform vec4 uDropA;      // teardrop: body radius, body centre y, tip y, tip radius
+uniform vec4 uGum;        // melted gumdrop: base radius, height, profile exponent, morph 0..1
+uniform vec4 uDropB;      // opacity, unused, visible, footprint radius on the skin
 uniform vec4 uGround;     // contact shadow, contact glow, ring, unused
 uniform vec4 uRipple;     // amplitude, phase, outer radius, unused
 uniform float uGlowR;     // radius reached by the light front
@@ -56,7 +57,7 @@ float gMicroScale = 1.0;
 
 const float TILE = 12.0;    // world size of one macro (crack) tile, 12 plates across
 const float MTILE = 2.4;    // world size of one micro-relief tile
-const float ZB = -10.8;     // far edge of the skin
+const float ZB = -19.0;     // far edge of the skin
 const float H_TOP = 0.046;
 const float H_BOT = -0.066;
 
@@ -128,10 +129,10 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
   float dry = 1.0 - heal;
   // tone and lighting change gradually over the whole surface, so no patch
   // boundary is visible where the cracks have just closed
-  float tone = mix(heal, uToneGlobal, 0.8);
+  float tone = clamp(max(0.62 * smoothstep(uGlowR, uGlowR - 2.4, r0) * uGlowI, mix(heal, uToneGlobal, 0.8)), 0.0, 1.0);
   float lit = smoothstep(uGlowR, uGlowR - 0.6, rr) * uGlowI;
   // the far field never lights up: those cracks simply close at the end
-  lit *= smoothstep(-5.2, -3.0, Pm.z);
+  lit *= smoothstep(-3.1, -1.7, Pm.z);
   // no light directly underneath the drop while it is still there
   lit *= mix(1.0, smoothstep(uDropB.w * 0.9, uDropB.w * 1.15, r0), uDropB.z);
 
@@ -240,7 +241,7 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
   float fres = pow(1.0 - ndv, 3.0);
   col += uLightCol * spec * sh * (1.0 - depthK);
   col += uSkyCol * fres * (0.30 + 0.45 * tone);
-  col += uGlowCol * (0.07 * contact + 0.42 * ring);
+  col += uGlowCol * (0.15 * contact + 0.42 * ring);
   // crests of the ripples catch the light
   col *= 1.0 + 5.0 * ripple(P.xz);
 
@@ -249,14 +250,14 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
     float fn = textureLod(uMicro, P.xz / MTILE * 0.23 + vec2(uTime * 0.05, -uTime * 0.035), 2.0).a;
     float fk = smoothstep(0.30, 0.68, fn);
     // intensity varies along every crack, with hot sparkling spots
-    float flick = 0.45 + 2.6 * fk * fk;
+    float flick = 0.75 + 2.4 * fk * fk;
     // while the crack closes the line of light breaks up into dashes and points
     float dash = smoothstep(heal * 1.15 - 0.22, heal * 1.15 + 0.03, fk + 0.2 * (1.0 - heal));
     dash *= smoothstep(0.0, 0.12, dry);
     // thin, hot core (clips to white and blooms) with a faint cool halo
-    float coreG = 1.0 - smoothstep(0.0, w * 0.6 + 0.0026, m.r);
-    float halo = exp(-m.r / 0.022);
-    float gl = (coreG * 1.7 + halo * 0.04) * lit * dash * flick;
+    float coreG = 1.0 - smoothstep(0.0, w * 0.55 + 0.0026, m.r);
+    float halo = exp(-m.r / 0.016);
+    float gl = (coreG * 2.3 + halo * 0.03) * lit * dash * flick;
     gl *= 0.85 + 0.45 * smoothstep(uGlowR - 2.4, uGlowR - 0.5, rr);
     col = mix(col, uGlowCol * 0.5, clamp(coreG * lit * dash, 0.0, 1.0) * 0.9);
     col += uGlowCol * gl;
@@ -264,10 +265,10 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
 
   // studio shaping of the repaired skin: bright towards the horizon and the
   // left, falling off towards the bottom of the frame
-  float shape = (mix(0.70, 0.86, smoothstep(0.0, 0.62, vUv.y)) + 0.20 * smoothstep(0.55, 0.92, vUv.y)) * (1.0 + 0.16 * (0.5 - vUv.x));
+  float shape = (mix(0.66, 0.79, smoothstep(0.0, 0.62, vUv.y)) + 0.27 * smoothstep(0.55, 0.92, vUv.y)) * (1.0 + 0.16 * (0.5 - vUv.x));
   col *= mix(1.0, shape, tone);
   // bright atmospheric haze in the distance
-  col = mix(col, uHazeCol, (1.0 - exp(-max(t - 4.0, 0.0) * 0.055)) * mix(0.38, 0.8, tone));
+  col = mix(col, uHazeCol, (1.0 - exp(-max(t - 4.0, 0.0) * 0.055)) * mix(0.22, 0.85, tone));
 
   // soft highlight on the far edge of the skin
   float rim = exp(-max(P.z - ZB, 0.0) / 0.25);
@@ -301,15 +302,34 @@ float sdRoundCone(vec3 p, float r1, float r2, float h) {
   return dot(q, vec2(a, b)) - r1;
 }
 
-float sdDrop(vec3 p) {
-  // one smooth profile: a round cone from the body sphere up to the tip.
-  // When the tip sinks into the body it degenerates to the plain sphere cap.
+// Teardrop in the air: a round cone from the body sphere up to the sharp tip.
+float sdTear(vec3 p) {
   vec3 q = p - vec3(0.0, uDropA.y, 0.0);
-  float h = uDropA.z - uDropA.y;
-  if (h > uDropA.x - uDropA.w + 0.02) {
-    return sdRoundCone(q, uDropA.x, uDropA.w, h);
-  }
-  return length(q) - uDropA.x;
+  return sdRoundCone(q, uDropA.x, uDropA.w, uDropA.z - uDropA.y);
+}
+
+// Melted drop on the skin: one smooth convex "gumdrop" of revolution,
+//   (r / a)^2 + (y / h)^n = 1
+// n < 2 gives the narrow rounded top of the freshly landed drop, n = 2 the
+// dome / lens it relaxes into. First-order distance estimate (value / |grad|).
+float sdGum(vec3 p) {
+  float a = uGum.x, h = uGum.y, n = uGum.z;
+  float r = length(p.xz);
+  float y = max(p.y, 0.0) / h;
+  float yy = pow(y, n * 0.5);
+  float F = sqrt(r * r / (a * a) + yy * yy);
+  float iF = 1.0 / max(F, 1e-3);
+  float dFr = r / (a * a) * iF;
+  float dFy = yy * iF * (n * 0.5) * pow(max(y, 2e-3), n * 0.5 - 1.0) / h;
+  float g = max(length(vec2(dFr, dFy)), 0.5 / max(a, h));
+  return (F - 1.0) / g;
+}
+
+float sdDrop(vec3 p) {
+  float k = uGum.w;
+  if (k <= 0.0) return sdTear(p);
+  if (k >= 1.0) return sdGum(p);
+  return mix(sdTear(p), sdGum(p), k);
 }
 
 void main() {
@@ -325,8 +345,8 @@ void main() {
 
   if (uDropB.z > 0.002) {
     // bounding sphere around the drop
-    vec3 bc = vec3(0.0, 0.85, 0.0);
-    float br = 1.55;
+    vec3 bc = vec3(0.0, uDropA.y + 0.35, 0.0);
+    float br = 1.6;
     vec3 oc = ro - bc;
     float b = dot(oc, rd);
     float c = dot(oc, oc) - br * br;
@@ -336,11 +356,11 @@ void main() {
       float t = max(-b - hh, 0.0);
       float tEnd = -b + hh;
       if (rd.y < 0.0) tEnd = min(tEnd, -ro.y / rd.y);
-      for (int i = 0; i < 56; i++) {
+      for (int i = 0; i < 72; i++) {
         vec3 p = ro + rd * t;
         float d = sdDrop(p);
         if (d < 0.0012) { hit = true; break; }
-        t += d * 0.9;
+        t += d * 0.72;
         if (t > tEnd) break;
       }
       tHit = t;
