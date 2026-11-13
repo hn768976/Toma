@@ -23,6 +23,10 @@ export type PostParams = {
   aperture: number;
   /** Upper bound of the blur-disc radius (fraction of frame height). */
   maxCoc: number;
+  /** Blur-disc radius (fraction of frame height) that still counts as sharp:
+   *  widens the in-focus zone around the focus plane without reducing the
+   *  blur further away. 0 = physically thin focus plane. */
+  focusRange: number;
   /** Scales the blur of everything in front of the focus plane (1 = physical). */
   nearBlur: number;
   /** Extra blur-disc radius added to every pixel (fraction of frame height):
@@ -47,6 +51,7 @@ export const defaultPostParams = (): PostParams => ({
   focus: 5,
   aperture: 0.02,
   maxCoc: 0.03,
+  focusRange: 0,
   nearBlur: 1,
   defocus: 0,
   bloomStrength: 0.2,
@@ -83,6 +88,7 @@ uniform float uAperture;
 uniform float uMaxCoc;
 uniform float uNearBlur;
 uniform float uDefocus;
+uniform float uFocusRange;
 
 float cocAt(vec2 uv) {
   float d = texture2D(tDepth, uv).r;
@@ -92,7 +98,8 @@ float cocAt(vec2 uv) {
   if (c < 0.0) c *= uNearBlur;
   // global defocus keeps the sign (in front of / behind the focus plane)
   float s = c < 0.0 ? -1.0 : 1.0;
-  c = s * sqrt(c * c + uDefocus * uDefocus);
+  float m = max(abs(c) - uFocusRange, 0.0);
+  c = s * sqrt(m * m + uDefocus * uDefocus);
   return clamp(c, -uMaxCoc, uMaxCoc);
 }
 
@@ -393,6 +400,7 @@ export class PostPipeline {
       uMaxCoc: { value: 0.03 },
       uNearBlur: { value: 1 },
       uDefocus: { value: 0 },
+      uFocusRange: { value: 0 },
     });
     this.dofMat = mk(DOF_FRAG, {
       tColorCoc: { value: null },
@@ -468,6 +476,7 @@ export class PostPipeline {
     this.cocMat.uniforms.uMaxCoc.value = p.maxCoc;
     this.cocMat.uniforms.uNearBlur.value = p.nearBlur;
     this.cocMat.uniforms.uDefocus.value = p.defocus;
+    this.cocMat.uniforms.uFocusRange.value = p.focusRange;
     this.pass(this.cocMat, this.cocRT);
 
     // 3. Depth of field

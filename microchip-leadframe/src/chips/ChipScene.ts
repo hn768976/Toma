@@ -620,7 +620,7 @@ export const createChipScene =
         // the image only drifts out of focus in the second half of the wipe
         const c = w0 + 0.63 * (w1 - w0);
         const u = (t - c) / (0.19 * (w1 - w0));
-        defocus = 0.019 * Math.exp(-u * u) * Math.min(1, wipe * 4);
+        defocus = 0.012 * Math.exp(-u * u) * Math.min(1, wipe * 4);
       }
       wipeMat.uniforms.uAmount.value = wipe;
       wipeMat.uniforms.uProgress.value = progress;
@@ -628,6 +628,8 @@ export const createChipScene =
       params.frame = frameIndex;
       params.focus = dist;
       params.nearBlur = 0.66;
+      // keep the whole hero die sharp; its neighbours still fall off quickly
+      params.focusRange = 0.0036;
       // the whole image drifts out of focus while the wipe passes
       params.defocus = defocus;
       params.aperture = sampleTrack(look.aperture, t);

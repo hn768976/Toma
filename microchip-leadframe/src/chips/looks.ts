@@ -38,7 +38,7 @@ export type ChipLook = {
 /**
  * Version 1 - matches the reference.
  * Values were measured from the reference (12.04 s) by tracking the
- * perspective of the centre die: a steady ~73 degree orbit at roughly 5 deg/s
+ * perspective of the centre die: a steady ~68 degree orbit at roughly 5 deg/s
  * (faster while the foreground wipe passes), rising from 19.5 to 29.5 degrees
  * and pushing in slightly, with the die kept in the middle of the frame, on a
  * very long lens.
@@ -52,8 +52,9 @@ export const REFERENCE_ORBIT: ChipLook = {
     [6, -21],
     [8, -32],
     [8.7, -36.5],
-    [10.2, -56],
-    [12.04, -66],
+    [10.2, -53],
+    [11.2, -58],
+    [12.04, -61],
   ],
   elevation: [
     [0, 19.5],
@@ -87,8 +88,8 @@ export const REFERENCE_ORBIT: ChipLook = {
   ],
   fov: 8,
   aperture: [
-    [0, 0.15],
-    [12.04, 0.15],
+    [0, 0.18],
+    [12.04, 0.18],
   ],
   envYaw: [
     [0, 0],
@@ -162,9 +163,9 @@ export const CRANE_DOWN: ChipLook = {
   ],
   fov: 9,
   aperture: [
-    [0, 0.22],
-    [6, 0.18],
-    [12.04, 0.15],
+    [0, 0.25],
+    [6, 0.21],
+    [12.04, 0.18],
   ],
   // The key side of the room follows the orbit part of the way, so the sheet
   // keeps its sheen instead of falling into the dark half of the studio.
