@@ -60,56 +60,56 @@ export const cameraAt = (t: number) => {
       [6, -21],
       [9, -7],
       [12, 5],
-      [16, 19],
-      [20, 29],
+      [16, 16],
+      [20, 23],
     ],
     t,
   );
   const pitch = spline(
     [
-      [0, 9],
-      [5, 13],
-      [10, 15],
-      [20, 13],
+      [0, 12],
+      [5, 17],
+      [10, 19],
+      [20, 17],
     ],
     t,
   );
   const dist = spline(
     [
-      [0, 10.5],
-      [4, 13.8],
-      [9, 17.2],
-      [14, 17.6],
-      [20, 16.8],
+      [0, 13.8],
+      [4, 15.2],
+      [9, 16.2],
+      [14, 16.5],
+      [20, 15.8],
     ],
     t,
   );
   const roll = spline(
     [
-      [0, -24],
-      [3, -20],
-      [6, -11],
+      [0, -15],
+      [3, -14],
+      [6, -9],
       [9, -3],
-      [12, 2],
-      [16, 8],
-      [20, 12],
+      [12, 1],
+      [16, 5],
+      [20, 8],
     ],
     t,
   );
   const tx = spline(
     [
-      [0, -3.2],
-      [6, -1.3],
-      [10, 0],
-      [20, 1.4],
+      [0, -2.6],
+      [6, -1.5],
+      [10, -0.6],
+      [20, 0.6],
     ],
     t,
   );
   const ty = spline(
     [
-      [0, 1.2],
-      [10, 0.05],
-      [20, 0.1],
+      [0, 1.0],
+      [10, 0.5],
+      [20, 0.6],
     ],
     t,
   );
@@ -189,8 +189,8 @@ export const makeDashboardFactory =
     );
     const FLOOR_SIZE_X = 46;
     const FLOOR_SIZE_Z = 14;
-    const FLOOR_Y = -3.4;
-    const FLOOR_Z = 12.5;
+    const FLOOR_Y = -2.1;
+    const FLOOR_Z = 11.5;
     const floorMesh = new THREE.Mesh(plane(FLOOR_SIZE_X, FLOOR_SIZE_Z), floorMat);
     floorMesh.rotation.x = -Math.PI / 2;
     floorMesh.position.set(0, FLOOR_Y, FLOOR_Z);
@@ -321,11 +321,11 @@ export const makeDashboardFactory =
       (0.5 - py / LOWER_H) * lowerH,
     ];
     const lowerGroup = new THREE.Group();
-    lowerGroup.position.set(0, -1.2, 2.2);
-    lowerGroup.rotation.x = -1.2;
+    lowerGroup.position.set(0, -0.75, 1.75);
+    lowerGroup.rotation.x = -1.32;
     scene.add(lowerGroup);
     const lowerTex = staticLayer(LOWER_W, LOWER_H, (ctx) => drawLowerStatic(ctx, palette));
-    const ls = new THREE.Mesh(plane(lowerW, lowerH), additive(lowerTex, 1.0, 0));
+    const ls = new THREE.Mesh(plane(lowerW, lowerH), additive(lowerTex, 0.9, 0));
     ls.renderOrder = 3;
     lowerGroup.add(ls);
 
@@ -434,9 +434,9 @@ export const makeDashboardFactory =
       }),
     );
     const barColor = new THREE.Color(palette.glowBar);
-    const barMesh = new THREE.Mesh(plane(21, 0.14), barMat);
-    barMesh.position.set(0, -2.8, 6.0);
-    barMesh.rotation.x = -0.5;
+    const barMesh = new THREE.Mesh(plane(26, 0.1), barMat);
+    barMesh.position.set(0, -1.75, 5.6);
+    barMesh.rotation.x = -0.9;
     barMesh.renderOrder = 5;
     scene.add(barMesh);
 
@@ -471,7 +471,7 @@ export const makeDashboardFactory =
           d.material.uniforms.opacity.value = a;
           d.mesh.visible = a > 0;
         }
-        lineB.setProgress(clamp((t - 13.6) / 6.0, 0, 1));
+        lineB.setProgress(clamp((t - 11.0) / 8.8, 0, 1));
 
         const sx = ((t * 0.11) % 1.4) - 0.2;
         const [shx, shy] = toL(lx(sx), (ly(0) + ly(1)) / 2);
@@ -481,14 +481,14 @@ export const makeDashboardFactory =
 
         FLOOR_BLIPS.forEach((b, idx) => {
           const on = Math.sin((frame + b.phase) * 0.12) > 0.2 ? 1 : 0.25;
-          tmpColor.copy(blipColor).multiplyScalar(on * 0.9);
+          tmpColor.copy(blipColor).multiplyScalar(on * 0.75);
           blips.setColorAt(idx * 2, tmpColor);
           blips.setColorAt(idx * 2 + 1, tmpColor);
         });
         if (blips.instanceColor) blips.instanceColor.needsUpdate = true;
 
         const pulse = 1 + 0.08 * Math.sin(t * 2.1) + 0.04 * Math.sin(t * 5.3);
-        barMat.color.copy(barColor).multiplyScalar(4.0 * pulse);
+        barMat.color.copy(barColor).multiplyScalar(3.4 * pulse);
 
         const cam = cameraAt(t);
         const cp = Math.cos(cam.pitch);
@@ -514,13 +514,13 @@ export const makeDashboardFactory =
           streakStrength: 0,
           streakThreshold: 1,
           streakTint: white,
-          exposure: 1.0,
+          exposure: 1.15,
           contrast: 1.04,
           saturation: 1.12,
           lift,
           vignette: 0.5,
           grain: 0.022,
-          aberration: 0.0014,
+          aberration: 0.0006,
           seed: (frame * 0.618) % 1,
         });
       },

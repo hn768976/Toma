@@ -72,7 +72,7 @@ export const CANDLES: Candle[] = (() => {
     [0.92, 0.5],
     [1, 0.42],
   ];
-  const n = 112;
+  const n = 86;
   const out: Candle[] = [];
   let prev = spline(shape, 0);
   for (let i = 0; i < n; i++) {
@@ -101,14 +101,14 @@ export const LINE_A = (() => {
   return pts;
 })();
 
-/** Second overlay line (yellow in reference) spanning x in [0.56, 0.92]. */
+/** Second overlay line (yellow in reference) spanning x in [0.52, 0.98]. */
 export const LINE_B = (() => {
   const rnd = mulberry32(991);
   const pts: Array<[number, number]> = [];
-  const n = 40;
+  const n = 50;
   for (let i = 0; i < n; i++) {
-    const x = 0.56 + (i / (n - 1)) * 0.36;
-    const base = 0.56 - (x - 0.56) * 0.6 + Math.sin(x * 22) * 0.06;
+    const x = 0.52 + (i / (n - 1)) * 0.46;
+    const base = 0.56 - (x - 0.52) * 0.5 + Math.sin(x * 22) * 0.06;
     pts.push([x, base + (rnd() - 0.5) * 0.14]);
   }
   return pts;

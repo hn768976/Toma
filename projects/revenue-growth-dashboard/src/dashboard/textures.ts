@@ -55,7 +55,7 @@ export const drawUpperStatic = (ctx: CanvasRenderingContext2D, p: Palette) => {
   }
 
   // area chart (independent scale 2700..3300 mapped to 0.84H..0.08H)
-  const ax0 = 0.17 * W;
+  const ax0 = UL * W;
   const ax1 = 0.875 * W;
   const ayBottom = 0.84 * H;
   const ayTop = 0.07 * H;
@@ -79,13 +79,13 @@ export const drawUpperStatic = (ctx: CanvasRenderingContext2D, p: Palette) => {
   ctx.fillStyle = ag;
   ctx.fill();
   // horizontal fade at the left start
-  const fade = ctx.createLinearGradient(ax0, 0, ax0 + 0.08 * W, 0);
+  const fade = ctx.createLinearGradient(ax0, 0, ax0 + 0.03 * W, 0);
   fade.addColorStop(0, "rgba(0,0,0,1)");
   fade.addColorStop(1, "rgba(0,0,0,0)");
   ctx.save();
   ctx.globalCompositeOperation = "destination-out";
   ctx.fillStyle = fade;
-  ctx.fillRect(ax0 - 2, 0, 0.08 * W + 4, H);
+  ctx.fillRect(ax0 - 2, 0, 0.03 * W + 4, H);
   ctx.restore();
   ctx.beginPath();
   pathTop();
@@ -136,9 +136,14 @@ export const drawUpperStatic = (ctx: CanvasRenderingContext2D, p: Palette) => {
   ctx.textAlign = "left";
 };
 
+const sstep = (e0: number, e1: number, x: number) => {
+  const u = clamp((x - e0) / (e1 - e0), 0, 1);
+  return u * u * (3 - 2 * u);
+};
+
 export const curveProgress = (t: number) => ({
-  a: 0.93 * Math.pow(clamp((t - 0.35) / 19.45, 0, 1), 0.9),
-  b: 0.95 * Math.pow(clamp((t - 0.85) / 18.95, 0, 1), 0.88),
+  a: 0.93 * Math.pow(clamp((t - 0.35) / 19.45, 0, 1), 0.9) + 0.07 * sstep(13, 19.9, t),
+  b: 0.95 * Math.pow(clamp((t - 0.85) / 18.95, 0, 1), 0.88) + 0.05 * sstep(13, 19.9, t),
 });
 
 /** Small static text label (marker values) as its own canvas. */
@@ -189,8 +194,8 @@ export const drawLowerStatic = (ctx: CanvasRenderingContext2D, p: Palette) => {
   // glass slab
   roundRect(ctx, 0.01 * W, 0.02 * H, 0.98 * W, 0.96 * H, 40);
   const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, `rgba(${p.glassRgb},0.10)`);
-  bg.addColorStop(1, `rgba(${p.glassRgb},0.05)`);
+  bg.addColorStop(0, `rgba(${p.glassRgb},0.035)`);
+  bg.addColorStop(1, `rgba(${p.glassRgb},0.02)`);
   ctx.fillStyle = bg;
   ctx.fill();
   ctx.strokeStyle = p.frame;
@@ -225,7 +230,7 @@ export const drawLowerStatic = (ctx: CanvasRenderingContext2D, p: Palette) => {
   }
   ctx.lineTo(lx(1), ly(0));
   ctx.closePath();
-  ctx.fillStyle = `rgba(${p.humpRgb},0.16)`;
+  ctx.fillStyle = `rgba(${p.humpRgb},0.07)`;
   ctx.fill();
 
   // candles
@@ -238,7 +243,7 @@ export const drawLowerStatic = (ctx: CanvasRenderingContext2D, p: Palette) => {
     const mix = i / n;
     const col = up ? p.candleUp : p.candleDown;
     // glow
-    ctx.globalAlpha = 0.18;
+    ctx.globalAlpha = 0.05;
     ctx.fillStyle = p.candleGlow;
     ctx.fillRect(x - bw * 1.4, ly(c.h), bw * 2.8, ly(c.l) - ly(c.h));
     ctx.globalAlpha = 0.85 + 0.15 * Math.sin(mix * 12);
@@ -251,7 +256,7 @@ export const drawLowerStatic = (ctx: CanvasRenderingContext2D, p: Palette) => {
     const top = ly(Math.max(c.o, c.c));
     const bot = ly(Math.min(c.o, c.c));
     const grad = ctx.createLinearGradient(0, top, 0, Math.max(bot, top + 6));
-    grad.addColorStop(0, "#ffffff");
+    grad.addColorStop(0, col);
     grad.addColorStop(0.35, col);
     grad.addColorStop(1, col);
     ctx.fillStyle = grad;
@@ -408,7 +413,7 @@ export const FLOOR_BLIPS = (() => {
   for (let j = 0; j < FLOOR_ROWS; j++) {
     for (let i = 0; i < FLOOR_COLS; i++) {
       const id = j * FLOOR_COLS + i;
-      if (hash01(id) > 0.982) out.push({ i, j, phase: hash01(id + 999) * 90 });
+      if (hash01(id) > 0.968) out.push({ i, j, phase: hash01(id + 999) * 90 });
     }
   }
   return out;
