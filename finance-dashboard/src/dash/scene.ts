@@ -33,7 +33,7 @@ export const DASH_FONTS = [
 ];
 
 // The cards are laid out along a "wall" line that recedes to the right.
-const WALL_ANGLE = THREE.MathUtils.degToRad(27);
+const WALL_ANGLE = THREE.MathUtils.degToRad(33);
 const WALL_DIR = new THREE.Vector3(Math.cos(WALL_ANGLE), 0, -Math.sin(WALL_ANGLE));
 const WALL_N = new THREE.Vector3(Math.sin(WALL_ANGLE), 0, Math.cos(WALL_ANGLE)); // towards camera side
 const onWall = (s: number, y: number, depth = 0) =>
@@ -119,9 +119,9 @@ const keyframes = (t: number, keys: [number, number][]) => {
  * cards that decelerates into the last seconds. Eye level near card centres.
  */
 const REF_KEYS = {
-  s: [[0, -0.25], [2.5, 0.3], [4, 0.9], [5.5, 1.9], [7.5, 2.5], [10, 2.75]] as [number, number][],
-  d: [[0, 9.6], [2.5, 5.8], [4, 5.1], [5.5, 4.8], [7.5, 4.65], [10, 4.6]] as [number, number][],
-  look: [[0, 0.6], [2.5, 1.3], [4, 2.2], [5.5, 3.3], [7.5, 4.0], [10, 4.35]] as [number, number][],
+  s: [[0, -0.3], [1, -0.15], [2.5, 0.5], [4, 1.5], [5.5, 2.6], [7.5, 3.25], [10, 3.5]] as [number, number][],
+  d: [[0, 9.4], [1, 8.0], [2.5, 6.4], [4, 5.9], [5.5, 5.4], [7.5, 5.1], [10, 5.0]] as [number, number][],
+  look: [[0, 0.6], [1, 0.8], [2.5, 1.6], [4, 2.8], [5.5, 3.9], [7.5, 4.6], [10, 5.0]] as [number, number][],
 };
 const referenceRig = (t: number): Rig => {
   const s = keyframes(t, REF_KEYS.s);
@@ -129,7 +129,7 @@ const referenceRig = (t: number): Rig => {
   const ls = keyframes(t, REF_KEYS.look);
   const pos = onWall(s, 0.55, d);
   const look = onWall(ls, -0.05, 0);
-  return { pos, look, fov: 42, roll: 0 };
+  return { pos, look, fov: 48, roll: 0 };
 };
 
 export type DashVariant = "reference" | "emerald";
@@ -166,7 +166,7 @@ export const createDashFactory =
       scene.add(wall);
     }
     // big violet chart card high on the back layer
-    cards.push(makeCard(BACK_W, BACK_H, 11, onWall(3.5, 3.1, -3.2), WALL_ANGLE, (c, t) => drawBackCard(c, p, t), 4, 1));
+    cards.push(makeCard(BACK_W, BACK_H, 14, onWall(3.0, 4.5, -3.0), WALL_ANGLE, (c, t) => drawBackCard(c, p, t), 4, 1));
     // system list far left
     cards.push(makeCard(LIST_W, LIST_H, 2.6, onWall(-4.6, 0.4, -2.2), WALL_ANGLE, (c, t) => drawSystemList(c, p, t), 3));
     // main card

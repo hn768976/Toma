@@ -253,8 +253,9 @@ const areaChart = (
   c.closePath();
   const g = c.createLinearGradient(0, y, 0, y + h);
   g.addColorStop(0, color);
-  g.addColorStop(1, "rgba(0,0,0,0)");
-  c.globalAlpha = 0.9;
+  g.addColorStop(0.7, color);
+  g.addColorStop(1, "rgba(0,0,0,0.15)");
+  c.globalAlpha = 0.92;
   c.fillStyle = g;
   c.fill();
   c.globalAlpha = 1;
@@ -283,7 +284,7 @@ export const drawTallCard = (c: Ctx, p: DashPalette, t: number, idx: number) => 
   widths.forEach((w, i) => {
     const L = (W - 140) * Math.min(w, 1) * (1 + 0.015 * Math.sin(t * 1.7 + i + idx));
     roundRect(c, 64, 180 + i * 58, L, 30, 8);
-    c.fillStyle = p.barLight;
+    c.fillStyle = p.tallBar;
     c.globalAlpha = 0.85 - i * 0.05;
     c.fill();
     c.globalAlpha = 1;
@@ -396,24 +397,37 @@ export const drawBackCard = (c: Ctx, p: DashPalette, t: number) => {
   c.globalAlpha = 0.8;
   text(c, "Portfolio Overview", 110, 140, "600 48px Montserrat", p.textDim);
   c.globalAlpha = 1;
-  // candle-ish jagged violet line
+  // candlestick-style violet price chart with a thin trend line
   const rng = mulberry32(5);
   let v = 0.5;
-  const n = 260;
-  c.beginPath();
-  for (let i = 0; i < n; i++) {
-    v += (rng() - 0.5) * 0.09;
-    v = clamp(v, 0.1, 0.9);
-    const px = 100 + (i / (n - 1)) * (W - 200);
-    const jitter = (rng() - 0.5) * 0.12 + 0.02 * Math.sin(t * 2 + i);
-    const py = 260 + (1 - v - jitter) * 600;
-    if (i === 0) c.moveTo(px, py);
-    else c.lineTo(px, py);
-  }
-  c.strokeStyle = p.lineChart;
-  c.lineWidth = 6;
+  const n = 120;
+  const step = (W - 200) / n;
+  const pts: number[] = [];
   c.shadowColor = p.lineChart;
-  c.shadowBlur = 16;
+  c.shadowBlur = 14;
+  for (let i = 0; i < n; i++) {
+    const open = v;
+    v = clamp(v + (rng() - 0.5) * 0.12, 0.08, 0.92);
+    const close = v;
+    const hi = Math.max(open, close) + rng() * 0.08;
+    const lo = Math.min(open, close) - rng() * 0.08;
+    const px = 100 + i * step + step / 2;
+    const y = (q: number) => 200 + (1 - q) * 780 + 6 * Math.sin(t * 2 + i);
+    c.strokeStyle = p.lineChart;
+    c.lineWidth = 4;
+    c.beginPath();
+    c.moveTo(px, y(hi));
+    c.lineTo(px, y(lo));
+    c.stroke();
+    c.fillStyle = p.lineChart;
+    c.globalAlpha = close >= open ? 1 : 0.55;
+    c.fillRect(px - step * 0.32, y(Math.max(open, close)), step * 0.64, Math.max(4, Math.abs(close - open) * 780));
+    c.globalAlpha = 1;
+    pts.push(y((open + close) / 2));
+  }
+  c.beginPath();
+  pts.forEach((py, i) => (i === 0 ? c.moveTo(100 + step / 2, py) : c.lineTo(100 + i * step + step / 2, py)));
+  c.lineWidth = 3;
   c.stroke();
   c.shadowBlur = 0;
   // small scale labels

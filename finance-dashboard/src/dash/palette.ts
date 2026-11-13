@@ -13,6 +13,8 @@ export type DashPalette = {
   donut: [string, string, string];
   donutGlow: string;
   barLight: string;
+  /** bars on the tall KPI cards */
+  tallBar: string;
   barStrong: string;
   barDot: string;
   legend: string[];
@@ -47,6 +49,7 @@ export const REFERENCE_PALETTE: DashPalette = {
   donut: ["#b764f2", "#f2a774", "#ea4450"],
   donutGlow: "rgba(185,100,245,0.45)",
   barLight: "#cfd0f0",
+  tallBar: "#a8c6ea",
   barStrong: "#6b5cf4",
   barDot: "#e9e23c",
   legend: ["#e8d93e", "#9a62f2", "#e8d93e", "#f0a24e", "#e8d93e", "#e2e04a"],
@@ -73,8 +76,8 @@ export const EMERALD_PALETTE: DashPalette = {
   name: "emerald",
   bg: [0.006, 0.03, 0.03],
   gridLine: "rgba(120,200,180,0.10)",
-  panelTop: "rgba(22,62,58,0.70)",
-  panelBottom: "rgba(8,34,34,0.66)",
+  panelTop: "rgba(30,78,72,0.72)",
+  panelBottom: "rgba(12,44,42,0.68)",
   panelBorder: "rgba(150,235,205,0.45)",
   panelGlow: "rgba(120,240,200,0.10)",
   text: "#f4f1e4",
@@ -83,20 +86,21 @@ export const EMERALD_PALETTE: DashPalette = {
   donut: ["#22d38f", "#f4c54a", "#ff6f61"],
   donutGlow: "rgba(40,220,150,0.45)",
   barLight: "#f6e3a6",
+  tallBar: "#bfe9d4",
   barStrong: "#19b884",
   barDot: "#ffd34a",
-  legend: ["#ffd34a", "#22d38f", "#ffd34a", "#ff8f5a", "#ffd34a", "#9ee86a"],
+  legend: ["#ffd34a", "#22d38f", "#ffd34a", "#f4c54a", "#ffd34a", "#9ee86a"],
   strip: "#f2b33a",
   stripText: "rgba(50,30,0,0.85)",
-  areas: ["#f4c54a", "#22d38f", "#ff6f61", "#9ee86a", "#f4c54a", "#22d38f"],
+  areas: ["#f4c54a", "#22d38f", "#9ee86a", "#ffd34a", "#3ee0a6", "#f4c54a"],
   revenueArea: ["#0e8f6a", "#4cf0b4"],
   revenueLine: "#ffb347",
   lineChart: "#f4c54a",
-  negative: "#ff7a6b",
+  negative: "#ffc04a",
   statusDots: ["#ffd34a", "#ff6f61", "#22d38f"],
   hudLine: "rgba(220,250,235,0.55)",
   accentNum: ["#ffb347", "#ffd34a"],
-  gain: [1.0, 1.02, 0.98],
-  lift: [0.0, 0.004, 0.002],
+  gain: [1.12, 1.14, 1.08],
+  lift: [0.0, 0.006, 0.004],
   saturation: 1.05,
 };
