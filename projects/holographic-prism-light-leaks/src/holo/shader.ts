@@ -83,9 +83,9 @@ vec3 spec(float x) {
 float hueOf(float k) {
   if (k < 0.26) return 0.10;   // red-orange
   if (k < 0.44) return 0.19;   // orange
-  if (k < 0.52) return 0.29;   // yellow
-  if (k < 0.58) return -1.0;   // pinkish white
-  if (k < 0.65) return 0.45;   // green
+  if (k < 0.54) return 0.29;   // yellow
+  if (k < 0.60) return -1.0;   // pinkish white
+  if (k < 0.65) return 0.45;   // green (narrower share)
   if (k < 0.80) return 0.70;   // blue
   if (k < 0.87) return 0.84;   // violet
   return 0.5;                  // full rainbow
@@ -132,14 +132,14 @@ void washes(inout Field F, vec2 uv, float t, float fp) {
   for (int i = 0; i < 16; i++) {
     Slot s = slot(float(i), float(i), 16.0, t, 2.6, 1.9);
     vec2 q = wrapq(uv - placeAt(s, P_WASH, 0.15, mod(float(i) * 7.0, 16.0), vec2(4.0, 4.0)), P_WASH);
-    float rx = 0.30 + 0.15 * s.h2.x;
+    float rx = 0.24 + 0.14 * s.h2.x;
     float d = length(q);
     float E = 2.0 * rx;                      // <= 0.9 = P_WASH.y / 2
     if (d >= E) continue;
     float ry = rx * (0.35 + 0.45 * s.h2.y);
     vec2 r = rot2(q, s.h2.z * TAU + (s.h2.w - 0.5) * 0.4 * (s.ph - 0.5) * s.T);
     vec2 e = r / vec2(rx, ry);
-    float I = exp(-dot(e, e) * 1.05) * win(d, E) * plateau(s.ph) * (0.32 + 0.28 * s.h3.y);
+    float I = exp(-dot(e, e) * 1.05) * win(d, E) * plateau(s.ph) * (0.30 + 0.26 * s.h3.y);
     I *= 0.7 + 0.45 * vnoise(vec2(e.x * 0.6, e.y * 2.2) + s.h3.zw * 40.0); // smeared, uneven
     float k = s.h3.x;
     float h0;
@@ -164,31 +164,31 @@ void washes(inout Field F, vec2 uv, float t, float fp) {
 // across or along the band (dispersion). Each colour channel's copy is also
 // displaced along the band normal, giving rainbow fringes on the soft edges.
 void bars(inout Field F, vec2 uv, float t, float fp) {
-  for (int i = 0; i < 8; i++) {
-    Slot s = slot(float(i) + 10.0, float(i), 8.0, t, 1.8, 1.8);
-    vec2 c = placeAt(s, P_STREAK, 0.18, mod(float(i) * 3.0, 8.0), vec2(4.0, 2.0));
+  for (int i = 0; i < 10; i++) {
+    Slot s = slot(float(i) + 10.0, float(i), 10.0, t, 1.8, 1.8);
+    vec2 c = placeAt(s, P_STREAK, 0.22, mod(float(i) * 3.0, 10.0), vec2(5.0, 2.0));
     vec2 q = wrapq(uv - c, P_STREAK);
     float dq = length(q);
     if (dq >= 0.75) continue;                       // reach 0.75 <= P_STREAK.y / 2
     float a = s.h2.y * TAU + (s.h3.y - 0.5) * 0.8 * (s.ph - 0.5) * s.T;
     vec2 r = rot2(q, a);
-    float Lh = 0.12 + 0.22 * s.h2.z;                // half length <= 0.34
-    float w = 0.07 + 0.14 * s.h2.w;                 // half width  <= 0.21
+    float Lh = 0.08 + 0.18 * s.h2.z;                // half length <= 0.26
+    float w = 0.05 + 0.10 * s.h2.w;                 // half width  <= 0.15
     float curv = (s.h3.z - 0.5) * 0.7;
     float xs = r.y + curv * r.x * r.x;
-    float soft = 0.5 * w + 0.02;                    // defocused edge
+    float soft = 0.42 * w + 0.014;                  // defocused edge
     float disp = 0.22 * w + 0.008;                  // chromatic displacement
-    float ax = max(abs(r.x) - Lh, 0.0);
+    float ax = 0.4 * max(abs(r.x) - Lh, 0.0);      // ends smeared 2.5x longer (tapered)
     vec3 m;
     for (int ch = 0; ch < 3; ch++) {
       float y = xs + disp * (float(ch) - 1.0);
       float d = length(vec2(ax, y)) - w;
       m[ch] = 1.0 - smoothstep(-soft, soft, d);
     }
-    float life = bell(s.ph) * win(dq, 0.75) * (0.36 + 0.3 * s.h1.y);
+    float life = bell(s.ph) * win(dq, 0.75) * (0.42 + 0.32 * s.h1.y);
     life *= 0.75 + 0.5 * vnoise(vec2(r.x * 2.2, xs * 4.0) + s.h2.xy * 50.0); // uneven brightness
     float h0 = hueOf(s.h3.x);
-    float span = s.h3.x >= 0.87 ? 0.9 : 0.25 + 0.35 * s.h2.x;
+    float span = s.h3.x >= 0.87 ? 0.9 : 0.35 + 0.3 * s.h2.x;
     float u = s.h1.z < 0.5 ? clamp(xs / w, -1.0, 1.0) * 0.5 : clamp(r.x / (Lh + w), -1.0, 1.0) * 0.5;
     vec3 body = h0 < 0.0 ? vec3(1.0, 0.8, 0.86) : spec(h0 + span * u);
     F.light += mix(body, vec3(1.0), 0.06) * m * life;
@@ -216,7 +216,7 @@ void orbs(inout Field F, vec2 uv, float t, float fp) {
     float life = bell(s.ph) * win(dq, 0.6) * (0.32 + 0.3 * s.h1.y);
     float h0 = hueOf(s.h3.x);
     float u = clamp(dot(q, vec2(cos(ang), sin(ang))) / R, -1.0, 1.0) * 0.5;
-    vec3 body = h0 < 0.0 ? vec3(1.0, 0.9, 0.85) : spec(h0 + (0.2 + 0.3 * s.h2.w) * u);
+    vec3 body = h0 < 0.0 ? vec3(1.0, 0.9, 0.85) : spec(h0 + (0.5 + 0.4 * s.h2.w) * u);
     F.light += mix(body, vec3(1.0), 0.08) * m * life;
     if (s.h3.w > 0.85) F.white += m.g * life * 0.4;
   }
@@ -311,7 +311,7 @@ void main() {
 
   // subtle lens vignette
   float v = smoothstep(1.25, 0.35, length(p * vec2(0.9, 1.25)));
-  col *= mix(0.72, 1.0, v);
+  col *= mix(0.8, 1.0, v);
 
   // triangular dither to avoid banding in the soft gradients
   float dth = hash12(gl_FragCoord.xy + fract(t) * 91.7) + hash12(gl_FragCoord.yx * 1.37 + 4.1) - 1.0;
