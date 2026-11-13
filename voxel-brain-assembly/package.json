@@ -1,0 +1,44 @@
+{
+  "name": "voxel-brain-assembly",
+  "version": "1.0.0",
+  "description": "Voxel Brain Assembly \u2014 4K Remotion compositions (Three.js / WebGL 2)",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.543",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.543",
+    "three": "0.178.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.543",
+    "@types/react": "19.3.0",
+    "@types/three": "0.170.0",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "render:v1:4k": "remotion render VoxelBrainAssembly-V1-Match out/Version-1_Voxel-Brain-Assembly_Reference-Match_4K.mp4",
+    "render:v2:4k": "remotion render VoxelBrainAssembly-V2-OrbitCamera out/Version-2_Voxel-Brain-Assembly_Orbit-Camera_4K.mp4",
+    "render:v1:1080p": "remotion render VoxelBrainAssembly-V1-Match out/Version-1_Voxel-Brain-Assembly_Reference-Match_1080p.mp4 --scale=0.5",
+    "render:v2:1080p": "remotion render VoxelBrainAssembly-V2-OrbitCamera out/Version-2_Voxel-Brain-Assembly_Orbit-Camera_1080p.mp4 --scale=0.5",
+    "render:all": "npm run render:v1:1080p && npm run render:v2:1080p",
+    "still:v1": "remotion still VoxelBrainAssembly-V1-Match out/VoxelBrainAssembly-V1-Match.png --frame=150",
+    "still:v2": "remotion still VoxelBrainAssembly-V2-OrbitCamera out/VoxelBrainAssembly-V2-OrbitCamera.png --frame=150"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}
