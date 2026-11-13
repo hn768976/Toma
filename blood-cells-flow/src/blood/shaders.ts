@@ -78,7 +78,7 @@ void main() {
   vec2 perC = vec2(64.0, 64.0);
   float grain = fbm(sh * perC + 4.0 * w, perC);
 
-  float h = 0.5 + 1.05 * folds + 0.12 * (fibres - 0.45) + 0.05 * grain;
+  float h = 0.5 + 1.05 * folds + 0.035 * (fibres - 0.45) + 0.04 * grain;
   gl_FragColor = vec4(h, fibres, grain * 0.5 + 0.5, 1.0);
 }
 `;
@@ -157,10 +157,13 @@ void main() {
   vec3 col = albedo * (uAmbient * 8.0 + uKeyCol * diff * att * 1.7 + uHeadCol * head * 0.86);
   col += uSpecCol * spec * att * (0.4 + 0.6 * cav) * 0.85;
   col += uAmbient * (0.4 + 0.6 * cav);
+  // broad patches of shadow where the folds turn away from the light
+  float shadow = textureLod(tTissue, vUv + vec2(0.37, 0.11), 4.6).r;
+  col *= mix(0.3, 1.0, smoothstep(0.36, 0.64, shadow));
 
   // The far end of the vessel is flooded with light.
   float g = smoothstep(uGlow0, uGlow1, d);
-  vec3 glow = uGlowCol * (0.74 + 0.3 * smoothstep(0.1, 0.95, textureLod(tTissue, vUv, 2.5).r));
+  vec3 glow = uGlowCol * (0.6 + 0.5 * smoothstep(0.1, 0.95, textureLod(tTissue, vUv, 1.8).r));
   col = mix(col, glow, g * g * (3.0 - 2.0 * g));
   gl_FragColor = vec4(col, 1.0);
 }
@@ -221,8 +224,12 @@ void main() {
   float rObj = length(vObj.xz);
   float dimple = 1.0 - smoothstep(0.15, 0.85, rObj);
   float headAtt = 1.0 / (1.0 + d * d * 0.012);
-  float lit = 0.12 + 0.43 * core * (0.5 + 0.5 * headAtt) + 0.38 * dimple * (0.35 + 0.65 * core);
-  vec3 col = uCellCol * lit * m * (0.8 + 0.4 * vShade);
+  float lit = 0.1 + 0.36 * core * (0.5 + 0.5 * headAtt);
+  // rougher, darker rim
+  float rim = smoothstep(0.55, 1.0, rObj);
+  vec3 col = uCellCol * lit * mix(m, m * m * 0.8, rim) * (0.8 + 0.4 * vShade);
+  // light shining through the thin centre
+  col += mix(uCellCol, uCellFar, 0.22) * pow(dimple, 1.4) * (0.3 + 0.7 * core) * 0.85;
   col += uCellCol * uKeyCol * wrapL * wrapL * att * 0.5;
   col += uKeyCol * pow(1.0 - ndv, 4.0) * wrapL * att * 0.06;
 

@@ -83,9 +83,10 @@ src/
 - **Vessel** – a tube swept along a gently bending path. Its tissue look comes
   from a tileable height map (domain-warped folds + fibrous ridges) that is
   baked once on the GPU and used for bump lighting and colour.
-- **Cells** – 112 instanced biconcave discs (Evans–Fung profile) that tumble
-  and drift towards the lens; they recycle far away in the glow, so nothing
-  pops in view.
+- **Cells** – about 250 instanced biconcave discs (Evans–Fung profile) placed
+  by rejection sampling so none of them touch. They drift towards the lens as
+  one plug and tumble individually; they recycle far away in the glow, so
+  nothing pops in view and nothing ever interpenetrates.
 - **Camera** – rides the centre line; its aim follows the measured trajectory
   of the glowing far end of the vessel in the reference clip.
 - **Look** – everything is rendered in linear HDR, then gets depth of field,

@@ -19,18 +19,25 @@ import {
 // ---------------------------------------------------------------------------
 const VESSEL_RADIUS = 1;
 const CAMERA_START = 3;
-const CAMERA_SPEED = 2.4; // radii per second
+const CAMERA_SPEED = 2.1; // radii per second
 const VIEW_AHEAD = 46; // how much vessel exists in front of the camera
 const LOOK_AHEAD = 19; // distance of the glowing "end" that the camera frames
 const FOV = 37;
-const TISSUE_V_LENGTH = 6.5; // world length of one tissue-map period along the vessel
+const TISSUE_V_LENGTH = 12; // world length of one tissue-map period along the vessel
 const CELL_COUNT = 250;
 const CELL_RANGE_NEAR = -2;
 const CELL_RANGE_FAR = 43;
 const CELL_RADIUS = 0.165;
+// All cells drift towards the lens at the same speed (plug flow) and only
+// tumble individually, so their mutual distances never change.
+const CELL_FLOW_SPEED = -0.45;
+// Cells live in a ring around the centre line: the lens travels through the
+// free core, and the outer limit keeps them clear of the vessel wall.
+const CELL_RHO_MIN = 0.34;
+const CELL_RHO_MAX = 0.66;
 
 const PAN_GAIN_X = 1.3;
-const PAN_GAIN_Y = 1.5;
+const PAN_GAIN_Y = 1.4;
 const TRACK_X = TUNNEL_END_TRACK.map((p) => p[0]);
 const TRACK_Y = TUNNEL_END_TRACK.map((p) => p[1]);
 
@@ -73,12 +80,8 @@ const makeCellGeometry = (): THREE.BufferGeometry => {
 
 type Cell = {
   s0: number;
-  speed: number;
   rho: number;
   phi: number;
-  phiRate: number;
-  wobble: number;
-  wobblePhase: number;
   scale: number;
   thick: number;
   axis: THREE.Vector3;
@@ -160,10 +163,10 @@ export const createBloodScene =
         circ.set(0, 0, 0).addScaledVector(frame.n, -sn).addScaledVector(frame.b, cs);
         // Low-frequency bulges so the lumen is not a perfect cylinder.
         const bulge =
-          0.07 * Math.sin(th * 2 + s * 0.55) +
-          0.05 * Math.sin(th * 3 - s * 0.9 + 1.3) +
-          0.04 * Math.sin(th * 5 + s * 1.7 + 0.5) +
-          0.05 * Math.sin(s * 1.15 + 2.0);
+          0.04 * Math.sin(th * 2 + s * 0.55) +
+          0.03 * Math.sin(th * 3 - s * 0.9 + 1.3) +
+          0.022 * Math.sin(th * 5 + s * 1.7 + 0.5) +
+          0.03 * Math.sin(s * 1.15 + 2.0);
         const r = VESSEL_RADIUS * (1 + bulge);
         const k = (j * (RADIAL + 1) + i) * 3;
         pos[k] = frame.p.x + radial.x * r;
@@ -207,8 +210,8 @@ export const createBloodScene =
     wallGeo.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
     wallGeo.setIndex(new THREE.BufferAttribute(idx, 1));
 
-    const GLOW0 = 4.5;
-    const GLOW1 = 10.8;
+    const GLOW0 = 3.3;
+    const GLOW1 = 10.2;
     const lightPos = new THREE.Vector3();
     const wallMat = new THREE.ShaderMaterial({
       vertexShader: WALL_VERT,
@@ -220,7 +223,7 @@ export const createBloodScene =
         uWorldPerUv: {
           value: new THREE.Vector2(Math.PI * 2 * VESSEL_RADIUS, TISSUE_V_LENGTH),
         },
-        uBump: { value: 0.75 },
+        uBump: { value: 0.5 },
         uLightPos: { value: lightPos },
         uColLow: { value: palette.wallLow },
         uColHigh: { value: palette.wallHigh },
@@ -242,48 +245,45 @@ export const createBloodScene =
     const cellGeo = makeCellGeometry();
     const shade = new Float32Array(CELL_COUNT);
     const cells: Cell[] = [];
-    // Cells are scattered through the whole lumen. A candidate is rejected if
-    // it would touch an already placed cell at any of a few sample times, so
-    // the discs never interpenetrate while they drift at different speeds.
-    const SAMPLE_TIMES = [0, 0.2, 0.4, 0.6, 0.8, 1].map((u) => u * duration);
-    const relAt = (c: Cell, t: number) =>
-      wrap(c.s0 + (c.speed - CAMERA_SPEED) * t, CELL_RANGE_NEAR, CELL_RANGE_FAR);
-    const localAt = (c: Cell, t: number): [number, number, number] => {
-      const phi = c.phi + c.phiRate * t;
-      return [relAt(c, t), Math.cos(phi) * c.rho, Math.sin(phi) * c.rho];
-    };
+    // Cells are scattered through the lumen by rejection sampling: a
+    // candidate is dropped if its bounding sphere would touch a cell that is
+    // already placed. Because the whole population moves as one plug (and
+    // recycles cyclically), a layout that is free of overlaps at t = 0 stays
+    // free of overlaps for every frame.
+    const cellRange = CELL_RANGE_FAR - CELL_RANGE_NEAR;
     const collides = (c: Cell) => {
-      for (const t of SAMPLE_TIMES) {
-        const a = localAt(c, t);
-        for (const o of cells) {
-          const b = localAt(o, t);
-          const dx = a[0] - b[0];
-          const dy = a[1] - b[1];
-          const dz = a[2] - b[2];
-          const min = (c.scale + o.scale) * 1.12;
-          if (dx * dx + dy * dy + dz * dz < min * min) {
-            return true;
-          }
+      const cy = Math.cos(c.phi) * c.rho;
+      const cz = Math.sin(c.phi) * c.rho;
+      for (const o of cells) {
+        let dx = Math.abs(c.s0 - o.s0);
+        dx = Math.min(dx, cellRange - dx); // cyclic along the vessel
+        const dy = cy - Math.cos(o.phi) * o.rho;
+        const dz = cz - Math.sin(o.phi) * o.rho;
+        const min = (c.scale + o.scale) * 1.1;
+        if (dx * dx + dy * dy + dz * dz < min * min) {
+          return true;
         }
       }
       return false;
     };
     for (let i = 0; i < CELL_COUNT; i++) {
       let cell: Cell | null = null;
-      for (let attempt = 0; attempt < 60; attempt++) {
+      for (let attempt = 0; attempt < 400; attempt++) {
         const axis = new THREE.Vector3(rng() - 0.5, rng() - 0.5, rng() - 0.5).normalize();
         const rot0 = new THREE.Quaternion().setFromAxisAngle(
           new THREE.Vector3(rng() - 0.5, rng() - 0.5, rng() - 0.5).normalize(),
           rng() * Math.PI * 2,
         );
+        // uniform over the ring's cross-section
+        const u = rng();
+        const rho = Math.sqrt(
+          CELL_RHO_MIN * CELL_RHO_MIN +
+            u * (CELL_RHO_MAX * CELL_RHO_MAX - CELL_RHO_MIN * CELL_RHO_MIN),
+        );
         cell = {
-          s0: rng() * (CELL_RANGE_FAR - CELL_RANGE_NEAR),
-          speed: -(0.35 + rng() * 0.35),
-          rho: 0.7 * Math.pow(rng(), 0.5),
+          s0: rng() * cellRange,
+          rho,
           phi: rng() * Math.PI * 2,
-          phiRate: (rng() - 0.5) * 0.1,
-          wobble: 0.015 + rng() * 0.025,
-          wobblePhase: rng() * Math.PI * 2,
           scale: CELL_RADIUS * (0.86 + rng() * 0.3),
           thick: 0.92 + rng() * 0.3,
           axis,
@@ -293,8 +293,14 @@ export const createBloodScene =
         if (!collides(cell)) {
           break;
         }
+        cell = null;
       }
-      cells.push(cell as Cell);
+      if (cell) {
+        cells.push(cell);
+      }
+    }
+    const cellCount = cells.length;
+    for (let i = 0; i < cellCount; i++) {
       shade[i] = rng();
     }
     cellGeo.setAttribute("aShade", new THREE.InstancedBufferAttribute(shade, 1));
@@ -311,7 +317,7 @@ export const createBloodScene =
         uGlow1: { value: GLOW1 },
       },
     });
-    const cellMesh = new THREE.InstancedMesh(cellGeo, cellMat, CELL_COUNT);
+    const cellMesh = new THREE.InstancedMesh(cellGeo, cellMat, cellCount);
     cellMesh.frustumCulled = false;
     scene.add(cellMesh);
 
@@ -340,8 +346,8 @@ export const createBloodScene =
 
       // Camera rides the centre line with a slow organic sway.
       path.sample(camS, camFrame);
-      const swayX = 0.1 * Math.sin(t * 0.83 + 0.4) + 0.05 * Math.sin(t * 1.9 + 2.0);
-      const swayY = 0.09 * Math.sin(t * 0.67 + 1.9) + 0.04 * Math.sin(t * 2.3 + 0.3);
+      const swayX = 0.05 * Math.sin(t * 0.83 + 0.4) + 0.025 * Math.sin(t * 1.9 + 2.0);
+      const swayY = 0.045 * Math.sin(t * 0.67 + 1.9) + 0.02 * Math.sin(t * 2.3 + 0.3);
       camera.position
         .copy(camFrame.p)
         .addScaledVector(camFrame.n, swayX)
@@ -356,8 +362,8 @@ export const createBloodScene =
       const trackIndex = (t * 30 * (TRACK_X.length - 1)) / (duration * 30 - 1);
       // The measured track is a smoothed centroid, which under-reads the
       // swing of the glow; PAN_GAIN restores the reference amplitude.
-      const sx = clamp(0.5 + (sampleSeries(TRACK_X, trackIndex) - 0.5) * PAN_GAIN_X, 0.1, 0.9);
-      const sy = clamp(0.5 + (sampleSeries(TRACK_Y, trackIndex) - 0.5) * PAN_GAIN_Y, 0.1, 0.9);
+      const sx = clamp(0.5 + (sampleSeries(TRACK_X, trackIndex) - 0.5) * PAN_GAIN_X, 0.08, 0.92);
+      const sy = clamp(0.5 + (sampleSeries(TRACK_Y, trackIndex) - 0.5) * PAN_GAIN_Y, 0.07, 0.93);
       dCam.set((2 * sx - 1) * tanH2, (1 - 2 * sy) * tanV2, -1).normalize();
       qRel.setFromUnitVectors(FORWARD, dCam);
       camera.quaternion.copy(qLook).multiply(qRel.invert());
@@ -371,26 +377,14 @@ export const createBloodScene =
       lightPos.copy(tmpFrame.p);
 
       // Cells.
-      for (let i = 0; i < CELL_COUNT; i++) {
+      for (let i = 0; i < cellCount; i++) {
         const c = cells[i];
-        const rel = wrap(
-          c.s0 + (c.speed - CAMERA_SPEED) * t,
-          CELL_RANGE_NEAR,
-          CELL_RANGE_FAR,
-        );
-        // Unwrapped distance travelled, used so spin stays continuous.
-        const s = camS + rel;
-        path.sample(s, tmpFrame);
-        const phi = c.phi + c.phiRate * t;
-        let rho =
-          c.rho + c.wobble * Math.sin(t * 0.9 + c.wobblePhase);
-        // Keep a clear corridor around the lens so nothing clips the near plane.
-        const corridor = 0.62 * smoothstep(5.0, 1.6, rel);
-        rho = Math.max(rho, corridor);
-        rho = Math.min(rho, 0.74);
+        const rel =
+          CELL_RANGE_NEAR + wrap(c.s0 + (CELL_FLOW_SPEED - CAMERA_SPEED) * t, 0, cellRange);
+        path.sample(camS + rel, tmpFrame);
         p3.copy(tmpFrame.p)
-          .addScaledVector(tmpFrame.n, Math.cos(phi) * rho)
-          .addScaledVector(tmpFrame.b, Math.sin(phi) * rho);
+          .addScaledVector(tmpFrame.n, Math.cos(c.phi) * c.rho)
+          .addScaledVector(tmpFrame.b, Math.sin(c.phi) * c.rho);
         spin.setFromAxisAngle(c.axis, c.rate * t);
         quat.copy(spin).multiply(c.rot0);
         const fade =
@@ -415,7 +409,7 @@ export const createBloodScene =
       params.lift.copy(palette.lift);
       params.contrast = 1.0;
       params.saturation = palette.saturation;
-      params.vignette = 0.72;
+      params.vignette = 0.8;
       params.vignetteColor.copy(palette.vignetteColor);
       params.grain = 0.022;
       post.render(scene, camera, params);
