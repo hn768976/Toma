@@ -14,8 +14,8 @@ export const LOOK: Look = {
   stops: [
     { depth: 0.0, color: "#fff4f3" },
     { depth: 0.45, color: "#efb6e0" },
-    { depth: 0.9, color: "#b84ccc" },
-    { depth: 1.9, color: "#6a1fa8" },
+    { depth: 0.9, color: "#b84bbf" },
+    { depth: 1.9, color: "#7a1e9e" },
     { depth: 2.65, color: "#8db0f5" },
     { depth: 3.2, color: "#f4f6ff" },
     { depth: 3.65, color: "#fff6c4" },
@@ -23,19 +23,19 @@ export const LOOK: Look = {
   // Pillars raised above the surface (crater rim / snap-shut pop).
   upStops: [
     { height: 0.0, color: "#fff4f3" },
-    { height: 0.5, color: "#f3c4e8" },
-    { height: 1.2, color: "#e39ade" },
-    { height: 2.4, color: "#b866da" },
+    { height: 0.5, color: "#f8dcee" },
+    { height: 1.2, color: "#f3cde8" },
+    { height: 2.4, color: "#e7b3e0" },
   ],
   background: "#fff6f4",
   shadowTint: "#a95cc4",
   emissiveFrom: 2.2,
   emissiveTo: 3.9,
   emissive: 0.45,
-  vignette: 0.02,
+  vignette: 0.0,
 };
 
-export const MOTION_BLUR = { samples: 12, shutter: 0.9 };
+export const MOTION_BLUR = { samples: 8, shutter: 0.35 };
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 

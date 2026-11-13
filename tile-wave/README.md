@@ -6,9 +6,10 @@ plus a side branch) the tiles sink and tip into a terraced valley whose floor
 glows (pink → violet → periwinkle → white → warm cream), so the band zig-zags
 along the grid while running diagonally across it. A rim of raised pink cards
 leans in towards the axis like overlapping scales and keeps fluttering while
-the band is open. The valley opens from a slit, holds, then closes: columns of
-tiles are drawn out into long blades across the band, which relax while the
-surface rests. The open/hold/close curve and the 132-frame (~4.4 s) cycle are
+the band is open, while the valley floor gently bobs. The valley opens quickly
+from a slit, keeps widening slowly, then closes completely: columns of tiles
+are lifted and drawn out into long, pale slats that read perpendicular to the
+band on screen, and lie back down while the surface rests. The open/hold/close curve and the 132-frame (~4.4 s) cycle are
 fitted to the reference's colour curve.
 
 | Composition   | Size        | FPS | Frames | Duration | Camera |
@@ -26,7 +27,7 @@ fitted to the reference's colour curve.
   height (depth palette below the surface, rim palette above it), with soft
   wrap lighting and lavender-tinted shading.
 * **Motion blur + anti-aliasing by accumulation:** each output frame averages
-  12 sub-frame renders spread over a 0.9-frame shutter, each with a sub-pixel camera
+  8 sub-frame renders spread over a 0.35-frame shutter, each with a sub-pixel camera
   jitter, into a half-float buffer.
 * Fully deterministic: every pillar height is a pure function of the
   (fractional) frame number.

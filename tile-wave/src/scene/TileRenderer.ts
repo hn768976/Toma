@@ -136,9 +136,10 @@ void main() {
   vec2 v = vUv - 0.5;
   v.x *= uRes.x / uRes.y;
   c *= 1.0 - uVignette * dot(v, v);
-  // Warm, slightly brighter centre fading to pinker corners (soft studio backdrop).
-  float r2 = clamp(dot(v, v) * 1.1, 0.0, 1.0);
-  c *= mix(vec3(1.02, 1.01, 0.97), vec3(0.97, 0.9, 0.94), r2);
+  // Lift the pale surface towards the reference's near-white blush; the
+  // saturated valley colours are left alone.
+  float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  c *= mix(vec3(1.0), vec3(1.02, 1.05, 1.045), smoothstep(0.5, 0.85, lum));
   float d = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
   gl_FragColor = vec4(toSrgb(c) + d / 255.0, 1.0);
 }`;
