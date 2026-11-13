@@ -42,8 +42,9 @@ const CAMERA_V1: CameraKey[] = [
  * down to a low grazing angle on the left for the smooth-skin reveal.
  */
 const CAMERA_V2: CameraKey[] = [
-  { f: 0, pos: [2.7, 2.3, 2.9], target: [0.0, 1.45, 0.0], fov: 30 },
-  { f: 38, pos: [2.25, 2.85, 3.15], target: [0.0, 0.55, 0.0], fov: 30 },
+  // low side view looking slightly up at the falling drop
+  { f: 0, pos: [3.3, 1.25, 2.3], target: [0.0, 1.5, 0.0], fov: 30 },
+  { f: 38, pos: [2.6, 2.3, 3.0], target: [0.0, 0.55, 0.0], fov: 30 },
   { f: 60, pos: [1.9, 3.2, 3.3], target: [0.0, 0.3, 0.0], fov: 30 },
   { f: 125, pos: [0.35, 5.0, 2.8], target: [0.0, 0.0, 0.0], fov: 31 },
   { f: 190, pos: [-2.1, 5.0, 2.9], target: [0.0, 0.0, -0.1], fov: 32 },
@@ -124,6 +125,9 @@ export const sceneUniforms = (frame: number, variant: Variant) => {
     uGlowI: ramp(frame, 60, 98),
     uGlobalHeal: ramp(frame, 272, 292),
     uTime: frame / FPS,
+    // V1 frames the far edge of the skin exactly like the reference; the
+    // orbiting V2 camera sees an endless surface with a level horizon
+    uFarEdge: variant === "v1" ? -19 : -600,
     uFocus: distance(cam.pos, focusPoint),
     uAperture: 2.5,
   };

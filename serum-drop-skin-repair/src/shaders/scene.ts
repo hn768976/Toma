@@ -31,6 +31,7 @@ uniform float uGlowI;     // glow intensity
 uniform float uGlobalHeal;
 uniform float uUnderHeal; // cracks under the melting drop close first
 uniform float uFrontBias;
+uniform float uFarEdge;    // z of the far edge of the skin
 uniform float uToneGlobal; // overall warm-up of the skin tone / lighting // how far the light front leads on the right side
 uniform float uTime;
 uniform float uFocus;
@@ -57,7 +58,6 @@ float gMicroScale = 1.0;
 
 const float TILE = 12.0;    // world size of one macro (crack) tile, 12 plates across
 const float MTILE = 2.4;    // world size of one micro-relief tile
-const float ZB = -19.0;     // far edge of the skin
 const float H_TOP = 0.046;
 const float H_BOT = -0.066;
 
@@ -271,7 +271,7 @@ vec3 shadeSkin(vec3 ro, vec3 rd, out float dist) {
   col = mix(col, uHazeCol, (1.0 - exp(-max(t - 4.0, 0.0) * 0.055)) * mix(0.22, 0.85, tone));
 
   // soft highlight on the far edge of the skin
-  float rim = exp(-max(P.z - ZB, 0.0) / 0.25);
+  float rim = exp(-max(P.z - uFarEdge, 0.0) / 0.25);
   col = mix(col, uStripCol, rim * 0.6);
   return col;
 }
@@ -281,7 +281,7 @@ vec3 shadeScene(vec3 ro, vec3 rd, out float dist) {
   if (rd.y > -1e-4) return backdrop(rd);
   float tTop = -ro.y / rd.y;
   vec3 P = ro + rd * tTop;
-  if (P.z < ZB) return backdrop(rd);
+  if (P.z < uFarEdge) return backdrop(rd);
   return shadeSkin(ro, rd, dist);
 }
 
