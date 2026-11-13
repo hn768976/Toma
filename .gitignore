@@ -1,0 +1,3 @@
+# Rendered deliverables (large binaries) are shared outside git
+deliverables/*.mp4
+deliverables/*.zip
