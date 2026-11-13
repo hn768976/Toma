@@ -172,23 +172,29 @@ export const buildHelixGeometry = (spec: HelixSpec) => {
       }
     }
 
-    // ---- rungs (base pairs) pointing at the axis ----
-    {
+    // ---- rungs (base pairs): ladder steps from the thick strand to the thin one ----
+    if (strand === 0) {
       let xr = x0 + rng() * 0.3;
       const X = new THREE.Vector3(1, 0, 0);
       const side = new THREE.Vector3();
+      const pA = new THREE.Vector3();
+      const dir = new THREE.Vector3();
       while (xr < x1 - 0.1) {
-        if (rng() > (strand === 1 ? 0.08 : 0.55)) {
-          frame(xr, strand);
-          // mostly short stubs, some reaching the axis; never through it (avoids crossing fans)
-          const len =
-            R * (rng() > 0.7 ? 0.3 + rng() * 0.35 : 0.78 + rng() * 0.2);
-          const rr = tube * 0.09;
-          side.crossVectors(X, N1).normalize();
-          const start = R - baseRho * 0.6;
+        if (rng() > 0.12) {
+          const thA = k * xr + phase;
+          const thB = thA + STRAND_OFFSET;
+          pA.set(xr, R * Math.cos(thA), R * Math.sin(thA));
+          dir.set(xr, R * Math.cos(thB), R * Math.sin(thB)).sub(pA);
+          const L = dir.length();
+          dir.normalize();
+          // most steps span the full gap, some are short teeth
+          const full = rng() > 0.3;
+          const reach = full ? L - tube * 0.4 : L * (0.25 + rng() * 0.4);
+          const rr = tube * 0.055;
+          side.crossVectors(X, dir).normalize();
           const rings: number[] = [];
           for (let e = 0; e < 2; e++) {
-            const rad = e === 0 ? start : R - len;
+            const d = e === 0 ? baseRho * 0.6 : reach;
             const first = b.count;
             for (let j = 0; j < 5; j++) {
               const a = (j / 5) * TWO_PI;
@@ -196,14 +202,14 @@ export const buildHelixGeometry = (spec: HelixSpec) => {
                 .copy(X)
                 .multiplyScalar(Math.cos(a))
                 .addScaledVector(side, Math.sin(a));
-              tmpP.set(xr, N1.y * rad, N1.z * rad).addScaledVector(tmpN, rr);
+              tmpP.copy(pA).addScaledVector(dir, d).addScaledVector(tmpN, rr);
               b.vertex(tmpP, tmpN, xr, KIND_RUNG, strand, e);
             }
             rings.push(first);
           }
           b.bridge(rings[0], rings[1], 5);
         }
-        xr += 0.3 + rng() * 0.1;
+        xr += 0.3 + rng() * 0.12;
       }
     }
   }

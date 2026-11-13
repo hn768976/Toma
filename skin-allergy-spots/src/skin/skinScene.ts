@@ -143,12 +143,12 @@ vec2 relief(vec2 uv) {
     float d = length(q) / rad;
     d *= 1.0 + (edgeNoise * 0.3 + fine * 0.02) * mix(0.35, 1.0, lump);
     float dome = pow(clamp(1.0 - d * d, 0.0, 1.0), 1.4);
-    float plateau = smoothstep(1.0, 0.76, d);
-    float prof = mix(dome, plateau * (0.93 + 0.07 * dome), lump);
-    float height = s.z * 0.2 * smoothstep(0.0, 0.6, g) * mix(0.75, 1.0, grow);
+    float plateau = smoothstep(1.08, 0.52, d);
+    float prof = mix(dome, plateau * (0.8 + 0.2 * dome), lump);
+    float height = s.z * 0.225 * smoothstep(0.0, 0.6, g) * mix(0.75, 1.0, grow);
     float surf = 1.0 + lump * ((lumps - 0.45) * 0.62 + fine * 0.02);
     h = max(h, height * prof * surf);
-    float halo = smoothstep(1.3, 0.55, d);
+    float halo = smoothstep(1.4, 0.6, d);
     red = max(red, halo * smoothstep(0.0, 0.3, g) * (0.82 + 0.18 * lumps * lump));
   }
   return vec2(h, red);
@@ -542,7 +542,7 @@ export const createSkinScene =
     // ---- skin surface ----
     const lin = (hex: number) =>
       new THREE.Color().setHex(hex, THREE.SRGBColorSpace);
-    const fogColor = lin(0xe9b2b4);
+    const fogColor = lin(0xe9b7af);
     const shared = {
       tBake: { value: bakeTarget.texture },
       tMicro: { value: microTarget.texture },
@@ -568,8 +568,8 @@ export const createSkinScene =
       uniforms: {
         ...shared,
         uLightDir: { value: new THREE.Vector3(0.62, 0.42, -0.66) },
-        uSkin: { value: lin(0xe6a3a3) },
-        uRed: { value: lin(0xe66a70) },
+        uSkin: { value: lin(0xe6a99f) },
+        uRed: { value: lin(0xe8746c) },
         uDeep: { value: lin(0xd9534f) },
         uRelief: { value: 1 },
       },
@@ -659,7 +659,7 @@ export const createSkinScene =
       bgCenter: new THREE.Vector2(0.5, 0.5),
       vignette: 0.1,
       grain: 0.008,
-      exposure: 0.97,
+      exposure: 0.93,
       filmic: 0,
       tint: new THREE.Color(1, 1, 1),
       saturation: 1.0,

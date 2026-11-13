@@ -77,22 +77,22 @@ void main() {
       float box2 = smoothstep(0.72, 0.95, -R.x * 0.8 + R.z * 0.3) * 0.16;
       vec3 base = mix(uShellA, uShellB, strand) * tone * 0.5;
       vec3 rim = mix(uRim, uWire * 1.25, strand);
-      col = base * (0.3 + 0.7 * ndv) + rim * fr * fr * mix(0.9, 1.0, strand)
+      col = base * (0.3 + 0.7 * ndv) + rim * (fr * fr * 1.5 + fr * 0.25)
           + uSpec * (key + box1 + box2) * mix(1.0, 0.6, strand);
       col *= mix(0.3, 1.0, gap);
-      col += uWire * tip * tip * 1.6;
+      col += uWire * tip * tip * 0.9;
     }
   } else if (kind < 1.5) {
     // ---------- thin emissive wire ----------
     if (vX > gw) discard;
     float tip = smoothstep(0.35, 0.0, gw - vX);
-    col = uWire * (1.15 + 0.5 * ndv + 2.5 * tip * tip);
+    col = uWire * (1.15 + 0.5 * ndv + 1.3 * tip * tip);
   } else if (kind < 2.5) {
     // ---------- rung, extends towards the axis after the wire passes ----------
     float g = clamp((gw - vX) * 0.9, 0.0, 1.0);
     if (vX > gw || vData.z > g) discard;
     float fresh = smoothstep(1.6, 0.0, gw - vX);
-    col = uWire * (0.62 + 1.0 * fresh);
+    col = uWire * (0.4 + 0.8 * fresh);
   } else {
     // ---------- marker ring ----------
     if (vX > gs) discard;
@@ -127,10 +127,10 @@ export type DnaCamera = {
 };
 
 export const DEFAULT_CAMERA: DnaCamera = {
-  from: [-0.9, -0.9, 9.6],
-  to: [0.6, 0.3, 8.5],
-  lookFrom: [-0.3, -0.5, 0],
-  lookTo: [0.35, 0.25, 0],
+  from: [-1.0, -2.0, 12.6],
+  to: [0.7, -0.9, 11.4],
+  lookFrom: [-0.3, -1.6, 0],
+  lookTo: [0.35, -0.9, 0],
   rollFrom: -0.03,
   rollTo: 0.02,
   fov: 30,
@@ -205,16 +205,11 @@ export const createDnaScene =
       [0, 0],
       [1, 0],
       [2, 0],
-      [-2, -1],
       [-1, -1],
       [0, -1],
       [1, -1],
-      [2, -1],
-      [-1, -2],
-      [1, -2],
-      [3, -1],
-      [-1, 1],
-      [9, 9], // hero foreground helix, see below
+      [-2, -1],
+      [9, 9], // large defocused foreground helix, see below
     ];
     for (const [a, b] of layout) {
       {
@@ -228,20 +223,20 @@ export const createDnaScene =
         const pitchJ = rng();
         const spinJ = rng();
         const y = isNear
-          ? -1.7
-          : a * 3.9 + (isHero ? 0 : jitterY) + (b & 1 ? 1.95 : 0);
-        const z = isNear ? 4.6 : b * 3.6 + (isHero ? 0 : jitterZ);
+          ? -2.9
+          : a * 2.9 + (isHero ? 0 : jitterY) + (b & 1 ? 1.45 : 0);
+        const z = isNear ? 6.6 : b * 4.0 + (isHero ? 0 : jitterZ);
         const endA = isNear
-          ? 5.5
-          : (isHero ? 8.0 : 5.0 + endJ * 7.5) - z * 0.25;
+          ? 6.5
+          : (isHero ? 4.6 : 1.5 + endJ * 5.5) - y * 0.35;
         const endB = endA - 0.6 - rng() * 2.6;
         const geo = buildHelixGeometry({
           radius: 1,
-          pitch: 6.9 + pitchJ * 0.25,
+          pitch: 8.2 + pitchJ * 0.3,
           phase,
           x0: X0,
           x1: endA + 0.01,
-          tube: 0.082,
+          tube: 0.098,
           rng,
         });
         const uniforms = baseUniforms();
@@ -259,8 +254,8 @@ export const createDnaScene =
         helices.push({
           mesh,
           uniforms,
-          delay: isHero || isNear ? 0.0 : delayJ * 0.7,
-          startX: isNear ? -1.5 : -7.4 - y * 0.75 + z * 0.3,
+          delay: isHero || isNear ? 0.0 : delayJ * 1.2,
+          startX: isNear ? -1.0 : -9.5 - y * 0.6 + z * 0.3,
           endA,
           endB,
           spin0: 0,
@@ -272,13 +267,13 @@ export const createDnaScene =
     const duration = durationInFrames / fps;
     const ease = (s: number) => {
       const c = Math.min(Math.max(s, 0), 1);
-      return 0.9 * ((1 - Math.exp(-4.6 * c)) / (1 - Math.exp(-4.6))) + 0.1 * c;
+      return 0.5 * ((1 - Math.exp(-3 * c)) / (1 - Math.exp(-3))) + 0.5 * c;
     };
 
     const settings: PostSettings = {
       focus: 11,
-      aperture: 0.03,
-      maxCoc: 0.05,
+      aperture: 0.01,
+      maxCoc: 0.028,
       bloomThreshold: 1.25,
       bloomStrength: 0.17,
       bgInner: col(palette.bgInner),
