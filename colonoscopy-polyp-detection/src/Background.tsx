@@ -25,15 +25,15 @@ export const Background: React.FC<{ drift?: number }> = ({ drift = 0 }) => {
   const { specks, clouds, sprite } = useMemo(() => {
     const rnd = mulberry32(20240611);
     const specks: Speck[] = [];
-    for (let i = 0; i < 2200; i++) {
+    for (let i = 0; i < 3600; i++) {
       const depth = rnd();
       specks.push({
         x: rnd(),
         y: rnd(),
-        size: 12 + depth * depth * 30,
+        size: 8 + depth * depth * 24,
         stretch: 1.5 + rnd() * 1.6,
         alpha: 0.28 + rnd() * 0.65,
-        vx: -(0.0011 + depth * 0.0034),
+        vx: 0.0011 + depth * 0.0034,
         vy: (rnd() - 0.5) * 0.0012,
         twinkle: 0.05 + rnd() * 0.12,
         phase: rnd() * Math.PI * 2,
@@ -47,7 +47,7 @@ export const Background: React.FC<{ drift?: number }> = ({ drift = 0 }) => {
         rx: 0.06 + rnd() * 0.12,
         ry: 0.04 + rnd() * 0.08,
         a: 0.18 + rnd() * 0.3,
-        vx: -(0.0008 + rnd() * 0.0014),
+        vx: 0.0008 + rnd() * 0.0014,
       });
     }
     const sprite = document.createElement("canvas");
@@ -66,7 +66,7 @@ export const Background: React.FC<{ drift?: number }> = ({ drift = 0 }) => {
     const ctx = ref.current!.getContext("2d")!;
     ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = 1;
-    ctx.fillStyle = "#070c12";
+    ctx.fillStyle = "#0b1219";
     ctx.fillRect(0, 0, width, height);
 
     const wrap = (v: number) => ((v % 1.2) + 1.2) % 1.2 - 0.1;

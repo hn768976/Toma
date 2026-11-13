@@ -117,18 +117,18 @@ void main() {
   float ta = 0.004;
 
   // one thick, softly glowing segmented band (static)
-  float mainBand = band(r, 0.60, 0.735, aa);
+  float mainBand = band(r, 0.635, 0.725, aa);
   float gA = arc(t, 0.655, 0.375 * uReveal, ta);                 // green: right + bottom
   float bA = arc(t, 0.05, 0.245 * uReveal, ta);                  // lavender: top
   float wA = arc(t, 0.31, 0.325 * uReveal, ta);                  // white: left
   vec3 green = vec3(0.52, 1.0, 0.46);
-  vec3 white = vec3(0.90, 0.91, 1.0);
+  vec3 white = vec3(0.86, 0.92, 1.0);
   vec3 lav   = vec3(0.72, 0.76, 1.0);
   float seg = clamp(gA + bA + wA, 0.0, 1.0);
-  vec3 col = (green * gA + white * wA + lav * bA) * mainBand;
-  float a = mainBand * seg * 0.78;
+  vec3 col = (green * gA + white * wA + lav * bA) * mainBand * 0.80;
+  float a = mainBand * seg * 0.62;
   // brighter core line for a glassy look
-  col += vec3(0.22) * band(r, 0.65, 0.69, aa) * seg;
+  col += vec3(0.10) * band(r, 0.665, 0.695, aa) * seg;
 
   // thin pink-white outline hugging the band
   float outline = band(r, 0.752, 0.768, aa) * uReveal;
@@ -137,9 +137,9 @@ void main() {
 
   // tick marks on the inside of the top (lavender) arc
   float tickA = fract(t * 40.0);
-  float ticks = band(r, 0.52, 0.60, aa) * step(0.42, tickA) * step(tickA, 0.58) * bA;
-  col += vec3(0.92, 0.94, 1.0) * ticks * 0.8;
-  a += ticks * 0.7;
+  float ticks = band(r, 0.575, 0.635, aa) * step(0.42, tickA) * step(tickA, 0.58) * bA;
+  col += vec3(0.92, 0.94, 1.0) * ticks * 0.5;
+  a += ticks * 0.4;
 
   // soft bloom around the ring
   float gd = (r - 0.67) / 0.13;
@@ -254,7 +254,7 @@ export const buildScene = (): SceneHandles => {
       uTime: { value: 0 },
       uReveal: { value: 0 },
       uOpacity: { value: 0 },
-      uGlow: { value: 0.3 },
+      uGlow: { value: 0.16 },
     },
     transparent: true,
     depthWrite: false,
@@ -274,13 +274,13 @@ export const buildScene = (): SceneHandles => {
   // ---- endoscope --------------------------------------------------------------
   // Local frame: tip face at x = 0, tube extends towards -x.
   const scope = new THREE.Group();
-  const SR = 0.285;
+  const SR = 0.25;
   const scopeMat = new THREE.MeshPhysicalMaterial({
-    color: 0x3a363c,
-    roughness: 0.42,
+    color: 0x47434a,
+    roughness: 0.58,
     metalness: 0.2,
-    clearcoat: 0.8,
-    clearcoatRoughness: 0.25,
+    clearcoat: 0.35,
+    clearcoatRoughness: 0.45,
   });
   const bodyGeo = new THREE.CylinderGeometry(SR, SR, 9, 64, 1, true);
   bodyGeo.rotateZ(Math.PI / 2);

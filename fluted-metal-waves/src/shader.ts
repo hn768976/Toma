@@ -34,9 +34,9 @@ float H(vec2 p) {
   // the motion loops perfectly.
   float breath = 0.5 + 0.5 * cos(uPhase);
   float x0 = 0.735 + 0.05 * sin(uPhase);
-  float dx = (x - x0) / 0.21;
+  float dx = (x - x0) / (x < x0 ? 0.22 : 0.13);   // steeper right flank
   float hump = exp(-dx * dx);
-  float yc = 0.41 + 0.19 * hump * (0.08 + 0.92 * breath)
+  float yc = 0.46 + 0.24 * hump * (0.08 + 0.92 * breath)
            + 0.03 * sin(6.28318 * x * 0.8 + uPhase + 0.6)
            - 0.26 * smoothstep(x0 + 0.06, 1.08, x);
   // the fold is shallow on the left and deepest under the mound
@@ -56,9 +56,10 @@ vec3 shade(vec2 frag) {
   vec2 g = vec2(H(p + vec2(e, 0.0)) - h, H(p + vec2(0.0, e)) - h) / e;
 
   // rib coordinate; the wave slope drags the flutes sideways a little
-  // straight flutes with alternating wide / narrow profiles
+  // flutes with alternating wide / narrow profiles
   float u0 = uv.x * RIBS;
-  float u = u0 + 0.085 * sin(3.14159 * u0) + 0.03 * sin(u0 * 0.37 + 1.3);
+  float u = u0 + 0.085 * sin(3.14159 * u0) + 0.03 * sin(u0 * 0.37 + 1.3)
+          + g.x * 0.022 + h * 0.9;          // the fold shears the flutes sideways
   float f = fract(u) - 0.5;
   float odd = step(1.0, mod(u, 2.0));            // -0.5 .. 0.5 across one flute
 
@@ -81,7 +82,7 @@ vec3 shade(vec2 frag) {
 
   vec3 col = mix(uShadow, uMid, smoothstep(0.0, 0.55, lum));
   col = mix(col, uLight, smoothstep(0.45, 1.0, lum));
-  col = mix(col, uSpec, clamp((strip + strip2) * (0.35 + 0.65 * sky), 0.0, 1.0) * 0.5);
+  col = mix(col, uSpec, clamp((strip + strip2) * (0.35 + 0.65 * sky), 0.0, 1.0) * 0.7);
 
   // crisp dark groove between two flutes
   float groove = smoothstep(0.5, 0.455, abs(f));

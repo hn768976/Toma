@@ -1,7 +1,7 @@
 # Fluted Metal Waves (Remotion + WebGL 2 shader)
 
 A seamless-looping abstract background: a vertically fluted, polished metal
-sheet with a soft wave swaying and breathing in place. Rendered entirely by one WebGL 2
+sheet with a soft mound that breathes and sways in place. Rendered entirely by one WebGL 2
 fragment shader - there are no external assets.
 
 | Composition ID | Description | Size | FPS | Frames |

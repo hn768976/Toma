@@ -78,7 +78,7 @@ export const ColonoscopyPolypDetection: React.FC<{ camera: CameraMode }> = ({
     handles.scope.position.y = interpolate(
       tipX,
       [SCOPE_TIP_START_X, SCOPE_TIP_END_X],
-      [0.12, 0.42],
+      [-0.06, 0.22],
     );
 
     // ---- detection ring ----
@@ -96,8 +96,8 @@ export const ColonoscopyPolypDetection: React.FC<{ camera: CameraMode }> = ({
     handles.ringMaterial.uniforms.uReveal.value = reveal;
     // bloom flares right after lock-on, then settles
     handles.ringMaterial.uniforms.uGlow.value =
-      0.26 +
-      0.3 * interpolate(frame, [RING_IN_END, RING_IN_END + 14, RING_IN_END + 44], [0, 1, 0], clamp);
+      0.15 +
+      0.16 * interpolate(frame, [RING_IN_END, RING_IN_END + 14, RING_IN_END + 44], [0, 1, 0], clamp);
     handles.ringMaterial.uniforms.uOpacity.value = fadeIn * fadeOut * pulse;
     const pop = interpolate(frame, [RING_IN_START, RING_IN_END + 6], [1.28, 1], {
       ...clamp,
