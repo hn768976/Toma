@@ -47,10 +47,10 @@ export const kingGeometry = () => {
     [0.17, 1.25], [0.21, 1.4], [0.25, 1.5], [0.255, 1.53], [0.22, 1.555],
     [0.14, 1.58], [0.09, 1.6], [0, 1.61],
   ]);
-  const v = new THREE.BoxGeometry(0.075, 0.24, 0.075).translate(0, 1.72, 0);
-  const h = new THREE.BoxGeometry(0.2, 0.065, 0.075).translate(0, 1.75, 0);
-  const knob = new THREE.SphereGeometry(0.045, 16, 12).translate(0, 1.85, 0);
-  return merge([body, v, h, knob]);
+  // Rounded (capsule) cross so the rim light outlines both arms.
+  const v = new THREE.CapsuleGeometry(0.036, 0.17, 6, 16).translate(0, 1.72, 0);
+  const h = new THREE.CapsuleGeometry(0.032, 0.13, 6, 16).rotateZ(Math.PI / 2).translate(0, 1.75, 0);
+  return merge([body, v, h]);
 };
 
 export const queenGeometry = () => {

@@ -371,7 +371,7 @@ export const ChessScene: React.FC<ChessSceneProps> = ({ cameraMode }) => {
             vec2 c=floor(vWorld.xz+0.5);
             float lightSq=mod(c.x+c.y,2.0)<0.5?1.0:0.55;
             vec2 d=vWorld.xz-vec2(-0.7,1.2);
-            vec2 k=d*vec2(d.x>0.0?0.62:0.4,0.5);
+            vec2 k=d*vec2(d.x>0.0?0.42:0.4,0.5);
             float fall=exp(-dot(k,k));
             float v=fall*lightSq*uIntensity;
             gl_FragColor=vec4(uColor*v,v);
@@ -407,7 +407,7 @@ export const ChessScene: React.FC<ChessSceneProps> = ({ cameraMode }) => {
         mesh.position.set(-2.6 + i * 0.6 + rayRand() * 0.4, 3.4, -5.5 - rayRand() * 1.5);
         mesh.rotation.z = 0.72 + (rayRand() - 0.5) * 0.14;
         scene.add(mesh);
-        rays.push({ mesh, mat, base: 0.22 + rayRand() * 0.16 });
+        rays.push({ mesh, mat, base: 0.15 + rayRand() * 0.1 });
       }
 
       // ---------- Constellations ----------
@@ -502,13 +502,12 @@ export const ChessScene: React.FC<ChessSceneProps> = ({ cameraMode }) => {
           camera.lookAt(1.02, 0.86, -1.0);
           // The reference opens wide, eases a ~1.28x push-in over f15–60, holds,
           // then eases back out over f240–278.
-          // Zoom keys measured from the reference (1 / framing scale vs the hold).
-          camera.zoom = interpolate(
-            frame,
-            [0, 29, 40, 60, 240, 260, 270, 280, 299],
-            [0.813, 0.9, 0.952, 1, 1, 0.935, 0.909, 0.826, 0.813],
-            { ...clampOpts, easing: Easing.inOut(Easing.sin) },
-          );
+          // One continuous eased push-in (f0–60) and pull-out (f240–290); the
+          // curves pass through the zoom values measured from the reference
+          // (0.813 wide → 1.0 hold; f29 ≈ 0.90, f40 ≈ 0.95, f260 ≈ 0.94, f280 ≈ 0.83).
+          const pushIn = interpolate(frame, [0, 60], [0, 1], { ...clampOpts, easing: Easing.inOut(Easing.sin) });
+          const pullOut = interpolate(frame, [240, 290], [0, 1], { ...clampOpts, easing: Easing.inOut(Easing.sin) });
+          camera.zoom = 0.813 + 0.187 * pushIn - 0.187 * pullOut;
         } else {
           camera.zoom = 1;
           // Version 2: crane-down orbit around the king (≈70° arc), king held centre-frame.
@@ -534,7 +533,7 @@ export const ChessScene: React.FC<ChessSceneProps> = ({ cameraMode }) => {
           kingMat.color.copy(darkKing).lerp(litKing, litClamped);
           kingMat.emissiveIntensity = kingMatLit * lit;
           kingRim.value = 0.55 + 0.1 * litClamped;
-          kingGlow.intensity = 1.6 * lit;
+          kingGlow.intensity = 1.2 * lit;
           spillMat.uniforms.uIntensity.value = 1.5 * lit;
           fill.intensity = 0.12 + 0.98 * litClamped;
           hemi.intensity = 0.06 + 0.29 * litClamped;
