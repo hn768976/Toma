@@ -20,3 +20,7 @@ Config.setPixelFormat("yuv420p");
 // Standard HD delivery: BT.709 matrix, TV (limited) range, tagged in the file.
 Config.setColorSpace("bt709");
 Config.setCrf(16);
+// Software WebGL (SwiftShader) can take a while to compile shaders on busy or
+// slow CPUs; allow generous time before Remotion gives up on a frame.
+Config.setDelayRenderTimeoutInMilliseconds(180000);
+Config.setTimeoutInMilliseconds(180000);
