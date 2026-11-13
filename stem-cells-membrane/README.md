@@ -40,7 +40,7 @@ npx remotion render StemCells-V2-OrchidPalette  out/stem-cells-v2-4k.mp4
 npx remotion still StemCells-V1-ReferenceMatch out/still.png --frame=150
 ```
 
-Codec (H.264), pixel format (yuv420p) and CRF 16 are set in
+Codec (H.264), pixel format (yuv420p) and CRF 17, BT.709 are set in
 `remotion.config.ts`.
 
 ### OpenGL renderer

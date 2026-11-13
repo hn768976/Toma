@@ -15,7 +15,9 @@ Config.setVideoImageFormat("png");
 Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
-Config.setCrf(16);
+Config.setCrf(17);
+// Encode and tag as BT.709, the standard for HD video.
+Config.setColorSpace("bt709");
 
 // The scenes are WebGL2 (Three.js). On Linux servers without a GPU the
 // software renderer "swangle" always works; on macOS / Windows use the

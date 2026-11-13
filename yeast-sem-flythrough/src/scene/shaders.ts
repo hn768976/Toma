@@ -50,17 +50,17 @@ void main(){
   float lines2 = pow(1. - abs(2. * f2 - 1.), 6.);
   float grain = vnoise(q * 38. + vSeed) * .6 + vnoise(q * 80. + vSeed) * .4;
   float sc = scar(q, vScar1, vSeed) + scar(q, vScar2, vSeed + 9.);
-  float h = sc * .036 + (lines * .010 + lines2 * .007 + grain * .006) * lod;
+  float h = sc * .05 + (lines * .009 + lines2 * .007 + grain * .011) * lod;
   vec3 G = normalize(vNrm);
   vec3 N = bumpNormal(vView, G, h, vSize);
   vec3 V = normalize(-vView);
   float e = 1. - clamp(dot(N, V), 0., 1.);
   float ge = 1. - clamp(dot(G, V), 0., 1.);
   // secondary-electron look: brightness follows surface tilt away from the viewer
-  float I = pow(e, 1.55);
+  float I = pow(e, 1.2);
   vec3 col = mix(uDark, uMid, smoothstep(0., .55, I));
-  col = mix(col, uRim, smoothstep(.3, 1., I) * .95);
-  col += uRim * pow(ge, 4.) * .55;
+  col = mix(col, uRim, smoothstep(.22, 1., I) * .88);
+  col += uRim * pow(ge, 3.) * .22;
   col += uRim * (lines * .10 + lines2 * .07) * lod * (.35 + ge);
   col *= .88 + .24 * grain;
   float fog = smoothstep(uFogNear, uFogFar, dist);
