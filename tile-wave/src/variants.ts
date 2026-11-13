@@ -18,20 +18,20 @@ export const LOOK: Look = {
     { depth: 1.9, color: "#7a1e9e" },
     { depth: 2.65, color: "#8db0f5" },
     { depth: 3.2, color: "#f4f6ff" },
-    { depth: 3.65, color: "#fff6c4" },
+    { depth: 3.65, color: "#fff9e3" },
   ],
   // Pillars raised above the surface (crater rim / snap-shut pop).
   upStops: [
     { height: 0.0, color: "#fff4f3" },
-    { height: 0.5, color: "#f8dcee" },
-    { height: 1.2, color: "#f3cde8" },
-    { height: 2.4, color: "#e7b3e0" },
+    { height: 0.6, color: "#fbe4f0" },
+    { height: 1.1, color: "#f2c0e2" },
+    { height: 2.0, color: "#e29ad4" },
   ],
   background: "#fff6f4",
   shadowTint: "#a95cc4",
   emissiveFrom: 2.2,
   emissiveTo: 3.9,
-  emissive: 0.45,
+  emissive: 0.25,
   vignette: 0.0,
 };
 
@@ -58,9 +58,9 @@ export const cameraFor = (variant: VariantName) => (frame: number): CameraState 
     return {
       position: orbit(target, 49, 1.1, 2.88),
       target,
-      roll: 2.14,
+      roll: 2.01,
       fov: 40,
-      shiftX: 0.14,
+      shiftX: 0.0,
     };
   }
   // Version 2: low, oblique tracking shot travelling along the valley with a

@@ -153,14 +153,14 @@ const smoothstep = (a: number, b: number, x: number) => {
 };
 
 // Valley opening over one cycle (phase 0..1), shaped after the reference's
-// colour curve: a fast rise from a slit to nearly the full band, a short hold
-// that keeps widening slowly, a quick close, then a long fully-closed rest in
-// which the standing slats lie back down.
+// colour curve: a fast rise from a slit to nearly the full band, a hold that
+// keeps widening slowly, a quick close, then a fully-closed rest in which the
+// standing slats lie back down.
 export const opening = (phase: number) => {
   const p = ((phase % 1) + 1) % 1;
-  if (p < 0.33) return 0.93 * smoothstep(0.02, 0.33, p);
-  if (p < 0.44) return 0.93 + 0.07 * smoothstep(0.33, 0.44, p);
-  if (p < 0.68) return 1 - smoothstep(0.44, 0.68, p);
+  if (p < 0.33) return 0.9 * smoothstep(0.05, 0.33, p);
+  if (p < 0.58) return 0.9 + 0.1 * smoothstep(0.33, 0.58, p);
+  if (p < 0.72) return 1 - smoothstep(0.58, 0.72, p);
   return 0;
 };
 
@@ -198,13 +198,13 @@ export type Pose = {
 const bladeEnv = (p: number) => {
   const q = ((p % 1) + 1) % 1;
   // Closing: blades grow as the valley narrows, then relax during the rest.
-  const closing = smoothstep(0.46, 0.68, q) * (1 - smoothstep(0.88, 0.99, q));
+  const closing = smoothstep(0.58, 0.68, q) * (1 - smoothstep(0.72, 0.9, q));
   // Opening slit: the first tiles to tip are drawn out too.
   const w = q > 0.5 ? q - 1 : q;
-  const opening = Math.exp(-Math.pow((w - 0.06) / 0.09, 2));
+  const opening = Math.exp(-Math.pow((w - 0.1) / 0.08, 2));
   return Math.max(closing, opening);
 };
-const BLADE_REACH = 9.0; // cells from the axis that form blades
+const BLADE_REACH = 7.0; // cells from the axis that form blades
 const BLADE_TILT = 0.2; // radians
 const BLADE_ROT = 0.24; // radians
 const BLADE_COS = Math.cos(BLADE_ROT);
@@ -233,7 +233,7 @@ export const cellPose = (c: Cell, frame: number): Pose => {
   // Rows stay in step: a gentle per-row variation only.
   // Whole columns across the band are drawn out together, so neighbouring
   // tiles overlap into one long shingled strip; the columns between stay flat.
-  const colSel = smoothstep(0.38, 0.5, c.colRnd);
+  const colSel = smoothstep(0.6, 0.68, c.colRnd);
   const blade = bladeEnv(phase) * Math.pow(reachB, 0.7) * colSel * (0.75 + 0.25 * c.rnd2);
   if (a < 0) {
     // Snap-shut: tiles near the path lift and roll over together, then settle.
@@ -247,23 +247,34 @@ export const cellPose = (c: Cell, frame: number): Pose => {
       blade,
     };
   }
-  const base = profile(c.dist, a, c.strength);
+  // The band edge breathes: its width swells and shrinks in waves that travel
+  // along the band, so the open shape reads organic and never holds still.
+  const al = alongBand(c.x, c.y);
+  const dist = c.dist - a * (0.9 * Math.sin(al * 0.16 - phase * 2 * Math.PI * 1.4) + 0.5 * Math.sin(al * 0.37 + phase * 2 * Math.PI * 2.1 + 1.3));
+  const base = profile(dist, a, c.strength);
   const [bx, by] = bladeDir(c, blade);
-  const slope = (profile(c.dist + 0.5, a, c.strength) - profile(c.dist - 0.5, a, c.strength));
+  const slope = (profile(dist + 0.5, a, c.strength) - profile(dist - 0.5, a, c.strength));
   const depthNoise = base < 0 ? 1 + 0.16 * c.jitter : 0.8 + 0.3 * c.rnd;
   // The valley floor keeps bobbing gently while open (no dead hold).
-  const bob = base < 0 ? 0.18 * a * Math.sin(2 * Math.PI * (phase * 3.0 + c.rnd)) : 0;
+  const bob = base < 0 ? 0.3 * a * Math.sin(2 * Math.PI * (phase * 3.0 + c.rnd)) : 0;
   // Blades are lifted so they stand proud of the surface as pale slats
   // instead of dipping into the coloured layers.
-  const h = base * depthNoise + bob + 0.9 * blade;
+  // While shut, the tiles along the seam stay tipped on edge, so the closed
+  // band reads as a dashed dark line (every other tile).
+  const q = ((phase % 1) + 1) % 1;
+  const seamEnv = (q > 0.5 ? smoothstep(0.6, 0.72, q) : 1 - smoothstep(0.08, 0.2, q)) * (1 - smoothstep(0.05, 0.3, a));
+  const seam = seamEnv * Math.exp(-Math.pow(c.dist / 1.1, 2)) * c.strength * (c.rnd < 0.4 ? 1 : 0);
+  const h = base * depthNoise + bob + 0.5 * blade - 0.35 * seam;
   // Rim cards keep fluttering while the band is open (the reference never holds still).
-  const rimMask = Math.exp(-Math.pow((c.dist - (a * W_MAX + 1.0)) / 2.2, 2)) * c.strength;
-  const flutter = 0.22 * a * rimMask * Math.sin(2 * Math.PI * (phase * 2.6 + c.rnd));
+  const rimMask = Math.exp(-Math.pow((dist - (a * W_MAX + 1.0)) / 2.2, 2)) * c.strength;
+  const flutter = 0.32 * a * rimMask * Math.sin(2 * Math.PI * (phase * 2.6 + c.rnd));
   // In the valley tiles follow the slope; on the rim they stand up as cards
   // all leaning in towards the axis, like overlapping scales.
-  const rimF = Math.exp(-Math.pow((c.dist - (a * W_MAX + 1.0)) / 1.0, 2)) * a * c.strength;
+  const rimF = Math.exp(-Math.pow((dist - (a * W_MAX + 1.0)) / 1.0, 2)) * a * c.strength;
   const slopeTilt =
     (base < 0 ? Math.atan(slope * TILT_GAIN) * (0.55 + 0.9 * c.rnd2) : rimF * (0.85 + 0.15 * c.rnd2)) + flutter;
-  const tilt = Math.max(-MAX_TILT, Math.min(MAX_TILT, slopeTilt + BLADE_TILT * blade));
+  // Standing slats keep swaying slightly while they lie back down.
+  const sway = 0.12 * blade * Math.sin(2 * Math.PI * (phase * 2.2 + c.rnd2));
+  const tilt = Math.max(-MAX_TILT, Math.min(MAX_TILT, slopeTilt + BLADE_TILT * blade + sway + 0.6 * seam * (0.8 + 0.4 * Math.sin(2 * Math.PI * (phase * 1.5 + c.rnd2)))));
   return { h, tilt, gx: bx, gy: by, blade };
 };
