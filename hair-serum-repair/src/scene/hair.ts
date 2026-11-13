@@ -70,7 +70,7 @@ export const createHair = (palette: Palette) => {
       uRepairFront: { value: 0 },
       uContactS: { value: 0.15 },
       uRadius: { value: HAIR_RADIUS },
-      uBump: { value: 0.15 },
+      uBump: { value: 0.11 },
       uGridStrength: { value: 0 },
       uGridFront: { value: 0 },
       uExposure: { value: 1 },
@@ -101,7 +101,7 @@ export const createHair = (palette: Palette) => {
         vec3 n = cos(a) * aE1 + sin(a) * vec3(0.0, 0.0, 1.0);
         float damaged = 1.0 - repairMask(s, a);
         // repaired hair is very slightly slimmer: the cuticle lies flat again
-        float r = uRadius * (0.93 + 0.07 * damaged) + uBump * cuticleHeight(s, a) * damaged;
+        float r = uRadius * (0.97 + 0.03 * damaged) + uBump * cuticleHeight(s, a) * damaged;
         vec3 p = position + n * r;
         vWorld = p;
         vE1 = aE1;
@@ -132,7 +132,7 @@ export const createHair = (palette: Palette) => {
       float gridLine(float x, float width) {
         float d = abs(fract(x - 0.5) - 0.5);
         float w = fwidth(x);
-        return 1.0 - smoothstep(width * w, (width + 1.25) * w, d);
+        return 1.0 - smoothstep(width * w, (width + 1.6) * w, d);
       }
 
       void main() {
@@ -158,7 +158,7 @@ export const createHair = (palette: Palette) => {
         float h0 = cuticleHeight(s, a);
         float hs = cuticleHeight(s + e, a);
         float ha = cuticleHeight(s, a + e);
-        vec3 Nd = normalize(N - uBump * 3.2 * ((hs - h0) / e * T + (ha - h0) / e * B));
+        vec3 Nd = normalize(N - uBump * 4.2 * ((hs - h0) / e * T + (ha - h0) / e * B));
         float grain = vnoise(vec3(cos(a) * 6.0, sin(a) * 6.0, s * 3.0));
         float fibre = vnoise(vec3(cos(a) * 34.0, sin(a) * 34.0, s * 1.4));
         vec3 albedo = mix(uCuticleB, uCuticleA, clamp(0.15 * grain + 0.85 * smoothstep(0.08, 0.6, h0), 0.0, 1.0));
@@ -174,8 +174,8 @@ export const createHair = (palette: Palette) => {
         float nh2 = max(dot(N, H2), 0.0);
         float streak = 0.75 + 0.25 * vnoise(vec3(s * 0.9, a * 9.0, 1.0));
         vec3 glossy = uSmoothBase;
-        glossy += uSheen * 0.2 * pow(nh1, 16.0);
-        glossy += uSheen * 0.3 * pow(nh1, 70.0);
+        glossy += uSheen * 0.06 * pow(nh1, 16.0);
+        glossy += uSheen * 0.16 * pow(nh1, 130.0);
         glossy += uSheen * 1.15 * pow(nh1, 420.0) * streak;
         glossy += uSheen * 0.5 * pow(nh2, 160.0);
         float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
@@ -186,15 +186,15 @@ export const createHair = (palette: Palette) => {
 
         // ---------------- serum glow on the strand ----------------
         float dd = distance(vWorld, uDropPos);
-        col += uGlow * uDropGlow * 0.4 * exp(-dd * dd * 0.3) * (0.1 + 0.9 * (1.0 - repaired));
+        col += uGlow * uDropGlow * 0.22 * exp(-dd * dd * 0.3) * (0.1 + 0.9 * (1.0 - repaired));
 
         // ---------------- energy line at the repair front ----------------
         if (uRepairFront > 0.0) {
-          float lineCore = exp(-pow(dist / 0.028, 2.0));
-          float lineHalo = exp(-pow(dist / 0.2, 2.0));
+          float lineCore = exp(-pow(dist / 0.02, 2.0));
+          float lineHalo = exp(-pow(dist / 0.14, 2.0));
           float flicker = 0.75 + 0.5 * vnoise(vec3(cos(a) * 3.0, sin(a) * 3.0, uRepairFront * 3.0));
-          col += uGlowHot * lineCore * 1.7 * flicker;
-          col += uGlow * lineHalo * 0.3;
+          col += mix(uGlow, uGlowHot, 0.6) * lineCore * 1.05 * flicker;
+          col += uGlow * lineHalo * 0.16;
           // warm afterglow just behind the front
           col += uGlow * 0.07 * repaired * exp(-pow((dist + 0.3) / 0.9, 2.0));
         }
@@ -202,13 +202,13 @@ export const createHair = (palette: Palette) => {
         // ---------------- analysis grid ----------------
         if (uGridStrength > 0.0) {
           float behind = smoothstep(0.0, 1.6, uGridFront - abs(s - uContactS)) * repaired;
-          float g = max(gridLine(s / 0.34, 0.75), gridLine(a / 6.28318530718 * 20.0, 0.75));
-          float lit = 1.25 + 1.5 * pow(nh1, 8.0) + 3.0 * pow(nh1, 220.0);
-          vec3 gridCol = mix(uGlow, uGlowHot, clamp(pow(nh1, 30.0) * 1.3, 0.0, 1.0));
+          float g = max(gridLine(s / 0.25, 1.0), gridLine(a / 6.28318530718 * 28.0, 1.0));
+          float lit = 0.95 + 1.3 * pow(nh1, 8.0) + 2.4 * pow(nh1, 220.0);
+          vec3 gridCol = mix(uGlow, uGlowHot, clamp(0.45 + pow(nh1, 30.0) * 1.3, 0.0, 1.0));
           col += gridCol * g * lit * behind * uGridStrength;
           // golden haze inside the cells and a hot rim on the silhouette
-          col += uGlow * 0.035 * (0.4 + pow(nh1, 3.0)) * behind * uGridStrength;
-          col += uGlow * 1.1 * pow(fres, 3.0) * behind * uGridStrength;
+          col += uGlow * 0.012 * (0.4 + pow(nh1, 3.0)) * behind * uGridStrength;
+          col += uGlow * 0.8 * pow(fres, 3.0) * behind * uGridStrength;
         }
 
         gl_FragColor = vec4(col * uExposure, 1.0);
@@ -222,7 +222,11 @@ export const createHair = (palette: Palette) => {
 
   return {
     mesh,
-    update: (tl: Timeline, dropPosition: THREE.Vector3, cameraPosition: THREE.Vector3) => {
+    update: (
+      tl: Timeline,
+      dropPosition: THREE.Vector3,
+      cameraPosition: THREE.Vector3,
+    ) => {
       const u = material.uniforms;
       u.uRepairFront.value = tl.repairFront;
       u.uGridStrength.value = tl.gridStrength;

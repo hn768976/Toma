@@ -49,7 +49,12 @@ export const createHairScene = (
   composer.setPixelRatio(1);
   composer.setSize(width, height);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(width, height), 0.38, 0.5, 0.9);
+  const bloom = new UnrealBloomPass(
+    new THREE.Vector2(width, height),
+    0.26,
+    0.45,
+    0.92,
+  );
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
 

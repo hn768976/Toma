@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { Palette } from "./palette";
 import { Timeline } from "./timeline";
 
-const DROP_RADIUS = 1.85;
+const DROP_RADIUS = 1.62;
 const BUBBLES = 36;
 const SETTLE_ANGLE = THREE.MathUtils.degToRad(42);
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
@@ -66,13 +66,13 @@ export const createDroplet = (palette: Palette) => {
         // liquid body: clear amber glass, denser and deeper towards the limb
         vec3 col = mix(uCore, uEdge, smoothstep(0.1, 0.85, fres));
         float mottling = 0.5 + 0.5 * sin(vLocal.x * 5.0 + sin(vLocal.y * 4.0 + uTime * 0.02) * 1.5);
-        col *= 0.86 + 0.22 * ndv + 0.08 * mottling;
+        col *= 0.66 + 0.2 * ndv + 0.08 * mottling;
         // dark refraction ring just inside the silhouette, bright meniscus on it
-        col *= 1.0 - 0.3 * smoothstep(0.55, 0.8, fres) * smoothstep(0.98, 0.8, fres);
+        col *= 1.0 - 0.42 * smoothstep(0.5, 0.8, fres) * smoothstep(0.98, 0.8, fres);
         col += uHot * 0.45 * pow(fres, 7.0);
         // light focused through the drop lands opposite the key light
         float caustic = pow(max(dot(N, normalize(vec3(0.35, -0.2, 0.9))), 0.0), 26.0);
-        col += uHot * (0.42 + 0.35 * uEnergy) * caustic;
+        col += uHot * (0.4 + 0.12 * uEnergy) * caustic;
         // crescent window reflection hugging the upper-left limb
         float side = dot(N, normalize(vec3(-0.86, 0.22, 0.45)));
         float crescent = smoothstep(0.8, 0.93, side) * smoothstep(0.86, 0.7, fres) * smoothstep(0.3, 0.52, fres);
@@ -86,11 +86,11 @@ export const createDroplet = (palette: Palette) => {
         for (int i = 0; i < BUBBLES; i++) {
           float fi = float(i);
           float ang = hash11(fi + 1.0) * 6.2831853;
-          float rad = pow(hash11(fi + 21.0), 0.8) * 0.56;
+          float rad = sqrt(hash11(fi + 21.0)) * 0.74;
           vec2 c = vec2(cos(ang), sin(ang)) * rad + vec2(0.06, -0.04);
           c.y += 0.03 * sin(uTime * 0.045 + fi * 1.7);
           c.x += 0.024 * cos(uTime * 0.035 + fi * 2.3);
-          float r = 0.03 + 0.055 * hash11(fi + 43.0);
+          float r = 0.018 + 0.085 * pow(hash11(fi + 43.0), 2.0);
           vec2 e = (q - c) / r;
           float d = length(e);
           // bright rim, stronger on the lower-right where light exits
@@ -103,7 +103,7 @@ export const createDroplet = (palette: Palette) => {
         col += uHot * bubbles * 0.55 * front;
         col += vec3(1.0) * sparkle * 0.45 * front;
 
-        float alpha = (0.8 + 0.2 * smoothstep(0.3, 0.9, fres)) * uOpacity;
+        float alpha = (0.7 + 0.3 * smoothstep(0.3, 0.9, fres)) * uOpacity;
         gl_FragColor = vec4(col * uExposure, alpha);
       }
     `,
@@ -161,7 +161,11 @@ export const createDroplet = (palette: Palette) => {
       qSettle.setFromAxisAngle(Y_AXIS, tl.dropSettle * SETTLE_ANGLE);
       mesh.quaternion.copy(qTilt).multiply(qSettle);
       mesh.position.copy(position);
-      mesh.scale.set(tl.dropScaleNormal, tl.dropScaleTangent, Math.min(1, tl.dropScaleTangent));
+      mesh.scale.set(
+        tl.dropScaleNormal,
+        tl.dropScaleTangent,
+        Math.min(1, tl.dropScaleTangent),
+      );
       mesh.visible = tl.dropOpacity > 0.001 && tl.dropScaleTangent > 0.001;
       material.uniforms.uOpacity.value = tl.dropOpacity;
       material.uniforms.uTime.value = frame;
@@ -172,7 +176,8 @@ export const createDroplet = (palette: Palette) => {
       const size = DROP_RADIUS * 2 * (1.9 + 0.9 * Math.max(0, tl.haloStrength));
       halo.position.copy(position);
       halo.scale.set(size, size, 1);
-      haloMaterial.uniforms.uStrength.value = Math.max(0, tl.haloStrength) * 0.3;
+      haloMaterial.uniforms.uStrength.value =
+        Math.max(0, tl.haloStrength) * 0.1;
       halo.visible = tl.haloStrength > 0.001;
     },
     dispose: () => {

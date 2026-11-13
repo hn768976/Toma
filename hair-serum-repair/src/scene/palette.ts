@@ -23,14 +23,14 @@ export type Palette = {
 export const PALETTES: Record<Variant, Palette> = {
   // Reference look: golden serum on a cool slate-blue backdrop
   v1: {
-    bgDark: "#1b202b",
-    bgLight: "#5f7184",
-    cuticleA: "#938068",
-    cuticleB: "#3d352c",
+    bgDark: "#181c25",
+    bgLight: "#586675",
+    cuticleA: "#8a7a66",
+    cuticleB: "#2e2923",
     smoothBase: "#070605",
     sheen: "#c9c6c2",
     glow: "#ffc23a",
-    glowHot: "#fff3c4",
+    glowHot: "#fff0c0",
     dropCore: "#ffd818",
     dropEdge: "#e89a00",
     dropHot: "#fff6b8",

@@ -1,5 +1,10 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
-import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import {
+  AbsoluteFill,
+  interpolate,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
 import { createHairScene, HairScene } from "./scene/scene";
 import { PALETTES, Variant } from "./scene/palette";
 
@@ -30,7 +35,12 @@ export const HairSerum: React.FC<HairSerumProps> = ({ variant }) => {
       return;
     }
     if (!sceneRef.current) {
-      sceneRef.current = createHairScene(canvasRef.current, width, height, PALETTES[variant]);
+      sceneRef.current = createHairScene(
+        canvasRef.current,
+        width,
+        height,
+        PALETTES[variant],
+      );
     }
     sceneRef.current.render(frame);
   }, [frame, width, height, variant]);

@@ -49,26 +49,26 @@ export const smooth = (a: number, b: number, x: number) => {
 
 // Continuous push-in on the strand
 const CAMERA_DISTANCE: Key[] = [
-  [0, 45],
-  [40, 26.5],
+  [0, 39],
+  [40, 26],
   [75, 17.8],
-  [125, 15.8],
-  [180, 13.0],
-  [250, 12.6],
+  [125, 15.2],
+  [180, 12.0],
+  [250, 11.4],
 ];
 
 // Droplet centre (world units, hair radius = 1)
 const DROP_X: Key[] = [
-  [0, -6.1],
-  [40, -4.7],
-  [72, -2.95],
-  [90, -1.85],
+  [0, -5.5],
+  [40, -3.75],
+  [72, -2.75],
+  [90, -1.8],
   [110, -0.85],
-  [150, -0.55],
+  [150, -0.4],
 ];
 const DROP_Y: Key[] = [
-  [0, 2.2],
-  [40, 1.05],
+  [0, 2.0],
+  [40, 1.0],
   [72, 0.42],
   [90, 0.3],
   [110, 0.4],
@@ -79,7 +79,8 @@ const DROP_Z: Key[] = [
   [0, 1.35],
   [80, 1.35],
   [112, 0.8],
-  [150, 0.7],
+  [128, 0.72],
+  [150, 0.5],
 ];
 
 export type Timeline = {
@@ -108,7 +109,8 @@ export type Timeline = {
 };
 
 export const getTimeline = (f: number): Timeline => {
-  const absorb = smooth(114, 148, f);
+  // the lens keeps its footprint while it flattens and sinks into the strand
+  const absorb = smooth(118, 146, f);
   return {
     cameraDistance: curve(CAMERA_DISTANCE, f),
     dropX: curve(DROP_X, f),
@@ -122,12 +124,12 @@ export const getTimeline = (f: number): Timeline => {
           [76, 1],
           [92, 0.93],
           [104, 0.7],
-          [116, 0.36],
-          [132, 0.3],
+          [116, 0.34],
+          [132, 0.24],
         ],
         f,
       ) *
-      (1 - 0.75 * absorb),
+      (1 - 0.7 * absorb),
     dropScaleTangent:
       curve(
         [
@@ -138,15 +140,18 @@ export const getTimeline = (f: number): Timeline => {
         ],
         f,
       ) *
-      (1 - absorb),
-    dropOpacity: 1 - smooth(134, 148, f),
-    haloStrength:
-      smooth(58, 88, f) * (1 - smooth(100, 146, f)),
-    repairFront: f < 102 ? 0 : 0.9 * smooth(102, 112, f) + Math.max(0, f - 108) * 0.092,
-    gridStrength: smooth(130, 154, f) * (1 - smooth(198, 230, f)),
-    gridFront: Math.max(0, f - 130) * 0.17,
-    exposure: 0.72 + 0.28 * smooth(0, 40, f),
-    cuticleLight: 0.4 + 0.6 * smooth(4, 55, f),
+      (1 - 0.5 * absorb),
+    dropOpacity: 1 - smooth(130, 144, f),
+    haloStrength: smooth(58, 88, f) * (1 - smooth(100, 146, f)),
+    repairFront:
+      f < 102 ? 0 : 0.9 * smooth(102, 112, f) + Math.max(0, f - 108) * 0.078,
+    gridStrength:
+      smooth(122, 150, f) *
+      (0.72 + 0.28 * smooth(160, 190, f)) *
+      (1 - smooth(197, 235, f)),
+    gridFront: Math.max(0, f - 120) * 0.14,
+    exposure: 0.62 + 0.38 * smooth(0, 42, f),
+    cuticleLight: 0.38 + 0.62 * smooth(6, 60, f),
     cameraX: curve(
       [
         [0, -1.3],

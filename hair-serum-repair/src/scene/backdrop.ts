@@ -62,12 +62,12 @@ export const createBackdrop = (palette: Palette, aspect: number) => {
         rho += 0.05 * sin(ang * 5.0 + 1.3) + 0.025 * sin(ang * 11.0 - uTime * 0.05);
         rho += uTime * 0.0035; // slow parallax drift
 
-        float b = 0.6 * bands(rho * 7.0) + 0.4 * bands(rho * 15.0 + 4.0);
-        b = smoothstep(0.3, 0.72, b);
+        float b = 0.5 * bands(rho * 9.5) + 0.3 * bands(rho * 21.0 + 4.0) + 0.2 * bands(rho * 43.0 + 9.0);
+        b = smoothstep(0.34, 0.68, b);
         // broad light pool, like the key light falling across the strands
         float pool = 1.0 - smoothstep(0.0, 1.5, length(p - vec2(-0.25, 0.2)));
         vec3 col = mix(uDark, uLight, b * (0.3 + 0.7 * pool));
-        col *= 0.5 + 0.55 * pool;
+        col *= 0.42 + 0.56 * pool;
 
         float grey = dot(col, vec3(0.299, 0.587, 0.114));
         col = mix(vec3(grey), col, uSaturation) * uExposure;
@@ -86,7 +86,8 @@ export const createBackdrop = (palette: Palette, aspect: number) => {
       material.uniforms.uTime.value = frame;
       material.uniforms.uZoom.value = tl.backgroundZoom;
       material.uniforms.uExposure.value = tl.exposure;
-      material.uniforms.uSaturation.value = 0.35 + 0.65 * ((tl.exposure - 0.72) / 0.28);
+      material.uniforms.uSaturation.value =
+        0.35 + 0.65 * ((tl.exposure - 0.62) / 0.38);
     },
     dispose: () => {
       mesh.geometry.dispose();
