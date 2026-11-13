@@ -1,0 +1,8 @@
+node_modules/
+refs/
+out/
+previews/
+build/
+*.zip
+.remotion/
+scripts/env.sh
