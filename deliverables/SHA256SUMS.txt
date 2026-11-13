@@ -1,0 +1,6 @@
+d13ae9d6e87eab747487a76a03341ae2bed83a32f1e36e47145c703c35469010  Version 1 - CPU Circuit Activation (Reference Match) - 1080p.mp4
+c96bcd5f830aef8bd1ee987e5bf699735f8f1292bc2280bc919cb7b26b1f1b18  Version 1 - Padlock Circuit Security (Reference Match) - 1080p.mp4
+f6b4659b029ac797b608a052cb9224d1edbcd4c8d9bbb465d4821e7e3e45fa13  Version 2 - CPU Circuit Activation (Ember Gold Palette) - 1080p.mp4
+14b7e58f35c768d5a67f770cdc0004f51e00f741dc6d820a4d1cb8142887ed07  Version 2 - Padlock Circuit Security (Orbit Camera) - 1080p.mp4
+7053b933e374693e8f963420bef360131b6a64df6060bb981da986bb666d1840  cpu-circuit-activation-4K-project.zip
+a33c36fd4df395106f6cdc56734d922cb217ffec333c93c35a40caed264014c2  padlock-circuit-security-4K-project.zip
