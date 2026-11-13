@@ -31,3 +31,15 @@ export const sampleTrack = (track: Track, t: number): number => {
     (u3 - u2) * h * m1
   );
 };
+
+/** Piecewise-linear interpolation (no easing, no overshoot), clamped. */
+export const sampleLinear = (track: Track, t: number): number => {
+  const n = track.length;
+  if (t <= track[0][0]) return track[0][1];
+  if (t >= track[n - 1][0]) return track[n - 1][1];
+  let i = 0;
+  while (i < n - 2 && t > track[i + 1][0]) i++;
+  const [t0, v0] = track[i];
+  const [t1, v1] = track[i + 1];
+  return v0 + ((v1 - v0) * (t - t0)) / (t1 - t0);
+};

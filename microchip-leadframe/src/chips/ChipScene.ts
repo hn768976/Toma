@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { sampleTrack, Track } from "../engine/keyframes";
+import { sampleLinear, sampleTrack, Track } from "../engine/keyframes";
 import { clamp, lerp, makeRng } from "../engine/math";
 import { PostPipeline, defaultPostParams } from "../engine/post";
 import type { StageArgs, StageController } from "../engine/ThreeStage";
@@ -20,45 +20,6 @@ const GRID = 3; // units from -GRID..GRID in both directions
 
 // Lighting timeline, keyed in seconds.
 
-/**
- * A soft specular "hot zone" travels over the sheet three times, always from
- * left to right: along the far edge (0-3 s), through the middle (3.5-7 s)
- * and across the foreground (8-10.5 s). Coordinates are camera-aligned ground
- * coordinates relative to the target (x = screen right, y = away from camera).
- * The power drops to zero while the light jumps back to the left.
- */
-const HOT_X: Track = [
-  [0, -9],
-  [3.0, 9],
-  [3.3, -10],
-  [7.0, 8],
-  [7.5, -9],
-  [10.5, 7],
-  [12.04, 9],
-];
-const HOT_Y: Track = [
-  [0, 10],
-  [3.0, 10],
-  [3.3, -3],
-  [7.0, 3],
-  [7.5, -5],
-  [10.5, -2],
-  [12.04, -2],
-];
-const HOT_POWER: Track = [
-  [0, 1.7],
-  [2.6, 1.7],
-  [3.1, 0],
-  [3.4, 0],
-  [3.9, 2.1],
-  [6.4, 2.1],
-  [7.1, 0],
-  [7.6, 0],
-  [8.2, 1.4],
-  [10.2, 1.4],
-  [10.8, 0.35],
-  [12.04, 0.3],
-];
 const ENV_INTENSITY: Track = [
   [0, 1.12],
   [6, 1.05],
@@ -303,12 +264,12 @@ void main() {
   float a3 = pane(p, x0 - 0.36, 0.1, 0.05, 0.08, -0.3, 1.3) * 0.75;
   float a4 = pane(p, x0 + 0.78, 0.09, 0.06, 0.02, 0.2, 1.3) * 0.6;
   float panes = clamp(a1 + a2 + a3 + a4, 0.0, 1.0);
-  vec3 glass = vec3(0.36, 0.62, 0.84) * (0.8 + 0.45 * p.y);
+  vec3 glass = vec3(0.22, 0.56, 0.9) * (0.85 + 0.45 * p.y);
   // white bloom low in the frame while the panes pass
   vec2 q = (p - vec2(0.5, 0.2)) * vec2(uAspect, 1.0);
   float bloom = exp(-dot(q, q) / 0.18) * uAmount;
-  float aPane = panes * 0.52 * smoothstep(0.0, 0.3, uAmount);
-  float aBloom = bloom * 0.2;
+  float aPane = panes * 0.56 * smoothstep(0.0, 0.3, uAmount);
+  float aBloom = bloom * 0.12;
   float alpha = clamp(aPane + aBloom, 0.0, 0.85);
   vec3 col = (glass * aPane + vec3(0.92, 0.95, 1.0) * aBloom) / max(aPane + aBloom, 1e-4);
   gl_FragColor = vec4(col, alpha);
@@ -582,8 +543,9 @@ export const createChipScene =
 
       // Travelling soft light: place it so its mirror image on the sheet sits
       // at the wanted spot.
-      const hx = sampleTrack(HOT_X, t);
-      const hy = sampleTrack(HOT_Y, t);
+      const sampleLight = look.light.linear ? sampleLinear : sampleTrack;
+      const hx = sampleLight(look.light.x, t);
+      const hy = sampleLight(look.light.y, t);
       const gx = target.x + right.x * hx + away.x * hy;
       const gz = target.z + right.z * hx + away.z * hy;
       const k = LIGHT_HEIGHT / (LIGHT_HEIGHT + camera.position.y);
@@ -592,17 +554,17 @@ export const createChipScene =
         LIGHT_HEIGHT,
         (gz - k * camera.position.z) / (1 - k),
       );
-      const power = sampleTrack(HOT_POWER, t) * look.hotZone;
+      const power = sampleLight(look.light.power, t) * look.hotZone;
       metalUniforms.uLightPower.value = 62 * power;
 
       // Grade
       const envYaw = THREE.MathUtils.degToRad(sampleTrack(look.envYaw, t));
       // rotate the lookup the opposite way = rotate the room with the camera
       metalUniforms.uEnvRot.value.set(Math.cos(envYaw), -Math.sin(envYaw));
-      const cool = clamp(sampleTrack(COOLNESS, t), 0, 1);
+      const cool = clamp(sampleTrack(COOLNESS, t) + look.coolBias, 0, 1.3);
       metalUniforms.uEnvIntensity.value = sampleTrack(ENV_INTENSITY, t);
       dieSideMat.uniforms.uSideLevel.value = lerp(0.95, 0.1, cool);
-      floorMat.color.copy(floorSteel).lerp(floorCool, cool);
+      floorMat.color.copy(floorSteel).lerp(floorCool, cool).multiplyScalar(look.openingLevel);
       sky.copy(skySteel).lerp(skyCool, cool);
       dieTopMat.uniforms.uLevel.value = sampleTrack(DIE_LEVEL, t);
       dieTopMat.uniforms.uSat.value = sampleTrack(DIE_SAT, t);
@@ -611,17 +573,14 @@ export const createChipScene =
       // Foreground wipe
       let wipe = 0;
       let progress = 0;
-      let defocus = 0;
       if (look.wipeWindow) {
         const [w0, w1] = look.wipeWindow;
         progress = clamp((t - w0) / (w1 - w0), 0, 1);
         const sn = Math.sin(Math.PI * progress);
         wipe = sn * sn * (1.5 - 0.5 * sn * sn); // smooth at both ends, broad in the middle
-        // the image only drifts out of focus in the second half of the wipe
-        const c = w0 + 0.63 * (w1 - w0);
-        const u = (t - c) / (0.19 * (w1 - w0));
-        defocus = 0.012 * Math.exp(-u * u) * Math.min(1, wipe * 4);
       }
+      // the whole image drifts out of focus as the wipe passes and eases back
+      const defocus = look.wipeDefocus ? Math.max(0, sampleTrack(look.wipeDefocus, t)) : 0;
       wipeMat.uniforms.uAmount.value = wipe;
       wipeMat.uniforms.uProgress.value = progress;
 
@@ -630,7 +589,6 @@ export const createChipScene =
       params.nearBlur = 0.66;
       // keep the whole hero die sharp; its neighbours still fall off quickly
       params.focusRange = 0.0036;
-      // the whole image drifts out of focus while the wipe passes
       params.defocus = defocus;
       params.aperture = sampleTrack(look.aperture, t);
       params.maxCoc = 0.04;
@@ -638,7 +596,12 @@ export const createChipScene =
       params.bloomThreshold = 1.0;
       params.exposure = lerp(0.9, 0.8, cool) * sampleTrack(look.exposure, t);
       params.tint.copy(steelTint).lerp(coolTint, cool);
-      params.lift.setRGB(0.011 - 0.002 * cool, 0.015 - 0.002 * cool, 0.019 + 0.002 * cool);
+      const lift = look.blackLift;
+      params.lift.setRGB(
+        0.011 - 0.002 * cool + 0.9 * lift,
+        0.015 - 0.002 * cool + lift,
+        0.019 + 0.002 * cool + 1.2 * lift,
+      );
       params.contrast = 1.03;
       params.saturation = lerp(0.42, 0.8, cool);
       params.vignette = 0.3;
