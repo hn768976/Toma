@@ -14,6 +14,8 @@ Config.setJpegQuality(95);
 Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
+// Tag and convert as BT.709 limited range (standard HD/UHD delivery).
+Config.setColorSpace("bt709");
 Config.setCrf(16);
 
 // Sandboxed environments that block Remotion's own Chrome Headless Shell
