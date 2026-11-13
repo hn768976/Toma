@@ -4,11 +4,8 @@ import type {SceneFactory} from '../engine/GLStage';
 import {createPostChain, createRenderer} from '../engine/post';
 import {createRng, smoothstep} from '../engine/random';
 import {sampleScalar, sampleTrack, type Key} from '../engine/track';
-import {
-	createConnectorMaterials,
-	makeConnector,
-	type ConnectorKind,
-} from './connectors';
+import {createConnectorMaterials, makeConnector} from './connectors';
+import {layoutCables} from './layout';
 import type {FiberPalette} from './palette';
 import {
 	bezier,
@@ -110,6 +107,20 @@ export const poseAt = (t: number) => {
 		roll = 0.05;
 	}
 	return {pos, target, fov, roll};
+};
+
+/** upper bound for background cables; the layout keeps only those that overlap nothing */
+export const CABLE_COUNT = 40;
+
+/** A camera matching the animated pose at frame `t` (used to stage and check the layout). */
+export const poseCamera = (t: number) => {
+	const p = poseAt(t);
+	const cam = new THREE.PerspectiveCamera(p.fov, ASPECT, 0.05, 400);
+	cam.position.copy(p.pos);
+	cam.up.set(Math.sin(p.roll), Math.cos(p.roll), 0);
+	cam.lookAt(p.target);
+	cam.updateMatrixWorld();
+	return cam;
 };
 
 /** Motion-blur sample count, driven by how fast the image is moving. */
@@ -317,23 +328,8 @@ export const createFiberScene =
 		scene.add(tipPts.points);
 
 		// ---------------- black cables & connectors
-		// Hero connectors are staged in the final camera's space so the closing
-		// low-angle shot reproduces the reference layout exactly.
-		const fp = poseAt(300);
-		const fcam = new THREE.PerspectiveCamera(fp.fov, width / height, 0.05, 400);
-		fcam.position.copy(fp.pos);
-		fcam.up.set(Math.sin(fp.roll), Math.cos(fp.roll), 0);
-		fcam.lookAt(fp.target);
-		fcam.updateMatrixWorld();
-		const camQ = fcam.quaternion.clone();
-		const tanV = Math.tan(THREE.MathUtils.degToRad(fp.fov / 2));
-		const tanH = tanV * (width / height);
-		const camNdc = (sx: number, sy: number, depth: number) =>
-			V(sx * tanH * depth, sy * tanV * depth, -depth).applyMatrix4(fcam.matrixWorld);
-		const camLocalPoint = (x: number, y: number, z: number) =>
-			V(x, y, z).applyMatrix4(fcam.matrixWorld);
-		const camDir = (x: number, y: number, z: number) => V(x, y, z).normalize().applyQuaternion(camQ);
-
+		// Hero connectors are staged in the final camera's space; every cable runs straight
+		// out of the bundle source so none of them cross (see layout.ts).
 		const cableGeos: THREE.BufferGeometry[] = [];
 		const addCable = (spec: StrandSpec, radius: number) => {
 			const tube = new THREE.TubeGeometry(new BezierCurve(spec), 110, radius, 14, false);
@@ -344,81 +340,35 @@ export const createFiberScene =
 			cableGeos.push(tube);
 		};
 
+		const layout = layoutCables({
+			rng: createRng(seed + 101),
+			source: SOURCE,
+			stageCam: poseCamera(300),
+			checkCams: [poseCamera(SETTLE), poseCamera(250), poseCamera(300)],
+			aspect: width / height,
+			settle: SETTLE,
+			bgCount: CABLE_COUNT,
+		});
+
 		type Hero = {spec: StrandSpec; obj: THREE.Object3D; up: THREE.Vector3; plugLen: number};
 		const heroes: Hero[] = [];
 		const caps: {spec: StrandSpec; mesh: THREE.Mesh}[] = [];
 		const cm = createConnectorMaterials(pal.boot, pal.glowPort);
 		const capGeo = new THREE.SphereGeometry(1, 16, 12);
 
-		type HeroDef = {kind: ConnectorKind; sx: number; sy: number; d: number; dir: [number, number, number]; scale: number; delay: number; twist: number};
-		const heroDefs: HeroDef[] = [
-			{kind: 'rj45Clear', sx: 0.02, sy: -0.04, d: 6.0, dir: [0.25, -0.12, 1], scale: 2.3, delay: 132, twist: 0.1},
-			{kind: 'usbc', sx: 0.6, sy: 0.08, d: 7.5, dir: [1, 0.12, 0.35], scale: 1.4, delay: 135, twist: 0.0},
-			{kind: 'usbc', sx: 0.66, sy: 0.55, d: 7, dir: [0.75, 0.6, 0.45], scale: 1.7, delay: 134, twist: 0.3},
-			{kind: 'rj45Blue', sx: 0.82, sy: -0.3, d: 8, dir: [0.9, 0.05, 0.6], scale: 1.4, delay: 137, twist: 0.0},
-			{kind: 'usbc', sx: 0.32, sy: 0.92, d: 6.2, dir: [0.45, 1, 0.35], scale: 1.3, delay: 131, twist: 0.4},
-			{kind: 'usbcGlow', sx: -0.88, sy: -0.64, d: 9, dir: [-0.15, -0.25, 1], scale: 1.1, delay: 138, twist: 1.2},
-			{kind: 'usbcGlow', sx: -0.6, sy: 0.3, d: 16, dir: [-0.1, 0.2, 1], scale: 1.0, delay: 140, twist: 0.4},
-			{kind: 'usbcGlow', sx: -0.8, sy: -0.06, d: 18, dir: [0, 0, 1], scale: 1.0, delay: 137, twist: 1.0},
-			{kind: 'usbcGlow', sx: -0.38, sy: -0.42, d: 20, dir: [0.1, -0.1, 1], scale: 1.0, delay: 138, twist: 0.3},
-			{kind: 'usba', sx: -0.76, sy: 0.7, d: 15, dir: [-0.2, 0.6, 0.8], scale: 1.0, delay: 130, twist: 0.2},
-			{kind: 'usbc', sx: 0.12, sy: -0.8, d: 10, dir: [0.4, -0.6, 0.7], scale: 1.0, delay: 138, twist: 0.6},
-			{kind: 'rj45Clear', sx: -0.46, sy: -0.15, d: 24, dir: [0, 0, 1], scale: 1.0, delay: 136, twist: 0.0},
-			{kind: 'usbcGlow', sx: -0.25, sy: 0.14, d: 28, dir: [0, 0, 1], scale: 1.0, delay: 135, twist: 0.2},
-		];
-
-		for (const h of heroDefs) {
-			const tip = camNdc(h.sx, h.sy, h.d);
-			const dir = camDir(...h.dir);
-			const plugLen = 2.35 * h.scale;
-			const end = tip.clone().addScaledVector(dir, -plugLen);
-			const fromAbove = h.sy > 0.3 && h.sx > 0;
-			const p0 = fromAbove
-				? tip.clone().add(camDir(-0.35, 1, -0.9).multiplyScalar(28))
-				: V(rng.range(-2, 2), rng.range(-1, 1), rng.range(-3, 3));
-			const len = end.distanceTo(p0);
-			const spec: StrandSpec = {
-				p0,
-				p1: p0.clone().lerp(end, 0.33),
-				p2: end.clone().addScaledVector(dir, -Math.min(len * 0.18, 4.5)),
-				p3: end,
-				delay: h.delay,
-				duration: SETTLE - 4 - h.delay + rng.range(-3, 2),
-				width: 0,
-				bright: 0,
-				seed: rng.next(),
-			};
-			addCable(spec, 0.16 * h.scale);
-			const obj = makeConnector(h.kind, cm);
-			obj.scale.setScalar(h.scale);
+		for (const h of layout.heroes) {
+			addCable(h.spec, 0.16 * h.def.scale);
+			const obj = makeConnector(h.def.kind, cm);
+			obj.scale.setScalar(h.def.scale);
 			scene.add(obj);
-			const up = camDir(Math.sin(h.twist), Math.cos(h.twist), 0);
-			heroes.push({spec, obj, up, plugLen});
+			heroes.push({spec: h.spec, obj, up: h.up, plugLen: h.plugLen});
 		}
-		// background cables that sweep past / above the final camera
-		for (let i = 0; i < 40; i++) {
-			const upperLeft = rng.next() < 0.6;
-			const phi = THREE.MathUtils.degToRad(upperLeft ? rng.range(96, 150) : rng.range(28, 72));
-			const r = rng.range(4.5, 10);
-			const end = camLocalPoint(r * Math.cos(phi), r * Math.sin(phi), rng.range(-3, 8));
-			const p0 = V(rng.range(-3, 3), rng.range(-1.5, 1.5), rng.range(-5, 5));
-			const spec: StrandSpec = {
-				p0,
-				p1: p0.clone().lerp(end, 0.33),
-				p2: p0.clone().lerp(end, 0.66),
-				p3: end,
-				delay: rng.range(124, 148),
-				duration: rng.range(30, 42),
-				width: 0,
-				bright: 0,
-				seed: rng.next(),
-			};
-			const radius = rng.range(0.09, 0.17);
-			addCable(spec, radius);
+		for (const c of layout.bg) {
+			addCable(c.spec, c.radius);
 			const cap = new THREE.Mesh(capGeo, cm.blackPlastic);
-			cap.scale.setScalar(radius);
+			cap.scale.setScalar(c.radius);
 			scene.add(cap);
-			caps.push({spec, mesh: cap});
+			caps.push({spec: c.spec, mesh: cap});
 		}
 		const cable = makeCableMaterial();
 		const cableMesh = new THREE.Mesh(mergeGeometries(cableGeos), cable.mat);

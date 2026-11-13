@@ -21,6 +21,10 @@ Duration matches the reference exactly (301 frames @ 30 fps).
   cable growth via shader injection into `MeshPhysicalMaterial`.
 - Procedurally modelled connectors (`src/fiber/connectors.ts`), PMREM studio environment for
   reflections, UnrealBloom, SMAA, final grade (vignette, grain, subtle chromatic aberration).
+- Non-overlapping cable layout (`src/fiber/layout.ts`): every black cable runs straight out of
+  the bundle's vanishing point, so cables fan out and never cross. Each connector owns its own
+  angular slot, and every cable/connector is tested as a screen-space capsule from the settle
+  and closing camera positions; anything that would overlap is rejected.
 - True camera motion blur during the whip move (temporal accumulation of sub-frame renders).
 - No external image/video/font assets are needed — everything is generated in code.
 
@@ -70,7 +74,8 @@ src/
   engine/post.ts           renderer, bloom, SMAA, grade
   engine/track.ts          C1-continuous camera keyframe interpolation
   engine/random.ts         seeded PRNG + easing
-  fiber/scene.ts           scene layout, camera path, timing
+  fiber/scene.ts           scene, camera path, timing
+  fiber/layout.ts          non-overlapping cable / connector layout
   fiber/strands.ts         fibre ribbon + tip shaders
   fiber/connectors.ts      USB-C / USB-A / RJ45 models and materials
   fiber/palette.ts         Version 1 and Version 2 colour palettes
