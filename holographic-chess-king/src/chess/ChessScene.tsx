@@ -197,7 +197,7 @@ export const ChessScene: React.FC<ChessSceneProps> = ({ cameraMode }) => {
     (info: StageInfo) => {
       const { renderer, width, height, bufferWidth, bufferHeight, pixelScale } = info;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 0.95;
+      renderer.toneMappingExposure = 1.3;
 
       const scene = new THREE.Scene();
       const bg = new THREE.Color("#02060d");
@@ -454,8 +454,10 @@ export const ChessScene: React.FC<ChessSceneProps> = ({ cameraMode }) => {
           kingMat.color.copy(darkKing).lerp(litKing, litClamped);
           kingMat.emissiveIntensity = kingMatLit * lit;
           kingGlow.intensity = 3.2 * lit;
-          fill.intensity = 0.55 + 0.55 * litClamped;
-          hemi.intensity = 0.2 + 0.15 * litClamped;
+          fill.intensity = 0.12 + 0.98 * litClamped;
+          hemi.intensity = 0.06 + 0.29 * litClamped;
+          key.intensity = 0.25 + 0.45 * litClamped;
+          rim.intensity = 0.9 + 1.3 * litClamped;
           poolMat.uniforms.uIntensity.value = 0.75 * lit;
 
           for (const r of kingRings) {
@@ -463,7 +465,7 @@ export const ChessScene: React.FC<ChessSceneProps> = ({ cameraMode }) => {
             r.mat.uniforms.uIntensity.value = r.base * (0.8 + 0.35 * litClamped);
           }
           for (const r of pieceRings) {
-            r.mat.uniforms.uIntensity.value = r.base * (0.92 + 0.08 * Math.sin(t * 2.1 + r.mesh.position.x));
+            r.mat.uniforms.uIntensity.value = r.base * (0.62 + 0.38 * litClamped) * (0.92 + 0.08 * Math.sin(t * 2.1 + r.mesh.position.x));
           }
           rays.forEach((r, i) => {
             r.mat.uniforms.uIntensity.value = r.base * (0.12 + 0.88 * litClamped) * (0.85 + 0.15 * Math.sin(t * 0.7 + i));
