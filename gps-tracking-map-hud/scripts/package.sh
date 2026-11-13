@@ -5,5 +5,5 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 OUT=${1:-../gps-tracking-map-hud-project.zip}
 rm -f "$OUT"
-zip -r -q "$OUT" . -x 'node_modules/*' '.git/*' 'refs/*' 'out/*' 'previews/*' '*.zip' 'scripts/env.sh' '.remotion/*'
+zip -r -q "$OUT" . -x 'node_modules/*' '.git/*' 'refs/*' 'out/*' 'previews/*' '*.zip' 'scripts/env.sh' '.remotion/*' 'deliverables/*'
 unzip -l "$OUT" | tail -1

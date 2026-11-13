@@ -118,4 +118,31 @@ in metres) — not latitude/longitude of any real place. One target every 60 fra
 
 ## Timings
 
-TIMINGS_PLACEHOLDER
+Measured in this cloud container: **no GPU**, 4 CPU cores, Chrome with `--gl=swangle`
+(ANGLE on SwiftShader, i.e. WebGL2 in software). A GPU machine with `--gl=angle` is much faster.
+
+**720p previews** (`--scale=1/3`, concurrency 2, PNG sequence, wall time incl. ~10 s startup):
+
+| Clip | Frames | Wall | Per frame |
+|---|---|---|---|
+| GPSTrack_Teal | 601 | 301 s | 0.50 s |
+| GPSTrack_Interface | 601 | 215 s | 0.36 s |
+| GPSAnalysis_Blue | 600 | 233 s | 0.39 s |
+| GPSAnalysis_Amber | 600 | 228 s | 0.38 s |
+| NightMap_HUD | 601 | 344 s | 0.57 s |
+| MapFlyover_Blue | 600 | 239 s | 0.40 s |
+| MapFlyover_Amber | 600 | 236 s | 0.39 s |
+| TargetLocator_Grey | 601 | 292 s | 0.49 s |
+| TargetLocator_Red | 601 | 292 s | 0.49 s |
+
+**4K** (`--scale=1`, one tab; per-frame = (6 frames − 1 frame) / 5, so startup and the flyover
+tile bake are excluded):
+
+| Clip | Startup + first frame | Per 4K frame | 600 frames, 1 tab (estimate) |
+|---|---|---|---|
+| 1 GPSTrack_Teal | 12.0 s | 3.3 s | ≈ 33 min |
+| 3 GPSAnalysis_Blue | 11.2 s | 2.4 s | ≈ 24 min |
+| 6 MapFlyover_Blue | 16.3 s | 3.0 s | ≈ 31 min |
+
+All nine at 4K on this CPU-only container: roughly 4–5 hours single-tab, about half that with
+`--concurrency=2`. On a desktop GPU with `--gl=angle`, expect well under 1 s per 4K frame.
