@@ -87,7 +87,7 @@ export const buildSkinScene = (): SkinScene => {
       roughness: 0.55,
     }),
     corneum: new THREE.MeshStandardMaterial({
-      color: 0xe6ae86,
+      color: 0xf0bd98,
       map: mottB,
       roughness: 0.6,
       transparent: true,
@@ -190,12 +190,12 @@ export const buildSkinScene = (): SkinScene => {
     };
     const blue = 0x2456e0;
     const red = 0xe3202c;
-    addLoop(blue, 0.027, 0.16, 0.2, 0.035, 5);
-    addLoop(blue, 0.027, -0.08, 0.24, 0.04, 7);
-    addLoop(blue, 0.025, -0.3, 0.14, 0.03, 6);
-    addLoop(red, 0.019, 0.2, 0.2, 0.05, 6);
-    addLoop(red, 0.019, 0.0, 0.24, 0.055, 8);
-    addLoop(red, 0.018, -0.2, 0.2, 0.045, 5);
+    addLoop(blue, 0.027, 0.1, 0.22, 0.035, 5);
+    addLoop(blue, 0.027, -0.18, 0.27, 0.04, 7);
+    addLoop(blue, 0.025, -0.46, 0.16, 0.03, 6);
+    addLoop(red, 0.019, 0.14, 0.22, 0.05, 6);
+    addLoop(red, 0.019, -0.12, 0.27, 0.055, 8);
+    addLoop(red, 0.018, -0.36, 0.22, 0.045, 5);
   }
 
   // ---------- hairs + follicles (attached to the dermis) ----------
@@ -231,8 +231,8 @@ export const buildSkinScene = (): SkinScene => {
       const z = rz === HALF ? rz + 0.035 : rz;
       const lean = 0.1 + rnd() * 0.24;
       const leanZ = rz === HALF ? 0 : -0.1 - rnd() * 0.25;
-      const len = 2.05 + rnd() * 0.45;
-      const y0 = -0.2 + rnd() * 0.1;
+      const len = 2.27 + rnd() * 0.45;
+      const y0 = -0.42 + rnd() * 0.12;
       const curve = new THREE.CatmullRomCurve3([
         new THREE.Vector3(x - lean * 0.12, y0, z),
         new THREE.Vector3(x, y0 + len * 0.3, z + leanZ * 0.1),
@@ -278,7 +278,7 @@ export const buildSkinScene = (): SkinScene => {
     const geo = track(new THREE.PlaneGeometry(8.5, 8.5));
     const plane = new THREE.Mesh(geo, mat);
     plane.rotation.x = -Math.PI / 2;
-    plane.position.set(0.5, -2.75, -0.3);
+    plane.position.set(0.5, -2.45, -0.3);
     plane.renderOrder = -1;
     scene.add(plane);
   }

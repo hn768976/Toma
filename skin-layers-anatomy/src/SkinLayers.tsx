@@ -52,7 +52,7 @@ export const SkinLayers: React.FC<{ variant: Variant }> = ({ variant }) => {
     <AbsoluteFill
       style={{
         background:
-          "radial-gradient(60% 55% at 6% 96%, #eef1f7 0%, rgba(238,241,247,0) 70%)," +
+          "radial-gradient(60% 55% at 6% 96%, #f4f5f9 0%, rgba(244,245,249,0) 70%)," +
           "radial-gradient(55% 45% at 88% 100%, #fbf1ed 0%, rgba(251,241,237,0) 70%)," +
           "radial-gradient(45% 30% at 45% 100%, #f7f5f6 0%, rgba(247,245,246,0) 75%)," +
           "#ffffff",

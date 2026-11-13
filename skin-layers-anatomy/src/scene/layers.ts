@@ -9,9 +9,9 @@ const wave = (x: number, z: number, p: number, amp: number) =>
 
 /** Interfaces between layers, bottom to top, in the stacked state. */
 export const interfaces: ((x: number, z: number) => number)[] = [
-  () => -0.8,
-  (x, z) => -0.6 + wave(x, z, 0.4, 0.06),
-  (x, z) => -0.38 + wave(x, z, 2.1, 0.1),
+  () => -1.05,
+  (x, z) => -0.82 + wave(x, z, 0.4, 0.06),
+  (x, z) => -0.58 + wave(x, z, 2.1, 0.1),
   (x, z) => 0.3 + wave(x, z, 4.4, 0.14),
   (x, z) => 0.37 + wave(x, z, 4.5, 0.15),
   (x, z) => 0.68 + wave(x, z, 1.2, 0.04),
@@ -38,9 +38,9 @@ export type LayerDef = {
 };
 
 export const LAYERS: LayerDef[] = [
-  { id: "muscle", index: 0, offset: -1.0, y0: -0.8, y1: -0.6 },
-  { id: "hypodermis", index: 1, offset: -0.81, y0: -0.6, y1: -0.38 },
-  { id: "dermis", index: 2, offset: -0.62, y0: -0.38, y1: 0.3 },
+  { id: "muscle", index: 0, offset: -1.0, y0: -1.05, y1: -0.82 },
+  { id: "hypodermis", index: 1, offset: -0.81, y0: -0.82, y1: -0.58 },
+  { id: "dermis", index: 2, offset: -0.62, y0: -0.58, y1: 0.3 },
   { id: "basal", index: 3, offset: -0.41, y0: 0.3, y1: 0.37 },
   { id: "squamous", index: 4, offset: -0.26, y0: 0.37, y1: 0.68 },
   { id: "corneum", index: 5, offset: 0, y0: 0.68, y1: 0.78 },

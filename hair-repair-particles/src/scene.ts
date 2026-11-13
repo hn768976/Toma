@@ -297,7 +297,10 @@ export const buildHairScene = (palette: Palette): HairScene => {
 
     hairMat.uniforms.uFront.value = u >= 1 ? 1.01 : u;
     const flareLevel =
-      (1 - 0.8 * ramp(t, T.flareDipStart, T.flareDipEnd)) *
+      (1 -
+        0.45 *
+          Math.sin(Math.PI * ramp(t, T.flareDipStart, T.flareDipEnd))) *
+      palette.flareGain *
       (1 - ramp(t, T.flareOutStart, T.flareOutEnd));
     // molecules start small and tight, opening up as the camera pulls back
     const grow = 0.55 + 0.45 * ramp(t, 1.8, 3.4);

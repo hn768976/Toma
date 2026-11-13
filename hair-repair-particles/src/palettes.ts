@@ -15,6 +15,8 @@ export type Palette = {
   beadRim: string;
   flareCore: string;
   flareTint: string;
+  /** overall flare strength (lower on light strands to avoid clipping) */
+  flareGain: number;
 };
 
 /** Version 1 – the warm olive / amber look of the reference. */
@@ -33,6 +35,7 @@ const reference: Palette = {
   beadRim: "#ffe0a8",
   flareCore: "#fff4f6",
   flareTint: "#ffb8c8",
+  flareGain: 1,
 };
 
 /** Version 2 – cool sapphire / ice palette: silver strand, aqua molecules. */
@@ -51,6 +54,7 @@ const sapphire: Palette = {
   beadRim: "#c9f7ff",
   flareCore: "#f4feff",
   flareTint: "#8fd8ff",
+  flareGain: 0.62,
 };
 
 export const PALETTES: Record<Variant, Palette> = { reference, sapphire };

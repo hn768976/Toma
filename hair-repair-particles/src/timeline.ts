@@ -43,10 +43,10 @@ export const T = {
   ringAtTip: 7.0,
   beadsOutStart: 6.2,
   beadsOutEnd: 7.25,
-  flareDipStart: 6.75, // flare drops as the ring leaves the tip…
+  flareDipStart: 6.7, // flare dips briefly as the ring leaves the tip…
   flareDipEnd: 7.1,
-  flareOutStart: 7.45, // …lingers faintly, then dies
-  flareOutEnd: 7.85,
+  flareOutStart: 7.5, // …flares up again, then dies
+  flareOutEnd: 7.82,
   cameraStart: 1.5,
   cameraEnd: 8.2,
 };
@@ -55,7 +55,9 @@ export const T = {
 export const ringU = (t: number) => {
   const dEnter = 13.6; // distance from tip when it enters the frame
   const speed = dEnter / (T.ringAtTip - T.ringEnter);
-  const d = dEnter - speed * (t - T.ringEnter);
+  // the ring arrives a touch late, then settles into a constant speed
+  const lag = t < 2.4 ? 0.25 * (2.4 - t) * (2.4 - t) : 0;
+  const d = dEnter - speed * (t - lag - T.ringEnter);
   return clamp01(1 - d / HAIR_LENGTH);
 };
 
