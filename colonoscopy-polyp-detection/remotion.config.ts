@@ -11,6 +11,7 @@ Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
+Config.setColorSpace("bt709");
 // WebGL 2 is required. "swangle" = ANGLE on SwiftShader (software), works on
 // machines without a GPU. On a workstation with a GPU you can pass --gl=angle.
 Config.setChromiumOpenGlRenderer("swangle");

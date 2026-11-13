@@ -23,23 +23,24 @@ const float ASPECT = 16.0 / 9.0;
 // wave travelling to the right. All time terms use integer multiples of
 // uPhase => the motion loops perfectly.
 float ridge(float d, float amp) {
-  float s = mix(0.40, 0.16, smoothstep(-0.10, 0.10, d));
+  float s = mix(0.30, 0.20, smoothstep(-0.14, 0.14, d));
   return amp * exp(-(d * d) / (s * s));
 }
 
 float H(vec2 p) {
   float x = p.x / ASPECT;
-  // travelling wave: one wavelength = 0.55 screen widths, moves right by one
-  // wavelength per loop. Crest sits at x = 0.75 on frame 0.
-  float th = 6.28318 * (x - 0.75) / 0.55 - uPhase;
-  float amp = mix(0.05, 0.25, smoothstep(0.05, 0.80, x));
-  float yc = 0.44 + amp * (cos(th) - 0.25 * sin(2.0 * th))
-           + 0.03 * sin(6.28318 * x * 0.9 + uPhase + 1.0);
-  float h = ridge(p.y - yc, 0.46);
-  // a second, fainter ridge above the frame that dips into the top edge
-  h += ridge(p.y - yc - 1.12 - 0.08 * sin(th * 0.5 + 1.0), 0.20);
+  // A soft mound anchored right of centre that sways and "breathes" in place.
+  // Only sin/cos of uPhase are used => the motion loops perfectly.
+  float sway = 0.085 * sin(uPhase);
+  float th = 6.28318 * (x - 0.76 - sway) / 0.66;
+  float amp = mix(0.05, 0.21, smoothstep(0.05, 0.80, x)) * (0.86 + 0.14 * cos(uPhase));
+  float yc = 0.47 + amp * (cos(th) - 0.2 * sin(2.0 * th))
+           + 0.055 * sin(uPhase + 6.28318 * x * 0.8 + 0.6);
+  float h = ridge(p.y - yc, 0.30);
+  // a second, fainter ridge above the frame that dips into the top-left corner
+  h += ridge(p.y - yc - 1.08 - 0.07 * sin(uPhase + 2.0), 0.20);
   // slow swell for large-scale variation
-  h += 0.05 * sin(p.x * 2.4 + p.y * 2.0 + uPhase + 2.0);
+  h += 0.04 * sin(p.x * 2.4 + p.y * 2.0 + uPhase + 2.0);
   return h;
 }
 
@@ -52,11 +53,14 @@ vec3 shade(vec2 frag) {
   vec2 g = vec2(H(p + vec2(e, 0.0)) - h, H(p + vec2(0.0, e)) - h) / e;
 
   // rib coordinate; the wave slope drags the flutes sideways a little
-  float u = uv.x * RIBS + g.x * 0.035 + h * 0.5;
-  float f = fract(u) - 0.5;            // -0.5 .. 0.5 across one flute
+  // straight flutes with alternating wide / narrow profiles
+  float u0 = uv.x * RIBS;
+  float u = u0 + 0.085 * sin(3.14159 * u0) + 0.03 * sin(u0 * 0.37 + 1.3);
+  float f = fract(u) - 0.5;
+  float odd = step(1.0, mod(u, 2.0));            // -0.5 .. 0.5 across one flute
 
   // convex flute profile + large scale wave slope
-  vec3 n = normalize(vec3(f * 1.35 - g.x * 0.16, -g.y * 0.30, 1.0));
+  vec3 n = normalize(vec3(f * (1.2 + 0.35 * odd) - g.x * 0.14, -g.y * 0.30, 1.0));
   vec3 r = reflect(vec3(0.0, 0.0, -1.0), n);
 
   // --- studio environment -------------------------------------------------
@@ -74,7 +78,7 @@ vec3 shade(vec2 frag) {
 
   vec3 col = mix(uShadow, uMid, smoothstep(0.0, 0.55, lum));
   col = mix(col, uLight, smoothstep(0.45, 1.0, lum));
-  col = mix(col, uSpec, clamp((strip + strip2) * (0.45 + 0.55 * sky), 0.0, 1.0) * 0.9);
+  col = mix(col, uSpec, clamp((strip + strip2) * (0.35 + 0.65 * sky), 0.0, 1.0) * 0.5);
 
   // crisp dark groove between two flutes
   float groove = smoothstep(0.5, 0.455, abs(f));
@@ -82,6 +86,8 @@ vec3 shade(vec2 frag) {
   // soft contact shadow on the right flank of each flute
   col *= 1.0 - 0.16 * smoothstep(0.15, 0.5, f);
 
+  // persistent darker band on the right edge, slightly darker left edge
+  col *= 1.0 - 0.34 * smoothstep(0.90, 0.975, uv.x) - 0.12 * smoothstep(0.07, 0.0, uv.x);
   return col;
 }
 

@@ -98,6 +98,7 @@ varying vec2 vUv;
 uniform float uTime;     // seconds
 uniform float uReveal;   // 0..1 sweep-in
 uniform float uOpacity;  // 0..1
+uniform float uGlow;
 const float PI = 3.14159265;
 
 float band(float r, float r0, float r1, float aa) {
@@ -115,38 +116,36 @@ void main() {
   float aa = fwidth(r) * 1.2;
   float ta = 0.004;
 
-  float rot = uTime * 0.085;
-  // main segmented ring
-  float mainBand = band(r, 0.625, 0.73, aa);
-  float gA = arc(t, 0.30 + rot, 0.40 * uReveal, ta);            // green
-  float wA = arc(t, 0.715 + rot, 0.33 * uReveal, ta);           // white
-  float bA = arc(t, 0.06 + rot, 0.225 * uReveal, ta);           // ice blue
-  vec3 green = vec3(0.50, 1.0, 0.45);
+  // one thick, softly glowing segmented band (static)
+  float mainBand = band(r, 0.60, 0.735, aa);
+  float gA = arc(t, 0.655, 0.375 * uReveal, ta);                 // green: right + bottom
+  float bA = arc(t, 0.05, 0.245 * uReveal, ta);                  // lavender: top
+  float wA = arc(t, 0.31, 0.325 * uReveal, ta);                  // white: left
+  vec3 green = vec3(0.52, 1.0, 0.46);
   vec3 white = vec3(1.0, 0.99, 0.97);
-  vec3 blue  = vec3(0.62, 0.78, 1.0);
-  vec3 col = (green * gA + white * wA + blue * bA) * mainBand;
-  float a = mainBand * clamp(gA + wA + bA, 0.0, 1.0);
-  // inner bright core line for a glassy look
-  float core = band(r, 0.645, 0.69, aa);
-  col += vec3(0.25) * core * clamp(gA + wA + bA, 0.0, 1.0);
+  vec3 lav   = vec3(0.80, 0.82, 1.0);
+  float seg = clamp(gA + bA + wA, 0.0, 1.0);
+  vec3 col = (green * gA + white * wA + lav * bA) * mainBand;
+  float a = mainBand * seg;
+  // brighter core line for a glassy look
+  col += vec3(0.22) * band(r, 0.65, 0.69, aa) * seg;
 
-  // thin counter-rotating outer ring (soft pink-white) with tick gaps
-  float outer = band(r, 0.80, 0.822, aa);
-  float ticks = 1.0 - arc(t, -rot * 1.6, 0.03, ta) - arc(t, 0.52 - rot * 1.6, 0.05, ta);
-  float oA = outer * ticks * uReveal;
-  col += vec3(1.0, 0.86, 0.90) * oA * 0.85;
-  a += oA * 0.7;
+  // thin pink-white outline hugging the band
+  float outline = band(r, 0.752, 0.768, aa) * uReveal;
+  col += vec3(1.0, 0.84, 0.90) * outline * 0.7;
+  a += outline * 0.6;
 
-  // thin inner hairline
-  float inner = band(r, 0.555, 0.567, aa) * arc(t, 0.1 - rot * 2.2, 0.55 * uReveal, ta);
-  col += vec3(0.9, 0.97, 1.0) * inner * 0.7;
-  a += inner * 0.5;
+  // tick marks on the inside of the top (lavender) arc
+  float tickA = fract(t * 40.0);
+  float ticks = band(r, 0.52, 0.60, aa) * step(0.42, tickA) * step(tickA, 0.58) * bA;
+  col += vec3(0.92, 0.94, 1.0) * ticks * 0.8;
+  a += ticks * 0.7;
 
-  // soft glow around the ring
-  float gd = (r - 0.69) / 0.16;
-  float glow = exp(-gd * gd) * 0.26 * uReveal;
-  col += vec3(0.86, 0.95, 0.90) * glow;
-  a += glow * 0.55;
+  // soft bloom around the ring
+  float gd = (r - 0.67) / 0.13;
+  float glow = exp(-gd * gd) * uGlow * uReveal;
+  col += vec3(0.88, 0.96, 0.92) * glow;
+  a += glow * 0.5;
 
   a *= uOpacity;
   gl_FragColor = vec4(col * uOpacity, clamp(a, 0.0, 1.0));
@@ -173,7 +172,7 @@ export const buildScene = (): SceneHandles => {
 
   // ---- colon wall -----------------------------------------------------------
   const innerMat = new THREE.MeshPhysicalMaterial({
-    color: 0xd67f62,
+    color: 0xdc917a,
     roughness: 0.5,
     metalness: 0.0,
     clearcoat: 0.35,
@@ -222,24 +221,24 @@ export const buildScene = (): SceneHandles => {
   const profile: THREE.Vector2[] = [];
   for (let i = 0; i <= 48; i++) {
     const t = i / 48; // 0 = top of head, 1 = base on wall
-    const ang = t * Math.PI * 0.56;
+    const ang = t * Math.PI * 0.6;
     const head = 0.17;
     let rr = Math.sin(ang) * head;
     let yy = Math.cos(ang) * head + 0.09;
     if (t > 0.55) {
       const k = (t - 0.55) / 0.45;
-      rr += k * k * k * 0.11;
+      rr += k * k * k * 0.035;
       yy -= k * 0.035;
     }
     profile.push(new THREE.Vector2(Math.max(rr, 0.0001), yy));
   }
   const polypGeo = new THREE.LatheGeometry(profile.reverse(), 64);
   const polyp = new THREE.Mesh(polypGeo, polypMat);
-  polyp.scale.set(1.35, 1.35, 1.6); // slightly oval
-  polyp.castShadow = true;
+  polyp.scale.set(1.2, 1.55, 1.75); // slightly oval
+  polyp.castShadow = false;
   polyp.receiveShadow = true;
   const polypGroup = new THREE.Group();
-  polypGroup.position.copy(wallPoint).addScaledVector(wallNormal, -0.03);
+  polypGroup.position.copy(wallPoint).addScaledVector(wallNormal, -0.1);
   polypGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), wallNormal);
   polypGroup.add(polyp);
   world.add(polypGroup);
@@ -253,6 +252,7 @@ export const buildScene = (): SceneHandles => {
       uTime: { value: 0 },
       uReveal: { value: 0 },
       uOpacity: { value: 0 },
+      uGlow: { value: 0.3 },
     },
     transparent: true,
     depthWrite: false,
@@ -261,9 +261,9 @@ export const buildScene = (): SceneHandles => {
     blendDst: THREE.OneMinusSrcAlphaFactor,
     side: THREE.DoubleSide,
   });
-  const ringGeo = new THREE.PlaneGeometry(1.52, 1.52);
+  const ringGeo = new THREE.PlaneGeometry(1.5, 1.5);
   const ring = new THREE.Mesh(ringGeo, ringMaterial);
-  ring.position.copy(wallPoint).addScaledVector(wallNormal, 0.2);
+  ring.position.copy(wallPoint).addScaledVector(wallNormal, 0.3);
   ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), wallNormal);
   ring.renderOrder = 10;
   world.add(ring);
@@ -280,9 +280,9 @@ export const buildScene = (): SceneHandles => {
     clearcoat: 0.8,
     clearcoatRoughness: 0.25,
   });
-  const bodyGeo = new THREE.CylinderGeometry(SR, SR, 14, 64, 1, true);
+  const bodyGeo = new THREE.CylinderGeometry(SR, SR, 9, 64, 1, true);
   bodyGeo.rotateZ(Math.PI / 2);
-  bodyGeo.translate(-7 - 0.03, 0, 0);
+  bodyGeo.translate(-4.5 - 0.03, 0, 0);
   const body = new THREE.Mesh(bodyGeo, scopeMat);
   body.castShadow = true;
   // rounded bevel at the tip
@@ -308,25 +308,28 @@ export const buildScene = (): SceneHandles => {
   face.position.x = -0.004;
   // light guide (bright), lens + working channel (dark, glossy)
   const lightMat = new THREE.MeshBasicMaterial({ color: 0xf4f6ff });
-  const lightGeo = new THREE.CircleGeometry(0.05, 32);
+  const lightGeo = new THREE.CircleGeometry(0.062, 32);
   lightGeo.rotateY(Math.PI / 2);
   const light = new THREE.Mesh(lightGeo, lightMat);
-  light.position.set(0.002, 0.1, 0.04);
+  light.position.set(0.002, 0.12, 0.05);
   const holeMat = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.2 });
-  const holeGeo = new THREE.CircleGeometry(0.05, 32);
+  const holeGeo = new THREE.CircleGeometry(0.066, 32);
   holeGeo.rotateY(Math.PI / 2);
   const hole1 = new THREE.Mesh(holeGeo, holeMat);
-  hole1.position.set(0.002, -0.06, 0.1);
+  hole1.position.set(0.002, -0.07, 0.12);
   const hole2 = new THREE.Mesh(holeGeo, holeMat);
   hole2.scale.setScalar(0.7);
-  hole2.position.set(0.002, -0.08, -0.08);
-  const rimGeo = new THREE.RingGeometry(0.05, 0.062, 32);
+  hole2.position.set(0.002, -0.09, -0.1);
+  const rimGeo = new THREE.RingGeometry(0.066, 0.08, 32);
   rimGeo.rotateY(Math.PI / 2);
   const rimMat2 = new THREE.MeshStandardMaterial({ color: 0x3a3840, roughness: 0.3, metalness: 0.6 });
   const holeRim = new THREE.Mesh(rimGeo, rimMat2);
   holeRim.position.copy(hole1.position).setX(0.003);
+  seam.visible = false;
   scope.add(body, bevel, seam, face, light, hole1, hole2, holeRim);
-  scope.position.set(0, -0.3, -0.12);
+  // turned slightly so the tip face is visible and the scope aims at the polyp
+  scope.rotation.set(0, -0.1, 0.085);
+  scope.position.set(0, 0.15, -0.42);
   world.add(scope);
   disposables.push(
     bodyGeo, bevelGeo, seamGeo, faceGeo, lightGeo, holeGeo, rimGeo,

@@ -4,8 +4,8 @@ export const HEIGHT = 2160;
 export const FPS = 30;
 // Reference clip: 461 frames @ 30 fps = 15.3667 s
 export const DURATION_IN_FRAMES = 461;
-// The wave motion loops seamlessly every 240 frames (8 s), like the reference.
-export const LOOP_FRAMES = 240;
+// The wave motion loops seamlessly every 230 frames (7.67 s), like the reference.
+export const LOOP_FRAMES = 230;
 
 export type Palette = "silver" | "gold";
 

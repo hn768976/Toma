@@ -25,16 +25,16 @@ export const Background: React.FC<{ drift?: number }> = ({ drift = 0 }) => {
   const { specks, clouds, sprite } = useMemo(() => {
     const rnd = mulberry32(20240611);
     const specks: Speck[] = [];
-    for (let i = 0; i < 3000; i++) {
+    for (let i = 0; i < 2200; i++) {
       const depth = rnd();
       specks.push({
         x: rnd(),
         y: rnd(),
-        size: 7 + depth * depth * 20,
+        size: 12 + depth * depth * 30,
         stretch: 1.5 + rnd() * 1.6,
-        alpha: 0.3 + rnd() * 0.7,
-        vx: -(0.00012 + depth * 0.0005),
-        vy: (rnd() - 0.5) * 0.00012,
+        alpha: 0.2 + rnd() * 0.6,
+        vx: -(0.0004 + depth * 0.0014),
+        vy: (rnd() - 0.5) * 0.0005,
         twinkle: 0.02 + rnd() * 0.05,
         phase: rnd() * Math.PI * 2,
       });
@@ -44,19 +44,19 @@ export const Background: React.FC<{ drift?: number }> = ({ drift = 0 }) => {
       clouds.push({
         x: rnd(),
         y: rnd(),
-        rx: 0.1 + rnd() * 0.2,
-        ry: 0.03 + rnd() * 0.07,
+        rx: 0.06 + rnd() * 0.12,
+        ry: 0.04 + rnd() * 0.08,
         a: 0.18 + rnd() * 0.3,
-        vx: -(0.00008 + rnd() * 0.0002),
+        vx: -(0.0003 + rnd() * 0.0006),
       });
     }
     const sprite = document.createElement("canvas");
     sprite.width = sprite.height = 64;
     const sc = sprite.getContext("2d")!;
     const g = sc.createRadialGradient(32, 32, 0, 32, 32, 32);
-    g.addColorStop(0, "rgba(226,236,255,1)");
-    g.addColorStop(0.35, "rgba(200,216,246,0.75)");
-    g.addColorStop(1, "rgba(150,180,230,0)");
+    g.addColorStop(0, "rgba(214,222,236,0.9)");
+    g.addColorStop(0.45, "rgba(190,202,222,0.5)");
+    g.addColorStop(1, "rgba(160,176,205,0)");
     sc.fillStyle = g;
     sc.fillRect(0, 0, 64, 64);
     return { specks, clouds, sprite };
@@ -78,8 +78,8 @@ export const Background: React.FC<{ drift?: number }> = ({ drift = 0 }) => {
       ctx.translate(cx, cy);
       ctx.scale(c.rx * width, c.ry * height);
       const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
-      g.addColorStop(0, `rgba(20,48,74,${c.a})`);
-      g.addColorStop(1, "rgba(20,48,74,0)");
+      g.addColorStop(0, `rgba(34,50,66,${c.a})`);
+      g.addColorStop(1, "rgba(34,50,66,0)");
       ctx.fillStyle = g;
       ctx.fillRect(-1, -1, 2, 2);
       ctx.restore();

@@ -74,6 +74,12 @@ export const ColonoscopyPolypDetection: React.FC<{ camera: CameraMode }> = ({
       { ...clamp, easing: Easing.inOut(Easing.quad) },
     );
     handles.scope.position.x = tipX;
+    // rises towards the polyp as it advances
+    handles.scope.position.y = interpolate(
+      tipX,
+      [SCOPE_TIP_START_X, SCOPE_TIP_END_X],
+      [0.12, 0.42],
+    );
 
     // ---- detection ring ----
     const reveal = interpolate(frame, [RING_IN_START, RING_IN_END + 8], [0, 1], {
@@ -83,11 +89,15 @@ export const ColonoscopyPolypDetection: React.FC<{ camera: CameraMode }> = ({
     const fadeIn = interpolate(frame, [RING_IN_START, RING_IN_END], [0, 1], clamp);
     const fadeOut = interpolate(frame, [RING_OUT_START, RING_OUT_END], [1, 0], {
       ...clamp,
-      easing: Easing.inOut(Easing.quad),
+      easing: Easing.out(Easing.quad),
     });
     const pulse = 0.94 + 0.06 * Math.sin((frame / fps) * Math.PI * 2 * 0.9);
     handles.ringMaterial.uniforms.uTime.value = frame / fps;
     handles.ringMaterial.uniforms.uReveal.value = reveal;
+    // bloom flares right after lock-on, then settles
+    handles.ringMaterial.uniforms.uGlow.value =
+      0.26 +
+      0.3 * interpolate(frame, [RING_IN_END, RING_IN_END + 14, RING_IN_END + 44], [0, 1, 0], clamp);
     handles.ringMaterial.uniforms.uOpacity.value = fadeIn * fadeOut * pulse;
     const pop = interpolate(frame, [RING_IN_START, RING_IN_END + 6], [1.28, 1], {
       ...clamp,
@@ -101,14 +111,14 @@ export const ColonoscopyPolypDetection: React.FC<{ camera: CameraMode }> = ({
     if (cameraMode === "reference") {
       // locked-off cutaway view, looking slightly down into the open colon
       camera.fov = 24;
-      camera.position.set(0.15, 3.1, 7.8);
-      camera.lookAt(0.15, 0.6, 0);
+      camera.position.set(0.15, 2.95, 7.4);
+      camera.lookAt(0.15, 0.42, 0);
     } else {
       // alternative: low three-quarter view that follows the scope from behind,
       // orbiting to the right while pushing in on the polyp.
       const p = handles.polypPosition;
-      const az = THREE.MathUtils.lerp(-0.62, 0.3, camEase); // around the Y axis
-      const el = THREE.MathUtils.lerp(0.5, 0.26, camEase);
+      const az = THREE.MathUtils.lerp(-0.48, 0.3, camEase); // around the Y axis
+      const el = THREE.MathUtils.lerp(0.44, 0.26, camEase);
       const dist = THREE.MathUtils.lerp(8.6, 5.4, camEase);
       const tx = THREE.MathUtils.lerp(-0.2, p.x - 0.55, camEase);
       const ty = THREE.MathUtils.lerp(0.0, p.y - 0.12, camEase);
