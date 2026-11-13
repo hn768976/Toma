@@ -157,8 +157,8 @@ const smoothstep = (a: number, b: number, x: number) => {
 // keeps widening slowly, a gradual close (~48 frames), then a brief rest.
 export const opening = (phase: number) => {
   const p = ((phase % 1) + 1) % 1;
-  if (p < 0.34) return 0.92 * smoothstep(0.0, 0.34, p);
-  if (p < 0.59) return 0.92 + 0.08 * smoothstep(0.34, 0.59, p);
+  if (p < 0.4) return 0.92 * smoothstep(0.02, 0.4, p);
+  if (p < 0.59) return 0.92 + 0.08 * smoothstep(0.4, 0.59, p);
   if (p < 0.95) return 1 - smoothstep(0.59, 0.95, p);
   return 0;
 };

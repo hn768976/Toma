@@ -60,7 +60,7 @@ export const cameraFor = (variant: VariantName) => (frame: number): CameraState 
       target,
       roll: 2.01,
       fov: 40,
-      shiftX: 0.17,
+      shiftX: 0.05,
     };
   }
   // Version 2: low, oblique tracking shot travelling along the valley with a
