@@ -31,7 +31,14 @@ class Builder {
   idx: number[] = [];
   count = 0;
 
-  vertex(p: THREE.Vector3, n: THREE.Vector3, x: number, kind: number, strand: number, v: number) {
+  vertex(
+    p: THREE.Vector3,
+    n: THREE.Vector3,
+    x: number,
+    kind: number,
+    strand: number,
+    v: number,
+  ) {
     this.pos.push(p.x, p.y, p.z);
     this.nor.push(n.x, n.y, n.z);
     this.ax.push(x);
@@ -98,7 +105,10 @@ export const buildHelixGeometry = (spec: HelixSpec) => {
     const first = b.count;
     for (let j = 0; j < radial; j++) {
       const a = (j / radial) * TWO_PI;
-      tmpN.copy(N1).multiplyScalar(Math.cos(a)).addScaledVector(N2, Math.sin(a));
+      tmpN
+        .copy(N1)
+        .multiplyScalar(Math.cos(a))
+        .addScaledVector(N2, Math.sin(a));
       tmpP.copy(P).addScaledVector(tmpN, rho).addScaledVector(T, shift);
       b.vertex(tmpP, tmpN, x, kind, strand, v);
     }
@@ -123,7 +133,14 @@ export const buildHelixGeometry = (spec: HelixSpec) => {
       for (let i = 0; i <= n; i++) {
         const xi = x + ((xe - x) * i) / n;
         // v packs per-segment tone (integer part unused) and the 0..1 position in the segment
-        const first = ring(xi, strand, baseRho * thick, 14, KIND_SHELL, i / n + Math.floor(tone * 8) * 2);
+        const first = ring(
+          xi,
+          strand,
+          baseRho * thick,
+          14,
+          KIND_SHELL,
+          i / n + Math.floor(tone * 8) * 2,
+        );
         if (prev >= 0) b.bridge(prev, first, 14);
         prev = first;
       }
@@ -146,8 +163,8 @@ export const buildHelixGeometry = (spec: HelixSpec) => {
     {
       let xr = x0 + rng() * 0.6;
       while (xr < x1 - 0.2) {
-        const rho = baseRho * (strand === 0 ? 1.22 : 1.45);
-        const half = strand === 0 ? 0.02 : 0.017;
+        const rho = baseRho * (strand === 0 ? 1.16 : 1.3);
+        const half = strand === 0 ? 0.013 : 0.011;
         const a = ring(xr - half, strand, rho, 14, KIND_RING, 0);
         const c = ring(xr + half, strand, rho, 14, KIND_RING, 1);
         b.bridge(a, c, 14);
@@ -161,9 +178,11 @@ export const buildHelixGeometry = (spec: HelixSpec) => {
       const X = new THREE.Vector3(1, 0, 0);
       const side = new THREE.Vector3();
       while (xr < x1 - 0.1) {
-        if (strand === 1 && rng() > 0.1) {
+        if (rng() > (strand === 1 ? 0.08 : 0.55)) {
           frame(xr, strand);
-          const len = R * (1.0 + rng() * 0.8);
+          // mostly short stubs, some reaching the axis; never through it (avoids crossing fans)
+          const len =
+            R * (rng() > 0.7 ? 0.3 + rng() * 0.35 : 0.78 + rng() * 0.2);
           const rr = tube * 0.09;
           side.crossVectors(X, N1).normalize();
           const start = R - baseRho * 0.6;
@@ -173,7 +192,10 @@ export const buildHelixGeometry = (spec: HelixSpec) => {
             const first = b.count;
             for (let j = 0; j < 5; j++) {
               const a = (j / 5) * TWO_PI;
-              tmpN.copy(X).multiplyScalar(Math.cos(a)).addScaledVector(side, Math.sin(a));
+              tmpN
+                .copy(X)
+                .multiplyScalar(Math.cos(a))
+                .addScaledVector(side, Math.sin(a));
               tmpP.set(xr, N1.y * rad, N1.z * rad).addScaledVector(tmpN, rr);
               b.vertex(tmpP, tmpN, xr, KIND_RUNG, strand, e);
             }
@@ -181,7 +203,7 @@ export const buildHelixGeometry = (spec: HelixSpec) => {
           }
           b.bridge(rings[0], rings[1], 5);
         }
-        xr += 0.2 + rng() * 0.06;
+        xr += 0.3 + rng() * 0.1;
       }
     }
   }

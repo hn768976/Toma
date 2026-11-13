@@ -1,7 +1,11 @@
 import React, { useMemo } from "react";
 import { useVideoConfig } from "remotion";
 import { GLCanvas } from "./gl/GLCanvas";
-import { createSkinScene, ORBIT_CAMERA, REFERENCE_CAMERA } from "./skin/skinScene";
+import {
+  createSkinScene,
+  ORBIT_CAMERA,
+  REFERENCE_CAMERA,
+} from "./skin/skinScene";
 
 const CAMERAS = { reference: REFERENCE_CAMERA, orbit: ORBIT_CAMERA } as const;
 

@@ -6,11 +6,11 @@ skin texture, vellus hairs, soft shadows and shallow depth of field. Built with
 **Remotion 4** and **Three.js (WebGL 2, custom GLSL shaders)**. No external
 assets - everything is generated in code.
 
-| Composition            | Size      | FPS | Frames | Length  | Notes                                                   |
-| ---------------------- | --------- | --- | ------ | ------- | ------------------------------------------------------- |
-| `SkinAllergySpots-V1`  | 3840x2160 | 30  | 180    | 6.000 s | Reference match: static three-quarter camera             |
-| `SkinAllergySpots-V2`  | 3840x2160 | 30  | 180    | 6.000 s | Alternative camera movement: low orbiting push-in        |
-| `Preview-V1` / `-V2`   | 1280x720  | 30  | 180    | 6.000 s | Same scenes, light-weight, for Remotion Studio           |
+| Composition           | Size      | FPS | Frames | Length  | Notes                                             |
+| --------------------- | --------- | --- | ------ | ------- | ------------------------------------------------- |
+| `SkinAllergySpots-V1` | 3840x2160 | 30  | 180    | 6.000 s | Reference match: static three-quarter camera      |
+| `SkinAllergySpots-V2` | 3840x2160 | 30  | 180    | 6.000 s | Alternative camera movement: low orbiting push-in |
+| `Preview-V1` / `-V2`  | 1280x720  | 30  | 180    | 6.000 s | Same scenes, light-weight, for Remotion Studio    |
 
 ## Commands
 

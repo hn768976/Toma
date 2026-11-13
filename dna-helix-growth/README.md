@@ -5,8 +5,8 @@ dark with glowing leading wires, base-pair rungs, marker rings, shallow depth
 of field and bloom. Built with **Remotion 4** and **Three.js (WebGL 2, custom
 GLSL shaders)**. No external assets - everything is generated in code.
 
-| Composition          | Size      | FPS | Frames | Length   | Notes                                             |
-| -------------------- | --------- | --- | ------ | -------- | ------------------------------------------------- |
+| Composition          | Size      | FPS | Frames | Length   | Notes                                              |
+| -------------------- | --------- | --- | ------ | -------- | -------------------------------------------------- |
 | `DnaHelixGrowth-V1`  | 3840x2160 | 30  | 400    | 13.333 s | Reference match: cyan wires, red rings, teal-black |
 | `DnaHelixGrowth-V2`  | 3840x2160 | 30  | 400    | 13.333 s | Alternative colour palette: gold / violet / indigo |
 | `Preview-V1` / `-V2` | 1280x720  | 30  | 400    | 13.333 s | Same scenes, light-weight, for Remotion Studio     |

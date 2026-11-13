@@ -68,7 +68,7 @@ uniform float uMaxCoc;   // in pixels of this target
 uniform float uFar;
 in vec2 vUv;
 out vec4 o;
-#define RINGS 5
+#define RINGS DOF_RINGS
 float cocAt(float depth01) {
   float d = max(depth01 * uFar, 1e-3);
   return clamp(uAperture * abs(d - uFocus) / d, 0.0, uMaxCoc);
@@ -110,11 +110,11 @@ uniform vec2 uTexel;
 uniform float uMaxCoc;
 in vec2 vUv;
 out vec4 o;
-#define RINGS 3
+#define RINGS FILL_RINGS
 void main() {
   vec4 c0 = texture(tSrc, vUv);
   // radius of the gaps left by pass one, faded out for nearly sharp pixels
-  float radius = (uMaxCoc / 5.0) * 0.62 * smoothstep(0.5, uMaxCoc * 0.25, c0.a);
+  float radius = (uMaxCoc / float(DOF_RINGS)) * 0.62 * smoothstep(0.5, uMaxCoc * 0.25, c0.a);
   vec4 acc = c0;
   float wsum = 1.0;
   float spacing = radius / float(RINGS);
@@ -252,9 +252,11 @@ const makeTarget = (w: number, h: number, type: THREE.TextureDataType) => {
 const makeMaterial = (
   fragmentShader: string,
   uniforms: Record<string, THREE.IUniform>,
+  defines: Record<string, number> = {},
 ) =>
   new THREE.RawShaderMaterial({
     glslVersion: THREE.GLSL3,
+    defines,
     vertexShader: FS_VERT,
     fragmentShader,
     uniforms,
@@ -290,7 +292,16 @@ export class PostPipeline {
     width: number,
     height: number,
     far: number,
+    /** Kernel density: taps = 1 + 3 * rings * (rings + 1). More rings = smoother large bokeh, slower. */
+    quality: { dofRings: number; fillRings: number } = {
+      dofRings: 4,
+      fillRings: 2,
+    },
   ) {
+    const defines = {
+      DOF_RINGS: quality.dofRings,
+      FILL_RINGS: quality.fillRings,
+    };
     this.renderer = renderer;
     this.w = width;
     this.h = height;
@@ -314,32 +325,47 @@ export class PostPipeline {
     this.dofB = makeTarget(this.hw, this.hh, type);
     for (let i = 0; i < 4; i++) {
       const s = 4 * Math.pow(2, i);
-      this.bloomA.push(makeTarget(Math.round(width / s), Math.round(height / s), type));
-      this.bloomB.push(makeTarget(Math.round(width / s), Math.round(height / s), type));
+      this.bloomA.push(
+        makeTarget(Math.round(width / s), Math.round(height / s), type),
+      );
+      this.bloomB.push(
+        makeTarget(Math.round(width / s), Math.round(height / s), type),
+      );
     }
 
     const geo = new THREE.BufferGeometry();
     geo.setAttribute(
       "position",
-      new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3),
+      new THREE.BufferAttribute(
+        new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]),
+        3,
+      ),
     );
     this.mDown = makeMaterial(DOWN_FRAG, {
       tSrc: { value: null },
       uSrcTexel: { value: new THREE.Vector2() },
     });
-    this.mDof = makeMaterial(DOF_FRAG, {
-      tSrc: { value: null },
-      uTexel: { value: new THREE.Vector2(1 / this.hw, 1 / this.hh) },
-      uFocus: { value: 10 },
-      uAperture: { value: 0 },
-      uMaxCoc: { value: 1 },
-      uFar: { value: far },
-    });
-    this.mFill = makeMaterial(FILL_FRAG, {
-      tSrc: { value: null },
-      uMaxCoc: { value: 1 },
-      uTexel: { value: new THREE.Vector2(1 / this.hw, 1 / this.hh) },
-    });
+    this.mDof = makeMaterial(
+      DOF_FRAG,
+      {
+        tSrc: { value: null },
+        uTexel: { value: new THREE.Vector2(1 / this.hw, 1 / this.hh) },
+        uFocus: { value: 10 },
+        uAperture: { value: 0 },
+        uMaxCoc: { value: 1 },
+        uFar: { value: far },
+      },
+      defines,
+    );
+    this.mFill = makeMaterial(
+      FILL_FRAG,
+      {
+        tSrc: { value: null },
+        uMaxCoc: { value: 1 },
+        uTexel: { value: new THREE.Vector2(1 / this.hw, 1 / this.hh) },
+      },
+      defines,
+    );
     this.mBright = makeMaterial(BRIGHT_FRAG, {
       tSrc: { value: null },
       uSrcTexel: { value: new THREE.Vector2(1 / this.hw, 1 / this.hh) },
@@ -379,7 +405,10 @@ export class PostPipeline {
     this.quadScene.add(this.quad);
   }
 
-  private pass(material: THREE.Material, target: THREE.WebGLRenderTarget | null) {
+  private pass(
+    material: THREE.Material,
+    target: THREE.WebGLRenderTarget | null,
+  ) {
     this.quad.material = material;
     this.renderer.setRenderTarget(target);
     this.renderer.render(this.quadScene, this.quadCam);
@@ -454,12 +483,22 @@ export class PostPipeline {
   }
 
   dispose() {
-    [this.sceneTarget, this.half, this.dofA, this.dofB, ...this.bloomA, ...this.bloomB].forEach(
-      (t) => t.dispose(),
-    );
-    [this.mDown, this.mDof, this.mFill, this.mBright, this.mBlur, this.mComp].forEach((m) =>
-      m.dispose(),
-    );
+    [
+      this.sceneTarget,
+      this.half,
+      this.dofA,
+      this.dofB,
+      ...this.bloomA,
+      ...this.bloomB,
+    ].forEach((t) => t.dispose());
+    [
+      this.mDown,
+      this.mDof,
+      this.mFill,
+      this.mBright,
+      this.mBlur,
+      this.mComp,
+    ].forEach((m) => m.dispose());
     this.quad.geometry.dispose();
   }
 }

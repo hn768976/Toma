@@ -19,7 +19,9 @@ export type GLSceneFactory = (
  * and re-drawn synchronously for every frame, so each frame is deterministic
  * and can be rendered in any order / in parallel tabs.
  */
-export const GLCanvas: React.FC<{ factory: GLSceneFactory }> = ({ factory }) => {
+export const GLCanvas: React.FC<{ factory: GLSceneFactory }> = ({
+  factory,
+}) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
   const canvasRef = useRef<HTMLCanvasElement>(null);

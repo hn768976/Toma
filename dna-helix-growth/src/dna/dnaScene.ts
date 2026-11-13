@@ -73,14 +73,14 @@ void main() {
       float fr = pow(1.0 - ndv, 2.6);
       // studio-style reflections: one tight key light, two long soft boxes
       float key = pow(max(dot(R, normalize(vec3(0.35, 0.8, 0.48))), 0.0), 70.0) * 2.6;
-      float box1 = smoothstep(0.6, 0.9, R.y) * 0.34;
+      float box1 = smoothstep(0.72, 0.93, R.y) * 0.3;
       float box2 = smoothstep(0.72, 0.95, -R.x * 0.8 + R.z * 0.3) * 0.16;
-      vec3 base = mix(uShellA, uShellB, strand) * tone;
+      vec3 base = mix(uShellA, uShellB, strand) * tone * 0.5;
       vec3 rim = mix(uRim, uWire * 1.25, strand);
-      col = base * (0.3 + 0.7 * ndv) + rim * fr * mix(0.75, 1.0, strand)
+      col = base * (0.3 + 0.7 * ndv) + rim * fr * fr * mix(0.9, 1.0, strand)
           + uSpec * (key + box1 + box2) * mix(1.0, 0.6, strand);
       col *= mix(0.3, 1.0, gap);
-      col += uWire * tip * tip * 2.2;
+      col += uWire * tip * tip * 1.6;
     }
   } else if (kind < 1.5) {
     // ---------- thin emissive wire ----------
@@ -89,17 +89,17 @@ void main() {
     col = uWire * (1.15 + 0.5 * ndv + 2.5 * tip * tip);
   } else if (kind < 2.5) {
     // ---------- rung, extends towards the axis after the wire passes ----------
-    float g = clamp((gw - vX) * 0.55, 0.0, 1.0);
+    float g = clamp((gw - vX) * 0.9, 0.0, 1.0);
     if (vX > gw || vData.z > g) discard;
     float fresh = smoothstep(1.6, 0.0, gw - vX);
-    col = uWire * (0.7 + 1.6 * fresh);
+    col = uWire * (0.62 + 1.0 * fresh);
   } else {
     // ---------- marker ring ----------
     if (vX > gs) discard;
     float fresh = smoothstep(1.2, 0.0, gs - vX);
     vec3 R = reflect(-V, N);
     float key = pow(max(dot(R, normalize(vec3(0.35, 0.8, 0.48))), 0.0), 30.0);
-    col = uRing * (0.5 + 0.8 * ndv + 1.6 * fresh) + uSpec * key * 0.9;
+    col = uRing * (0.45 + 0.6 * ndv + 0.7 * fresh) + uSpec * key * 0.9;
   }
   o = vec4(col * uFade, clamp(-vPos.z / uFar, 0.0, 1.0));
 }`;
@@ -127,8 +127,8 @@ export type DnaCamera = {
 };
 
 export const DEFAULT_CAMERA: DnaCamera = {
-  from: [-0.9, -0.9, 10.8],
-  to: [0.6, 0.3, 9.6],
+  from: [-0.9, -0.9, 9.6],
+  to: [0.6, 0.3, 8.5],
   lookFrom: [-0.3, -0.5, 0],
   lookTo: [0.35, 0.25, 0],
   rollFrom: -0.03,
@@ -139,7 +139,11 @@ export const DEFAULT_CAMERA: DnaCamera = {
 const smooth = (t: number) => t * t * (3 - 2 * t);
 
 export const createDnaScene =
-  (palette: DnaPalette, cam: DnaCamera, durationInFrames: number): GLSceneFactory =>
+  (
+    palette: DnaPalette,
+    cam: DnaCamera,
+    durationInFrames: number,
+  ): GLSceneFactory =>
   (canvas, width, height, fps) => {
     const renderer = new THREE.WebGLRenderer({
       canvas,
@@ -153,17 +157,31 @@ export const createDnaScene =
     renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
     renderer.setClearColor(0x000000, 1);
 
-    const post = new PostPipeline(renderer, width, height, FAR);
+    const post = new PostPipeline(renderer, width, height, FAR, {
+      dofRings: 4,
+      fillRings: 3,
+    });
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(cam.fov, width / height, 0.5, FAR);
+    const camera = new THREE.PerspectiveCamera(
+      cam.fov,
+      width / height,
+      0.5,
+      FAR,
+    );
 
     // All helices share one orientation: axes run lower-left -> upper-right and
     // lean towards the camera, like the reference.
     const field = new THREE.Group();
-    field.rotation.set(0, THREE.MathUtils.degToRad(-7), THREE.MathUtils.degToRad(31), "ZYX");
+    field.rotation.set(
+      0,
+      THREE.MathUtils.degToRad(-7),
+      THREE.MathUtils.degToRad(35),
+      "ZYX",
+    );
     scene.add(field);
 
-    const col = (c: [number, number, number]) => new THREE.Color(c[0], c[1], c[2]);
+    const col = (c: [number, number, number]) =>
+      new THREE.Color(c[0], c[1], c[2]);
     const baseUniforms = () => ({
       uGrowWire: { value: new THREE.Vector2() },
       uGrowShell: { value: new THREE.Vector2() },
@@ -182,14 +200,26 @@ export const createDnaScene =
     const X0 = -26;
     // Regular array of parallel helices: a = row (screen up/down), b = depth layer.
     const layout: [number, number][] = [
-      [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0],
-      [-2, -1], [-1, -1], [0, -1], [1, -1], [2, -1],
-      [-1, -2], [1, -2], [3, -1],
+      [-2, 0],
+      [-1, 0],
+      [0, 0],
+      [1, 0],
+      [2, 0],
+      [-2, -1],
+      [-1, -1],
+      [0, -1],
+      [1, -1],
+      [2, -1],
+      [-1, -2],
+      [1, -2],
+      [3, -1],
       [-1, 1],
+      [9, 9], // hero foreground helix, see below
     ];
     for (const [a, b] of layout) {
       {
         const isHero = a === 0 && b === 0;
+        const isNear = a === 9;
         const jitterY = (rng() - 0.5) * 0.7;
         const jitterZ = (rng() - 0.5) * 0.9;
         const endJ = rng();
@@ -197,9 +227,13 @@ export const createDnaScene =
         const phase = 0.5 + 0.55 * a + 0.8 * b + (rng() - 0.5) * 0.5;
         const pitchJ = rng();
         const spinJ = rng();
-        const y = a * 3.9 + (isHero ? 0 : jitterY) + (b & 1 ? 1.95 : 0);
-        const z = b * 3.6 + (isHero ? 0 : jitterZ);
-        const endA = (isHero ? 5.2 : 1.5 + endJ * 8.5) - z * 0.25;
+        const y = isNear
+          ? -1.7
+          : a * 3.9 + (isHero ? 0 : jitterY) + (b & 1 ? 1.95 : 0);
+        const z = isNear ? 4.6 : b * 3.6 + (isHero ? 0 : jitterZ);
+        const endA = isNear
+          ? 5.5
+          : (isHero ? 8.0 : 5.0 + endJ * 7.5) - z * 0.25;
         const endB = endA - 0.6 - rng() * 2.6;
         const geo = buildHelixGeometry({
           radius: 1,
@@ -207,7 +241,7 @@ export const createDnaScene =
           phase,
           x0: X0,
           x1: endA + 0.01,
-          tube: 0.105,
+          tube: 0.082,
           rng,
         });
         const uniforms = baseUniforms();
@@ -225,8 +259,8 @@ export const createDnaScene =
         helices.push({
           mesh,
           uniforms,
-          delay: isHero ? 0.0 : delayJ * 0.9,
-          startX: -6.0 - y * 0.55 + z * 0.3,
+          delay: isHero || isNear ? 0.0 : delayJ * 0.7,
+          startX: isNear ? -1.5 : -7.4 - y * 0.75 + z * 0.3,
           endA,
           endB,
           spin0: 0,
@@ -238,19 +272,19 @@ export const createDnaScene =
     const duration = durationInFrames / fps;
     const ease = (s: number) => {
       const c = Math.min(Math.max(s, 0), 1);
-      return 0.9 * ((1 - Math.exp(-3.6 * c)) / (1 - Math.exp(-3.6))) + 0.1 * c;
+      return 0.9 * ((1 - Math.exp(-4.6 * c)) / (1 - Math.exp(-4.6))) + 0.1 * c;
     };
 
     const settings: PostSettings = {
       focus: 11,
-      aperture: 0.04,
+      aperture: 0.03,
       maxCoc: 0.05,
-      bloomThreshold: 1.0,
-      bloomStrength: 0.3,
+      bloomThreshold: 1.25,
+      bloomStrength: 0.17,
       bgInner: col(palette.bgInner),
       bgOuter: col(palette.bgOuter),
-      bgCenter: new THREE.Vector2(0.45, 0.4),
-      vignette: 0.55,
+      bgCenter: new THREE.Vector2(0.5, 0.1),
+      vignette: 0.3,
       grain: 0.012,
       exposure: 1.0,
       filmic: 1.0,
@@ -281,8 +315,8 @@ export const createDnaScene =
         const e = t < h.delay ? 0 : ease(s);
         const wireA = h.startX + (h.endA - h.startX) * e;
         const wireB = h.startX - 0.8 + (h.endB - (h.startX - 0.8)) * e;
-        const shellA = wireA - 0.28;
-        const shellB = wireB - 0.55 - 0.05 * (wireB - h.startX);
+        const shellA = wireA - 0.07;
+        const shellB = wireB - 0.09;
         h.uniforms.uGrowWire.value.set(wireA, wireB);
         h.uniforms.uGrowShell.value.set(shellA, shellB);
         h.mesh.rotation.x = h.spin0 + h.spinRate * t;
