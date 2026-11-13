@@ -50,8 +50,12 @@ const dollyCamera = (u: number): CameraState => {
   const p = 1.15 * u - 0.15 * u * u;
   const az = deg(32 - 20 * u);
   const el = deg(23 + 27 * Math.pow(1 - u, 2.2));
-  const dist = lerp(9.6, 5.3, p);
-  const target = CORE_CENTER.clone().add(new THREE.Vector3(0, lerp(-0.18, -0.02, u), 0));
+  const dist = lerp(9.6, 4.6, p);
+  // Offset the aim to camera-right so the core sits left of centre early on.
+  const right = new THREE.Vector3(Math.cos(az), 0, -Math.sin(az));
+  const target = CORE_CENTER.clone()
+    .add(new THREE.Vector3(0, lerp(-0.18, -0.02, u), 0))
+    .addScaledVector(right, lerp(0.55, 0.12, u));
   const pos = new THREE.Vector3(
     Math.sin(az) * Math.cos(el),
     Math.sin(el),
@@ -67,7 +71,7 @@ const dollyCamera = (u: number): CameraState => {
 const orbitCamera = (u: number): CameraState => {
   const e = easeInOutSine(u);
   const az = deg(lerp(-75, 55, e));
-  const el = deg(lerp(14, 46, e));
+  const el = deg(lerp(21, 48, e));
   const dist = lerp(6.9, 6.0, e);
   const target = CORE_CENTER.clone().add(new THREE.Vector3(0, lerp(0.05, -0.15, e), 0));
   const pos = new THREE.Vector3(
@@ -118,9 +122,9 @@ const makeShellMaterial = (
       uTime: { value: 0 },
       uSeed: { value: opts.seed },
       uIntensity: { value: opts.intensity },
-      uGlass: { value: new THREE.Color("#0f1a70") },
-      uCell: { value: new THREE.Color("#aeb3ff") },
-      uTraceColor: { value: new THREE.Color("#35b5ff") },
+      uGlass: { value: new THREE.Color("#0e2a80") },
+      uCell: { value: new THREE.Color("#a6c2ff") },
+      uTraceColor: { value: new THREE.Color("#3ccfff") },
       uEdgeColor: { value: new THREE.Color("#7fd8ff") },
       uCellSize: { value: opts.cellSize },
       uCellGain: { value: opts.cellGain },
@@ -128,6 +132,7 @@ const makeShellMaterial = (
       uEdgeGain: { value: opts.edgeGain },
       uSparkGain: { value: opts.sparkGain },
       uTrace: { value: traceTex },
+      uEnergy: { value: 1 },
       uReflect: { value: opts.reflect ? 1 : 0 },
       uBaseY: { value: CUBE_BASE_Y },
     },
@@ -157,26 +162,27 @@ const SceneContents: React.FC<Props> = ({ variant }) => {
       uTileSize: { value: tileSize },
       uTileOffset: { value: new THREE.Vector2(...offset) },
       uFocusDist: { value: 5 },
-      uDofRange: { value: 0.2 },
-      uSharpBias: { value: 0.04 },
+      uDofRange: { value: 0.13 },
+      uSharpBias: { value: 0.03 },
       uTime: { value: 0 },
-      uGlowColor: { value: new THREE.Color("#1f6dff") },
+      uGlowColor: { value: new THREE.Color("#1a86ff") },
       uGlowCore: { value: new THREE.Color("#9fe4ff") },
       uGlowGain: { value: glowGain },
       uPoolColor: { value: new THREE.Color("#1b3fa8") },
       uPoolRadius: { value: 2.6 },
       uPoolGain: { value: 0.22 },
-      uFogColor: { value: new THREE.Color("#0a1430") },
-      uFogNear: { value: 10 },
-      uFogFar: { value: 38 },
+      uFogColor: { value: new THREE.Color("#050a18") },
+      uFogNear: { value: 18 },
+      uFogFar: { value: 70 },
       uBaseGain: { value: baseGain },
+      uEnergy: { value: 1 },
     });
 
     // Circuit floor
     const floorMat = new THREE.ShaderMaterial({
       vertexShader: floorVertex,
       fragmentShader: floorFragment,
-      uniforms: floorUniforms(6.5, [0.13, 0.41], 1.0, 1.1),
+      uniforms: floorUniforms(6.5, [0.13, 0.41], 0.75, 1.1),
     });
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(90, 90), floorMat);
     floor.rotation.x = -Math.PI / 2;
@@ -335,7 +341,7 @@ const SceneContents: React.FC<Props> = ({ variant }) => {
   }, [pxScale]);
 
   useLayoutEffect(() => {
-    scene.background = new THREE.Color("#0a1430");
+    scene.background = new THREE.Color("#050a18");
   }, [scene]);
 
   useLayoutEffect(() => {
@@ -354,12 +360,21 @@ const SceneContents: React.FC<Props> = ({ variant }) => {
 
     // Focus on the core's nearest face.
     const focus = pos.distanceTo(CORE_CENTER) - 0.6;
+    // Energy: a gradual build over the shot plus cyan surges through the core
+    // (timed like the brightness spikes of the reference clip).
+    const surge = [2.6, 3.65, 12.7, 13.7].reduce(
+      (acc, c) => acc + 0.55 * Math.exp(-((t - c) * (t - c)) / (2 * 0.12 * 0.12)),
+      0,
+    );
+    const energy = lerp(0.85, 1.3, u) + surge;
     for (const m of built.floorMats) {
       m.uniforms.uTime.value = t;
+      m.uniforms.uEnergy.value = energy;
       m.uniforms.uFocusDist.value = focus;
     }
     for (const m of built.shellMats) {
       m.uniforms.uTime.value = t;
+      m.uniforms.uEnergy.value = energy;
     }
     built.moteMat.uniforms.uTime.value = t;
     built.moteMat.uniforms.uFocusDist.value = focus;

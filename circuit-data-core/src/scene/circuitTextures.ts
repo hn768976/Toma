@@ -138,10 +138,10 @@ const drawBoard = (base: Ctx, glow: Ctx, seed: number, size: number) => {
     base.arc(ex, ey, w * 1.6, 0, Math.PI * 2);
     base.fill();
 
-    if (rng() < 0.2) {
+    if (rng() < 0.24) {
       const bright = range(rng, 0.45, 1);
       glow.strokeStyle = `rgba(255,255,255,${bright})`;
-      glow.lineWidth = w * 1.3;
+      glow.lineWidth = w * 2.6;
       strokePath(glow, pts);
       glow.fillStyle = `rgba(255,255,255,${bright})`;
       glow.beginPath();
@@ -190,8 +190,8 @@ export const createCircuitCanvases = (seed: number): CircuitCanvases => {
   const glow = makeCanvas(TILE);
   drawBoard(base.ctx, glow.ctx, seed, TILE);
   return {
-    base: [base.c, blurTile(base.c, 12, 1024), blurTile(base.c, 36, 512)],
-    glow: [glow.c, blurTile(glow.c, 12, 1024), blurTile(glow.c, 36, 512)],
+    base: [base.c, blurTile(base.c, 10, 1024), blurTile(base.c, 24, 512)],
+    glow: [glow.c, blurTile(glow.c, 10, 1024), blurTile(glow.c, 24, 512)],
   };
 };
 

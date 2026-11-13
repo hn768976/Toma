@@ -55,6 +55,7 @@ export const floorFragment = /* glsl */ `
   uniform float uFogNear;
   uniform float uFogFar;
   uniform float uBaseGain;
+  uniform float uEnergy;
   varying vec3 vWorld;
   varying float vDepth;
   ${NOISE}
@@ -76,7 +77,7 @@ export const floorFragment = /* glsl */ `
     vec3 base = lvl < 1.0 ? mix(b0, b1, lvl) : mix(b1, b2, lvl - 1.0);
     float glow = lvl < 1.0 ? mix(g0, g1, lvl) : mix(g1, g2, lvl - 1.0);
     // Defocused glow spreads out — keep its energy so bokeh stays luminous.
-    glow *= 1.0 + lvl * 0.5;
+    glow *= 1.0 + lvl * 0.7;
 
     // Energy pulses running through the traces.
     float n = vnoise(vWorld.xz * 0.33 + 7.0);
@@ -89,13 +90,17 @@ export const floorFragment = /* glsl */ `
     float d = length(vWorld.xz);
     float pool = exp(-(d * d) / (uPoolRadius * uPoolRadius));
 
-    vec3 col = base * uBaseGain * (0.85 + pool * 1.6);
+    // Blinking SMD lights: bright board pixels flash on and off in their own rhythm.
+    vec2 cellB = floor(vWorld.xz * 2.5);
+    float blink = step(0.55, fract(uTime * (0.6 + hash12(cellB) * 1.4) + hash12(cellB + 3.1)));
+    float padMask = smoothstep(0.42, 0.6, dot(base, vec3(0.333)));
+    vec3 col = base * uBaseGain * (0.85 + pool * 1.6) * (1.0 - padMask * 0.6 + padMask * blink * 1.6);
     vec3 glowCol = mix(uGlowColor, uGlowCore, clamp(glow * glow * 0.8, 0.0, 1.0));
-    col += glowCol * glow * pulse * breathe * uGlowGain * (0.75 + pool * 1.8);
+    col += glowCol * glow * pulse * breathe * uGlowGain * uEnergy * (0.75 + pool * 1.8);
     col += uPoolColor * pool * uPoolGain;
 
     float fog = smoothstep(uFogNear, uFogFar, vDepth);
-    col = mix(col, uFogColor, fog);
+    col = mix(col, uFogColor, fog * 0.85);
     gl_FragColor = vec4(col, 1.0);
   }
 `;
@@ -138,6 +143,7 @@ export const shellFragment = /* glsl */ `
   uniform float uEdgeGain;
   uniform float uSparkGain;
   uniform sampler2D uTrace;
+  uniform float uEnergy;
   uniform float uReflect;      // 1 when drawing the floor reflection
   uniform float uBaseY;        // world Y of the reflection plane
   varying vec3 vObj;
@@ -205,13 +211,13 @@ export const shellFragment = /* glsl */ `
     float blotch = smoothstep(0.58, 0.92, vnoise(coord * 2.2 + vec2(uTime * 0.12, uSeed * 5.0)));
 
     vec3 col = glass
-      + uTraceColor * blotch * 0.35 * uTraceGain
+      + uTraceColor * blotch * 0.8 * uTraceGain * uEnergy
       + cells * uCellGain * (1.0 + blotch * 0.8)
       + sparks
       + uTraceColor * tr * trPulse * uTraceGain
       + uEdgeColor * edgeGlow * uEdgeGain
       + uCell * strata * 0.35;
-    col *= uIntensity;
+    col *= uIntensity * mix(1.0, uEnergy, 0.7);
 
     if (uReflect > 0.5) {
       // Reflection fades out the further it is from the mirror plane.
