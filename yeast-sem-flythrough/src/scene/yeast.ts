@@ -15,7 +15,7 @@ const HERO_C = new THREE.Vector3(0, 0, 0);
 const AXIS = new THREE.Vector3(0.2, 0.3, 1).normalize();
 const FINAL_DIST = 8.7;
 const HI_DETAIL_RADIUS = 7.5;
-const TRAVEL = 42;
+const TRAVEL = 34;
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const smooth = (a: number, b: number, x: number) => {
@@ -39,21 +39,24 @@ const UP = new THREE.Vector3().crossVectors(SIDE, AXIS).normalize();
 /** Version 1: fast, curving push-in through the colony that decelerates and
  *  settles on the hero trio (as in the reference). */
 const flythrough = (t: number, dur: number): Rig => {
-  const x = clamp01(t / 7.4);
-  const ease = 1 - Math.pow(1 - x, 1.6);
+  const x = clamp01(t / 8.4);
+  const ease = 1 - Math.pow(1 - x, 1.4);
   // the push-in decelerates but never stops: a slow dolly continues to the end
-  const s = (TRAVEL - 2.8) * (1 - ease) + 2.8 * (1 - t / dur);
+  const s = (TRAVEL - 3.6) * (1 - ease) + 3.6 * (1 - t / dur);
   const k = 1 - ease;
   const lat = Math.pow(k, 1.35);
-  // slow arc around the hero cells once the camera has arrived
-  const arc = smooth(3.5, 10, t) + 0.35 * clamp01((t - 5) / 5);
+  // steady arc around the hero cells keeps the shot drifting once it has arrived
+  const arc = clamp01((t - 3) / 7);
   const pos = HERO_C.clone()
     .addScaledVector(AXIS, FINAL_DIST + s)
     .addScaledVector(
       SIDE,
-      -7.5 * lat + Math.sin(t * 0.9) * 0.35 * k + 1.5 * arc,
+      -6.5 * lat + Math.sin(t * 0.9) * 0.3 * k - 1.6 + 4.6 * arc,
     )
-    .addScaledVector(UP, 4.2 * lat + Math.cos(t * 0.7) * 0.3 * k - 0.55 * arc);
+    .addScaledVector(
+      UP,
+      3.6 * lat + Math.cos(t * 0.7) * 0.25 * k + 0.6 - 1.9 * arc,
+    );
   const target = HERO_C.clone().add(new THREE.Vector3(0.05, -0.05, 0));
   const dHero = pos.distanceTo(HERO_C) - 0.9;
   const focus = THREE.MathUtils.lerp(
@@ -61,8 +64,8 @@ const flythrough = (t: number, dur: number): Rig => {
     dHero,
     smooth(3.2, 6.0, t),
   );
-  const aperture = THREE.MathUtils.lerp(0.55, 0.2, smooth(4.5, 7.2, t));
-  return { pos, target, roll: -0.3 * k + 0.09 * (t / dur), focus, aperture };
+  const aperture = THREE.MathUtils.lerp(0.5, 0.2, smooth(4.5, 7.2, t));
+  return { pos, target, roll: -0.3 * k + 0.16 * (t / dur), focus, aperture };
 };
 
 /** Version 2: starts as a macro shot of the hero trio, then orbits and pulls
@@ -155,8 +158,8 @@ const buildCells = (): Cell[] => {
       variant: Math.floor(rnd() * VARIANTS.length),
       quat: new THREE.Quaternion().setFromAxisAngle(rv(), rnd() * 6.28),
       axis: rv(),
-      spin: (rnd() - 0.5) * 0.22,
-      drift: rv().multiplyScalar(0.14),
+      spin: (rnd() - 0.5) * 0.32,
+      drift: rv().multiplyScalar(0.24),
       phase: rnd() * 6.28,
       seed: rnd() * 80 + 2,
       scar1: [s1.x, s1.y, s1.z, k < 0.5 ? 0.28 + rnd() * 0.24 : 0],
@@ -219,7 +222,7 @@ const buildCells = (): Cell[] => {
           h.tilt,
         ),
       );
-    c.spin = 0.045;
+    c.spin = 0.085;
     c.axis = new THREE.Vector3(0.3, 1, 0.2).normalize();
     c.drift.multiplyScalar(0.3);
     c.scar1 = h.s1 as Cell["scar1"];
@@ -252,7 +255,7 @@ const buildCells = (): Cell[] => {
   const tmp = new THREE.Vector3();
   const blocked = (p: THREE.Vector3, rad: number) =>
     p.distanceTo(startCam) < 17 ||
-    pathPts.some((c) => c.distanceTo(p) < 0.95 + rad) ||
+    pathPts.some((c, i) => c.distanceTo(p) < (i < 150 ? 1.9 : 0.95) + rad) ||
     orbitPts.some((c) => c.distanceTo(p) < 4.2 + rad) ||
     sight.some((s) => {
       s.closestPointToPoint(p, true, tmp);
@@ -330,7 +333,7 @@ export const yeastFactory: SceneFactory<YeastParams> = ({
     vertexShader: CELL_VERT,
     fragmentShader: CELL_FRAG,
     uniforms: {
-      uDark: { value: v3("#17434f") },
+      uDark: { value: v3("#113540") },
       uMid: { value: v3("#3f8a9c") },
       uRim: { value: v3("#b2ecfb") },
       uFog: { value: v3("#06222e") },
@@ -385,9 +388,9 @@ export const yeastFactory: SceneFactory<YeastParams> = ({
       for (const g of groups) {
         g.list.forEach((c, i) => {
           p.set(
-            c.pos.x + Math.sin(t * 0.23 + c.phase) * c.drift.x,
-            c.pos.y + Math.sin(t * 0.19 + c.phase * 1.9) * c.drift.y,
-            c.pos.z + Math.sin(t * 0.21 + c.phase * 2.7) * c.drift.z,
+            c.pos.x + Math.sin(t * 0.37 + c.phase) * c.drift.x,
+            c.pos.y + Math.sin(t * 0.31 + c.phase * 1.9) * c.drift.y,
+            c.pos.z + Math.sin(t * 0.34 + c.phase * 2.7) * c.drift.z,
           );
           q2.setFromAxisAngle(c.axis, t * c.spin);
           q.copy(q2).multiply(c.quat);
@@ -410,7 +413,7 @@ export const yeastFactory: SceneFactory<YeastParams> = ({
         maxCoc: 0.05,
         vignette: 0.22,
         grain: 0.02,
-        contrast: 1.03,
+        contrast: 1.07,
         saturation: 1.14,
         lift: [0, 0, 0],
         frame,

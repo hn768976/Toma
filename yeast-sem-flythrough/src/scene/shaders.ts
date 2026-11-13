@@ -59,7 +59,7 @@ void main(){
   // secondary-electron look: brightness follows surface tilt away from the viewer
   float I = pow(e, 1.2);
   vec3 col = mix(uDark, uMid, smoothstep(0., .55, I));
-  col = mix(col, uRim, smoothstep(.22, 1., I) * .88);
+  col = mix(col, uRim, smoothstep(.25, 1., I) * .96);
   col += uRim * pow(ge, 3.) * .22;
   col += uRim * (lines * .10 + lines2 * .07) * lod * (.35 + ge);
   col *= .88 + .24 * grain;
