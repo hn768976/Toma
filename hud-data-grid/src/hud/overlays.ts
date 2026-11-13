@@ -147,22 +147,24 @@ export class Gauge {
     color: THREE.Color,
     private fps: number,
     private accent: string,
+    rotation = 0,
   ) {
     const canvas = document.createElement("canvas");
     canvas.width = 640;
     canvas.height = 640;
     this.ctx = canvas.getContext("2d")!;
     this.tex = canvasTexture(canvas);
-    this.mesh = floorPlane(size, size, x, y, additive(this.tex, color));
+    this.mesh = floorPlane(size, size, x, y, additive(this.tex, color), 0.006, rotation);
   }
 
   private value(frame: number) {
     const t = frame / this.fps;
-    const step = Math.floor(t * 4.3 + hash(this.seed) * 3);
+    const step = Math.floor(t * 2.6 + hash(this.seed) * 3);
     // mostly drifts, sometimes jumps
-    const base = Math.floor(hash(this.seed, Math.floor(step / 6)) * 99);
-    const drift = Math.floor(hash(this.seed, step) * 4);
-    return (base + drift + (step % 6)) % 100;
+    // holds a value, then ticks in short bursts (sparser changes, like the reference)
+    const base = Math.floor(hash(this.seed, Math.floor(step / 8)) * 99);
+    const burst = Math.min(step % 8, 3);
+    return (base + burst) % 100;
   }
 
   update(frame: number) {
@@ -212,7 +214,8 @@ export class Gauge {
     c.stroke();
     // number
     c.globalAlpha = 1;
-    c.font = "600 150px Orbitron";
+    c.font = "600 170px Orbitron";
+    c.lineWidth = 3;
     c.textAlign = "center";
     c.textBaseline = "middle";
     c.fillText(String(v).padStart(2, "0"), cx, cx + 8);
@@ -303,3 +306,52 @@ export const makeGlintTexture = () => {
   }
   return canvasTexture(canvas);
 };
+
+// ---------------------------------------------------------------------------
+// Emissive bars (orange status lamps / bright streaks) floating just above the
+// floor; they sit near the lens so the depth of field turns them into bokeh.
+// ---------------------------------------------------------------------------
+export const makeBarTexture = () => {
+  // pre-softened lamp: a rounded bar with a wide falloff, so it reads as
+  // out-of-focus bokeh even before the depth-of-field pass
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 64;
+  const c = canvas.getContext("2d")!;
+  c.filter = "blur(9px)";
+  c.fillStyle = "#ffffff";
+  c.beginPath();
+  c.moveTo(40, 22);
+  c.lineTo(216, 22);
+  c.quadraticCurveTo(228, 32, 216, 42);
+  c.lineTo(40, 42);
+  c.quadraticCurveTo(28, 32, 40, 22);
+  c.fill();
+  c.filter = "none";
+  return canvasTexture(canvas);
+};
+
+export class GlowBar {
+  readonly mesh: THREE.Mesh;
+  private mat: THREE.MeshBasicMaterial;
+  constructor(
+    tex: THREE.Texture,
+    private base: THREE.Color,
+    w: number,
+    x: number,
+    y: number,
+    lift: number,
+    private seed: number,
+    private fps: number,
+    private blink: number,
+  ) {
+    this.mat = additive(tex, base.clone());
+    this.mesh = floorPlane(w, w * 0.25, x, y, this.mat, lift);
+  }
+  update(frame: number) {
+    const t = frame / this.fps;
+    const step = Math.floor(t * (1.5 + 3 * hash(this.seed, 1)) + hash(this.seed) * 5);
+    const on = hash(this.seed, step) > this.blink ? 1 : 0.25;
+    this.mat.color.copy(this.base).multiplyScalar(on);
+  }
+}

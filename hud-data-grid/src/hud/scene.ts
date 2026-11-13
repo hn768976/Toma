@@ -4,7 +4,7 @@ import { PostChain, PostSettings } from "../engine/post";
 import { hash, lerp, smoothstep } from "../engine/random";
 import type { StageFactory } from "../engine/ThreeStage";
 import { createHudMaterial, HudPalette } from "./hudMaterial";
-import { DigitReadout, Gauge, makeGlintTexture, TextBlock } from "./overlays";
+import { DigitReadout, Gauge, GlowBar, makeBarTexture, makeGlintTexture, TextBlock } from "./overlays";
 
 export type HudVariant = "reference" | "craneMove";
 
@@ -33,6 +33,8 @@ type Rig = {
   focus: THREE.Vector3;
   /** When set, the focal plane is tilted so that it contains this floor direction (tilt-shift look). */
   focusAxis?: THREE.Vector3;
+  /** 0 = focal plane perpendicular to the lens axis, 1 = fully tilted to contain focusAxis */
+  focusTilt?: number;
   nearBlur: number;
   farBlur: number;
 };
@@ -50,8 +52,10 @@ const referenceRig = (): Rig => ({
   azimuth: 46.5,
   roll: -3.5,
   fov: 11.15,
-  focus: new THREE.Vector3(-0.2, 0, 0.45),
-  focusAxis: new THREE.Vector3(1, 0, 0),
+  focus: new THREE.Vector3(-0.4, 0, -0.1),
+  // sharp band runs from the readout towards the lower-right, like the reference
+  focusAxis: new THREE.Vector3(1, 0, 0.22).normalize(),
+  focusTilt: 1,
   nearBlur: 150,
   farBlur: 90,
 });
@@ -74,8 +78,9 @@ const craneRig = (t: number, dur: number): Rig => {
     azimuth: lerp(22, 60, k),
     roll: lerp(4, -6, k),
     fov: lerp(12.5, 13.5, k),
-    focus: new THREE.Vector3(lerp(-3.6, -0.6, k), 0, lerp(0.6, 0.1, k)),
-    focusAxis: new THREE.Vector3(1, 0, 0),
+    focus: new THREE.Vector3(lerp(-3.6, 0.2, k), 0, lerp(0.6, -0.2, k)),
+    focusAxis: new THREE.Vector3(1, 0, 0.22).normalize(),
+    focusTilt: 1,
     nearBlur: ref.nearBlur,
     farBlur: ref.farBlur,
   };
@@ -97,9 +102,12 @@ const applyRig = (cam: THREE.PerspectiveCamera, rig: Rig) => {
   let focalPlane: PostSettings["focalPlane"];
   if (rig.focusAxis) {
     const camUp = new THREE.Vector3(0, 1, 0).transformDirection(cam.matrixWorld);
+    const fwd = new THREE.Vector3(0, 0, -1).transformDirection(cam.matrixWorld);
+    const tilted = new THREE.Vector3().crossVectors(rig.focusAxis, camUp).normalize();
+    if (tilted.dot(fwd) < 0) tilted.negate();
     focalPlane = {
       point: rig.focus.clone(),
-      normal: new THREE.Vector3().crossVectors(rig.focusAxis, camUp).normalize(),
+      normal: fwd.lerp(tilted, rig.focusTilt ?? 1).normalize(),
     };
   }
   return { focusZ: -v.z, focalPlane };
@@ -114,8 +122,8 @@ export const createHudFactory =
     const camera = new THREE.PerspectiveCamera(38, pixelWidth / pixelHeight, 1, 400);
 
     // fog distances follow the lens: the crane move starts much farther away
-    const fogNear = variant === "reference" ? 37 : 34;
-    const fogFar = variant === "reference" ? 70 : 100;
+    const fogNear = variant === "reference" ? 34 : 32;
+    const fogFar = variant === "reference" ? 60 : 92;
     const floorMat = createHudMaterial(PALETTE, fogNear, fogFar, 0.78, [
       [0.9, 1.1, 0.55, 0.55],
       [2.65, 1.05, 0.55, 0.55],
@@ -134,8 +142,9 @@ export const createHudFactory =
       new DigitReadout(47, 2.4, 4.3, -4.6, dim.clone().multiplyScalar(0.8), fps),
     ];
     const gauges = [
-      new Gauge(3, 0.95, 0.9, 1.1, ink.clone().multiplyScalar(1.35), fps, "#ff9a3c"),
-      new Gauge(8, 0.95, 2.65, 1.05, ink.clone().multiplyScalar(1.35), fps, "#ff9a3c"),
+      // rotated about the floor normal so the numbers read upright through the lens
+      new Gauge(3, 0.95, 0.9, 1.1, ink.clone().multiplyScalar(1.5), fps, "#ff9a3c", 0.62),
+      new Gauge(8, 0.95, 2.65, 1.05, ink.clone().multiplyScalar(1.5), fps, "#ff9a3c", 0.62),
       new Gauge(15, 0.55, -5.2, -3.7, dim, fps, "#ff9a3c"),
     ];
     const texts = [
@@ -145,6 +154,24 @@ export const createHudFactory =
       new TextBlock(33, 1.2, -1.2, 3.6, dim, fps, 5),
     ];
     [...digits, ...gauges, ...texts].forEach((o) => scene.add(o.mesh));
+
+    // orange status lamps + bright streaks in the near foreground (become bokeh)
+    const barTex = makeBarTexture();
+    const amber = new THREE.Color(1.0, 0.5, 0.12).multiplyScalar(2.2);
+    const glowBars: GlowBar[] = [
+      [-3.67, -4.77],
+      [-2.66, -4.93],
+      [-1.72, -5.04],
+      [-0.19, -5.24],
+      [0.9, -5.4],
+    ].map(([x, y], i) => new GlowBar(barTex, amber, 0.95, x, y, 0.12, 50 + i, fps, 0.18));
+    for (let i = 0; i < 12; i++) {
+      const x = lerp(-13, -6, hash(i, 31));
+      const y = lerp(-8.5, -4.5, hash(i, 32));
+      const col = new THREE.Color(0.55, 0.75, 1.0).multiplyScalar(lerp(0.5, 1.0, hash(i, 33)));
+      glowBars.push(new GlowBar(barTex, col, lerp(0.7, 1.6, hash(i, 34)), x, y, 0.1, 80 + i, fps, 0.12));
+    }
+    glowBars.forEach((b) => scene.add(b.mesh));
 
     // distant glints
     const glintTex = makeGlintTexture();
@@ -175,6 +202,7 @@ export const createHudFactory =
         floorMat.uniforms.uTime.value = t;
         digits.forEach((d) => d.update(frame));
         gauges.forEach((g) => g.update(frame));
+        glowBars.forEach((b) => b.update(frame));
         texts.forEach((tb) => tb.update(frame));
         for (const g of glints) {
           const ph = ((t - g.t0) % g.period + g.period) % g.period;
@@ -194,12 +222,12 @@ export const createHudFactory =
           maxCoc: 30,
           bloomStrength: 1.0,
           bloomThreshold: 0.32,
-          exposure: 1.0,
+          exposure: 0.9,
           vignette: 0.62,
           grain: 0.018,
           saturation: 1.05,
           gain: [0.84, 1.0, 1.02],
-          lift: [-0.012, -0.004, 0.004],
+          lift: [-0.014, -0.01, -0.004],
           aberration: 1.2,
         };
         if (debug) {

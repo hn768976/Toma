@@ -98,7 +98,7 @@ void main() {
   vec2 gid = did * 37.0 + bid;
   float bt = h21(gid * 1.37 + 0.5);
   float bb = mix(0.4, 1.35, pow(h21(gid + 9.1), 0.8));
-  float isLive = step(0.45, h21(gid + 2.2));
+  float isLive = step(0.22, h21(gid + 2.2));
   float m = 0.045;
   vec2 c = bl - m;
   vec2 cs = bsz - 2.0 * m;
@@ -107,7 +107,7 @@ void main() {
 
   float stepT = floor(t * mix(3.0, 9.0, h21(gid + 4.4)) + h21(gid) * 10.0);
 
-  if (bt < 0.56) {
+  if (bt < 0.36) {
     // dot / dash matrix (LED-like, mostly lit, row-wise brightness)
     float Px = mix(0.13, 0.17, h21(gid + 1.9));
     float Pz = Px * mix(0.85, 1.05, h21(gid + 8.3));
@@ -128,7 +128,7 @@ void main() {
     ink += v * (1.0 - isAcc);
     hot += v * (1.0 - isAcc) * 0.25 * step(0.8, bb);
     acc += v * isAcc * 1.6;
-  } else if (bt < 0.72) {
+  } else if (bt < 0.68) {
     // text-like rows
     float RP = 0.078;
     float row = floor(c.y / RP);
@@ -141,10 +141,10 @@ void main() {
     float mf = smoothstep(0.4, 1.0, fw.x / 0.03);
     chars = mix(chars, 0.7, mf);
     float lineOn = pulseAA(c.y, RP, 0.026, fw.y) * boxAA(c.y, 0.0, cs.y, fw.y);
-    float flick = mix(1.0, step(0.25, h21(vec2(row, stepT) + gid)), isLive);
+    float flick = mix(1.0, step(0.3, h21(vec2(row, stepT) + gid)), isLive);
     float v = wOn * chars * lineOn * inside * bb * mix(0.55, 1.0, h21(vec2(row, gid.y))) * flick;
     ink += v;
-  } else if (bt < 0.83) {
+  } else if (bt < 0.86) {
     // horizontal bars (equaliser-like)
     float RP = 0.075;
     float row = floor(c.y / RP);
@@ -154,7 +154,7 @@ void main() {
     float isAcc = step(0.975, h21(gid + 17.0));
     ink += v * bb * 0.7 * (1.0 - isAcc);
     acc += v * isAcc * 1.4;
-  } else if (bt < 0.9) {
+  } else if (bt < 0.91) {
     // a few chunky bright tabs
     float RP = 0.22;
     float row = floor(c.y / RP);
@@ -192,14 +192,23 @@ void main() {
   float lx = lineAA(dl.x, 0.0, 0.016, fw.x) + lineAA(dl.x, DP.x, 0.016, fw.x);
   float ly = lineAA(dl.y, 0.0, 0.012, fw.y) + lineAA(dl.y, DP.y, 0.012, fw.y);
   float dash = mix(pulseAA(p.y, 0.5, 0.42, fw.y), 0.84, smoothstep(0.3, 1.0, fw.y / 0.5));
-  ink += lx * 0.55 * dash + ly * 0.35;
+  ink += lx * 0.55 * dash + ly * 0.3;
+  // light pulses streaming along every district line (data traffic)
+  {
+    float lane = did.x * 7.13 + did.y * 3.71;
+    float sp = mix(2.5, 6.0, h21(did + 11.0));
+    float py = mod(p.y + t * sp + h21(did) * 40.0, 9.0) - 4.5;
+    float px = mod(p.x - t * sp * 0.8 + h21(did + 5.0) * 40.0, 11.0) - 5.5;
+    hot += lx * exp(-py * py / 0.18) * 1.6 * step(0.35, h21(vec2(lane, 1.0)));
+    hot += ly * exp(-px * px / 0.2) * 1.2 * step(0.45, h21(vec2(lane, 2.0)));
+  }
 
   // ---------------- hero axis lines (x = 0 and y = 0) ----------------
   float ax = lineAA(p.x, 0.0, 0.016 / uScale, fw.x);
   float ay = lineAA(p.y, 0.0, 0.012 / uScale, fw.y);
   float gx = exp(-abs(p.x) / 0.07);
   float gy = exp(-abs(p.y) / 0.06);
-  hot += ax * 0.55 + ay * 0.35;
+  hot += ax * 0.55 + ay * 0.12;
   ink += gx * 0.16 + gy * 0.08;
   // parallel thin rails beside the main axis
   ink += (lineAA(p.x, 0.12, 0.008, fw.x) + lineAA(p.x, -0.12, 0.008, fw.x)) * 0.45;
