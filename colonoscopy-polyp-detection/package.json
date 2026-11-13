@@ -1,0 +1,41 @@
+{
+  "name": "colonoscopy-polyp-detection",
+  "version": "1.0.0",
+  "description": "Remotion project: colonoscopy-polyp-detection",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.543",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.543",
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.543",
+    "@types/react": "19.3.0",
+    "@types/three": "^0.170.0",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "render:v1": "remotion render ColonoscopyPolypDetection-V1-Reference out/version-1-colonoscopy-polyp-detection-reference-match-1080p.mp4 --scale=0.5",
+    "render:v1:4k": "remotion render ColonoscopyPolypDetection-V1-Reference out/version-1-colonoscopy-polyp-detection-reference-match-4k.mp4",
+    "render:v2": "remotion render ColonoscopyPolypDetection-V2-OrbitCamera out/version-2-colonoscopy-polyp-detection-orbit-camera-1080p.mp4 --scale=0.5",
+    "render:v2:4k": "remotion render ColonoscopyPolypDetection-V2-OrbitCamera out/version-2-colonoscopy-polyp-detection-orbit-camera-4k.mp4",
+    "render:all": "npm run render:v1 && npm run render:v2"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}
