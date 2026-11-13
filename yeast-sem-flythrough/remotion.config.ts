@@ -9,8 +9,9 @@ import { existsSync, readdirSync } from "node:fs";
 import { Config } from "@remotion/cli/config";
 
 Config.setRspack(true);
-Config.setVideoImageFormat("jpeg");
-Config.setJpegQuality(96);
+// PNG frames keep the encode in standard limited-range yuv420p (JPEG frames
+// would produce full-range "yuvj420p") and avoid a lossy intermediate step.
+Config.setVideoImageFormat("png");
 Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");

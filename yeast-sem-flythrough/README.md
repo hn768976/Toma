@@ -40,7 +40,7 @@ npx remotion render YeastSEM-V2-OrbitPullBack  out/yeast-sem-v2-4k.mp4
 npx remotion still YeastSEM-V1-ReferenceMatch out/still.png --frame=299
 ```
 
-Codec (H.264), pixel format (yuv420p), CRF 16 and JPEG quality are set in
+Codec (H.264), pixel format (yuv420p) and CRF 16 are set in
 `remotion.config.ts`.
 
 ### OpenGL renderer
