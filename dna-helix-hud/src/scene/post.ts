@@ -136,6 +136,8 @@ uniform float uCA;
 uniform vec3 uShadowTint;
 uniform vec3 uHighlightTint;
 uniform float uFade;
+uniform vec3 uLift;
+uniform float uGain;
 varying vec2 vUv;
 
 vec3 aces(vec3 x) {
@@ -169,6 +171,8 @@ void main() {
   float v = smoothstep(0.85, 0.2, length(d * vec2(1.0, 0.85)) * uVignette);
   col *= mix(0.25, 1.0, v);
   col = toSRGB(clamp(col, 0.0, 1.0));
+  // lifted, tinted blacks and softened highlights (display-referred)
+  col = uLift + col * uGain;
   // film grain (deterministic per frame)
   float g = hash(vUv * 1000.0 + fract(uTime * 7.31) * 100.0) - 0.5;
   col += g * uGrain;
@@ -183,6 +187,8 @@ export type PostParams = {
   exposure: number;
   time: number;
   fade: number;
+  lift: THREE.Color;
+  gain: number;
   shadowTint: THREE.Color;
   highlightTint: THREE.Color;
 };
@@ -253,15 +259,16 @@ export class PostChain {
       uFar: { value: 300 },
       uFocus: { value: 5 },
       uAperture: { value: 8 },
-      uMaxCoc: { value: 14 },
+      uMaxCoc: { value: 20 },
       uResScale: { value: this.resScale },
       uTexel: { value: new THREE.Vector2(1 / W, 1 / H) },
     });
     this.bokeh = mat(BOKEH, {
       tHalf: { value: null },
       uTexel: { value: new THREE.Vector2(1 / hw, 1 / hh) },
-      uRadScale: { value: 1.0 * this.resScale * this.resScale },
-      uMaxRadius: { value: 14.5 * this.resScale },
+      // ~110 golden-angle taps regardless of output resolution
+      uRadScale: { value: 1.9 * this.resScale * this.resScale },
+      uMaxRadius: { value: 20.5 * this.resScale },
     });
     this.dof = mat(DOF_COMPOSITE, {
       tSharp: { value: null },
@@ -283,10 +290,12 @@ export class PostChain {
       uTime: { value: 0 },
       uGrain: { value: 0.026 },
       uVignette: { value: 1.0 },
-      uCA: { value: 0.012 },
+      uCA: { value: 0.006 },
       uShadowTint: { value: new THREE.Color(1, 1, 1) },
       uHighlightTint: { value: new THREE.Color(1, 1, 1) },
       uFade: { value: 1 },
+      uLift: { value: new THREE.Color(0, 0, 0) },
+      uGain: { value: 1 },
     });
     this.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.final);
     this.quad.frustumCulled = false;
@@ -353,6 +362,8 @@ export class PostChain {
     fu.uExposure.value = p.exposure;
     fu.uTime.value = p.time;
     fu.uFade.value = p.fade;
+    (fu.uLift.value as THREE.Color).copy(p.lift);
+    fu.uGain.value = p.gain;
     (fu.uShadowTint.value as THREE.Color).copy(p.shadowTint);
     (fu.uHighlightTint.value as THREE.Color).copy(p.highlightTint);
     this.pass(this.final, null);

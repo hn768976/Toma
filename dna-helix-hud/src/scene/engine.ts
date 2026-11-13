@@ -10,10 +10,10 @@ export type Variant = "reference" | "orbit";
 // --- DNA geometry constants (world units) ---------------------------------
 const DNA_X0 = -20;
 const DNA_X1 = 2;
-const RUNG_SPACING = 0.34;
-const RUNGS_PER_TURN = 24;
+const RUNG_SPACING = 0.26;
+const RUNGS_PER_TURN = 31;
 const HELIX_RADIUS = 0.7;
-const BEAD_RADIUS = 0.142;
+const BEAD_RADIUS = 0.123;
 const SPIN_SPEED = 0.33; // rad / s around the helix axis
 
 export type Engine = {
@@ -58,25 +58,33 @@ export const createEngine = (
   // --- DNA -----------------------------------------------------------------
   const dna = new THREE.Group();
   scene.add(dna);
+  // Translucent, holographic material: the HUD layers show through the
+  // helix and both strands are visible through each other.
   const dnaMat = new THREE.MeshStandardMaterial({
-    color: 0xd9d4ca,
-    metalness: 0.25,
-    roughness: 0.5,
-    emissive: 0x16140f,
+    color: 0xe6e4dc,
+    metalness: 0.3,
+    roughness: 0.45,
+    emissive: 0x2a2c2a,
     envMapIntensity: 0.75,
+    transparent: true,
+    opacity: 0.8,
+    depthWrite: false,
   });
   const stickMat = new THREE.MeshStandardMaterial({
-    color: 0xcfcac0,
-    metalness: 0.25,
+    color: 0xdedcd4,
+    metalness: 0.3,
     roughness: 0.5,
-    emissive: 0x14120e,
+    emissive: 0x222422,
     envMapIntensity: 0.7,
+    transparent: true,
+    opacity: 0.72,
+    depthWrite: false,
   });
   const rungCount = Math.floor((DNA_X1 - DNA_X0) / RUNG_SPACING) + 1;
   const beadGeo = new THREE.SphereGeometry(BEAD_RADIUS, 28, 18);
-  const stickGeo = new THREE.CylinderGeometry(0.022, 0.022, 1, 10, 1);
+  const stickGeo = new THREE.CylinderGeometry(0.02, 0.02, 1, 10, 1);
   const beads = new THREE.InstancedMesh(beadGeo, dnaMat, rungCount * 2);
-  const sticks = new THREE.InstancedMesh(stickGeo, stickMat, rungCount * 2);
+  const sticks = new THREE.InstancedMesh(stickGeo, stickMat, rungCount);
   const m4 = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
@@ -90,16 +98,12 @@ export const createEngine = (
     const s2 = 1 + (rand(i, 2) - 0.5) * 0.12;
     beads.setMatrixAt(i * 2, m4.compose(p1, q.identity(), new THREE.Vector3(s1, s1, s1)));
     beads.setMatrixAt(i * 2 + 1, m4.compose(p2, q.identity(), new THREE.Vector3(s2, s2, s2)));
-    // two half-rungs (base pair) with a small gap in the middle
+    // one continuous base-pair rung between the two beads
     const dir = p2.clone().sub(p1).normalize();
-    const full = p1.distanceTo(p2);
-    const gap = 0.05;
-    const half = (full - gap) / 2 - BEAD_RADIUS * 0.6;
+    const len = p1.distanceTo(p2) - BEAD_RADIUS * 1.6;
     q.setFromUnitVectors(up, dir);
-    const c1 = p1.clone().addScaledVector(dir, BEAD_RADIUS * 0.6 + half / 2);
-    const c2 = p2.clone().addScaledVector(dir, -(BEAD_RADIUS * 0.6 + half / 2));
-    sticks.setMatrixAt(i * 2, m4.compose(c1, q, new THREE.Vector3(1, half, 1)));
-    sticks.setMatrixAt(i * 2 + 1, m4.compose(c2, q, new THREE.Vector3(1, half, 1)));
+    const mid = p1.clone().add(p2).multiplyScalar(0.5);
+    sticks.setMatrixAt(i, m4.compose(mid, q, new THREE.Vector3(1, len, 1)));
   }
   dna.add(beads, sticks);
   const dnaDepth = depthOnly({ side: THREE.FrontSide });
@@ -128,11 +132,15 @@ export const createEngine = (
   };
   const H90 = -Math.PI / 2;
   const layers: Layer[] = [
-    { seed: 11, size: [46, 28], pos: [-6, -1.9, 1], rot: [H90, 0, 0], repeat: [2.3, 1.4], intensity: 0.34, bigLabels: 0.5 },
+    { seed: 11, size: [46, 28], pos: [-6, -1.9, 1], rot: [H90, 0, 0], repeat: [2.3, 1.4], intensity: 0.3, bigLabels: 0.4, density: 0.65 },
     { seed: 23, size: [64, 40], pos: [-4, -2.75, -2], rot: [H90, 0, 0.02], repeat: [2.6, 1.6], intensity: 0.24, bigLabels: 0.4 },
     { seed: 37, size: [90, 60], pos: [-2, -4.1, -6], rot: [H90, 0, -0.03], repeat: [3.0, 2.0], intensity: 0.15, density: 1.2, bigLabels: 0.3 },
-    { seed: 41, size: [80, 26], pos: [-6, 3.0, -8], rot: [0, 0, 0], repeat: [2.6, 0.85], intensity: 0.13, density: 1.2, bigLabels: 0.2 },
+    { seed: 41, size: [80, 26], pos: [-6, 3.0, -8], rot: [0, 0, 0], repeat: [2.6, 0.85], intensity: 0.17, density: 1.3, bigLabels: 0.15 },
     { seed: 53, size: [50, 30], pos: [-4, 4.2, -1], rot: [Math.PI / 2, 0, 0], repeat: [2, 1.2], intensity: 0.07, bigLabels: 0.2 },
+    // near wall behind the helix: fills the upper frame with blurred data
+    { seed: 61, size: [72, 14], pos: [-6, 2.2, -4.5], rot: [0, 0, 0], repeat: [3.2, 0.62], intensity: 0.11, density: 1.3, bigLabels: 0.15 },
+    // faint layer in FRONT of the helix (mostly out of focus) so data passes over it
+    { seed: 67, size: [56, 6.5], pos: [-6, 1.1, 2.4], rot: [0, 0, 0], repeat: [2.6, 0.3], intensity: 0.045, density: 0.8, bigLabels: 0 },
   ];
   // small tilted floating panels along the opening flight path
   for (let i = 0; i < 9; i++) {
@@ -142,8 +150,8 @@ export const createEngine = (
       pos: [19 - i * 2.2 + rand(i, 5) * 1.5, -1.7 + rand(i, 6) * 0.45, -0.5 + rand(i, 7) * 4.5],
       rot: [H90 + 0.25 + rand(i, 8) * 0.5, (rand(i, 9) - 0.5) * 0.6, (rand(i, 10) - 0.5) * 0.4],
       repeat: [0.35, 0.25],
-      intensity: 0.4,
-      bigLabels: 3,
+      intensity: 0.22,
+      bigLabels: 0.6,
     });
   }
   layers.forEach((L) => {
@@ -225,7 +233,7 @@ export const createEngine = (
 
   // --- warm bokeh particles + cool sparkles --------------------------------
   const dotGeo = new THREE.SphereGeometry(1, 10, 8);
-  const orange = new THREE.MeshBasicMaterial({ color: new THREE.Color(5.0, 2.1, 0.45), toneMapped: false });
+  const orange = new THREE.MeshBasicMaterial({ color: new THREE.Color(3.4, 1.45, 0.3), toneMapped: false });
   const white = new THREE.MeshBasicMaterial({ color: new THREE.Color(3.0, 3.1, 3.3), toneMapped: false });
   const dotDepth = depthOnly({ side: THREE.FrontSide });
   disposables.push(dotGeo, orange, white, dotDepth);
@@ -244,14 +252,16 @@ export const createEngine = (
     depthMats.set(inst, dotDepth);
     return inst;
   };
-  makeDots(110, orange, 300, 0.018, 0.045);
+  makeDots(45, orange, 300, 0.014, 0.034);
   makeDots(70, white, 400, 0.01, 0.03);
 
   // --- post ----------------------------------------------------------------
   const post = new PostChain(renderer, W, H);
   const rig = makeRig(variant === "orbit" ? PATH_V2 : PATH_V1);
-  const shadowTint = new THREE.Color(0.86, 0.95, 1.08);
-  const highlightTint = new THREE.Color(1.04, 1.0, 0.94);
+  // cool blue-teal grade with lifted blacks, like the reference
+  const shadowTint = new THREE.Color(0.8, 0.97, 1.12);
+  const highlightTint = new THREE.Color(0.98, 1.0, 1.0);
+  const lift = new THREE.Color(0.0, 0.009, 0.022);
   const tmpTarget = new THREE.Vector3();
   const closest = new THREE.Vector3();
 
@@ -300,10 +310,12 @@ export const createEngine = (
     post.render(scene, camera, renderDepth, {
       focus,
       aperture: cam.aperture,
-      bloom: 0.45,
-      exposure: 1.0,
+      bloom: 0.3,
+      exposure: cam.exposure,
       time: t,
       fade: 1,
+      lift,
+      gain: 0.84,
       shadowTint,
       highlightTint,
     });
