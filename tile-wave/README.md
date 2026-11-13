@@ -7,8 +7,9 @@ glows (pink → violet → periwinkle → white → warm cream), so the band zig
 along the grid while running diagonally across it. A rim of raised pink cards
 leans in towards the axis like overlapping scales and keeps fluttering while
 the band is open, while the valley floor gently bobs and the band's width
-breathes in waves travelling along it. The valley opens quickly from a slit,
-keeps widening slowly, then closes completely: columns of tiles are lifted and
+breathes in waves travelling along it. The valley opens steadily from a slit
+(lower-left end first), keeps widening slowly for a short hold, then closes
+gradually and completely: columns of tiles are lifted and
 drawn out into pale slats that read perpendicular to the band on screen and
 lie back down while the surface rests, and the tiles along the shut seam stay
 tipped on edge as a dashed line. The open/hold/close curve and the 132-frame
@@ -16,7 +17,7 @@ tipped on edge as a dashed line. The open/hold/close curve and the 132-frame
 
 | Composition   | Size        | FPS | Frames | Duration | Camera |
 |---------------|-------------|-----|--------|----------|--------|
-| `TileWave-V1` | 3840 × 2160 | 30  | 267    | 8.9 s    | Reference recreation: locked-off steep top-down view, band at ~50° on screen, horizontal lens shift |
+| `TileWave-V1` | 3840 × 2160 | 30  | 267    | 8.9 s    | Reference recreation: locked-off steep top-down view, band at ~55° on screen, slight horizontal lens shift |
 | `TileWave-V2` | 3840 × 2160 | 30  | 267    | 8.9 s    | Alternative camera angle + movement: low oblique tracking shot that travels along the valley with a slow orbit |
 
 ## Technology
