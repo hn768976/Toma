@@ -466,9 +466,12 @@ export const drawSystemList = (c: Ctx, p: DashPalette, t: number) => {
   }
   items.forEach((it, i) => {
     const y = 420 + i * 128;
-    text(c, it, 40, y, "500 34px Inter", p.textDim);
-    c.fillStyle = p.textFaint;
-    c.fillRect(40, y + 26, 300 + 300 * hash(i, 2), 3);
+    // orange status dot + bright label, as in the reference
+    c.fillStyle = i % 3 === 2 ? p.textDim : p.accentNum[0];
+    c.fillRect(40, y - 22, 20, 20);
+    text(c, it, 84, y, "600 40px Inter", p.text);
+    c.fillStyle = p.textDim;
+    c.fillRect(84, y + 28, 280 + 300 * hash(i, 2), 4);
     const pct = tick(i + 40, t, 10, 90, 0.8);
     text(c, `${pct}%`, 800, y, "600 30px Inter", i % 3 === 0 ? p.accentNum[0] : p.textFaint, "right");
     c.fillStyle = i % 4 === 1 ? p.accentNum[1] : p.textFaint;
