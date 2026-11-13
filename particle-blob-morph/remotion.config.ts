@@ -12,7 +12,8 @@ Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setColorSpace("bt709");
-Config.setCrf(18);
+Config.setCrf(15);
+Config.setX264Preset("slow");
 // WebGL / canvas rendering in headless Chrome. "swangle" (SwiftShader via ANGLE)
 // works on every machine, including servers without a GPU. On a desktop with a
 // GPU you can pass `--gl=angle` on the command line for much faster renders.

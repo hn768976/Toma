@@ -23,9 +23,9 @@ export type ParticleBlobProps = {
 };
 
 /** Grid resolution of each cube face before it is projected onto the sphere. */
-const DOTS_PER_CUBE_EDGE = 60; // 6 * 60 * 60 = 21,600 dots
+const DOTS_PER_CUBE_EDGE = 52; // 6 * 52 * 52 = 16,224 dots
 /** World-space diameter of each dot (unit sphere radius = 1). */
-const DOT_SIZE = 0.0205;
+const DOT_SIZE = 0.0228;
 const CAMERA_FOV = 30;
 const CAMERA_Z = 4.75;
 
@@ -117,7 +117,7 @@ const buildScene = (
     depthWrite: false,
     uniforms: {
       uAspect: { value: width / height },
-      uCenter: { value: new THREE.Vector2(-0.03, -0.04) },
+      uCenter: { value: new THREE.Vector2(-0.03, 0.02) },
       uStopPos: { value: stops.map((s) => s[0]) },
       uStopCol: { value: stops.map((s) => new THREE.Vector3(...s[1])) },
     },
@@ -176,11 +176,16 @@ export const ParticleBlob: React.FC<ParticleBlobProps> = ({ palette }) => {
     const phase = t / loopSeconds;
     s.uniforms.uTime.value = t;
     s.uniforms.uFold.value = foldEnvelope(t, loopSeconds);
-    // One full turn per loop around a gently tilted, precessing axis.
+    // Tumble: one full turn per loop plus periodic pitch / roll wobble and a
+    // gentle anisotropic squash (tall <-> wide). Everything is periodic in the
+    // loop length, so the clip still loops seamlessly.
+    const TAU = 2 * Math.PI;
+    const squash = 0.09 * Math.sin(TAU * phase + 0.6);
     const rot = new THREE.Matrix4()
-      .makeRotationX(0.32 + 0.08 * Math.sin(2 * Math.PI * phase))
-      .multiply(new THREE.Matrix4().makeRotationZ(0.12))
-      .multiply(new THREE.Matrix4().makeRotationY(-2 * Math.PI * phase));
+      .makeRotationZ(0.28 * Math.sin(TAU * phase * 2 + 1.0))
+      .multiply(new THREE.Matrix4().makeScale(1 + squash, 1 - squash, 1))
+      .multiply(new THREE.Matrix4().makeRotationX(0.3 + 0.55 * Math.sin(TAU * phase)))
+      .multiply(new THREE.Matrix4().makeRotationY(-TAU * phase));
     (s.uniforms.uRot.value as THREE.Matrix3).setFromMatrix4(rot);
     s.renderer.clear();
     s.renderer.render(s.bgScene, s.bgCamera);

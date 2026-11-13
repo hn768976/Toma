@@ -25,16 +25,21 @@ vec4 shape(vec3 p, float tau) {
     snoise(vec4(p * 1.25 + 3.1, w)),
     snoise(vec4(p * 1.25 + 11.7, w)),
     snoise(vec4(p * 1.25 + 23.9, w)));
-  // Layered ridges ("folded fabric" look of the reference).
-  float sb = sin(q.y * 8.6 + 1.8 * snoise(vec4(q * 1.2, w * 1.4)) + tau * 1.1);
-  // flatten the troughs and sharpen the crests -> stacked "sheet" folds
-  float band = sign(sb) * pow(abs(sb), 0.65);
+  // Two families of diagonal ridges that sweep around the body (the folded,
+  // layered look of the reference). Crests are sharpened, troughs flattened.
+  vec3 ax1 = normalize(vec3(0.55, 1.0, 0.3));
+  vec3 ax2 = normalize(vec3(-0.7, 0.45, 0.55));
+  float s1 = sin(dot(q, ax1) * 8.4 + 1.6 * snoise(vec4(q * 1.2, w * 1.4)) + tau * 1.1);
+  float s2 = sin(dot(q, ax2) * 6.3 + 1.4 * snoise(vec4(q * 1.1 + 9.0, w * 1.2)) - tau * 0.8);
+  float band = sign(s1) * pow(abs(s1), 0.6);
+  float band2 = sign(s2) * pow(abs(s2), 0.7);
   float detail = snoise(vec4(q * 3.1 + 5.0, w * 1.6));
-  float fold = band * 0.1 + detail * 0.022;
+  float fold = band * 0.085 + band2 * 0.04 + detail * 0.018;
   float r = 1.0 + lump + uFold * fold;
-  // unnormalised: shear fades to zero at the poles of the shear axis (no singularity)
-  vec3 tang = cross(p, normalize(vec3(0.08, 1.0, 0.03)));
-  vec3 pos = p * r + uFold * 0.12 * band * tang;
+  // gentle shear along the ridges for overhangs (kept small: larger values
+  // pull bead rows apart and open visible tears)
+  vec3 tang = cross(p, ax1);
+  vec3 pos = p * r + uFold * 0.055 * band * tang;
   return vec4(pos, uFold * fold);
 }
 
@@ -102,17 +107,17 @@ void main() {
   float r2 = dot(c, c);
   if (r2 > 1.0) discard;
   vec3 sn = vec3(c, sqrt(1.0 - r2));                 // normal of the little sphere
-  float self = smoothstep(-0.25, 0.55, dot(vN, L));   // blob shadows itself
+  float self = smoothstep(-0.35, 0.65, dot(vN, L));   // blob shadows itself
   float cavity = 0.5 + 0.5 * smoothstep(-0.11, 0.07, vFold);
   float diff = max(dot(sn, L), 0.0) * self;
   float fill = max(dot(sn, F), 0.0) * 0.22;
   vec3 H = normalize(L + vec3(0.0, 0.0, 1.0));
   float spec = pow(max(dot(sn, H), 0.0), 38.0) * self;
   float rim = pow(1.0 - clamp(vN.z, 0.0, 1.0), 2.2);
-  vec3 col = uAmb * 0.6
-           + uDot * (diff * 1.6 + fill + 0.3)
-           + uHi * spec * 0.85
-           + uRim * rim * 0.6 * (0.4 + 0.6 * sn.z);
+  vec3 col = uAmb * 0.45
+           + uDot * (diff * 1.9 + fill * 0.7 + 0.2)
+           + uHi * spec * 1.25
+           + uRim * rim * 0.85 * (0.4 + 0.6 * sn.z);
   col *= cavity * mix(0.62, 1.0, sn.z);
   fragColor = vec4(col, 1.0);
 }
@@ -176,7 +181,12 @@ void main() {
     t = t * t * (3.0 - 2.0 * t);
     col = mix(col, uStopCol[i], r > uStopPos[i - 1] ? t : 0.0);
   }
-  col += (hash(gl_FragCoord.xy) - 0.5) / 255.0;   // dither against banding
+  // lopsided studio light: the top-left corner falls off less
+  vec2 uv = vUv;
+  col += vec3(0.05, 0.045, 0.035) * smoothstep(0.55, 0.0, length((uv - vec2(0.0, 1.0)) * vec2(1.1, 1.6)));
+  // fine grain + dither so the gradient survives 8-bit / H.264 without banding
+  float n = hash(gl_FragCoord.xy) + hash(gl_FragCoord.yx + 17.0) - 1.0;
+  col += n * (5.0 / 255.0);
   fragColor = vec4(col, 1.0);
 }
 `;
