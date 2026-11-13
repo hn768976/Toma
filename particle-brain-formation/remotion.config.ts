@@ -12,6 +12,8 @@ Config.setDefaultPremountInSeconds(2);
 Config.setCodec("h264");
 Config.setCrf(16);
 Config.setPixelFormat("yuv420p");
+// Standard limited-range BT.709 output (tagged), as expected by players/editors.
+Config.setColorSpace("bt709");
 // WebGL scene: SwiftShader-over-ANGLE works everywhere, including GPU-less
 // servers/containers. On a machine with a GPU you may pass --gl=angle to speed up.
 Config.setChromiumOpenGlRenderer("swangle");
