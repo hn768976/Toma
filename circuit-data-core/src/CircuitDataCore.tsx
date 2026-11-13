@@ -1,5 +1,5 @@
 import { ThreeCanvas } from "@remotion/three";
-import { useThree } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import React, { useLayoutEffect, useMemo } from "react";
 import * as THREE from "three";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
@@ -22,6 +22,7 @@ import {
   shellVertex,
 } from "./scene/shaders";
 import { mulberry32 } from "./scene/random";
+import { createDof } from "./scene/dof";
 
 // Colours are authored as display (sRGB) values and written straight to the
 // canvas, so Three.js colour management is disabled (see also `linear`/`flat`).
@@ -33,6 +34,9 @@ export const circuitDataCoreSchema = z.object({
 type Props = z.infer<typeof circuitDataCoreSchema>;
 
 const FOV = 25;
+// Lens: circle-of-confusion radius (fraction of frame height) at infinity, and its cap.
+const DOF_APERTURE = 0.03;
+const DOF_MAX_COC = 0.024;
 const CORE_CENTER = new THREE.Vector3(0, CUBE_BASE_Y + CUBE_H / 2, 0);
 const deg = THREE.MathUtils.degToRad;
 const lerp = THREE.MathUtils.lerp;
@@ -261,6 +265,14 @@ const SceneContents: React.FC<Props> = ({ variant }) => {
       shellMats.push(mat);
       coreGroup.add(mesh);
     }
+    // Depth-only proxy so the depth-of-field pass sees the core's surface (the
+    // glass shells themselves are additive and don't write depth). Drawn last.
+    const depthProxy = new THREE.Mesh(
+      new THREE.BoxGeometry(CUBE_W, CUBE_H, CUBE_D),
+      new THREE.MeshBasicMaterial({ colorWrite: false, transparent: true, depthWrite: true }),
+    );
+    depthProxy.renderOrder = 10;
+    coreGroup.add(depthProxy);
     group.add(coreGroup);
 
     // Floor reflection of the core (mirrored about the substrate top).
@@ -340,6 +352,13 @@ const SceneContents: React.FC<Props> = ({ variant }) => {
     return { group, floorMats: [floorMat, subTopMat], shellMats, moteMat, shells };
   }, [pxScale]);
 
+  const dof = useMemo(
+    () => createDof(width, height, { aperture: DOF_APERTURE * height, maxCoc: DOF_MAX_COC * height }),
+    [width, height],
+  );
+  // Take over rendering (priority 1): scene -> depth of field -> screen.
+  useFrame(({ gl }) => dof.render(gl, scene, camera), 1);
+
   useLayoutEffect(() => {
     scene.background = new THREE.Color("#050a18");
   }, [scene]);
@@ -358,15 +377,23 @@ const SceneContents: React.FC<Props> = ({ variant }) => {
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld();
 
-    // Focus on the core's nearest face.
-    const focus = pos.distanceTo(CORE_CENTER) - 0.6;
+    // Focus on the core's nearest top corner; its far half falls out of focus.
+    let nearest = Infinity;
+    for (const sx of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        const corner = new THREE.Vector3(sx * CUBE_W / 2, CUBE_BASE_Y + CUBE_H, sz * CUBE_D / 2);
+        nearest = Math.min(nearest, -corner.applyMatrix4(camera.matrixWorldInverse).z);
+      }
+    }
+    const focus = nearest + 0.15;
+    dof.setFocus(focus);
     // Energy: a gradual build over the shot plus cyan surges through the core
     // (timed like the brightness spikes of the reference clip).
     const surge = [2.6, 3.65, 12.7, 13.7].reduce(
       (acc, c) => acc + 0.55 * Math.exp(-((t - c) * (t - c)) / (2 * 0.12 * 0.12)),
       0,
     );
-    const energy = lerp(0.85, 1.3, u) + surge;
+    const energy = lerp(0.85, 1.2, u) + surge;
     for (const m of built.floorMats) {
       m.uniforms.uTime.value = t;
       m.uniforms.uEnergy.value = energy;
@@ -378,7 +405,7 @@ const SceneContents: React.FC<Props> = ({ variant }) => {
     }
     built.moteMat.uniforms.uTime.value = t;
     built.moteMat.uniforms.uFocusDist.value = focus;
-  }, [frame, fps, durationInFrames, camera, width, height, variant, built]);
+  }, [frame, fps, durationInFrames, camera, width, height, variant, built, dof]);
 
   return <primitive object={built.group} />;
 };
@@ -393,7 +420,7 @@ export const CircuitDataCore: React.FC<Props> = ({ variant }) => {
         dpr={1}
         linear
         flat
-        gl={{ antialias: true, preserveDrawingBuffer: true }}
+        gl={{ antialias: false, preserveDrawingBuffer: true }}
         camera={{ fov: FOV, near: 0.05, far: 120, position: [0, 3, 6] }}
       >
         <SceneContents variant={variant} />

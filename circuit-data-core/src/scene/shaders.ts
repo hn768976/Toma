@@ -93,8 +93,8 @@ export const floorFragment = /* glsl */ `
     // Blinking SMD lights: bright board pixels flash on and off in their own rhythm.
     vec2 cellB = floor(vWorld.xz * 2.5);
     float blink = step(0.55, fract(uTime * (0.6 + hash12(cellB) * 1.4) + hash12(cellB + 3.1)));
-    float padMask = smoothstep(0.42, 0.6, dot(base, vec3(0.333)));
-    vec3 col = base * uBaseGain * (0.85 + pool * 1.6) * (1.0 - padMask * 0.6 + padMask * blink * 1.6);
+    float padMask = smoothstep(0.36, 0.55, dot(base, vec3(0.333)));
+    vec3 col = base * uBaseGain * (0.85 + pool * 1.6) * (1.0 - padMask * 0.6 + padMask * blink * 2.6);
     vec3 glowCol = mix(uGlowColor, uGlowCore, clamp(glow * glow * 0.8, 0.0, 1.0));
     col += glowCol * glow * pulse * breathe * uGlowGain * uEnergy * (0.75 + pool * 1.8);
     col += uPoolColor * pool * uPoolGain;
