@@ -24,7 +24,7 @@ import type { Palette } from "./palette";
 import { SpriteSet, pickSprite } from "./sprites";
 
 export const ATOM_R = 0.5;
-export const BOND = 1.32;
+export const BOND = 1.2;
 
 export type Molecule = {
   p0: Vec3;
@@ -34,6 +34,7 @@ export type Molecule = {
   spin: number;
   phase: number;
   hero: boolean;
+  scripted?: boolean;
 };
 
 export type Camera = {
@@ -86,10 +87,10 @@ export const buildWorld = (seed: number): Molecule[] => {
   });
   // Main cloud surrounding the hero (also covers the orbit of version 2).
   let guard = 0;
-  while (mols.length < 1000 && guard++ < 100000) {
+  while (mols.length < 820 && guard++ < 100000) {
     const p: Vec3 = [(rnd() - 0.5) * 72, (rnd() - 0.5) * 44, -24 + Math.pow(rnd(), 1.35) * 86];
     // keep a clear pocket around the hero
-    if (Math.hypot(p[0], p[1] * 1.1, p[2]) < 5.2) continue;
+    if (Math.hypot(p[0], p[1] * 1.1, p[2]) < 6.2) continue;
     // keep the final V1 sight-line in front of the camera clean
     if (p[2] < -1 && p[2] > -12 && Math.hypot(p[0] + 0.75, p[1]) < 1.6) continue;
     // no out-of-focus giants right in front of the settled V1 camera
@@ -99,8 +100,26 @@ export const buildWorld = (seed: number): Molecule[] => {
     if (p[2] < -7 && Math.hypot(p[0] + 0.75, p[1]) < 3.2) continue;
     push(p);
   }
+  // Two scripted mid-ground molecules that drift in across the frame corners
+  // late in the shot (as in the reference). p(t) = p0 + vel * t.
+  const scripted: { start: Vec3; vel: Vec3; t0: number; axis: Vec3 }[] = [
+    { start: [-0.75 + 3.75, 1.8, -1.2], vel: [-0.22, -0.03, 0], t0: 6.0, axis: norm([0.3, 1, 0.25]) },
+    { start: [-0.75 - 3.9, -1.75, -1.0], vel: [0.36, 0.05, 0], t0: 10.2, axis: norm([0.6, 0.8, -0.3]) },
+  ];
+  for (const sc of scripted) {
+    mols.push({
+      p0: sub(sc.start, scale(sc.vel, sc.t0)),
+      vel: sc.vel,
+      axis0: sc.axis,
+      spinAxis: norm([0.2, 0.1, 1]),
+      spin: 0.18,
+      phase: 0,
+      hero: false,
+      scripted: true,
+    });
+  }
   // Fly-through tube along the V1 dolly path (passes the lens at speed).
-  for (let i = 0; i < 800; i++) {
+  for (let i = 0; i < 620; i++) {
     const z = -28 - Math.pow(rnd(), 1.25) * 380;
     const a = rnd() * Math.PI * 2;
     const r = 1.2 + Math.sqrt(rnd()) * 20;
@@ -115,8 +134,9 @@ const T_TOTAL = 421 / 30;
 export const cameraV1 = (t: number): Camera => {
   const tau = 0.555;
   const fly = 381 * Math.exp(-t / tau);
-  const settle = 0.75 * (1 - t / T_TOTAL);
-  const dist = 7.45 + fly + settle;
+  // keeps creeping in until ~10 s, then eases back slightly (hero size curve of the reference)
+  const settle = 1.3 - 1.75 * smoothstep(2.5, 10.2, t) + 0.75 * smoothstep(10.2, 14.0, t);
+  const dist = 7.75 + fly + settle;
   const speed = (381 / tau) * Math.exp(-t / tau);
   const swayX = 0.1 * Math.sin(t * 0.55 + 0.4);
   const swayY = 0.07 * Math.sin(t * 0.43 + 1.3);
@@ -127,10 +147,11 @@ export const cameraV1 = (t: number): Camera => {
     pos,
     target,
     roll: 0.01 * Math.sin(t * 0.35),
-    focus: Math.max(dist, 3),
+    // during the fly-through focus stays on the molecules streaming past
+    focus: Math.min(dist, 14),
     focal: 0.95,
     zoomBlur: clamp((speed / dist) * (1 / 60) * 1.6, 0, 0.3),
-    whiteout: 0.8 * (1 - smoothstep(0.0, 1.7, t)),
+    whiteout: 0.9 * (1 - smoothstep(0.0, 0.85, t)),
     bgZoom: lerp(0.72, 1.0, prog) + 0.012 * (t / T_TOTAL),
     bgShift: [-swayX * 0.02, -swayY * 0.02],
   };
@@ -142,7 +163,7 @@ export const cameraV2 = (t: number): Camera => {
   const intro = easeOutCubic(t / 3.6);
   const dist = lerp(2.6, 9.4, intro) + 0.5 * easeInOutSine(u);
   // yaw sweeps from the right side of the hero around to its left
-  const yaw = lerp(1.35, 0.42, intro) - 0.95 * easeInOutSine(clamp((t - 1.5) / (T_TOTAL - 1.5)));
+  const yaw = lerp(1.35, 0.42, intro) - 1.3 * easeInOutSine(clamp((t - 1.5) / (T_TOTAL - 1.5)));
   const pitch = lerp(-0.42, -0.2, intro) + 0.08 * easeInOutSine(u);
   const tgt: Vec3 = [0.55 * (1 - intro) + 0.35 * intro, 0.05, 0];
   const pos: Vec3 = [
@@ -161,7 +182,7 @@ export const cameraV2 = (t: number): Camera => {
     focus: dist * 0.98,
     focal: 0.95,
     zoomBlur: 0.05 * speedProxy * speedProxy,
-    whiteout: 0.93 * (1 - smoothstep(0.0, 1.2, t)),
+    whiteout: 0.9 * (1 - smoothstep(0.0, 0.55, t)),
     bgZoom: lerp(1.25, 1.0, intro) + 0.01 * u,
     bgShift: [Math.sin(yaw) * 0.18, pitch * 0.12],
   };
@@ -175,12 +196,14 @@ const moleculeAtoms = (m: Molecule, t: number): [Vec3, Vec3] => {
     center = [0, 0.08 * Math.sin(t * 0.62 + 0.5), 0];
     // mostly upright, gently swaying and turning
     let a: Vec3 = [0, 1, 0];
-    a = rotate(a, [1, 0, 0], 0.2 + 0.07 * Math.sin(t * 0.41));
-    a = rotate(a, [0, 0, 1], 0.07 * Math.sin(t * 0.52 + 0.6) - 0.02);
+    a = rotate(a, [1, 0, 0], 0.22 + 0.12 * Math.sin(t * 0.41));
+    a = rotate(a, [0, 0, 1], 0.12 * Math.sin(t * 0.47 + 0.6) - 0.03);
     axis = norm(a);
   } else {
     center = add(m.p0, scale(m.vel, t));
-    center = add(center, [0.12 * Math.sin(t * 0.7 + m.phase), 0.1 * Math.sin(t * 0.55 + m.phase * 1.7), 0]);
+    if (!m.scripted) {
+      center = add(center, [0.12 * Math.sin(t * 0.7 + m.phase), 0.1 * Math.sin(t * 0.55 + m.phase * 1.7), 0]);
+    }
     axis = rotate(m.axis0, m.spinAxis, m.spin * t + m.phase);
   }
   const h = scale(axis, BOND / 2);
@@ -220,19 +243,20 @@ const drawNeck = (ctx: CanvasRenderingContext2D, a: Proj, b: Proj, pal: Palette,
   if (d < 0.25 * rmin) return;
   const ux = dx / d;
   const uy = dy / d;
-  const gapStart = a.r * 0.55;
-  const gapEnd = d - b.r * 0.55;
+  // the neck is drawn behind both spheres, so it can start inside them
+  const gapStart = a.r * 0.45;
+  const gapEnd = d - b.r * 0.45;
   if (gapEnd <= gapStart) return;
   const uc = (a.r + (d - b.r)) / 2;
   const L = Math.max((gapEnd - gapStart) / 2, 1e-3);
-  const wm = (hero ? 0.3 : 0.22) * rmin;
-  const we = 0.78 * rmin;
+  const wm = (hero ? 0.13 : 0.17) * rmin;
+  const we = 0.74 * rmin;
   const N = 28;
   ctx.save();
   ctx.transform(ux, uy, -uy, ux, a.x, a.y);
   const prof = (s: number) => {
     const k = clamp(Math.abs(s - uc) / L);
-    return wm + (we - wm) * Math.pow(k, 2.4);
+    return wm + (we - wm) * Math.pow(k, 1.35);
   };
   ctx.beginPath();
   for (let i = 0; i <= N; i++) {
@@ -254,7 +278,7 @@ const drawNeck = (ctx: CanvasRenderingContext2D, a: Proj, b: Proj, pal: Palette,
   ctx.fillStyle = g;
   ctx.fill();
   // metallic core where the two shells meet
-  const core = ctx.createRadialGradient(uc, 0, 0, uc, 0, Math.max(L * 0.45, wm * 1.3));
+  const core = ctx.createRadialGradient(uc, 0, 0, uc, 0, Math.max(L * 0.5, wm * 2.2));
   core.addColorStop(0, pal.neckCore);
   core.addColorStop(0.5, pal.neckCore.replace(/[\d.]+\)$/, "0.25)"));
   core.addColorStop(1, "rgba(80,90,100,0)");
@@ -284,8 +308,9 @@ const drawAtom = (ctx: CanvasRenderingContext2D, p: Proj, sprites: SpriteSet) =>
 
 const drawMolecule = (ctx: CanvasRenderingContext2D, it: DrawItem, sprites: SpriteSet, pal: Palette) => {
   const [back, front] = it.a.z > it.b.z ? [it.a, it.b] : [it.b, it.a];
-  drawAtom(ctx, back, sprites);
+  // neck first: the spheres cover its ends, so there is no seam
   drawNeck(ctx, back, front, pal, it.hero);
+  drawAtom(ctx, back, sprites);
   drawAtom(ctx, front, sprites);
 };
 
@@ -430,7 +455,7 @@ export const renderFrame = (
     const maxy = Math.max(a.y, b.y) + rr * 2;
     if (maxx < 0 || minx > W || maxy < 0 || miny > H) continue;
     let coc: number;
-    if (z >= zf) coc = 0.0062 * W * Math.pow(1 - zf / z, 3.4);
+    if (z >= zf) coc = 0.008 * W * Math.pow(1 - zf / z, 2.9);
     else coc = 0.006 * W * Math.pow(zf / z - 1, 1.3);
     if (m.hero) coc *= 0.5;
     const fog = 1 - smoothstep(30, 74, z);

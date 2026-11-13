@@ -74,9 +74,9 @@ const drawAtom = (ctx: CanvasRenderingContext2D, R: number, pal: Palette) => {
 
   // crisp outline
   ctx.strokeStyle = pal.outline;
-  ctx.lineWidth = 0.03 * R;
+  ctx.lineWidth = 0.022 * R;
   ctx.beginPath();
-  ctx.arc(0, 0, R - 0.015 * R, 0, Math.PI * 2);
+  ctx.arc(0, 0, R - 0.011 * R, 0, Math.PI * 2);
   ctx.stroke();
 
   // --- specular highlights --------------------------------------------------
@@ -116,8 +116,8 @@ const drawAtom = (ctx: CanvasRenderingContext2D, R: number, pal: Palette) => {
   ctx.stroke();
 
   // --- "H2" label -----------------------------------------------------------
-  const big = 0.66 * R;
-  const small = 0.42 * R;
+  const big = 0.74 * R;
+  const small = 0.47 * R;
   ctx.fillStyle = pal.label;
   ctx.textBaseline = "alphabetic";
   ctx.font = `700 ${big}px ${FONT_FAMILY}, sans-serif`;
