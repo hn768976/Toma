@@ -127,14 +127,15 @@ const buildNeuron = (b: Builder, rng: Rng, detail: number) => {
     const q = add(p, mul(d, SHEATH_LEN));
     // The axon core is never drawn inside a sheath (its rounded end-caps reach the node gap),
     // only in the gap itself - so the core can never show through a sheath.
-    const a0 = add(p, mul(d, 0.2));
-    const a1 = add(q, mul(d, -0.2));
+    const a0 = add(p, mul(d, 0.26));
+    const a1 = add(q, mul(d, -0.26));
     b.capsule(a0, 0.235, a1, 0.235, { col: MYELIN, opacity: 1, mat: MAT_MYELIN, fire: 1, glow: i % 3 === 1 ? 0.22 : 0.03, bias: 0.7 }, rng.next(), s, s + SHEATH_LEN);
     s += SHEATH_LEN;
     const n = add(q, mul(d, NODE_GAP));
-    b.capsule(q, 0.085, n, 0.085, tissue, seed, s, s + NODE_GAP);
+    // short bare stretch at the node; sized so it only touches the sheath end-caps, never overlaps them
+    b.capsule(add(q, mul(d, 0.06)), 0.085, add(n, mul(d, -0.06)), 0.085, tissue, seed, s, s + NODE_GAP);
     // node of Ranvier: small warm glow
-    b.point(lerp3(q, n, 0.5), 0.1, { col: [1.0, 0.28, 0.2], opacity: 0.7, mat: MAT_LIT, glow: 0.8, bias: 0.35 }, rng.next(), s);
+    b.point(lerp3(q, n, 0.5), 0.095, { col: [1.0, 0.28, 0.2], opacity: 0.7, mat: MAT_LIT, glow: 0.8, bias: 0.35 }, rng.next(), s);
     p = n;
     s += NODE_GAP;
     if (hero) axonPath.push(p);
