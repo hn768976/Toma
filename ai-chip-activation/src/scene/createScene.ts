@@ -485,7 +485,7 @@ export const createScene = (
         float reach = exp(-vD / 9.0);
         col += uEnergyColor * 1.9 * uTraceE * behind * flow * (0.35 + 0.65 * reach);
         float head = exp(-pow((vD - uFront) / 0.9, 2.0)) * uHead;
-        col += (uEnergyColor + vec3(0.4, 0.55, 0.6)) * head * 1.8;
+        col += (uEnergyColor + vec3(0.4, 0.55, 0.6)) * head * 1.0;
         gl_FragColor = vec4(col * vA, 1.0);
       }
     `,
@@ -731,13 +731,23 @@ export const createScene = (
     const after = dt > 0;
     uTime.value = t;
     const approach = smooth((t - 1.0) / 1.9);
+    // the impact ramps in over ~3 frames instead of cutting in on one
+    const ramp = after ? smooth(dt / 0.1) : 0;
     L.uGlow.value =
-      0.55 + 0.05 * Math.sin(t * 2.3) + (after ? 0.9 * Math.exp(-dt * 3.2) + 0.25 : approach * 0.2);
-    L.uEnergy.value = after ? 0.95 * Math.exp(-dt * 0.95) + 0.03 : approach * 0.16;
+      0.55 +
+      0.05 * Math.sin(t * 2.3) +
+      (after
+        ? approach * 0.2 * (1 - ramp) + (0.9 * Math.exp(-dt * 3.2) + 0.25) * ramp
+        : approach * 0.2);
+    L.uEnergy.value = after
+      ? approach * 0.16 * (1 - ramp) + (0.95 * Math.exp(-dt * 0.95) + 0.03) * ramp
+      : approach * 0.16;
     L.uFront.value = after ? dt * 11.5 : -10;
     L.uRing.value = after ? Math.exp(-dt * 1.0) * smooth(dt / 0.15) : 0;
-    traceMat.uniforms.uTraceE.value = after ? 0.1 + 1.0 * Math.exp(-dt * 0.85) : 0;
-    traceMat.uniforms.uHead.value = after ? Math.exp(-dt * 0.9) : 0;
+    traceMat.uniforms.uTraceE.value = after
+      ? (0.1 + 1.0 * Math.exp(-dt * 0.85)) * smooth(dt / 0.25)
+      : 0;
+    traceMat.uniforms.uHead.value = after ? Math.exp(-dt * 0.9) * smooth(dt / 0.2) : 0;
     const pxScale = (2 * Math.tan((FOV * Math.PI) / 360)) / pxH;
     traceMat.uniforms.uPxScale.value = pxScale;
     streakMat.uniforms.uPxScale.value = pxScale;
@@ -755,11 +765,13 @@ export const createScene = (
     // chip face
     faceMat.uniforms.uHolo.value = after ? 1 : 0;
     faceMat.uniforms.uWipe.value = smooth((t - 4.45) / 0.95);
-    const flashI = after ? Math.exp(-dt * 5.0) : smooth((t - (IMPACT - 0.2)) / 0.2) * 0.3;
-    faceMat.uniforms.uFlash.value = flashI * 1.0;
-    flashMat.uniforms.uI.value = flashI * 0.5;
+    const flashI = after
+      ? (0.3 + 0.7 * ramp) * Math.exp(-dt * 5.0)
+      : smooth((t - (IMPACT - 0.2)) / 0.2) * 0.3;
+    faceMat.uniforms.uFlash.value = flashI * 0.7;
+    flashMat.uniforms.uI.value = flashI * 0.24;
     flash.quaternion.copy(camera.quaternion);
-    grade.uniforms.uExposure.value = 1.0 + flashI * 0.3;
+    grade.uniforms.uExposure.value = 1.0 + flashI * 0.2;
 
     // depth of field: focus on the chip, wide open during the impact swing
     dof.uniforms.uFocus.value = cam.dist;
