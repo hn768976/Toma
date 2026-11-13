@@ -96,7 +96,7 @@ vec3 shade(vec2 frag) {
   col += uHazeA * pow(hz, 4.5) * 0.4 * hzMask;
   col += uHazeB * pow(hz2, 4.5) * 1.2 * smoothstep(0.35, 0.95, r);
   float blobs = fbm(dir * 4.0 + vec2(lrT * 1.3, 2.0));
-  col += uDeep * pow(blobs, 4.5) * 1.6 * exp(-abs(r - 0.48) / 0.16);
+  col += mix(uDeep, uHazeB, 0.35) * pow(blobs, 4.0) * 2.6 * exp(-abs(r - 0.48) / 0.16);
 
   // --- radial light rays -------------------------------------------------------
   float rayMask = smoothstep(0.11, 0.22, r);
@@ -113,19 +113,19 @@ vec3 shade(vec2 frag) {
   col += uMid * 0.05 * exp(-abs(r - 0.33) / 0.16) * (0.6 + 0.4 * beams);
 
   // --- central iris: segmented ring of light ticks ------------------------------
-  float irisR = 0.172;
+  float irisR = 0.172 * (1.0 + 0.09 * sin(t * 0.52) + 0.04 * sin(t * 1.31 + 2.0));
   float ticksN = 30.0;
-  float ta = fract(a / TAU * ticksN + t * 0.06);
+  float ta = fract(a / TAU * ticksN + t * 0.06 + 0.25 * sin(t * 0.21));
   float tick = smoothstep(0.3, 0.1, abs(ta - 0.5));
   float band = exp(-pow((rs - irisR) / 0.012, 2.0));
-  float tickFl = 0.6 + 0.4 * vnoise(vec2(mod(floor(a / TAU * ticksN + t * 0.06), ticksN) * 2.1, t * 2.0));
+  float tickFl = 0.6 + 0.4 * vnoise(vec2(mod(floor(a / TAU * ticksN + t * 0.06 + 0.25 * sin(t * 0.21)), ticksN) * 2.1, t * 2.0));
   col += (uCore * 0.35 + uMid * 0.9) * tick * band * tickFl * 0.8;
   col += uMid * exp(-abs(rs - irisR) / 0.03) * 0.25;
-  col += uMid * ringLine(rs, 0.142, 0.0016, px) * 0.9;
-  col += uCore * ringLine(rs, 0.205, 0.0018, px) * 0.8;
+  col += uMid * ringLine(rs, irisR * 0.826, 0.0016, px) * 0.9;
+  col += uCore * ringLine(rs, irisR * 1.19, 0.0018, px) * 0.8;
   // inner dashed ring
   float dash = step(0.35, fract(a / TAU * 64.0 - t * 0.1));
-  col += uMid * ringLine(rs, 0.226, 0.0012, px) * dash * 0.8;
+  col += uMid * ringLine(rs, irisR * 1.31, 0.0012, px) * dash * 0.8;
 
   // --- hero rings: thick glowing rings sweeping outward past the camera -------
   // Two bright rings half a cycle apart, so one is always mid-frame while the
@@ -239,6 +239,9 @@ void main() {
   // filmic shoulder: hot cores roll to white, glows stay saturated
   c = 1.0 - exp(-c * 2.0);
   c = pow(c, vec3(0.95));
+  // levels: crush the haze floor to near-black and push highlights hotter
+  c = max(c - 0.045, 0.0) * 1.12;
+  c = clamp(c * (1.0 + 0.35 * c), 0.0, 1.0);
   // dither to avoid banding in the dark gradients
   c += (h21(gl_FragCoord.xy) - 0.5) / 255.0;
   outColor = vec4(c, 1.0);

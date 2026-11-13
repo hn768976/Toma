@@ -17,9 +17,9 @@ export const ELECTRIC_BLUE: TunnelPalette = {
 
 /** Version 2 — solar gold / ember: warm alternative palette. */
 export const SOLAR_GOLD: TunnelPalette = {
-  core: [1.0, 0.9, 0.62],
-  mid: [1.0, 0.45, 0.06],
-  deep: [0.75, 0.2, 0.02],
-  hazeA: [0.5, 0.1, 0.01],
-  hazeB: [0.7, 0.05, 0.22],
+  core: [1.0, 0.82, 0.5],
+  mid: [0.82, 0.32, 0.03],
+  deep: [0.55, 0.12, 0.02],
+  hazeA: [0.4, 0.07, 0.01],
+  hazeB: [0.55, 0.04, 0.18],
 };
