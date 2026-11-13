@@ -107,7 +107,7 @@ void main() {
 
   float stepT = floor(t * mix(3.0, 9.0, h21(gid + 4.4)) + h21(gid) * 10.0);
 
-  if (bt < 0.36) {
+  if (bt < 0.26) {
     // dot / dash matrix (LED-like, mostly lit, row-wise brightness)
     float Px = mix(0.13, 0.17, h21(gid + 1.9));
     float Pz = Px * mix(0.85, 1.05, h21(gid + 8.3));
@@ -208,8 +208,8 @@ void main() {
   float ay = lineAA(p.y, 0.0, 0.012 / uScale, fw.y);
   float gx = exp(-abs(p.x) / 0.07);
   float gy = exp(-abs(p.y) / 0.06);
-  hot += ax * 0.55 + ay * 0.12;
-  ink += gx * 0.16 + gy * 0.08;
+  hot += ax * 0.55 + ay * 0.05;
+  ink += gx * 0.16 + gy * 0.03;
   // parallel thin rails beside the main axis
   ink += (lineAA(p.x, 0.12, 0.008, fw.x) + lineAA(p.x, -0.12, 0.008, fw.x)) * 0.45;
   // data pulses travelling along the axes

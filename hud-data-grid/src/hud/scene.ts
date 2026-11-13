@@ -37,6 +37,7 @@ type Rig = {
   focusTilt?: number;
   nearBlur: number;
   farBlur: number;
+  field?: PostSettings["fieldFocus"];
 };
 
 /**
@@ -52,11 +53,13 @@ const referenceRig = (): Rig => ({
   azimuth: 46.5,
   roll: -3.5,
   fov: 11.15,
-  focus: new THREE.Vector3(-0.4, 0, -0.1),
-  // sharp band runs from the readout towards the lower-right, like the reference
-  focusAxis: new THREE.Vector3(1, 0, 0.22).normalize(),
+  focus: new THREE.Vector3(0.0, 0, -0.2),
+  // focal plane tilted along the data rows; the radial field falloff below
+  // keeps the sharp zone on the readout + gauges and softens the far ends
+  focusAxis: new THREE.Vector3(1, 0, 0),
   focusTilt: 1,
-  nearBlur: 150,
+  field: { center: [0.6, 0.5], radius: 0.46, gain: 34 },
+  nearBlur: 105,
   farBlur: 90,
 });
 
@@ -217,6 +220,7 @@ export const createHudFactory =
         const settings: PostSettings = {
           focusDistance: focusZ,
           focalPlane,
+          fieldFocus: rig.field,
           nearBlur: rig.nearBlur,
           farBlur: rig.farBlur,
           maxCoc: 30,

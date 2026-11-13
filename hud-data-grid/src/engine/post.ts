@@ -15,6 +15,11 @@ export type PostSettings = {
    * Blur grows with the distance from this plane instead of from a depth slice.
    */
   focalPlane?: { point: THREE.Vector3; normal: THREE.Vector3 };
+  /**
+   * Optional radial falloff (curvature of field): pixels farther than `radius`
+   * (in frame heights) from `center` (uv, origin bottom-left) get extra blur.
+   */
+  fieldFocus?: { center: [number, number]; radius: number; gain: number };
   /** CoC scale (px @1080) for things nearer / farther than the focus. */
   nearBlur: number;
   farBlur: number;
@@ -52,13 +57,21 @@ uniform vec4 focalPlane; // view space: xyz normal, w offset
 uniform float nearK;
 uniform float farK;
 uniform float maxCoc;
+// optional radial "field" falloff: xy = sharp-zone centre (uv), z = radius
+// (frame heights), w = extra CoC px per frame-height beyond that radius
+uniform vec4 field;
+uniform float aspect;
 vec3 viewPos(vec2 uv, float d) {
   vec4 v = invProj * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0);
   return v.xyz / v.w;
 }
-float cocOf(vec3 v) {
+float cocOf(vec3 v, vec2 uv) {
   float c = (dot(focalPlane.xyz, v) + focalPlane.w) / max(-v.z, 1e-4);
-  return c < 0.0 ? max(c * nearK, -maxCoc) : min(c * farK, maxCoc);
+  c = c < 0.0 ? c * nearK : c * farK;
+  float d = length((uv - field.xy) * vec2(aspect, 1.0));
+  float extra = max(d - field.z, 0.0) * field.w;
+  c += c < 0.0 ? -extra : extra;
+  return clamp(c, -maxCoc, maxCoc);
 }`;
 
 // 1) half-resolution prepass: colour + signed CoC (in full-res px) in alpha
@@ -71,7 +84,7 @@ in vec2 vUv;
 out vec4 fragColor;
 void main() {
   vec3 col = texture(tColor, vUv).rgb; // bilinear at half res = 2x2 box
-  float c = cocOf(viewPos(vUv, texture(tDepth, vUv).r));
+  float c = cocOf(viewPos(vUv, texture(tDepth, vUv).r), vUv);
   fragColor = vec4(col, c);
 }`;
 
@@ -118,7 +131,7 @@ in vec2 vUv;
 out vec4 fragColor;
 void main() {
   vec3 sharp = texture(tColor, vUv).rgb;
-  float c = abs(cocOf(viewPos(vUv, texture(tDepth, vUv).r)));
+  float c = abs(cocOf(viewPos(vUv, texture(tDepth, vUv).r), vUv));
   vec4 bl = texture(tBlur, vUv);
   // near-field blur spreads over sharper pixels behind it
   float spread = max(c, -bl.a * 0.85);
@@ -288,6 +301,8 @@ export class PostChain {
       nearK: { value: 10 },
       farK: { value: 10 },
       maxCoc: { value: 20 },
+      field: { value: new THREE.Vector4(0.5, 0.5, 10, 0) },
+      aspect: { value: width / height },
     });
     this.prepMat = mat(PREP_FRAG, { tColor: { value: null }, tDepth: { value: null }, ...cocUniforms() });
     this.dofMat = mat(DOF_FRAG, {
@@ -371,6 +386,9 @@ export class PostChain {
       d.nearK.value = s.nearBlur * u;
       d.farK.value = s.farBlur * u;
       d.maxCoc.value = s.maxCoc * u;
+      const fz = s.fieldFocus;
+      if (fz) d.field.value.set(fz.center[0], fz.center[1], fz.radius, fz.gain * u);
+      else d.field.value.set(0.5, 0.5, 10, 0);
     }
     this.prepMat.uniforms.tColor.value = this.sceneRT.texture;
     this.prepMat.uniforms.tDepth.value = this.sceneRT.depthTexture;
