@@ -8,12 +8,16 @@ export type Variant = "reference" | "camera";
 /** Layer spacing and where the water drop hits the top layer (world units, 1 = one cell). */
 const H = 6.5;
 const IMPACT = new THREE.Vector3(0.5, H + 0.34, -4.0);
-const LAYER_Y = [H, 0, -H];
+const LAYER_Y = [H, 0, -H, -2 * H];
+const NL = LAYER_Y.length;
 const ROWS = 18;
-/** The bottom layer sticks out a little so it peeks out under the middle one. */
-const LAYER_Z = [0, 0, 3];
+/** V2 only: the lower layers stick out a little so they peek out under the middle one. */
+const LAYER_Z_ALT = [0, 0, 3, 3];
 const X_MIN = -48;
 const X_MAX = 26;
+
+/** Lean of the drop in V1; chosen so it reads as near-upright under the rolled camera. */
+const DROP_LEAN = -0.15;
 
 type CamState = { pos: number[]; target: number[]; roll: number; fov: number; focus: number };
 
@@ -22,26 +26,34 @@ type CamState = { pos: number[]; target: number[]; roll: number; fov: number; fo
  * top cell layer, sinks through its edge and then bobs between the two layers.
  */
 function cameraReference(f: number): CamState {
-  // [frame, camX, camY/H, camZ, targetY/H]
+  // [frame, camX, camY/H, camZ, look-down offset/H]
+  // The camera sinks through the edge of the top layer and keeps descending
+  // past the second and third layers, easing to a stop above the fourth.
   const k = keys(f, [
-    [0, 2.0, 1.22, 6.9, 1.03],
-    [18, 2.0, 1.17, 7.0, 0.99],
-    [32, 1.9, 0.98, 7.8, 0.86],
-    [46, 1.8, 0.50, 8.4, 0.47],
-    [62, 1.7, 0.38, 8.5, 0.39],
-    [76, 1.6, 0.48, 8.4, 0.43],
-    [92, 1.5, 0.66, 8.0, 0.53],
-    [108, 1.5, 0.48, 8.3, 0.45],
-    [126, 1.6, 0.38, 8.5, 0.39],
-    [142, 1.5, 0.54, 8.2, 0.45],
-    [158, 1.4, 0.68, 7.9, 0.53],
-    [174, 1.4, 0.50, 8.1, 0.45],
-    [196, 1.3, 0.34, 8.0, 0.37],
-    [226, 1.2, 0.26, 7.8, 0.34],
+    [0, 2.0, 1.22, 6.9, 0.19],
+    [18, 2.0, 1.17, 7.0, 0.18],
+    [32, 1.9, 0.98, 7.8, 0.12],
+    [46, 1.8, 0.72, 8.4, 0.05],
+    [52, 1.75, 0.55, 8.4, 0.04],
+    [60, 1.7, 0.36, 8.4, 0.04],
+    [72, 1.7, 0.22, 8.4, 0.04],
+    [80, 1.65, 0.1, 8.4, 0.04],
+    [88, 1.6, -0.2, 8.4, 0.04],
+    [96, 1.6, -0.33, 8.4, 0.04],
+    [104, 1.55, -0.45, 8.4, 0.04],
+    [120, 1.5, -0.6, 8.4, 0.04],
+    [132, 1.5, -0.72, 8.4, 0.04],
+    [140, 1.45, -0.85, 8.4, 0.04],
+    [148, 1.45, -0.98, 8.4, 0.04],
+    [156, 1.4, -1.1, 8.4, 0.04],
+    [168, 1.4, -1.25, 8.4, 0.04],
+    [184, 1.35, -1.4, 8.4, 0.04],
+    [200, 1.3, -1.48, 8.4, 0.04],
+    [226, 1.3, -1.5, 8.4, 0.04],
   ]);
   return {
     pos: [k[0], k[1] * H, k[2]],
-    target: [0.2, k[3] * H, -7],
+    target: [0.2, (k[1] - k[3]) * H, -7],
     roll: -0.56,
     fov: 32,
     focus: 9.6,
@@ -76,7 +88,7 @@ function cameraAlternative(f: number): CamState {
   };
 }
 
-type Bubble = { birth: number; life: number; x: number; z: number; r: number; ph: number; speed: number; inDrop: number };
+type Bubble = { birth: number; life: number; layer: number; x: number; z: number; r: number; ph: number; speed: number; inDrop: number };
 
 export const createHydrationScene =
   (variant: Variant): SceneFactory =>
@@ -109,17 +121,18 @@ export const createHydrationScene =
     const rnds: number[] = [];
     const layers: number[] = [];
     // every layer is a long strip of cells: 15 rows deep, running along x
-    for (let L = 0; L < 3; L++) {
+    const layerZ = variant === "reference" ? [0, 0, 0, 0] : LAYER_Z_ALT;
+    for (let L = 0; L < NL; L++) {
       for (let iz = 0; iz < ROWS; iz++) {
         for (let x = X_MIN; x <= X_MAX; x++) {
-          offsets.push(x, LAYER_Y[L], LAYER_Z[L] - iz);
+          offsets.push(x, LAYER_Y[L], layerZ[L] - iz);
           rnds.push(rand(), rand(), rand(), rand());
           layers.push(L);
         }
       }
     }
     const count = layers.length;
-    const sphere = new THREE.SphereGeometry(1, 40, 26);
+    const sphere = new THREE.SphereGeometry(1, 36, 22);
     const cellGeo = new THREE.InstancedBufferGeometry();
     cellGeo.index = sphere.index;
     cellGeo.setAttribute("position", sphere.getAttribute("position"));
@@ -133,8 +146,10 @@ export const createHydrationScene =
       fragmentShader: CELL_FRAG,
       uniforms: {
         uImpact: { value: IMPACT.clone() },
-        uShape: { value: new THREE.Vector3() },
-        uTone: { value: new THREE.Vector3() },
+        uShape: { value: [0, 0, 0, 0] },
+        uTone: { value: [0, 0, 0, 0] },
+        uPale: { value: [0, 0, 0, 0] },
+        uLift: { value: 0 },
         uFrame: { value: 0 },
         uLightDir: { value: new THREE.Vector3(0.45, 0.75, -0.5).normalize() },
         uFog: { value: new THREE.Color() },
@@ -170,7 +185,7 @@ export const createHydrationScene =
       const th = (i / 48) * Math.PI;
       const r = Math.sin(th) * Math.pow(Math.sin(th / 2), 1.0) * 1.0;
       // tall pointed tip
-      const y = Math.cos(th) * (th < Math.PI / 2 ? 1.55 : 1.0);
+      const y = Math.cos(th) * (th < Math.PI / 2 ? 1.3 : 1.0);
       pts.push(new THREE.Vector2(Math.max(r, 0.0001), y));
     }
     pts.reverse();
@@ -193,27 +208,42 @@ export const createHydrationScene =
     const brand = rng(21);
     // bubbles carried inside the drop
     for (let i = 0; i < 14; i++) {
-      bubbles.push({ birth: -1, life: 1, x: brand() * 2 - 1, z: brand() * 2 - 1, r: 0.035 + brand() * 0.07, ph: brand(), speed: 0, inDrop: 1 });
+      bubbles.push({ birth: -1, life: 1, x: brand() * 2 - 1, z: brand() * 2 - 1, r: 0.035 + brand() * 0.07, ph: brand(), speed: 0, inDrop: 1, layer: 0 });
     }
     // bursts released under the membrane, trickling until ~f195
-    const bursts = [
-      [30, 34],
-      [58, 14],
-      [84, 16],
-      [112, 16],
-      [138, 18],
-      [162, 12],
-    ];
-    for (const [start, n] of bursts) {
+    // [start frame, count, layer the bubbles are released under]
+    const bursts =
+      variant === "reference"
+        ? [
+            [30, 30, 0],
+            [52, 14, 0],
+            [78, 16, 1],
+            [98, 14, 1],
+            [118, 12, 1],
+            [140, 16, 2],
+            [158, 12, 2],
+          ]
+        : [
+            [30, 34, 0],
+            [58, 14, 0],
+            [84, 16, 0],
+            [112, 16, 0],
+            [138, 18, 0],
+            [162, 12, 0],
+          ];
+    for (const [start, n, layer] of bursts) {
       for (let i = 0; i < n; i++) {
         const a = brand() * Math.PI * 2;
         const rr = Math.sqrt(brand()) * 1.05;
+        const birth = start + brand() * 16;
         bubbles.push({
-          birth: start + brand() * 16,
-          life: 46 + brand() * 30,
+          birth,
+          // every bubble has been absorbed by ~6.8 s, like in the reference
+          life: Math.min(46 + brand() * 30, 205 - birth),
+          layer,
           x: Math.cos(a) * rr,
           z: Math.sin(a) * rr * 0.8,
-          r: 0.07 + Math.pow(brand(), 2.0) * 0.2,
+          r: 0.055 + Math.pow(brand(), 2.0) * 0.12,
           ph: brand(),
           speed: 0.8 + brand() * 0.5,
           inDrop: 0,
@@ -274,31 +304,57 @@ export const createHydrationScene =
       camera.updateProjectionMatrix();
       camera.updateMatrixWorld();
 
-      // ----- hydration waves: [frame, top, middle, bottom] radius in cells -----
-      const shape = keys(f, [
-        [50, -6, -6, -6],
-        [68, -1, -3.5, -6],
-        [80, 6.5, -1, -6],
-        [100, 15, 3.2, -6],
-        [125, 34, 6.0, -6],
-        [150, 70, 8.6, -4],
-        [172, 90, 12.5, 4],
-        [190, 90, 20, 16],
-        [206, 90, 44, 40],
-        [220, 90, 90, 90],
-      ]);
-      const tone = keys(f, [
-        [44, -8, -8, -8],
-        [58, 2, 0, -8],
-        [74, 18, 7, 0],
-        [96, 50, 15, 8],
-        [126, 110, 28, 20],
-        [160, 140, 60, 50],
-        [190, 140, 130, 120],
-      ]);
-      cellMat.uniforms.uShape.value.set(shape[0], shape[1], shape[2]);
-      cellMat.uniforms.uTone.value.set(tone[0], tone[1], tone[2]);
+      // ----- hydration waves: radius (in cells) of the swollen / pearl zone per layer -----
+      let shape: number[];
+      let tone: number[];
+      if (variant === "reference") {
+        // each layer starts to hydrate when the bubble stream reaches it and
+        // is fully plump shortly after the camera has passed its front row
+        shape = [
+          keys(f, [[50, -6], [68, -1], [80, 6.5], [96, 20], [112, 90]])[0],
+          keys(f, [[48, -5], [58, 1.5], [72, 4.5], [84, 11], [100, 40], [112, 90]])[0],
+          keys(f, [[88, -5], [104, 3.5], [120, 5.5], [132, 7], [140, 9.5], [148, 16], [156, 40], [166, 90]])[0],
+          keys(f, [[142, -5], [158, 3], [172, 5.5], [180, 7.5], [188, 11], [196, 26], [205, 90]])[0],
+        ];
+        tone = [
+          keys(f, [[44, -8], [58, 2], [74, 18], [96, 140]])[0],
+          keys(f, [[42, -8], [60, 10], [84, 120]])[0],
+          keys(f, [[84, -8], [100, 7], [124, 12], [140, 18], [152, 50], [164, 130]])[0],
+          keys(f, [[150, -8], [170, 8], [188, 16], [196, 42], [205, 130]])[0],
+        ];
+      } else {
+        const sk = keys(f, [
+          [50, -6, -6, -6],
+          [68, -1, -3.5, -6],
+          [80, 6.5, -1, -6],
+          [100, 15, 3.2, -6],
+          [125, 34, 6.0, -6],
+          [150, 70, 8.6, -4],
+          [172, 90, 12.5, 4],
+          [190, 90, 20, 16],
+          [206, 90, 44, 40],
+          [220, 90, 90, 90],
+        ]);
+        const tk = keys(f, [
+          [44, -8, -8, -8],
+          [58, 2, 0, -8],
+          [74, 18, 7, 0],
+          [96, 50, 15, 8],
+          [126, 110, 28, 20],
+          [160, 140, 60, 50],
+          [190, 140, 130, 120],
+        ]);
+        shape = [sk[0], sk[1], sk[2], sk[2]];
+        tone = [tk[0], tk[1], tk[2], tk[2]];
+      }
+      cellMat.uniforms.uShape.value = shape;
+      cellMat.uniforms.uTone.value = tone;
+      // lower layers lose some of their dry colour before the water reaches them
+      cellMat.uniforms.uPale.value =
+        variant === "reference" ? [0, 0, 0.65 * smooth(56, 92, f), 0.6 * smooth(100, 150, f)] : [0, 0, 0, 0];
       cellMat.uniforms.uFrame.value = f;
+      // once the camera is below the top layer it recedes, so its underside reads as a fine grid
+      cellMat.uniforms.uLift.value = variant === "reference" ? 1.1 * H * smooth(42, 72, f) : 0;
       const hyd = smooth(60, 200, f);
       (cellMat.uniforms.uFog.value as THREE.Color).setRGB(0.83 + 0.02 * hyd, 0.9 + 0.03 * hyd, 0.96 + 0.01 * hyd);
 
@@ -320,15 +376,16 @@ export const createHydrationScene =
         [10, 1.6, 1.06, 0.97, 1],
         [18, 1.0, 1.0, 1.0, 1],
         [24, 0.52, 0.86, 1.08, 1],
-        [32, 0.05, 0.7, 1.06, 0.9],
-        [40, -0.5, 0.5, 0.9, 0.0],
+        [32, 0.1, 0.74, 1.06, 1],
+        [38, -0.3, 0.6, 0.98, 0.75],
+        [45, -0.8, 0.5, 0.9, 0.0],
       ]);
       const dropR = 0.98;
-      drop.visible = f < 41;
+      drop.visible = f < 46;
       drop.position.set(IMPACT.x, IMPACT.y + dk[0], IMPACT.z);
       drop.scale.set(dropR * dk[2], dropR * dk[1], dropR * dk[2]);
       // slight lean, like the reference drop
-      drop.rotation.set(0, 0, -0.22 + 0.03 * Math.sin(f / 7));
+      drop.rotation.set(0, 0, (variant === "reference" ? DROP_LEAN : -0.1) + 0.03 * Math.sin(f / 7));
       dropMat.uniforms.uAlpha.value = clamp01(dk[3]);
 
       // ----- bubbles -----
@@ -350,7 +407,7 @@ export const createHydrationScene =
             const spreadK = 0.55 + u * 0.9;
             v3.set(
               IMPACT.x + b.x * spreadK + Math.sin(age * 0.11 + b.ph * 30) * 0.14,
-              H - 0.55 - fall,
+              LAYER_Y[b.layer] - 0.55 - fall,
               IMPACT.z + b.z * spreadK + Math.cos(age * 0.09 + b.ph * 17) * 0.14,
             );
             const grow = smooth(0, 0.12, u);
@@ -373,12 +430,14 @@ export const createHydrationScene =
       const gI = keys(f, [[12, 0], [22, 1], [34, 0.6], [48, 0.28], [80, 0.1], [110, 0]])[0];
       glow.position.copy(IMPACT).add(v3.set(0, 0.15, 0));
       glow.quaternion.copy(camera.quaternion);
-      glow.scale.setScalar(4.2 + 2.5 * smooth(14, 40, f));
-      glowMat.uniforms.uIntensity.value = gI * 0.95;
+      glow.scale.setScalar(3.0 + 1.6 * smooth(14, 40, f));
+      glowMat.uniforms.uIntensity.value = gI * 0.42;
       (glowMat.uniforms.uColor.value as THREE.Color).setRGB(0.9, 0.98, 1.0);
       // soft aqua bloom where the bubbles are absorbed by the middle layer
       const g2 = keys(f, [[50, 0], [64, 0.5], [120, 0.55], [170, 0.5], [200, 0.2], [215, 0]])[0];
-      glow2.position.set(IMPACT.x, 0.7, IMPACT.z);
+      // follows the layer that is currently being hydrated
+      const below = variant === "reference" ? Math.min(NL - 1, Math.max(1, Math.ceil(-c.pos[1] / H + 0.35))) : 1;
+      glow2.position.set(IMPACT.x, LAYER_Y[below] + 0.7, IMPACT.z);
       glow2.quaternion.copy(camera.quaternion);
       glow2.scale.setScalar(5.5);
       glow2Mat.uniforms.uIntensity.value = g2 * 0.28;
@@ -386,8 +445,8 @@ export const createHydrationScene =
 
       post.render(scene, camera, {
         focus: c.focus,
-        aperture: 0.012,
-        maxCoc: 0.015,
+        aperture: variant === "reference" ? 0.016 - 0.007 * smooth(160, 196, f) : 0.014,
+        maxCoc: 0.019,
         bloomStrength: 0.22,
         bloomThreshold: 0.93,
         vignette: 0.16,

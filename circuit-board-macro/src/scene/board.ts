@@ -15,26 +15,26 @@ export const W = (r: number, s: number): V2 => [
   r * R[1] + s * F[1],
 ];
 
-const PLATE_TOP = 0.82;
+const PLATE_TOP = 0.62;
 
 function chip(b: Builder) {
   // --- body, lid -------------------------------------------------------
-  b.rbox("chipBody", 3.74, 0.5, 3.74, 0, 0.08, 0, 0.04, 0.05);
-  b.rbox("chipBody", 3.9, 0.1, 3.9, 0, 0.6, 0, 0.03, 0.14);
-  b.rbox("plate", 4.0, 0.12, 4.0, 0, 0.7, 0, 0.028, 0.2);
+  b.rbox("chipBody", 3.74, 0.36, 3.74, 0, 0.06, 0, 0.04, 0.05);
+  b.rbox("chipBody", 3.9, 0.08, 3.9, 0, 0.42, 0, 0.03, 0.14);
+  b.rbox("plate", 4.0, 0.12, 4.0, 0, 0.5, 0, 0.028, 0.2);
   const y = PLATE_TOP + 0.002;
 
   // --- gull-wing pins ----------------------------------------------------
   const s = new THREE.Shape();
   const t = 0.05;
-  s.moveTo(0, 0.34);
-  s.lineTo(0.2, 0.34);
-  s.lineTo(0.36, 0.05);
-  s.lineTo(0.6, 0.05);
-  s.lineTo(0.6, 0.05 - t);
-  s.lineTo(0.33, 0.05 - t);
-  s.lineTo(0.17, 0.34 - t);
-  s.lineTo(0, 0.34 - t);
+  s.moveTo(0, 0.25);
+  s.lineTo(0.14, 0.25);
+  s.lineTo(0.26, 0.05);
+  s.lineTo(0.42, 0.05);
+  s.lineTo(0.42, 0.05 - t);
+  s.lineTo(0.23, 0.05 - t);
+  s.lineTo(0.11, 0.25 - t);
+  s.lineTo(0, 0.25 - t);
   const N = 36;
   const pitch = 3.4 / (N - 1);
   for (let side = 0; side < 4; side++) {
@@ -47,8 +47,8 @@ function chip(b: Builder) {
       g.rotateY((side * Math.PI) / 2);
       b.add("pin", g);
       // upper tier of contacts just under the lid
-      const tooth = new THREE.BoxGeometry(0.09, 0.11, 0.05);
-      tooth.translate(1.9, 0.5, -1.7 + i * pitch);
+      const tooth = new THREE.BoxGeometry(0.09, 0.08, 0.05);
+      tooth.translate(1.9, 0.37, -1.7 + i * pitch);
       tooth.rotateY((side * Math.PI) / 2);
       b.add("pin", tooth);
     }
@@ -69,14 +69,14 @@ function chip(b: Builder) {
     dz = 0.1;
   b.rbox("plateDetail", 0.92, 0.012, 0.8, dx, PLATE_TOP, dz, 0.004, 0.05);
   b.rbox("plate", 0.84, 0.016, 0.72, dx, PLATE_TOP, dz, 0.004, 0.04);
-  b.rbox("die", 0.56, 0.12, 0.46, dx, PLATE_TOP + 0.01, dz, 0.02, 0.02);
+  b.rbox("die", 0.56, 0.07, 0.46, dx, PLATE_TOP + 0.01, dz, 0.02, 0.02);
   b.rbox(
     "dieTop",
     0.24,
     0.02,
     0.2,
     dx - 0.06,
-    PLATE_TOP + 0.125,
+    PLATE_TOP + 0.075,
     dz - 0.03,
     0.006,
     0.01,
@@ -397,7 +397,7 @@ function traces(b: Builder) {
       const outer = gI === 0 || gI === 3;
       const l1 = outer ? 0.35 : 1.25;
       const l2 = outer ? 1.5 + side * 0.25 : 1.05 + side * 0.2;
-      const x0 = 2.3;
+      const x0 = 2.15;
       const pts: V2[] = [
         [x0, zc],
         [x0 + l1, zc],

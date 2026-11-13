@@ -11,9 +11,9 @@ const DIST = 9.8; // camera distance to the look-at point
 const ELEV = (26 * Math.PI) / 180; // camera elevation above the board
 const TRUCK_FROM = -1.85; // lateral camera offset at t = 0 s
 const TRUCK_TO = 1.85; // lateral camera offset at t = 10 s
-const LOOK_S = -0.75; // look-at point, slightly in front of the chip centre
-const APERTURE = 0.024;
-const MAX_COC = 0.034;
+const LOOK_S = 0.1; // look-at point, close to the chip centre
+const APERTURE = 0.027;
+const MAX_COC = 0.038;
 
 function softbox(color: THREE.Color, w: number, h: number, pos: THREE.Vector3) {
   const m = new THREE.Mesh(
@@ -230,7 +230,7 @@ const makeFactory =
     const look = new THREE.Vector3();
     const dir = new THREE.Vector3();
     const tmp = new THREE.Vector3();
-    const chipCentre = new THREE.Vector3(0, 0.7, 0);
+    const chipCentre = new THREE.Vector3(0, 0.55, 0);
 
     return {
       render: (frame) => {

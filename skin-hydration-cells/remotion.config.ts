@@ -15,3 +15,4 @@ Config.setCrf(16);
 Config.setChromiumOpenGlRenderer("swangle");
 // Software WebGL needs a while to compile shaders when several tabs start at once.
 Config.setDelayRenderTimeoutInMilliseconds(300000);
+Config.setColorSpace("bt709");

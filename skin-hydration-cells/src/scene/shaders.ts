@@ -38,7 +38,7 @@ void main() {
   // warm peach light leak, top-left, towards the end
   vec2 w = vUv - vec2(0.0, 1.0);
   w.x *= uAspect;
-  col = mix(col, vec3(1.0, 0.86, 0.76), uWarm * 0.75 * smoothstep(0.55, 0.0, length(w)));
+  col = mix(col, vec3(1.0, 0.985, 0.97), uWarm * 0.8 * smoothstep(0.55, 0.0, length(w)));
   gl_FragColor = vec4(toLin(col), 1.0);
 }`;
 
@@ -48,8 +48,10 @@ attribute vec3 aOffset;
 attribute vec4 aRnd;
 attribute float aLayer;
 uniform vec3 uImpact;
-uniform vec3 uShape;
-uniform vec3 uTone;
+uniform float uShape[4];
+uniform float uTone[4];
+uniform float uPale[4];
+uniform float uLift;
 uniform float uFrame;
 varying vec3 vN;
 varying vec3 vW;
@@ -59,17 +61,18 @@ varying float vRnd;
 varying float vSide;
 void main() {
   float d = length(aOffset.xz - uImpact.xz) + (aRnd.x - 0.5) * 2.6;
-  float waveS = aLayer < 0.5 ? uShape.x : (aLayer < 1.5 ? uShape.y : uShape.z);
-  float waveT = aLayer < 0.5 ? uTone.x : (aLayer < 1.5 ? uTone.y : uTone.z);
+  int li = int(aLayer + 0.5);
+  float waveS = uShape[li];
+  float waveT = uTone[li];
   float shape = smoothstep(0.0, 1.0, (waveS - d) / 4.5);
   float tone = smoothstep(0.0, 1.0, (waveT - d) / 9.0);
-  tone = max(tone, shape);
+  tone = max(max(tone, shape), uPale[li]);
   // little elastic overshoot while a cell inflates
   float pop = 1.0 + 0.13 * sin(shape * 3.14159);
   float breathe = 1.0 + 0.015 * sin(uFrame * 0.09 + aRnd.y * 6.283) * shape;
 
   vec3 dryS = vec3(0.50, 0.20, 0.46) * (0.96 + 0.08 * aRnd.z);
-  vec3 wetS = vec3(0.575 + 0.02 * aRnd.w);
+  vec3 wetS = vec3(0.535 + 0.015 * aRnd.w);
   vec3 s = mix(dryS, wetS * pop * breathe, shape);
 
   // dry cells are pill shaped: flatten the poles of the sphere a little
@@ -88,6 +91,7 @@ void main() {
 
   vec3 jitter = vec3((aRnd.z - 0.5) * 0.08, (aRnd.w - 0.5) * 0.05 * (1.0 - shape), (aRnd.x - 0.5) * 0.08);
   vec3 world = aOffset + jitter + p;
+  if (aLayer < 0.5) { world.y += uLift; }
   // hydrated cells are plump: lift them so the layer keeps a flat inner face
   world.y += -side * 0.0 * shape;
 
@@ -119,34 +123,43 @@ void main() {
   float fres = pow(1.0 - f, 3.0);
   float nl = dot(N, L);
   float hl = nl * 0.5 + 0.5;
+  // the top layer is seen from below: light its underside softly
+  if (vSide < 0.0) { hl = max(hl, 0.72); }
   vec3 Hh = normalize(L + V);
   float spec = pow(max(dot(N, Hh), 0.0), 48.0);
   float sheen = pow(f, 2.5);
 
   // --- dry: peach skin cell with a glossy amber underside ---
   vec3 peach = vec3(0.97, 0.74, 0.63);
-  vec3 shade = vec3(0.58, 0.37, 0.32);
+  vec3 shade = vec3(0.50, 0.30, 0.25);
   vec3 dry = mix(shade, peach, smoothstep(0.1, 0.95, hl));
   float under = pow(clamp(-nl * 0.9 + 0.1, 0.0, 1.0), 1.4) * (0.35 + 0.65 * (1.0 - f));
+  // the top layer is seen from below: keep its underside pale instead of amber
+  under *= vSide < 0.0 ? 0.3 : 1.0;
   dry = mix(dry, vec3(0.88, 0.56, 0.22), under * (1.0 - f * 0.6) * 0.8);
   dry += vec3(1.0, 0.82, 0.45) * pow(clamp(-nl, 0.0, 1.0), 6.0) * (1.0 - f) * 0.5;
+  if (vSide < 0.0) { dry = mix(dry, vec3(0.95, 0.80, 0.74), 0.5); }
   float spec2 = pow(max(dot(N, normalize(normalize(vec3(-0.25, 0.75, 0.6)) + V)), 0.0), 26.0);
-  dry += vec3(1.0, 0.95, 0.92) * (sheen * 0.16 + spec * 0.55 + spec2 * 0.5);
+  dry *= 1.0 - 0.3 * pow(1.0 - f, 2.0);
+  dry += vec3(1.0, 0.95, 0.92) * (sheen * 0.14 + spec * 0.7 + spec2 * 0.75);
 
   // --- pearl: the cell loses its dry colour before it swells ---
   vec3 pearl = mix(vec3(0.60, 0.56, 0.63), vec3(0.945, 0.925, 0.90), smoothstep(0.05, 0.9, hl));
   pearl = mix(pearl, vec3(0.84, 0.58, 0.28), under * 0.8);
   pearl = mix(pearl, vec3(0.72, 0.93, 0.96), 0.22 * sheen);
-  pearl += vec3(1.0) * (spec * 0.4 + sheen * 0.08 + spec2 * 0.25);
+  pearl *= 1.0 - 0.22 * pow(1.0 - f, 2.0);
+  pearl += vec3(1.0) * (spec * 0.5 + sheen * 0.08 + spec2 * 0.5);
 
   // --- hydrated: luminous aqua pearl ---
   vec3 rim = mix(vec3(0.90, 0.875, 0.905), vec3(0.955, 0.94, 0.95), hl);
-  vec3 aqua = vec3(0.50, 0.885, 0.93);
+  vec3 aqua = vec3(0.42, 0.87, 0.93);
   vec3 wet = mix(rim, aqua, pow(f, 1.7) * 0.9);
   wet = mix(wet, vec3(0.86, 0.995, 1.0), pow(f, 6.0) * 0.6);
   wet = mix(wet, vec3(0.80, 0.84, 0.90), (1.0 - hl) * 0.25 * (1.0 - f));
+  wet = mix(wet, vec3(0.66, 0.72, 0.84), pow(1.0 - hl, 1.6) * 0.55 * (1.0 - 0.5 * f)); // cool shaded side
   wet += vec3(0.07, 0.02, 0.05) * fres;            // faint rosy edge
-  wet += vec3(1.0) * spec * 0.25;
+  float wspec = pow(max(dot(N, normalize(normalize(vec3(-0.35, 0.8, 0.5)) + V)), 0.0), 14.0);
+  wet = mix(wet, vec3(1.0), clamp(wspec * 0.7 + spec * 0.3, 0.0, 1.0));
 
   vec3 col = mix(dry, pearl, vTone);
   col = mix(col, wet, smoothstep(0.15, 0.95, vShape));
@@ -155,7 +168,7 @@ void main() {
   // aerial haze: distant cells dissolve into the bright background
   float dist = length(cameraPosition - vW);
   float fog = smoothstep(16.0, 50.0, dist);
-  col = mix(col, uFog, fog * 0.42);
+  col = mix(col, uFog, fog * 0.3);
   gl_FragColor = vec4(toLin(col), 1.0);
 }`;
 
@@ -204,7 +217,7 @@ void main() {
   col = mix(col, under, bottom);
   // wet impact zone: white-aqua glow and an expanding ripple
   float d = length(vW.xz - uImpact.xz);
-  float wetK = uPulse * smoothstep(5.5, 0.0, d);
+  float wetK = uPulse * 0.6 * smoothstep(4.0, 0.0, d);
   float ring = smoothstep(0.5, 0.0, abs(d - uRipple * 9.0)) * (1.0 - uRipple) * step(0.001, uRipple);
   col = mix(col, vec3(0.90, 0.985, 1.0), clamp(wetK * 0.95 + ring * 0.35, 0.0, 1.0) * (1.0 - bottom * 0.4));
   // hydration: dissolves into pale aqua and disappears
@@ -296,8 +309,8 @@ void main() {
   // thin-walled bubble: clear centre, saturated aqua wall, dark outline
   float wall = smoothstep(0.30, 0.82, fres);
   float outline = smoothstep(0.80, 0.97, fres);
-  vec3 col = mix(vec3(0.62, 0.92, 0.99), vec3(0.20, 0.70, 0.88), wall);
-  col = mix(col, vec3(0.13, 0.48, 0.68), outline * 0.85);
+  vec3 col = mix(vec3(0.66, 0.93, 0.99), vec3(0.16, 0.62, 0.84), wall);
+  col = mix(col, vec3(0.08, 0.38, 0.60), outline * 0.9);
   col = mix(col, vec3(1.0), clamp(spec + spec2 * 0.55, 0.0, 1.0));
   float a = mix(0.42, 0.97, wall);
   a = max(a, clamp(spec + spec2 * 0.5, 0.0, 1.0));

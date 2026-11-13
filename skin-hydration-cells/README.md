@@ -13,7 +13,8 @@ Created with the Remotion CLI (`npx create-video@latest --blank`).
 | `SkinHydration-V2-CameraMove-4K`  | 3840x2160 | 30  | 226    | 7.5333 s |
 
 - **Version 1 – Reference match:** rolled camera that starts above the top cell
-  layer, sinks past its edge and bobs between the layers, like the reference.
+  layer, sinks past its edge and keeps descending past the second and third
+  layers while each one hydrates, easing to a stop above the fourth.
 - **Version 2 – Camera move:** identical scene, timing and palette, but a level
   horizon with a crane-down into the gap followed by a slow frontal dolly-in.
 
@@ -52,7 +53,7 @@ npx remotion render SkinHydration-V1-Reference-4K out/v1-1080p.mp4 --scale=0.5 -
 npx remotion render SkinHydration-V1-Reference-4K out/v1-4k.mp4 --muted
 ```
 
-`remotion.config.ts` sets H.264 / yuv420p / CRF 16 and the software WebGL
+`remotion.config.ts` sets H.264 / yuv420p (BT.709) / CRF 16 and the software WebGL
 backend (`swangle`), so renders work on machines without a GPU. On a GPU
 workstation you can pass `--gl=angle` for faster renders.
 
