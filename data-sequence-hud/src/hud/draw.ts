@@ -145,9 +145,20 @@ const animatedBar = (frame: number, id: number, min: number, max: number) => {
   return a + (b - a) * smooth(t / 0.35);
 };
 
+/** Fast, wide-swinging value (gauges): new target every ~0.4-0.7 s. */
+const fastBar = (frame: number, id: number, min: number, max: number) => {
+  const period = 12 + randInt(9, id, 1);
+  const phase = randInt(period, id, 2);
+  const e = Math.floor((frame + phase) / period);
+  const t = ((frame + phase) % period) / period;
+  const a = min + rand(id, e) * (max - min);
+  const b = min + rand(id, e + 1) * (max - min);
+  return a + (b - a) * smooth(t / 0.6);
+};
+
 const drawLeftColumn = (ctx: Ctx, f: number, p: Palette) => {
   ctx.textBaseline = "alphabetic";
-  text(ctx, "DATA SEQUENCE ANALYSIS", 8, 16, 11.2, p.text, 500);
+  text(ctx, "DATA SEQUENCE ANALYSIS", 8, 16.4, 13.2, p.text, 600);
   // two rows of tiny numbers under the title
   for (let r = 0; r < 2; r++) {
     microRow(ctx, 8, 24.5 + r * 5.6, 140, 100 + r, f, p, { size: 4.2, bright: 0.6 });
@@ -157,8 +168,8 @@ const drawLeftColumn = (ctx: Ctx, f: number, p: Palette) => {
   const barY = [43.7, 52, 60.3, 68.7];
   barY.forEach((y, i) => {
     const w = animatedBar(f, 200 + i, 40, 100);
-    rect(ctx, 9, y - 0.65, 100, 1.3, "rgba(255,255,255,0.05)");
-    rect(ctx, 9, y - 0.65, w, 1.3, p.bar);
+    rect(ctx, 9, y - 0.9, 100, 1.8, "rgba(255,255,255,0.05)");
+    rect(ctx, 9, y - 0.9, w, 1.8, p.bar);
     if (i === 1) dot(ctx, 121, y, 0.6, p.dim);
     text(ctx, digits(5, 210 + i, epoch(f, 210 + i, 6, 18)), 127, y + 1.4, 4.2, p.text, 700);
     text(ctx, digits(5, 220 + i, epoch(f, 220 + i, 10, 30)), 141, y + 1.4, 4.2, p.dim, 700);
@@ -189,7 +200,7 @@ const drawLeftColumn = (ctx: Ctx, f: number, p: Palette) => {
   }
 
   // DATA ANALYSIS
-  text(ctx, "DATA ANALYSIS", 9, 150, 6.4, p.text, 500);
+  text(ctx, "DATA ANALYSIS", 9, 150, 6.8, p.text, 600);
   dot(ctx, 65, 148.2, 0.9, p.accent);
   for (let k = 0; k < 9; k++) rect(ctx, 72 + k * 9, 148, 0.5, 0.5, p.faint);
   for (let r = 0; r < 3; r++) microRow(ctx, 9, 158 + r * 6, 120, 500 + r, f, p, { size: 3.3 });
@@ -210,7 +221,7 @@ const drawLeftColumn = (ctx: Ctx, f: number, p: Palette) => {
   };
   barcode(183.5, 600, 9, 150);
 
-  text(ctx, "CORE DATA - 04", 9, 199.8, 6.4, p.text, 500);
+  text(ctx, "CORE DATA - 04", 9, 199.8, 6.8, p.text, 600);
   dot(ctx, 63, 197.8, 0.9, p.accent);
   rect(ctx, 66, 197.6, 71, 0.4, p.faint);
   for (let r = 0; r < 4; r++) microRow(ctx, 9, 207 + r * 5.6, 120, 650 + r, f, p, { size: 3.3 });
@@ -220,10 +231,11 @@ const drawLeftColumn = (ctx: Ctx, f: number, p: Palette) => {
   const ICON_FRAMES = 118;
   const active = Math.min(4, Math.floor((f + 4) / ICON_FRAMES));
   for (let i = 0; i <= active; i++) {
-    const x = 9 + i * 19.8;
+    // slot 0 is the icon currently counting; finished icons sit to its right
+    const x = 9 + (active - i) * 19.8;
     const y = 248;
     const local = f + 4 - i * ICON_FRAMES;
-    const value = i < active ? 100 : Math.max(1, Math.floor(clamp(local / (ICON_FRAMES - 6)) * 100));
+    const value = i < active ? 100 : Math.min(100, 4 + Math.floor(clamp(local / (ICON_FRAMES - 6)) * 96));
     const done = value >= 100;
     ctx.fillStyle = "rgba(0,0,0,0.35)";
     ctx.fillRect(x, y, 16, 20);
@@ -258,8 +270,8 @@ const drawLeftColumn = (ctx: Ctx, f: number, p: Palette) => {
   microRow(ctx, labelX, 265.5, 52, 761, f, p, { size: 2.6, bright: 0.2 });
 
   // orange progress lines
-  rect(ctx, 9, 279.6, animatedBar(f, 780, 55, 80), 0.6, p.accent);
-  rect(ctx, 9, 284.6, animatedBar(f, 781, 30, 55), 0.6, p.accent);
+  rect(ctx, 9, 279.6, animatedBar(f, 780, 120, 141), 0.6, p.accent);
+  rect(ctx, 9, 284.6, animatedBar(f, 781, 60, 110), 0.6, p.accent);
   text(ctx, digits(5, 782, epoch(f, 782, 8, 20)), 127, 281, 4.2, p.text, 700);
   text(ctx, digits(5, 783, epoch(f, 783, 8, 20)), 141, 281, 4.2, p.dim, 700);
   text(ctx, digits(5, 784, epoch(f, 784, 8, 20)), 133, 286.5, 4.2, p.text, 700);
@@ -283,7 +295,7 @@ const drawLeftColumn = (ctx: Ctx, f: number, p: Palette) => {
     ctx.globalAlpha = 1;
   }
 
-  text(ctx, "ENCODING DATA FEED", 9, 345.6, 6.4, p.text, 500);
+  text(ctx, "ENCODING DATA FEED", 9, 345.6, 6.8, p.text, 600);
   microRow(ctx, 9, 351, 90, 870, f, p, { size: 3.1 });
   rect(ctx, 9, 353, animatedBar(f, 871, 40, 55), 0.5, p.dim);
   rect(ctx, 9, 357.6, animatedBar(f, 872, 80, 100), 0.5, p.dim);
@@ -325,6 +337,35 @@ const drawLeftColumn = (ctx: Ctx, f: number, p: Palette) => {
 // Header / counter
 // ---------------------------------------------------------------------------
 const COUNTER_GROUPS = [3, 4, 1, 3];
+const COUNTER_DIGITS = 11;
+
+/**
+ * Counter state at frame f: starts from a random number, then roughly every
+ * 2-3 frames one digit steps (+1 mostly, sometimes a random jump), like the
+ * reference's decoding readout.
+ */
+const counterDigits = (f: number): number[] => {
+  const d = Array.from({ length: COUNTER_DIGITS }, (_, i) => randInt(10, 1200, i));
+  let t = 0;
+  for (let k = 0; ; k++) {
+    t += 2 + randInt(2, 1201, k);
+    if (t > f) break;
+    const i = randInt(COUNTER_DIGITS, 1202, k);
+    d[i] = rand(1203, k) < 0.75 ? (d[i] + 1) % 10 : randInt(10, 1204, k);
+  }
+  return d;
+};
+
+const drawCounterDigit = (ctx: Ctx, d: number, cx: number, baseline: number, color: string) => {
+  ctx.fillStyle = color;
+  if (d === 1) {
+    // squarish techno "1": a plain vertical stroke (no flag), as in the reference
+    ctx.fillRect(cx - 1.25, baseline - 20.6, 2.5, 20.6);
+    return;
+  }
+  setFont(ctx, 31, 500);
+  ctx.fillText(String(d), cx, baseline);
+};
 
 const drawHeader = (ctx: Ctx, f: number, p: Palette) => {
   text(ctx, "Decoding DATA  :", 186, 14.5, 7.2, p.text, 500);
@@ -359,17 +400,14 @@ const drawHeader = (ctx: Ctx, f: number, p: Palette) => {
   ctx.textAlign = "center";
   let x = 186;
   let idx = 0;
+  const cd = counterDigits(f);
   COUNTER_GROUPS.forEach((n, g) => {
     for (let i = 0; i < n; i++) {
       const bw = 23.6;
       const bh = 28.5;
       rect(ctx, x, 44, bw, bh, "rgba(255,255,255,0.025)");
       strokeRect(ctx, x, 44, bw, bh, p.outline, 0.6);
-      const ep = epoch(f, 1200 + idx, 4, 22);
-      const d = randInt(10, 1200 + idx, ep);
-      ctx.fillStyle = p.text;
-      setFont(ctx, 31, 500);
-      ctx.fillText(String(d), x + bw / 2, 68.6);
+      drawCounterDigit(ctx, cd[idx], x + bw / 2, 68.6, p.text);
       const lit = rand(1250 + idx, epoch(f, 1250 + idx, 10, 30)) < 0.75;
       rect(ctx, x + bw - 2.2, 44 + bh - 1.6, 2.8, 2.8, lit ? p.accent : p.accentDim);
       x += 28.3;
@@ -403,12 +441,13 @@ const drawHeader = (ctx: Ctx, f: number, p: Palette) => {
     rect(ctx, kx - 1, ky - 1, 2, 2, p.text);
     text(ctx, digits(3, 1300 + k, epoch(f, 1300 + k, 6, 12)), kx + 2, ky - 1.5, 2.4, p.dim, 700);
   }
-  rect(ctx, 719, 7, 39, 22, p.panel);
-  strokeRect(ctx, 719, 7, 39, 22, p.accent2, 0.35);
-  text(ctx, "SYS 2  LOG 207", 721, 11.5, 2.6, p.text, 700);
-  microRow(ctx, 721, 16, 20, 1310, f, p, { size: 2.2 });
-  microRow(ctx, 721, 20, 20, 1311, f, p, { size: 2.2 });
-  text(ctx, `( ${digits(2, 1312, epoch(f, 1312, 20, 40))} )`, 740, 17.5, 6, p.accent, 500);
+  rect(ctx, 719, 7, 39, 22, p.infoPanel);
+  rect(ctx, 719, 7, 39, 3.2, p.infoHeader);
+  text(ctx, "SYS 2  LOG 207", 720.5, 9.6, 2.4, p.bg, 700);
+  microRow(ctx, 721, 15, 15, 1310, f, p, { size: 2.1 });
+  microRow(ctx, 721, 19, 15, 1311, f, p, { size: 2.1 });
+  microRow(ctx, 721, 23, 15, 1313, f, p, { size: 2.1 });
+  text(ctx, `[${digits(2, 1312, epoch(f, 1312, 20, 40))}]`, 756.5, 21.5, 6.4, p.infoValue, 500, "right");
 
   // orange lines under the graph
   const l1 = animatedBar(f, 1320, 20, 40);
@@ -461,8 +500,8 @@ const drawGrid = (ctx: Ctx, f: number, p: Palette) => {
 
   // jumping highlight boxes (drawn under the digits)
   const outlines: [number, number, number, number][] = [];
-  for (let b = 0; b < 18; b++) {
-    const ep = epoch(f, 1500 + b, 6, 20);
+  for (let b = 0; b < 26; b++) {
+    const ep = epoch(f, 1500 + b, 2, 5);
     const ci = randInt(COLS.length, 1500 + b, ep, 1);
     const col = COLS[ci];
     const ri = randInt(ROWS.length, 1500 + b, ep, 2);
@@ -485,13 +524,13 @@ const drawGrid = (ctx: Ctx, f: number, p: Palette) => {
   }
 
   // digits
-  setFont(ctx, 5.3, 700);
+  setFont(ctx, 5.7, 700);
   ctx.textAlign = "center";
   COLS.forEach((c, ci) => {
     ROWS.forEach((y, ri) => {
       for (let i = 0; i < c.n; i++) {
         const id = 2000 + ci * 1000 + ri * 20 + i;
-        const ep = epoch(f, id, 25, 140);
+        const ep = epoch(f, id, 14, 90);
         const v = randInt(10, id, ep);
         const cr = rand(id, Math.floor((i + randInt(3, ci, ri)) / 3), ep, 1);
         const cr2 = rand(id, ep, 2);
@@ -508,30 +547,31 @@ const drawGrid = (ctx: Ctx, f: number, p: Palette) => {
 // Right column
 // ---------------------------------------------------------------------------
 const drawRightColumn = (ctx: Ctx, f: number, p: Palette) => {
-  const lines: [number, number, number][] = [
-    [715.7, 155, 182],
-    [720.7, 177, 182],
-    [725.7, 130, 182],
+  const lines: [number, number][] = [
+    [715.7, 182],
+    [720.7, 182],
+    [725.7, 182],
   ];
-  lines.forEach(([x, bright, end], i) => {
-    const h = animatedBar(f, 1700 + i, bright - 100, bright - 89);
+  lines.forEach(([x, end], i) => {
+    const h = fastBar(f, 1700 + i, 12, end - 89);
     rect(ctx, x - 0.45, 89, 0.9, end - 89, "rgba(255,255,255,0.08)");
     rect(ctx, x - 0.45, 89, 0.9, h, p.accent2);
   });
   // gauges
   [98, 123, 147, 172].forEach((y, i) => {
     const cx = 742;
-    ctx.lineWidth = 1.1;
-    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.lineWidth = 2.6;
+    ctx.strokeStyle = "rgba(255,255,255,0.1)";
     ctx.beginPath();
-    ctx.arc(cx, y, 7, 0, Math.PI * 2);
+    ctx.arc(cx, y, 6.6, 0, Math.PI * 2);
     ctx.stroke();
-    const v = animatedBar(f, 1710 + i, 0.25, 0.85);
+    const v = fastBar(f, 1710 + i, 0.05, 0.95);
     ctx.strokeStyle = p.accent2;
     ctx.beginPath();
-    ctx.arc(cx, y, 7, -Math.PI / 2 - v * Math.PI * 2, -Math.PI / 2);
+    ctx.arc(cx, y, 6.6, -Math.PI / 2 - v * Math.PI * 2, -Math.PI / 2);
     ctx.stroke();
-    text(ctx, `${(v * 200).toFixed(2)}`, 745, y + 1.3, 3.2, p.dim, 700);
+    // value sits in the ring's lower-right gap, clear of the arc
+    text(ctx, (v * 100).toFixed(2), 748.5, y + 8.2, 3.4, p.text, 700);
   });
   text(ctx, "DATA . ANALYSIS", 731, 187.5, 2.6, p.dim, 700);
 
@@ -541,8 +581,8 @@ const drawRightColumn = (ctx: Ctx, f: number, p: Palette) => {
     for (let c = 0; c < 12; c++) {
       const ep = epoch(f, 1800 + r * 12 + c, 10, 60);
       const v = rand(1800 + r, c, ep);
-      const color = v < 0.18 ? p.accent2 : v < 0.6 ? p.text : p.faint;
-      rect(ctx, 713 + c * 4.3, 205 + r * 4.4, 1.1, 1.1, color);
+      const color = v < 0.16 ? p.accent2 : v < 0.8 ? p.text : p.faint;
+      rect(ctx, 713 + c * 4.3, 205 + r * 4.4, 1.3, 1.3, color);
     }
   }
   for (let b = 0; b < 3; b++) {
@@ -618,17 +658,14 @@ const drawBottom = (ctx: Ctx, f: number, p: Palette) => {
   microRow(ctx, 419, 418.5, 70, 2251, f, p, { size: 2.4, bright: 0.6 });
   microRow(ctx, 419, 423, 70, 2252, f, p, { size: 2.4, bright: 0.6 });
 
-  // six cards that wipe in left-to-right, hold, then wipe out (~4 s cycle)
-  const CYCLE = 122;
+  // six cards build in right-to-left during the first ~0.8 s, then stay;
+  // only their numbers keep changing.
   const xs = [577, 609.5, 642, 674.5, 707, 739.5];
-  const local = (f + 92) % CYCLE;
-  const cyc = Math.floor((f + 92) / CYCLE);
   xs.forEach((x, i) => {
-    const tIn = i * 7;
-    const tOut = 92 + i * 4;
-    if (local < tIn || local >= tOut) return;
-    const fadeIn = clamp((local - tIn) / 3);
-    const value = digits(2, 2300 + i, cyc, epoch(f, 2300 + i, 18, 40));
+    const tIn = (5 - i) * 4 - 1;
+    if (f < tIn) return;
+    const fadeIn = clamp((f - tIn + 1) / 3);
+    const value = digits(2, 2300 + i, epoch(f, 2300 + i, 4, 12));
     card(ctx, x, 375, value, p, fadeIn);
   });
   // dot tables under the cards
@@ -637,7 +674,7 @@ const drawBottom = (ctx: Ctx, f: number, p: Palette) => {
       for (let c = 0; c < 6; c++) {
         const ep2 = epoch(f, 2400 + g * 40 + r * 6 + c, 15, 60);
         const v = rand(2400 + g, r, c, ep2);
-        rect(ctx, 577 + g * 31 + c * 4.2, 401 + r * 4.6, 1, 1, v < 0.5 ? p.text : p.faint);
+        rect(ctx, 577 + g * 31 + c * 4.2, 401 + r * 4.6, 1.2, 1.2, v < 0.75 ? p.text : p.faint);
       }
     }
     const ep3 = epoch(f, 2500 + g, 10, 30);
