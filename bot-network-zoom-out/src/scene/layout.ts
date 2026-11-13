@@ -59,7 +59,7 @@ export const buildLayout = (): Layout => {
     for (let i = -HALF_CELLS; i <= HALF_CELLS; i++) {
       const f = forced.get(key(i, j));
       let occupied = rand() < 0.78;
-      let agent = rand() < (Math.hypot(latticePos(i), latticePos(j)) < 45 ? 0.68 : 0.5);
+      let agent = rand() < (Math.hypot(latticePos(i), latticePos(j)) < 45 ? 0.56 : 0.5);
       if (f === "empty") occupied = false;
       if (f === "idle") {
         occupied = true;

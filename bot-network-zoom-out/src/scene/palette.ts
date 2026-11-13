@@ -31,7 +31,7 @@ export const referencePalette: Palette = {
   groundGlow: [0.02, 0.09, 0.42],
   groundDots: [0.25, 0.55, 1.0],
   tileIdle: [0.12, 0.46, 0.95],
-  tileDone: [0.2, 1.0, 0.62],
+  tileDone: [0.3, 0.92, 0.74],
   icon: [0.85, 0.95, 1.0],
   lines: [0.22, 0.62, 1.0],
   robotBody: [0.95, 0.1, 0.16],

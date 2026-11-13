@@ -73,6 +73,7 @@ export const createScene = (
       uGlow: { value: new THREE.Vector3(...palette.groundGlow) },
       uDots: { value: new THREE.Vector3(...palette.groundDots) },
       uTime: { value: 0 },
+      uHaze: { value: 1 },
     },
     vertexShader: /* glsl */ `
       varying vec3 vW;
@@ -86,7 +87,7 @@ export const createScene = (
       precision highp float;
       varying vec3 vW;
       uniform vec3 uNear, uGlow, uDots;
-      uniform float uTime;
+      uniform float uTime, uHaze;
       ${FOG_GLSL}
       float hash(vec2 p) {
         p = fract(p * vec2(123.34, 456.21));
@@ -106,7 +107,7 @@ export const createScene = (
         // soft drifting haze of light on the floor
         vec2 q = p * 0.018 + vec2(uTime * 0.012, 0.0);
         float n = vnoise(q + 3.7) * 0.6 + vnoise(q * 2.3 + 9.1) * 0.4;
-        col += uGlow * smoothstep(0.38, 0.85, n) * 0.5;
+        col += uGlow * smoothstep(0.38, 0.85, n) * 0.5 * uHaze;
         // patches of tiny data dots
         float cell = 0.26;
         vec2 g = p / cell;
@@ -529,6 +530,7 @@ export const createScene = (
     attr: THREE.InstancedBufferAttribute,
     t: number,
     idleGain: number,
+    doneGain: number,
   ) => {
     const a = attr.array as Float32Array;
     for (let i = 0; i < list.length; i++) {
@@ -537,7 +539,7 @@ export const createScene = (
       if (wave > 0 && isFinite(tl.land)) k = lerp(k, waveDone(t, tl.seed), wave);
       const flash = t > tl.land ? Math.exp(-(t - tl.land) * 3.2) * 1.1 : 0;
       const gi = (0.82 + 0.3 * tl.seed) * idleGain;
-      const gd = 1.12 + flash;
+      const gd = doneGain + flash;
       a[i * 3] = lerp(idle[0] * gi, done[0] * gd, k);
       a[i * 3 + 1] = lerp(idle[1] * gi, done[1] * gd, k);
       a[i * 3 + 2] = lerp(idle[2] * gi, done[2] * gd, k);
@@ -550,12 +552,13 @@ export const createScene = (
   // flip to done and the bots clear, as in the reference's far shot.
   let wave = 0;
   const WAVE_START = 6.6;
-  const WAVE_PERIOD = 1.6;
+  const WAVE_PERIOD = 2.0;
+  const WAVE_PHASE = 8.7; // a "working" dip starts here and every 2 s after
   const waveBlend = (t: number) => smooth((t - WAVE_START) / 1.4);
   const waveDone = (t: number, seed: number) => {
-    const ph = (t - WAVE_START + (seed - 0.5) * 0.3) / WAVE_PERIOD;
+    const ph = (t - WAVE_PHASE + (seed - 0.5) * 0.36) / WAVE_PERIOD;
     const f = ph - Math.floor(ph);
-    return smooth((f - 0.42) / 0.16) * (1 - smooth((f - 0.94) / 0.06));
+    return smooth((f - 0.16) / 0.2) * (1 - smooth((f - 0.86) / 0.14));
   };
 
   const writeRobots = (
@@ -649,8 +652,10 @@ export const createScene = (
     const idleGain = 1 - 0.42 * smooth((t - 8.5) / 5);
 
     wave = waveBlend(t);
-    writeTileColors(nearTiles, nearColors, t, idleGain);
-    writeTileColors(farTiles, farColors, t, idleGain);
+    const doneGain = 1.05 - 0.4 * farness;
+    writeTileColors(nearTiles, nearColors, t, idleGain, doneGain);
+    writeTileColors(farTiles, farColors, t, idleGain, doneGain);
+    groundMat.uniforms.uHaze.value = 1 - 0.75 * farness;
     // seen from far away the bots are only a few pixels: enlarge and
     // brighten them a little so they still read as coloured dots
     robotMat.uniforms.uBoost.value = 0.45 * farness;
@@ -669,9 +674,9 @@ export const createScene = (
           easeOutBack(age / 0.3) *
           smooth((CHECK_LIFE - age) / 0.4) *
           checkGain *
-          1.15;
+          1.75;
       }
-      tmpP.set(r.x, 1.75 + 0.55 * smooth(age / CHECK_LIFE), r.z);
+      tmpP.set(r.x, 2.0 + 0.55 * smooth(age / CHECK_LIFE), r.z);
       tmpQ.setFromAxisAngle(yAxis, age * 3.0 + r.seed * 20);
       tmpS.set(s, s, s);
       tmpM.compose(tmpP, tmpQ, tmpS);
