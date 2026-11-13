@@ -20,7 +20,7 @@ export type Palette = {
 };
 
 const AXON_DIR: V3 = norm([6.2, 3.0, -4.6]);
-const AXON_INITIAL = 4.2;
+const AXON_INITIAL = 3.3;
 const BEADS = 5;
 const BEAD_LEN = 0.5;
 const BEAD_GAP = 0.08;
@@ -43,7 +43,7 @@ const buildNeuron = (b: Builder, rng: Rng, detail: number, pal: Palette, hero: b
       col: lerp3(hair, pal.trunk, thick),
       opacity: lerp(0.5, 1.0, Math.min(1, thick * 1.6)),
       mat: MAT_GLOW,
-      fire: smooth(0.03, 0.09, r),
+      fire: smooth(0.05, 0.11, r),
     };
   };
   const spark = (p: V3, s: number) => {
@@ -65,10 +65,10 @@ const buildNeuron = (b: Builder, rng: Rng, detail: number, pal: Palette, hero: b
 
   // --- soma: a lumpy cluster of lobes --------------------------------------
   const somaStyle = { col: pal.trunk, opacity: 1, mat: MAT_GLOW, fire: 1 };
-  b.capsule([-0.3, -0.05, 0], 0.55, [0.3, 0.1, 0], 0.52, somaStyle, rng.next(), -0.2, 0.2);
-  for (let i = 0; i < 7; i++) {
+  b.capsule([-0.3, -0.05, 0], 0.5, [0.3, 0.1, 0], 0.46, somaStyle, rng.next(), -0.2, 0.2);
+  for (let i = 0; i < 11; i++) {
     const d = rng.dir();
-    b.capsule(mul(d, 0.2), 0.45, mul(d, 0.62), 0.26, somaStyle, rng.next(), -0.3, 0);
+    b.capsule(mul(d, rng.range(0.1, 0.3)), rng.range(0.3, 0.44), mul(d, rng.range(0.55, 0.8)), rng.range(0.16, 0.26), somaStyle, rng.next(), -0.3, 0);
   }
 
   // --- dendrites -------------------------------------------------------------
@@ -85,24 +85,24 @@ const buildNeuron = (b: Builder, rng: Rng, detail: number, pal: Palette, hero: b
   ];
   for (const t of trunks) {
     const d = norm(t);
-    growBranch(b, rng, mul(d, 0.5), d, rng.range(0.13, 0.18), rng.range(1.5, 2.2), 0, -0.5, {
+    growBranch(b, rng, mul(d, 0.45), d, rng.range(0.17, 0.24), rng.range(1.5, 2.2), 0, -0.5, {
       style,
       sSign: -1,
       wobble: 0.6,
       thickWobble: 0.9,
-      twigRate: 3.6 * (detail < 1 ? 0.5 : 1),
+      twigRate: 4.4 * (detail < 1 ? 0.5 : 1),
       twigLen: [0.3, 1.0],
       twigR: 0.011 * hairBoost,
       minR: 0.0048 * hairBoost,
       maxDepth: 9,
       spread: 0.85,
-      childScale: 0.72,
+      childScale: 0.66,
       lenScale: 0.84,
       bias: [-0.25, -0.1, 0.25],
       biasK: 0.2,
       onStep,
       onTip,
-      budget: mkBudget(8500),
+      budget: mkBudget(10500),
     });
   }
 
@@ -112,15 +112,15 @@ const buildNeuron = (b: Builder, rng: Rng, detail: number, pal: Palette, hero: b
   let s = 0.45;
   const seed = rng.next();
   if (hero) axonPath.push([0, 0, 0], p);
-  const axonStyle = { col: pal.trunk, opacity: 0.85, mat: MAT_GLOW, fire: 1 };
-  const nInit = 26;
+  const axonStyle = { col: pal.trunk, opacity: 1, mat: MAT_GLOW, fire: 0.4 };
+  const nInit = 22;
   const side: V3 = norm([-AXON_DIR[1], AXON_DIR[0], 0]);
   for (let i = 0; i < nInit; i++) {
     const wave = Math.cos((i / nInit) * Math.PI * 3.2 + 0.6) * 0.5;
     d = norm(add(add(AXON_DIR, mul(side, wave)), mul(rng.dir(), 0.08)));
     const q = add(p, mul(d, AXON_INITIAL / nInit));
-    const ra = lerp(0.24, 0.13, Math.sqrt(i / nInit));
-    const rb = lerp(0.24, 0.13, Math.sqrt((i + 1) / nInit));
+    const ra = lerp(0.2, 0.1, Math.sqrt(i / nInit));
+    const rb = lerp(0.2, 0.1, Math.sqrt((i + 1) / nInit));
     b.capsule(p, ra, q, rb, axonStyle, seed, s, s + AXON_INITIAL / nInit);
     p = q;
     s += AXON_INITIAL / nInit;
@@ -130,9 +130,10 @@ const buildNeuron = (b: Builder, rng: Rng, detail: number, pal: Palette, hero: b
     const wave = Math.sin((i / BEADS) * Math.PI * 1.6 + 0.4) * 0.75;
     d = norm(add(add(AXON_DIR, mul(side, wave)), mul(rng.dir(), 0.1)));
     const q = add(p, mul(d, BEAD_LEN));
-    b.capsule(p, 0.08, q, 0.08, axonStyle, seed, s, s + BEAD_LEN);
-    // translucent sheath, permanently tinted with the firing colour
-    b.capsule(add(p, mul(d, 0.13)), 0.2, add(q, mul(d, -0.13)), 0.2, { col: mul(pal.trunk, 0.22), opacity: 0.6, mat: MAT_GLOW, fire: 1, extra: 1 }, rng.next(), s, s + BEAD_LEN);
+    // sheath tinted with the firing colour (the axon core is not drawn inside it)
+    b.capsule(add(p, mul(d, 0.13)), 0.18, add(q, mul(d, -0.13)), 0.18, { col: mul(pal.trunk, 0.22), opacity: 0.85, mat: MAT_GLOW, fire: 0.4, extra: 1 }, rng.next(), s, s + BEAD_LEN);
+    b.capsule(p, 0.08, add(p, mul(d, 0.13)), 0.08, axonStyle, seed, s, s + 0.13);
+    b.capsule(add(q, mul(d, -0.13)), 0.08, q, 0.08, axonStyle, seed, s + BEAD_LEN - 0.13, s + BEAD_LEN);
     s += BEAD_LEN;
     const n = add(q, mul(d, BEAD_GAP));
     b.capsule(q, 0.08, n, 0.08, axonStyle, seed, s, s + BEAD_GAP);
@@ -195,9 +196,9 @@ const makeBuild = (key: string, pal: Palette) => () => {
 
   // a little floating dust for depth
   const rng = makeRng(99);
-  for (let i = 0; i < 260; i++) {
+  for (let i = 0; i < 120; i++) {
     const p: V3 = [rng.range(-9, 11), rng.range(-6, 7), rng.range(-8, 5)];
-    b.point(p, rng.range(0.008, 0.018), { col: mul(pal.hairAlt, 2.2), opacity: 0, mat: MAT_DUST }, rng.next());
+    b.point(p, rng.range(0.008, 0.018), { col: mul(pal.hairAlt, 1.0), opacity: 0, mat: MAT_DUST }, rng.next());
   }
   const out = b.toArray();
   cache.set(key, out);
@@ -212,9 +213,9 @@ const makeLook = (pal: Palette): Look => ({
   fireColor: pal.fire,
   pulseColor: pal.fire,
   light: [-0.3, 0.7, 0.65],
-  bloomStrength: 0.55,
+  bloomStrength: 0.3,
   bloomRadius: 0.55,
-  bloomThreshold: 0.7,
+  bloomThreshold: 0.78,
   maxCoc: 0.03,
   sway: 0.03,
   vignette: 0.5,
@@ -228,16 +229,26 @@ const depthOf = (cam: V3, target: V3, p: V3) => {
   return (p[0] - cam[0]) * f[0] + (p[1] - cam[1]) * f[1] + (p[2] - cam[2]) * f[2];
 };
 
-/** One firing cycle lasts 33.75 frames (1.125 s); the hard reset lands on frame 15 + n * 33.75. */
-const CYCLE = 33.75;
+/**
+ * Firing timeline, measured from the reference clip (frame numbers at 30 fps).
+ * Every cycle is: hard reset to calm -> ~12 calm frames -> the soma flashes on in one frame ->
+ * synapse particles build up (with two late surges) -> hard reset.
+ */
+const RESETS = [-15, 18, 51, 83, 116, 149, 182, 215, 250, 286, 320];
+const FLASHES = [-3, 30, 63, 95, 128, 161, 194, 227, 262, 298, 332];
 const firing = (frame: number) => {
-  const ph = (((frame - 16.5) / CYCLE) % 1 + 1) % 1; // 0 = just reset
-  const tail = Math.max(0, 1 - ph / 0.045); // 1.5-frame fade-out right after the reset
-  const rise = smooth(0.22, 1.0, ph);
-  const burst = Math.max(Math.pow(rise, 1.25), tail * 0.6);
-  const fire = Math.max(smooth(0.2, 0.42, ph), tail * 0.5);
-  // the front starts out in the dendrites (negative s), crosses the soma and runs down the axon
-  const front = ph < 0.045 ? AXON_END_S * 0.62 : lerp(-0.8, AXON_END_S * 0.62, smooth(0.3, 1.0, ph));
+  let i = 0;
+  while (i < RESETS.length - 2 && frame >= RESETS[i + 1]) i++;
+  const flash = FLASHES[i];
+  const next = RESETS[i + 1];
+  if (frame < flash) return { burst: 0, fire: 0, front: 0 };
+  const u = (frame - flash) / (next - flash); // 0 at the flash, 1 at the reset
+  let burst = 0.2 + 0.42 * u;
+  if (frame >= next - 5) burst += 0.19;
+  if (frame >= next - 2) burst += 0.19;
+  const fire = frame === flash ? 0.8 : 1;
+  // the hot front sits on the soma and slides a little way out along the axon
+  const front = lerp(-0.2, AXON_END_S * 0.28, smooth(0.15, 1.0, u));
   return { burst, fire, front };
 };
 
@@ -245,9 +256,9 @@ const makeState = () => (frame: number, fps: number, dur: number): FrameState =>
   const t = frame / (dur - 1);
   const time = frame / fps;
   const e = ease(t);
-  const target: V3 = [lerp(0.4, 0.1, e), lerp(0.65, 0.8, e), 0];
+  const target: V3 = [lerp(1.2, 0.85, e), lerp(0.75, 0.9, e), 0];
   const dist = lerp(13.4, 12.0, e);
-  const yaw = lerp(-0.05, 0.05, e);
+  const yaw = lerp(-0.09, 0.09, t);
   const pitch = lerp(0.02, 0.05, e);
   const camPos: V3 = [
     target[0] + Math.sin(yaw) * Math.cos(pitch) * dist,
@@ -268,7 +279,7 @@ const makeState = () => (frame: number, fps: number, dur: number): FrameState =>
     aperture: lerp(0.07, 0.085, rack),
     time,
     pulse: f.front,
-    pulseWidth: 3.6,
+    pulseWidth: 2.1,
     fire: f.fire,
     burst: f.burst,
     exposure: 1.0,
@@ -277,13 +288,13 @@ const makeState = () => (frame: number, fps: number, dur: number): FrameState =>
 
 /** Version 1 - the reference palette: electric blue cell, orange / amber firing. */
 export const BLUE_AMBER: Palette = {
-  trunk: [0.06, 0.32, 0.95],
-  hair: [0.02, 0.16, 0.7],
-  hairAlt: [0.05, 0.32, 0.8],
+  trunk: [0.04, 0.4, 0.95],
+  hair: [0.02, 0.2, 0.75],
+  hairAlt: [0.05, 0.45, 0.8],
   particle: [1.0, 0.36, 0.03],
   fire: [1.0, 0.55, 0.12],
-  background: [0.0002, 0.0006, 0.002],
-  fog: [0.0, 0.002, 0.008],
+  background: [0.0, 0.0001, 0.0005],
+  fog: [0.0, 0.0006, 0.003],
 };
 
 /** Version 2 - alternative palette: violet / magenta cell, mint-cyan firing. */
@@ -293,8 +304,8 @@ export const VIOLET_MINT: Palette = {
   hairAlt: [0.6, 0.06, 0.55],
   particle: [0.1, 1.0, 0.62],
   fire: [0.25, 1.0, 0.75],
-  background: [0.0012, 0.0002, 0.002],
-  fog: [0.006, 0.0, 0.008],
+  background: [0.0003, 0.0, 0.0005],
+  fog: [0.002, 0.0, 0.003],
 };
 
 export const firingV1: SceneDef = { build: makeBuild("v1", BLUE_AMBER), look: makeLook(BLUE_AMBER), state: makeState() };

@@ -271,7 +271,8 @@ void main() {
     col += base * glow;
   } else if (mat < 1.5) {
     // striped two-tone tissue, stripes run along the fibre
-    float m = 0.5;
+    // defocused tissue reads as soft patches of either tone rather than an averaged mix
+    float m = smoothstep(0.35, 0.65, fract(seed * 7.7 + floor(s * 1.3) * 0.37));
     float edge = 0.0;
     if (sharp > 0.0 && vExtra.z < 1.0) {
       vec2 dirn = L2 > 1e-4 ? ab / sqrt(L2) : vec2(1.0, 0.0);
@@ -279,22 +280,22 @@ void main() {
       float ang = asin(u);
       float st = sin(ang * 2.6 + seed * 31.0 + 1.6 * sin(s * 1.7 + seed * 9.0) + s * 0.9);
       float st2 = sin(ang * 5.3 - seed * 17.0 + s * 2.3);
-      m = mix(0.5, smoothstep(0.0, 0.5, st + 0.35 * st2), sharp);
+      m = mix(m, smoothstep(0.0, 0.5, st + 0.35 * st2), sharp);
       edge = 1.0 - smoothstep(0.0, 0.35, abs(st + 0.35 * st2 - 0.25));
     }
     vec3 tc = mix(uTissueA, uTissueB, m);
     tc = mix(tc, vec3(0.9, 0.88, 0.92), edge * 0.28 * sharp);
-    tc = mix(tc, vec3(0.78, 0.6, 0.6), (1.0 - sharp) * 0.6);
+    tc = mix(tc, vec3(0.78, 0.6, 0.6), (1.0 - sharp) * 0.3);
     tc = mix(tc, base, vExtra.z);
     col = tc * (0.16 + 0.95 * wrap * wrap + 0.25 * diff) + tc * rim * 0.3 + spec * 0.3;
-    col += uPulseColor * pulse * 0.9 * fireW;
+    col += uPulseColor * pulse * 0.45 * fireW;
   } else if (mat < 2.5) {
     // emissive glass-like tube
     col = base * (0.4 + 0.7 * wrap + 0.8 * rim) + base * spec * 1.0 + vec3(spec) * 0.12;
     col += mix(base, vec3(0.75, 0.85, 1.0), 0.5) * max(base.r, max(base.g, base.b)) * (0.55 * rim + 0.5 * spec);
     col += base * glow;
     float f = clamp(pulse * uFire * fireW, 0.0, 1.0);
-    vec3 hot = uFireColor * (0.75 + 0.75 * nz) + vec3(1.0, 0.9, 0.7) * nz * nz * 0.35;
+    vec3 hot = uFireColor * (0.6 + 0.6 * nz) + vec3(1.0, 0.9, 0.7) * nz * nz * 0.22;
     col = mix(col, hot, f);
     col += uFireColor * vExtra.z * (0.5 + 0.7 * rim + 0.5 * spec); // permanently tinted parts
   } else if (mat < 3.5) {
@@ -305,7 +306,7 @@ void main() {
     float endk = smoothstep(0.0, 0.22, t) * smoothstep(1.0, 0.78, t);
     endk = mix(0.75, endk, sharp);
     col = base * (0.18 + 0.9 * wrap * wrap + 0.25 * diff) * (0.55 + 0.45 * endk) + spec * 0.3 + base * rim * 0.3;
-    col += uPulseColor * pulse * (0.9 + 1.2 * nz) * fireW;
+    col += uPulseColor * pulse * (0.3 + 0.45 * nz) * fireW;
     col += uPulseColor * glow * (0.3 + 0.7 * nz);
   } else {
     float hotc = 1.0 - smoothstep(0.0, 1.0, d / max(r + c, 0.75));
