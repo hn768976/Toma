@@ -52,6 +52,9 @@ export const PATH_V2: CamKey[] = [
   { t: 20.0, pos: [-25.0, -1.45, 3.8], target: [-13.0, 0.5, -0.3], aperture: 13.5, roll: -0.2 },
 ];
 
+/** V1, 11.8-13.3 s: rack focus to the near-left part of the helix (axis x = -8). */
+export const FOCUS_PULL_V1 = { start: 11.8, end: 13.3, axisX: -8 };
+
 const v3 = (a: [number, number, number]) => new THREE.Vector3(a[0], a[1], a[2]);
 
 export type CamRig = {

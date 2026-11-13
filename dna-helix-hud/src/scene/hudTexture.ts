@@ -28,6 +28,8 @@ export type HudTextureOptions = {
   density?: number;
   accent?: string;
   accent2?: string;
+  /** Pre-blur radius in texture pixels (for layers that are always out of focus). */
+  blur?: number;
 };
 
 export const makeHudCanvas = (opts: HudTextureOptions): HTMLCanvasElement => {
@@ -168,6 +170,15 @@ export const makeHudCanvas = (opts: HudTextureOptions): HTMLCanvasElement => {
         ctx.fillRect(x + a * 14, y + b * 14, 4, 4);
       }
     }
+  }
+  if (opts.blur) {
+    const b = document.createElement("canvas");
+    b.width = S;
+    b.height = S;
+    const bctx = b.getContext("2d")!;
+    bctx.filter = `blur(${opts.blur}px)`;
+    bctx.drawImage(c, 0, 0);
+    return b;
   }
   return c;
 };

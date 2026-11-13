@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { rand } from "../lib/random";
-import { makeRig, PATH_V1, PATH_V2 } from "./cameraPaths";
+import { FOCUS_PULL_V1, makeRig, PATH_V1, PATH_V2 } from "./cameraPaths";
 import { makeHudTexture } from "./hudTexture";
 import { PostChain } from "./post";
 
@@ -129,6 +129,8 @@ export const createEngine = (
     intensity: number;
     bigLabels?: number;
     density?: number;
+    /** Pre-blurred texture, excluded from the depth pass (faint overlay only). */
+    overlay?: boolean;
   };
   const H90 = -Math.PI / 2;
   const layers: Layer[] = [
@@ -136,11 +138,12 @@ export const createEngine = (
     { seed: 23, size: [64, 40], pos: [-4, -2.75, -2], rot: [H90, 0, 0.02], repeat: [2.6, 1.6], intensity: 0.24, bigLabels: 0.4 },
     { seed: 37, size: [90, 60], pos: [-2, -4.1, -6], rot: [H90, 0, -0.03], repeat: [3.0, 2.0], intensity: 0.15, density: 1.2, bigLabels: 0.3 },
     { seed: 41, size: [80, 26], pos: [-6, 3.0, -8], rot: [0, 0, 0], repeat: [2.6, 0.85], intensity: 0.17, density: 1.3, bigLabels: 0.15 },
-    { seed: 53, size: [50, 30], pos: [-4, 4.2, -1], rot: [Math.PI / 2, 0, 0], repeat: [2, 1.2], intensity: 0.07, bigLabels: 0.2 },
+    // ceiling layer: the V2 crane passes through it, so it must not write depth
+    { seed: 53, size: [50, 30], pos: [-4, 4.2, -1], rot: [Math.PI / 2, 0, 0], repeat: [2, 1.2], intensity: 0.07, bigLabels: 0.2, overlay: true },
     // near wall behind the helix: fills the upper frame with blurred data
     { seed: 61, size: [72, 14], pos: [-6, 2.2, -4.5], rot: [0, 0, 0], repeat: [3.2, 0.62], intensity: 0.11, density: 1.3, bigLabels: 0.15 },
     // faint layer in FRONT of the helix (mostly out of focus) so data passes over it
-    { seed: 67, size: [56, 6.5], pos: [-6, 1.1, 2.4], rot: [0, 0, 0], repeat: [2.6, 0.3], intensity: 0.045, density: 0.8, bigLabels: 0 },
+    { seed: 67, size: [56, 6.5], pos: [-6, 1.1, 2.4], rot: [0, 0, 0], repeat: [2.6, 0.3], intensity: 0.05, density: 0.8, bigLabels: 0, overlay: true },
   ];
   // small tilted floating panels along the opening flight path
   for (let i = 0; i < 9; i++) {
@@ -155,7 +158,10 @@ export const createEngine = (
     });
   }
   layers.forEach((L) => {
-    const tex = makeHudTexture({ seed: L.seed, bigLabels: L.bigLabels, density: L.density }, renderer);
+    const tex = makeHudTexture(
+      { seed: L.seed, bigLabels: L.bigLabels, density: L.density, blur: L.overlay ? 7 : undefined },
+      renderer,
+    );
     tex.repeat.set(L.repeat[0], L.repeat[1]);
     // Tessellate large planes: software rasterisers (SwiftShader) can mis-
     // interpolate UVs when clipping huge two-triangle quads at grazing angles.
@@ -174,6 +180,9 @@ export const createEngine = (
     mesh.renderOrder = 1;
     scene.add(mesh);
     const dm = depthOnly({ map: tex, alphaTest: 0.18 });
+    // A faint overlay must not drive the depth of field of what lies behind
+    // it, so it writes no depth (it stays visible only in the colour pass).
+    if (L.overlay) dm.visible = false;
     depthMats.set(mesh, dm);
     disposables.push(tex, geo, m, dm);
   });
@@ -260,6 +269,8 @@ export const createEngine = (
   // --- post ----------------------------------------------------------------
   const post = new PostChain(renderer, W, H);
   const rig = makeRig(variant === "orbit" ? PATH_V2 : PATH_V1);
+  const focusPull = variant === "orbit" ? null : FOCUS_PULL_V1;
+  const focusPoint = new THREE.Vector3();
   // cool blue-teal grade with lifted blacks, like the reference
   const shadowTint = new THREE.Color(0.8, 0.97, 1.12);
   const highlightTint = new THREE.Color(0.98, 1.0, 1.0);
@@ -306,8 +317,15 @@ export const createEngine = (
     const axisX = THREE.MathUtils.clamp(cam.target.x, DNA_X0, DNA_X1);
     ray.closestPointToPoint(new THREE.Vector3(axisX, 0, 0), closest);
     const targetDist = cam.pos.distanceTo(cam.target);
-    const focus =
+    let focus =
       cam.focus !== null ? THREE.MathUtils.lerp(targetDist, cam.focus, cam.focusBlend) : targetDist;
+    // Optional late focus pull onto a point of the helix axis (V1: keep the
+    // near-left of the helix sharp and let its far right end fall off).
+    if (focusPull) {
+      const w = THREE.MathUtils.smoothstep(t, focusPull.start, focusPull.end);
+      const d = cam.pos.distanceTo(focusPoint.set(focusPull.axisX, 0, 0));
+      focus = THREE.MathUtils.lerp(focus, d, w);
+    }
 
     post.render(scene, camera, renderDepth, {
       focus,
