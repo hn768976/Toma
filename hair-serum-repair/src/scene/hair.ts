@@ -174,10 +174,10 @@ export const createHair = (palette: Palette) => {
         float nh2 = max(dot(N, H2), 0.0);
         float streak = 0.75 + 0.25 * vnoise(vec3(s * 0.9, a * 9.0, 1.0));
         vec3 glossy = uSmoothBase;
-        glossy += uSheen * 0.06 * pow(nh1, 16.0);
+        glossy += uSheen * 0.1 * pow(nh1, 10.0);
         glossy += uSheen * 0.16 * pow(nh1, 130.0);
-        glossy += uSheen * 1.15 * pow(nh1, 420.0) * streak;
-        glossy += uSheen * 0.5 * pow(nh2, 160.0);
+        glossy += uSheen * 0.62 * pow(nh1, 260.0) * streak;
+        glossy += uSheen * 0.22 * pow(nh2, 120.0);
         float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
         glossy += uSheen * 0.1 * fres;
 
@@ -202,9 +202,9 @@ export const createHair = (palette: Palette) => {
         // ---------------- analysis grid ----------------
         if (uGridStrength > 0.0) {
           float behind = smoothstep(0.0, 1.6, uGridFront - abs(s - uContactS)) * repaired;
-          float g = max(gridLine(s / 0.25, 1.0), gridLine(a / 6.28318530718 * 28.0, 1.0));
-          float lit = 0.95 + 1.3 * pow(nh1, 8.0) + 2.4 * pow(nh1, 220.0);
-          vec3 gridCol = mix(uGlow, uGlowHot, clamp(0.45 + pow(nh1, 30.0) * 1.3, 0.0, 1.0));
+          float g = max(gridLine(s / 0.18, 0.9), gridLine(a / 6.28318530718 * 40.0, 0.9));
+          float lit = 0.9 + 0.9 * pow(nh1, 8.0) + 1.4 * pow(nh1, 220.0);
+          vec3 gridCol = mix(uGlow, uGlowHot, clamp(0.2 + pow(nh1, 30.0) * 1.3, 0.0, 1.0));
           col += gridCol * g * lit * behind * uGridStrength;
           // golden haze inside the cells and a hot rim on the silhouette
           col += uGlow * 0.012 * (0.4 + pow(nh1, 3.0)) * behind * uGridStrength;

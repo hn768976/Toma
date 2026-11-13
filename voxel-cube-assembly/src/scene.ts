@@ -45,14 +45,14 @@ const LOOKS: Record<Variant, Look> = {
     floorGlowStrength: 0,
     hemiSky: 0xffffff,
     hemiGround: 0xc9ccd4,
-    hemiIntensity: 0.5,
-    keyIntensity: 1.0,
+    hemiIntensity: 0.62,
+    keyIntensity: 0.9,
     fillColor: 0xdfe8ff,
     fillIntensity: 0.4,
-    envIntensity: 0.68,
-    primary: [0.62, 0.06, 0.77, 0.1],
+    envIntensity: 0.16,
+    primary: [0.62, 0.05, 0.775, 0.08],
     secondary: [0.6, 0.07, 0.1, 0.1],
-    accent: [0.595, 0.62, 0.6, 0.1],
+    accent: [0.595, 0.62, 0.66, 0.08],
     accentEmissive: 0x7fb2f0,
     accentEmissiveIntensity: 0.04,
     chrome: 0xe6eaf0,
@@ -72,10 +72,10 @@ const LOOKS: Record<Variant, Look> = {
     hemiSky: 0xcfd8ff,
     hemiGround: 0x2a2420,
     hemiIntensity: 0.45,
-    keyIntensity: 1.25,
+    keyIntensity: 1.0,
     fillColor: 0xffb070,
     fillIntensity: 0.45,
-    envIntensity: 0.7,
+    envIntensity: 0.22,
     primary: [0.62, 0.1, 0.045, 0.05],
     secondary: [0.6, 0.08, 0.3, 0.14],
     accent: [0.07, 1.0, 0.42, 0.06],
@@ -364,7 +364,8 @@ export const createVoxelScene = (
   // Backdrop
   const floorMat = floorMaterial(look);
   const floor = new THREE.Mesh(
-    new THREE.CircleGeometry(ROOM_RADIUS, 96),
+    // a regular grid (not a triangle fan) keeps every triangle well-conditioned
+    new THREE.PlaneGeometry(ROOM_RADIUS * 2.2, ROOM_RADIUS * 2.2, 48, 48),
     floorMat,
   );
   floor.rotation.x = -Math.PI / 2;
@@ -401,18 +402,18 @@ export const createVoxelScene = (
   const materials: Record<Kind, THREE.MeshStandardMaterial> = {
     white: new THREE.MeshStandardMaterial({
       color: 0xffffff,
-      roughness: 0.14,
-      metalness: 0.06,
+      roughness: 0.5,
+      metalness: 0.02,
     }),
     dark: new THREE.MeshStandardMaterial({
       color: 0xffffff,
-      roughness: 0.1,
-      metalness: 0.5,
+      roughness: 0.42,
+      metalness: 0.3,
     }),
     blue: new THREE.MeshStandardMaterial({
       color: 0xffffff,
-      roughness: 0.1,
-      metalness: 0.1,
+      roughness: 0.45,
+      metalness: 0.03,
       emissive: look.accentEmissive,
       emissiveIntensity: look.accentEmissiveIntensity,
     }),

@@ -16,7 +16,7 @@ export const createBackdrop = (palette: Palette, aspect: number) => {
       uLight: { value: new THREE.Color(palette.bgLight) },
       uAspect: { value: aspect },
       uZoom: { value: 1 },
-      uTime: { value: 0 },
+      uDrift: { value: 0 },
       uExposure: { value: 1 },
       uSaturation: { value: 1 },
     },
@@ -33,7 +33,7 @@ export const createBackdrop = (palette: Palette, aspect: number) => {
       uniform vec3 uLight;
       uniform float uAspect;
       uniform float uZoom;
-      uniform float uTime;
+      uniform float uDrift;
       uniform float uExposure;
       uniform float uSaturation;
       varying vec2 vUv;
@@ -59,11 +59,11 @@ export const createBackdrop = (palette: Palette, aspect: number) => {
         vec2 d = p - c;
         float rho = length(d);
         float ang = atan(d.y, d.x);
-        rho += 0.05 * sin(ang * 5.0 + 1.3) + 0.025 * sin(ang * 11.0 - uTime * 0.05);
-        rho += uTime * 0.0035; // slow parallax drift
+        rho += 0.05 * sin(ang * 5.0 + 1.3) + 0.025 * sin(ang * 11.0);
+        rho += uDrift; // parallax drift while the camera travels, then it settles
 
         float b = 0.5 * bands(rho * 9.5) + 0.3 * bands(rho * 21.0 + 4.0) + 0.2 * bands(rho * 43.0 + 9.0);
-        b = smoothstep(0.34, 0.68, b);
+        b = smoothstep(0.24, 0.78, b);
         // broad light pool, like the key light falling across the strands
         float pool = 1.0 - smoothstep(0.0, 1.5, length(p - vec2(-0.25, 0.2)));
         vec3 col = mix(uDark, uLight, b * (0.3 + 0.7 * pool));
@@ -83,7 +83,8 @@ export const createBackdrop = (palette: Palette, aspect: number) => {
   return {
     mesh,
     update: (frame: number, tl: Timeline) => {
-      material.uniforms.uTime.value = frame;
+      void frame;
+      material.uniforms.uDrift.value = tl.backgroundDrift;
       material.uniforms.uZoom.value = tl.backgroundZoom;
       material.uniforms.uExposure.value = tl.exposure;
       material.uniforms.uSaturation.value =

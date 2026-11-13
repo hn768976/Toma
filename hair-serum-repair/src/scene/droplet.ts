@@ -24,6 +24,7 @@ export const createDroplet = (palette: Palette) => {
       uTime: { value: 0 },
       uExposure: { value: 1 },
       uEnergy: { value: 0 },
+      uCrescent: { value: 1 },
     },
     vertexShader: /* glsl */ `
       varying vec3 vWorld;
@@ -46,6 +47,7 @@ export const createDroplet = (palette: Palette) => {
       uniform float uTime;
       uniform float uExposure;
       uniform float uEnergy;
+      uniform float uCrescent;
       varying vec3 vWorld;
       varying vec3 vNormal;
       varying vec3 vLocal;
@@ -76,7 +78,7 @@ export const createDroplet = (palette: Palette) => {
         // crescent window reflection hugging the upper-left limb
         float side = dot(N, normalize(vec3(-0.86, 0.22, 0.45)));
         float crescent = smoothstep(0.8, 0.93, side) * smoothstep(0.86, 0.7, fres) * smoothstep(0.3, 0.52, fres);
-        col += vec3(1.0, 0.98, 0.9) * 0.8 * crescent;
+        col += vec3(1.0, 0.98, 0.9) * 0.8 * crescent * uCrescent;
         col += vec3(1.0) * 0.5 * pow(max(dot(N, H), 0.0), 220.0);
 
         // suspended micro-bubbles (seen through the front surface)
@@ -169,6 +171,7 @@ export const createDroplet = (palette: Palette) => {
       mesh.visible = tl.dropOpacity > 0.001 && tl.dropScaleTangent > 0.001;
       material.uniforms.uOpacity.value = tl.dropOpacity;
       material.uniforms.uTime.value = frame;
+      material.uniforms.uCrescent.value = 1 - 0.85 * tl.dropSettle;
       material.uniforms.uExposure.value = tl.exposure;
       material.uniforms.uEnergy.value = Math.max(0, tl.haloStrength);
       material.uniforms.uCameraPos.value.copy(cameraPosition);

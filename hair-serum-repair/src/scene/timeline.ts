@@ -104,13 +104,14 @@ export type Timeline = {
   /** the strand starts in shadow and is lit as the camera pushes in */
   cuticleLight: number;
   backgroundZoom: number;
+  backgroundDrift: number;
   /** horizontal framing: the camera drifts onto the strand as it pushes in */
   cameraX: number;
 };
 
 export const getTimeline = (f: number): Timeline => {
   // the lens keeps its footprint while it flattens and sinks into the strand
-  const absorb = smooth(118, 146, f);
+  const absorb = smooth(112, 138, f);
   return {
     cameraDistance: curve(CAMERA_DISTANCE, f),
     dropX: curve(DROP_X, f),
@@ -141,7 +142,7 @@ export const getTimeline = (f: number): Timeline => {
         f,
       ) *
       (1 - 0.5 * absorb),
-    dropOpacity: 1 - smooth(130, 144, f),
+    dropOpacity: 1 - smooth(120, 135, f),
     haloStrength: smooth(58, 88, f) * (1 - smooth(100, 146, f)),
     repairFront:
       f < 102 ? 0 : 0.9 * smooth(102, 112, f) + Math.max(0, f - 108) * 0.078,
@@ -161,11 +162,12 @@ export const getTimeline = (f: number): Timeline => {
       ],
       f,
     ),
+    backgroundDrift: 0.16 * smooth(-20, 62, f) + 0.00012 * f,
     backgroundZoom: curve(
       [
         [0, 1],
-        [75, 1.35],
-        [250, 1.75],
+        [60, 1.3],
+        [250, 1.42],
       ],
       f,
     ),
