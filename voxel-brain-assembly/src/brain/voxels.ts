@@ -26,13 +26,13 @@ const inEllipse = (x: number, y: number, cx: number, cy: number, rx: number, ry:
 /** Brain silhouette in voxel units: X in [-10, 10], Y in [0, 16]. */
 const insideBrain = (X: number, Y: number) => {
   const cerebrum = inEllipse(X, Y, 0, 9.4, 9.8, 6.4);
-  const frontal = inEllipse(X, Y, -6.0, 7.6, 4.0, 5.2);
-  const temporal = inEllipse(X, Y, -3.4, 4.0, 5.6, 2.9);
+  const frontal = inEllipse(X, Y, -6.2, 8.6, 4.0, 5.2);
+  const temporal = inEllipse(X, Y, -3.6, 5.0, 5.6, 2.6);
   const cerebellum = inEllipse(X, Y, 5.6, 3.6, 3.6, 2.5);
   // Short, wide stem joining the brain to the pedestal.
-  const stem = X >= 0.5 && X <= 4.5 && Y >= 0 && Y <= 3.2;
+  const stem = X >= 1.0 && X <= 4.5 && Y >= 0 && Y <= 3.2;
   // Small notch between the temporal lobe and the stem.
-  const notch = inEllipse(X, Y, -0.3, 1.0, 1.0, 1.4);
+  const notch = inEllipse(X, Y, -0.6, 1.2, 1.3, 1.6);
   return (cerebrum || frontal || temporal || cerebellum || stem) && !notch;
 };
 
@@ -93,7 +93,7 @@ export const buildVoxels = (): Voxel[] => {
     for (let c = 0; c < COLS; c++) {
       if (!mask[r][c]) continue;
       const X = c - COLS / 2 + 0.5;
-      const isStem = X >= 0.5 && X <= 4.5 && r < 3;
+      const isStem = X >= 1.0 && X <= 4.5 && r < 3;
       const t = clamp((dist[r][c] - 1) / 3.2, 0, 1);
       const layers = isStem ? 3 : 2 + Math.round(Math.sqrt(t) * 6);
       const xNorm = (c + 0.5) / COLS; // 0 = left (frontal), 1 = right
@@ -111,11 +111,12 @@ export const buildVoxels = (): Voxel[] => {
           ty: (r + 0.5) * VOXEL,
           // Slight depth jitter on the front surface gives a crafted, uneven relief.
           tz: z + (l === layers - 1 ? (rand() - 0.5) * 0.04 : 0),
-          flies: surface,
+          // About half of the front face flies; the rest materialise, keeping the swarm sparse.
+          flies: surface && rand() < 0.5,
           // From above and the upper left, some towards the camera (they read larger).
-          ox: -1.6 + rand() * 2.4,
-          oy: 1.8 + rand() * 3.0,
-          oz: -0.3 + rand() * 2.6,
+          ox: -2.4 + rand() * 2.2,
+          oy: 1.2 + rand() * 2.4,
+          oz: -0.3 + rand() * 2.2,
           bx: (rand() - 0.5) * 1.4,
           by: (rand() - 0.2) * 0.9,
           bz: (rand() - 0.5) * 1.2,
@@ -133,9 +134,9 @@ export const buildVoxels = (): Voxel[] => {
 
   // A handful of "scout" cubes drop in early from high above (≈1.2–2.4 s).
   const scouts = voxels.filter((v) => v.flies && v.ty < 1.0 && v.tx > 0.1);
-  for (let s = 0; s < 6 && scouts.length; s++) {
+  for (let s = 0; s < 3 && scouts.length; s++) {
     const pick = scouts[Math.floor(rand() * scouts.length)];
-    pick.start = 1.15 + s * 0.2 + rand() * 0.08;
+    pick.start = 1.3 + s * 0.3 + rand() * 0.08;
     pick.dur = 1.0 + rand() * 0.25;
     pick.ox = -0.2 + rand() * 1.0;
     pick.oy = 5.5 + rand() * 2.0;

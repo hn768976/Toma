@@ -15,11 +15,11 @@ import { buildVoxels, VOXEL, voxelPose, type VoxelPose } from "./voxels";
 const BG = new THREE.Color("#f2fcfd");
 const TILE = 1.3;
 const GAP = 0.045;
-const SLAB = 0.36; // tile slab thickness
-const PEDESTAL = { w: 3.1, h: 0.65, d: 2.4 };
+const SLAB = 0.5; // tile slab thickness
+const PEDESTAL = { w: 3.1, h: 0.78, d: 2.4 };
 /** Horizontal offset of the tile grid so no seam lines up with the lens axis. */
 const X_OFF = 0.37;
-const POOL_DEPTH = -0.3;
+const POOL_DEPTH = -0.44;
 /**
  * Recessed pools in world units [x0, x1, z0, z1], laid out from the
  * reference frame: a large pool left of the circuit and a wide one behind
@@ -27,8 +27,10 @@ const POOL_DEPTH = -0.3;
  */
 const POOLS: [number, number, number, number][] = [
   [-12.2, -5.4, -4.4, 0.7],
-  [-5.6, 3.2, -8.3, -5.2],
+  [-5.4, 3.8, -6.9, -3.0],
 ];
+/** Small per-row offset so the tile seams read staggered rather than as one grid. */
+const rowShift = (j: number) => (((j % 3) + 3) % 3) * 0.17 - 0.17;
 /** Circuit loop corners (front-left, front-right, back-right, back-left) on the floor. */
 const LOOP = { fz: 3.2, fl: -3.0, fr: 2.85, bz: -4.6, bl: -4.1, br: 5.1 };
 
@@ -36,51 +38,55 @@ const LOOP = { fz: 3.2, fl: -3.0, fr: 2.85, bz: -4.6, bl: -4.1, br: 5.1 };
 // Textures
 // ---------------------------------------------------------------------------
 const makeCubeTexture = () => {
-  // Hollow glass cube look: bright bevelled rim, deeper cyan core.
+  // Clear glass cube: bright white rim, and through the glass the cube's own
+  // back edges (dark navy lines converging to a smaller back face) over a
+  // deep teal interior. No inset panel, so the lattice reads see-through.
   const s = 256;
   const c = document.createElement("canvas");
   c.width = s;
   c.height = s;
   const g = c.getContext("2d")!;
-  g.fillStyle = "#e9fbfd";
+  const body = g.createLinearGradient(0, 0, s, s);
+  body.addColorStop(0, "#a3e2ee");
+  body.addColorStop(0.5, "#5ab9d2");
+  body.addColorStop(1, "#80cee0");
+  g.fillStyle = body;
   g.fillRect(0, 0, s, s);
-  const rim = s * 0.11;
-  const core = g.createLinearGradient(rim, rim, s - rim, s - rim);
-  core.addColorStop(0, "#8fd6e2");
-  core.addColorStop(0.5, "#4fb3c9");
-  core.addColorStop(1, "#7ccbdb");
-  g.fillStyle = core;
-  g.fillRect(rim, rim, s - 2 * rim, s - 2 * rim);
-  // Looking into a hollow glass cube: darker teal inner walls and back face.
-  const back = s * 0.3;
-  g.fillStyle = "rgba(18,96,120,0.30)";
+  // Interior depth: darker towards the back face.
+  const depth = g.createRadialGradient(s * 0.56, s * 0.56, s * 0.05, s * 0.5, s * 0.5, s * 0.62);
+  depth.addColorStop(0, "rgba(22,70,96,0.32)");
+  depth.addColorStop(1, "rgba(22,70,96,0.0)");
+  g.fillStyle = depth;
+  g.fillRect(0, 0, s, s);
+  // Back face edges and the edges joining them to the front corners.
+  const b0 = s * 0.3;
+  const b1 = s * 0.82;
+  g.strokeStyle = "rgba(24,62,86,0.62)";
+  g.lineWidth = s * 0.03;
+  g.strokeRect(b0, b0, b1 - b0, b1 - b0);
   g.beginPath();
-  g.moveTo(rim, rim);
-  g.lineTo(back, back);
-  g.lineTo(back, s - back);
-  g.lineTo(rim, s - rim);
-  g.closePath();
-  g.fill();
-  g.fillStyle = "rgba(18,96,120,0.18)";
-  g.beginPath();
-  g.moveTo(rim, rim);
-  g.lineTo(s - rim, rim);
-  g.lineTo(s - back, back);
-  g.lineTo(back, back);
-  g.closePath();
-  g.fill();
-  g.strokeStyle = "rgba(235,252,255,0.6)";
-  g.lineWidth = s * 0.016;
-  g.strokeRect(back, back, s - 2 * back, s - 2 * back);
-  // Specular sheen across the glass.
-  const sheen = g.createLinearGradient(0, 0, s, s * 0.6);
-  sheen.addColorStop(0, "rgba(255,255,255,0.28)");
-  sheen.addColorStop(0.45, "rgba(255,255,255,0.0)");
+  g.moveTo(0, 0);
+  g.lineTo(b0, b0);
+  g.moveTo(s, 0);
+  g.lineTo(b1, b0);
+  g.moveTo(0, s);
+  g.lineTo(b0, b1);
+  g.moveTo(s, s);
+  g.lineTo(b1, b1);
+  g.stroke();
+  // Faint highlight on the back edges (refraction).
+  g.strokeStyle = "rgba(210,248,255,0.35)";
+  g.lineWidth = s * 0.012;
+  g.strokeRect(b0 + s * 0.02, b0 + s * 0.02, b1 - b0, b1 - b0);
+  // Specular sheen across the front glass.
+  const sheen = g.createLinearGradient(0, 0, s, s * 0.7);
+  sheen.addColorStop(0, "rgba(255,255,255,0.32)");
+  sheen.addColorStop(0.4, "rgba(255,255,255,0.0)");
   g.fillStyle = sheen;
   g.fillRect(0, 0, s, s);
-  // Crisp outer edge.
-  g.strokeStyle = "rgba(255,255,255,0.95)";
-  g.lineWidth = s * 0.035;
+  // Bright white rim.
+  g.strokeStyle = "rgba(255,255,255,0.98)";
+  g.lineWidth = s * 0.05;
   g.strokeRect(g.lineWidth / 2, g.lineWidth / 2, s - g.lineWidth, s - g.lineWidth);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -146,6 +152,9 @@ const COMPOSITE_FRAG = /* glsl */ `
     // Gentle vignette
     vec2 q = vUv - 0.5;
     col *= 1.0 - dot(q, q) * 0.06;
+    // Dither (+/- half a code value) to avoid stepped rings in the bright sky.
+    float n = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+    col += (n - 0.5) / 255.0;
     gl_FragColor = linearToOutputTexel(vec4(col, 1.0));
   }
 `;
@@ -239,7 +248,7 @@ export class BrainWorld {
         uFocus: { value: 17 },
         uFocusRange: { value: 2.5 },
         uFarBlur: { value: 1.6 },
-        uNearBlur: { value: 0.26 },
+        uNearBlur: { value: 0.4 },
         uBloom: { value: 0.18 },
       },
       depthTest: false,
@@ -250,7 +259,7 @@ export class BrainWorld {
     this.postScene.add(this.quad);
 
     this.scene.background = BG.clone();
-    this.scene.fog = new THREE.Fog(BG.clone(), 22, 95);
+    this.scene.fog = new THREE.Fog(BG.clone(), 16, 62);
 
     this.buildLights();
     this.buildFloor();
@@ -299,7 +308,7 @@ export class BrainWorld {
   // ------------------------------------------------------------------- floor
   private isPool(i: number, j: number) {
     // i: column index (x), j: row index (z); cell centre = (i + 0.5) * TILE
-    const x = (i + 0.5) * TILE + X_OFF;
+    const x = (i + 0.5) * TILE + X_OFF + rowShift(j);
     const z = (j + 0.5) * TILE;
     return POOLS.some(([x0, x1, z0, z1]) => x > x0 && x < x1 && z > z0 && z < z1);
   }
@@ -318,13 +327,13 @@ export class BrainWorld {
       const z = (j + 0.5) * TILE;
       const halfWidth = 42 + Math.abs(Math.min(z, 0)) * 0.95;
       for (let i = -90; i < 90; i++) {
-        const x = (i + 0.5) * TILE + X_OFF;
+        const x = (i + 0.5) * TILE + X_OFF + rowShift(j);
         if (Math.abs(x) > halfWidth) continue;
         if (this.isPool(i, j)) continue;
         // Keep the pedestal area flat; elsewhere tiles sit at slightly
         // uneven heights like the reference.
         const nearPed = Math.abs(x) < 4.5 && z > -2.2 && z < 2.6;
-        const h = nearPed ? 0 : (rand() - 0.4) * 0.07 + (rand() < 0.04 ? 0.08 : 0);
+        const h = nearPed ? 0 : (rand() - 0.45) * 0.1 + (rand() < 0.06 ? 0.09 : 0);
         const cell = { x, z, h, tint: rand(), ph: nearPed ? -1 : rand() * Math.PI * 2 };
         if (Math.hypot(x + 1, z) < 26) near.push(cell);
         else far.push(cell);
@@ -369,6 +378,22 @@ export class BrainWorld {
       emissiveIntensity: 0.08,
       roughness: 0.25,
     });
+    // Water surface: dark along the near wall, lighter towards the far wall.
+    const pc = document.createElement("canvas");
+    pc.width = 4;
+    pc.height = 128;
+    const pg = pc.getContext("2d")!;
+    const grad = pg.createLinearGradient(0, 0, 0, 128);
+    grad.addColorStop(0, "#d9f1f8");
+    grad.addColorStop(0.45, "#9fcfe0");
+    grad.addColorStop(1, "#3f7f9c");
+    pg.fillStyle = grad;
+    pg.fillRect(0, 0, 4, 128);
+    const poolTex = new THREE.CanvasTexture(pc);
+    poolTex.colorSpace = THREE.SRGBColorSpace;
+    poolMat.map = poolTex;
+    poolMat.color.set("#ffffff");
+    this.disposables.push(poolTex);
     for (const [x0, x1, z0, z1] of POOLS) {
       const w = x1 - x0 + TILE * 2;
       const dpt = z1 - z0 + TILE * 2;
@@ -395,13 +420,14 @@ export class BrainWorld {
 
     // Recessed connector slot on the pedestal's front face.
     const slotMat = new THREE.MeshStandardMaterial({ color: "#7d93a1", roughness: 0.8 });
-    const slot = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.3, 0.06), slotMat);
-    slot.position.set(0, 0.15, PEDESTAL.d / 2 + 0.005);
+    const slot = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.34, 0.06), slotMat);
+    slot.position.set(0, 0.17, PEDESTAL.d / 2 + 0.005);
     this.scene.add(slot);
     const prongMat = new THREE.MeshStandardMaterial({ color: "#f3f8fa", roughness: 0.5 });
-    for (const sx of [-0.2, 0.2]) {
-      const prong = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.26, 0.08), prongMat);
-      prong.position.set(sx, 0.15, PEDESTAL.d / 2 + 0.01);
+    // White frame pieces split the slot into two openings.
+    for (const [sx, w] of [[0, 0.16], [-0.6, 0.12], [0.6, 0.12]] as const) {
+      const prong = new THREE.Mesh(new THREE.BoxGeometry(w, 0.36, 0.08), prongMat);
+      prong.position.set(sx, 0.17, PEDESTAL.d / 2 + 0.01);
       this.scene.add(prong);
     }
 
@@ -409,8 +435,8 @@ export class BrainWorld {
     // Thin glass tubes: pale core, cyan rim (fresnel-like via low roughness).
     const tubeMat = new THREE.MeshStandardMaterial({
       color: "#e6f9fc",
-      emissive: "#4cc3e2",
-      emissiveIntensity: 0.38,
+      emissive: "#5bbcd6",
+      emissiveIntensity: 0.3,
       roughness: 0.08,
       metalness: 0.0,
     });
@@ -480,7 +506,7 @@ export class BrainWorld {
       map: tex,
       emissiveMap: tex,
       emissive: new THREE.Color("#ffffff"),
-      emissiveIntensity: 0.3,
+      emissiveIntensity: 0.4,
       roughness: 0.15,
       metalness: 0.0,
     });
@@ -492,7 +518,7 @@ export class BrainWorld {
     mesh.castShadow = false;
     mesh.receiveShadow = false;
     mesh.frustumCulled = false;
-    this.brainGroup.position.set(0.2, PEDESTAL.h + 0.04, 0);
+    this.brainGroup.position.set(0.08, PEDESTAL.h + 0.04, 0);
     this.brainGroup.add(mesh);
     this.scene.add(this.brainGroup);
     this.disposables.push(tex, mat, geo);
@@ -517,7 +543,7 @@ export class BrainWorld {
     this.cubes.instanceMatrix.needsUpdate = true;
     if (this.cubes.instanceColor) this.cubes.instanceColor.needsUpdate = true;
     // Subtle "alive" breathing once the brain is complete.
-    this.cubeMat.emissiveIntensity = 0.3 + 0.03 * Math.sin(t * 2.1);
+    this.cubeMat.emissiveIntensity = 0.4 + 0.03 * Math.sin(t * 2.1);
   }
 
   /** Slow, subtle rise-and-settle of the floor slabs (pedestal area stays put). */

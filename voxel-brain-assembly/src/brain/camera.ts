@@ -32,7 +32,7 @@ export const cameraAt = (
     // Framing solved from the reference: horizon ~40% down, pedestal centre at
     // 57% across and its base at 67% down, 52-degree lens, gentle push-in.
     const position = new THREE.Vector3(-1.12 + fx, 2.35 - 0.03 * p + fy, 10.1 - 0.4 * p);
-    const target = new THREE.Vector3(-1.12 + fx * 0.4, 1.39 + fy * 0.4, 0);
+    const target = new THREE.Vector3(-1.12 + fx * 0.4, 1.5 + fy * 0.4, 0);
     return { position, target, fov: 52, focus: position.distanceTo(new THREE.Vector3(0, 1.4, 0.5)) };
   }
   const center = new THREE.Vector3(0.1, 1.9, 0);
