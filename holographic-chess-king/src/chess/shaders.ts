@@ -83,7 +83,7 @@ export const gradeShader = {
     tDiffuse: { value: null },
     uVignette: { value: 0.55 },
     uAspect: { value: 16 / 9 },
-    uLift: { value: [0.0, 0.006, 0.014] },
+    uLift: { value: [0.0055, 0.0075, 0.0072] },
   },
   vertexShader: /* glsl */ `varying vec2 vUv; void main(){vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
   fragmentShader: /* glsl */ `

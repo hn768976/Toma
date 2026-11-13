@@ -24,6 +24,11 @@ the finished point-cloud brain slowly turns.
 * Everything is a pure function of the frame number and seeded RNG, so frames
   render identically in any order and in parallel.
 
+## Assets
+
+No external assets are needed: all geometry, textures, particles and effects are
+generated procedurally in code (`src/`). `public/` is intentionally empty.
+
 ## Commands
 
 Requires Node.js 20.19+ / 22.13+ / 24+.

@@ -22,6 +22,11 @@ networks drift behind the out-of-focus pieces; at ~8.9 s the king powers down.
     ACES tone mapping, vignette grade.
 * Fully deterministic (seeded RNG, frame-driven timeline).
 
+## Assets
+
+No external assets are needed: all geometry, textures, particles and effects are
+generated procedurally in code (`src/`). `public/` is intentionally empty.
+
 ## Commands
 
 Requires Node.js 20.19+ / 22.13+ / 24+.
