@@ -51,6 +51,30 @@ const spherePos = (s: SphereParticle, t: number, burstStart: number): V3 => {
 
 type Ctx = CanvasRenderingContext2D;
 
+/**
+ * Exposure curve for the sphere / burst particles, matched to the reference's
+ * brightness: steady sphere, held down while the camera crosses the dense
+ * shell, then opening up as the streaks spread across the frame.
+ */
+const BURST_ALPHA: Array<[number, number]> = [
+  [0, 0.3],
+  [1.15, 0.3],
+  [1.45, 0.24],
+  [1.8, 0.34],
+  [2.15, 0.8],
+  [2.45, 1.15],
+  [3.0, 1.15],
+];
+const burstAlpha = (t: number) => {
+  if (t <= BURST_ALPHA[0][0]) return BURST_ALPHA[0][1];
+  for (let i = 1; i < BURST_ALPHA.length; i++) {
+    const [t1, v1] = BURST_ALPHA[i];
+    const [t0, v0] = BURST_ALPHA[i - 1];
+    if (t <= t1) return v0 + (v1 - v0) * smoothstep(t0, t1, t);
+  }
+  return BURST_ALPHA[BURST_ALPHA.length - 1][1];
+};
+
 // After-flash "light fan": uneven, soft radial streaks that spin and decay.
 // Drawn small and up-scaled with a blur so the wedges have no hard steps.
 const FAN_RAYS = (() => {
@@ -239,8 +263,11 @@ export const renderFrame = (
       if (a < 0.01) continue;
       // cheap reject: both endpoints off the same side of the screen
       if ((P.x < 0 && Q.x < 0) || (P.x > width && Q.x > width) || (P.y < 0 && Q.y < 0) || (P.y > height && Q.y > height)) continue;
-      const w = Math.max(minW * k, (s.width * cam.f) / zA);
-      ctx.globalAlpha = Math.min(1, a * Math.min(1, (w / k) * 0.8));
+      const w0 = Math.max(minW * k, (s.width * cam.f) / zA);
+      // depth of field for line work: defocused lines get wider and dimmer
+      const coc = APERTURE * cam.f * Math.abs(1 / zA - 1 / focus);
+      const w = Math.max(w0, Math.min(coc * 0.6, 24 * k));
+      ctx.globalAlpha = Math.min(1, a * Math.min(1, (w0 / k) * 0.8) * Math.sqrt(w0 / w));
       ctx.strokeStyle = PALETTE[s.color];
       ctx.lineWidth = Math.min(w, 6 * k);
       ctx.beginPath();
@@ -251,7 +278,33 @@ export const renderFrame = (
   };
   drawSegments(world.links, tl.links * 0.55, 1.4);
   drawSegments(world.beams, tl.beams, 2);
-  drawSegments(world.lattice, tl.lattice * 0.85, 2.2);
+  drawSegments(world.lattice, tl.lattice * 0.75, 2.2);
+
+  // opening backdrop: dim blue circuit board behind the sphere
+  if (tl.backdrop > 0.003) {
+    ctx.lineJoin = "miter";
+    for (const c of world.backdrop) {
+      let ok = true;
+      const pts: Array<[number, number]> = [];
+      let z = 0;
+      for (const p of c.pts) {
+        if (!project(cam, p, P)) {
+          ok = false;
+          break;
+        }
+        pts.push([P.x, P.y]);
+        z = P.z;
+      }
+      if (!ok) continue;
+      ctx.globalAlpha = Math.min(1, tl.backdrop * c.alpha * 0.55);
+      ctx.strokeStyle = PALETTE[c.color];
+      ctx.lineWidth = Math.max(2 * k, (0.12 * cam.f) / z);
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+      ctx.stroke();
+    }
+  }
 
   // circuits
   if (tl.circuits > 0.003) {
@@ -297,11 +350,12 @@ export const renderFrame = (
     streakGain = 1,
     dofScale = 1,
     streakWidth = 1,
+    nearFade = 5,
   ) => {
     if (alpha < 0.01 || !project(cam, pos, P)) return;
     const z = P.z;
     // fade elements that get very close to the lens (no giant blobs)
-    const a0 = alpha * fog(z) * clamp((z - 1.5) / 5);
+    const a0 = alpha * fog(z) * clamp((z - 1.5) / nearFade);
     if (a0 < 0.01) return;
     const s = Math.max(1.5 * k, (size * cam.f) / z);
     if (P.x < -s * 8 || P.x > width + s * 8 || P.y < -s * 8 || P.y > height + s * 8) {
@@ -363,9 +417,9 @@ export const renderFrame = (
   // opening sphere + burst
   if (tl.sphereAlpha > 0.003) {
     // stylised long-exposure streaks during the burst (like the reference)
-    // the camera passing through the shell would otherwise flare up
-    const crossDip = 1 - 0.7 * smoothstep(1.2, 1.5, t) * (1 - smoothstep(1.75, 2.05, t));
-    const gain = 1 + 3.5 * tl.streak;
+    // shorter shutter while crossing the shell keeps the icons crisp there
+    const crossing = smoothstep(1.2, 1.4, t) * (1 - smoothstep(1.65, 1.85, t));
+    const gain = (1 + 5 * tl.streak) * (1 - 0.65 * crossing);
     const sh = SHUTTER * gain;
     const prevBurst = makeCamera(path(t - sh), width, height);
     const savedPrev = prev;
@@ -374,7 +428,7 @@ export const renderFrame = (
       const p = spherePos(s, t, tl.burstStart);
       const pp = spherePos(s, t - sh, tl.burstStart);
       const tw = 0.7 + 0.3 * Math.sin(t * 5 + s.twinkle);
-      drawPoint(p, pp, s.size, s.color, tl.sphereAlpha * tw * (0.3 + 0.55 * tl.streak) * crossDip * (s.inner ? 0.55 : 1), s.square, 0.1 + 0.1 * tl.streak, gain, 0.3, 1 + 0.8 * tl.streak);
+      drawPoint(p, pp, s.size, s.color, tl.sphereAlpha * tw * burstAlpha(t) * (s.inner ? 0.55 : 1), s.square, 0.1 + 0.1 * tl.streak, gain, 0.3, 1 + 0.8 * tl.streak, 12);
     }
     activePrev = savedPrev;
   }

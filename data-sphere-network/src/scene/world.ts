@@ -26,6 +26,7 @@ export type World = {
   links: Segment[];
   beams: Segment[];
   circuits: Polyline[];
+  backdrop: Polyline[];
   lattice: Segment[];
   latticeNodes: Particle[];
   ring: Particle[];
@@ -157,6 +158,25 @@ export const buildWorld = (seed = 7): World => {
     circuits.push({ pts, color: rand() < 0.7 ? "white" : "ice", alpha: 0.5 + rand() * 0.5 });
   }
 
+  // -- dim blue circuit-board backdrop seen behind the opening sphere
+  const backdrop: Polyline[] = [];
+  for (let i = 0; i < 260; i++) {
+    const z = 45 + rand() * 60;
+    let x = (rand() * 2 - 1) * 70;
+    let y = (rand() * 2 - 1) * 40;
+    const pts: V3[] = [[x, y, z]];
+    let horiz = rand() < 0.6;
+    const n = 2 + Math.floor(rand() * 4);
+    for (let k = 0; k < n; k++) {
+      const L = (2 + rand() * 9) * (rand() < 0.5 ? -1 : 1);
+      if (horiz) x += L;
+      else y += L;
+      horiz = !horiz;
+      pts.push([x, y, z]);
+    }
+    backdrop.push({ pts, color: rand() < 0.7 ? "blue" : "cyan", alpha: 0.35 + rand() * 0.45 });
+  }
+
   // -- lattice "data-center" corridor around the core
   const lattice: Segment[] = [];
   const latticeNodes: Particle[] = [];
@@ -197,11 +217,11 @@ export const buildWorld = (seed = 7): World => {
   const ring: Particle[] = [];
   for (let i = 0; i < 72; i++) {
     const a = (i / 72) * Math.PI * 2 + (rand() - 0.5) * 0.02;
-    const r = 50 + (rand() - 0.5) * 1.8;
+    const r = 42 + (rand() - 0.5) * 1.6;
     ring.push({
       p: [Math.cos(a) * r, Math.sin(a) * r, CORE[2] - 25],
       size: 0.75 + rand() * 0.45,
-      color: rand() < 0.5 ? "yellow" : rand() < 0.55 ? "salmon" : "white",
+      color: rand() < 0.6 ? "yellow" : rand() < 0.75 ? "salmon" : "white",
       square: true,
       twinkle: rand() * 6.28,
     });
@@ -221,7 +241,7 @@ export const buildWorld = (seed = 7): World => {
     });
   }
 
-  return { sphere, field, icons, links, beams, circuits, lattice, latticeNodes, ring, rays };
+  return { sphere, field, icons, links, beams, circuits, backdrop, lattice, latticeNodes, ring, rays };
 };
 
 export const COLORS_USED = COLOR_NAMES;
