@@ -16,6 +16,8 @@ Config.setJpegQuality(95);
 Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
+// Tag + encode as standard BT.709 TV-range video (plain yuv420p, not yuvj420p).
+Config.setColorSpace("bt709");
 Config.setCrf(16);
 // WebGL frames are heavy; long single frames on CPU-only machines need time.
 Config.setDelayRenderTimeoutInMilliseconds(120000);
