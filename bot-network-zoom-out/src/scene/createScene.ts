@@ -652,7 +652,7 @@ export const createScene = (
     const idleGain = 1 - 0.42 * smooth((t - 8.5) / 5);
 
     wave = waveBlend(t);
-    const doneGain = 1.05 - 0.4 * farness;
+    const doneGain = 1.05 - 0.12 * farness;
     writeTileColors(nearTiles, nearColors, t, idleGain, doneGain);
     writeTileColors(farTiles, farColors, t, idleGain, doneGain);
     groundMat.uniforms.uHaze.value = 1 - 0.75 * farness;
