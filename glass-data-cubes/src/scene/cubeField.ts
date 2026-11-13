@@ -11,8 +11,8 @@ export type Box = {
 // kept around the flight path so the bright void stays visible in the centre.
 export const FIELD_NEAR_Z = 14;
 export const FIELD_FAR_Z = -150;
-const TUNNEL_X = 0.6;
-const TUNNEL_Y = 0.45;
+const TUNNEL_X = 0.95;
+const TUNNEL_Y = 0.7;
 const LATTICE = 0.25;
 
 const snap = (v: number) => Math.round(v / LATTICE) * LATTICE;
@@ -20,37 +20,29 @@ const snap = (v: number) => Math.round(v / LATTICE) * LATTICE;
 export const generateBoxes = (seed: number, count: number): Box[] => {
   const rng = mulberry32(seed);
   const boxes: Box[] = [];
-  const sizes = [1.5, 1.8, 2.1, 2.5, 2.9, 3.4, 4.0];
-  let guard = 0;
-  while (boxes.length < count && guard < count * 50) {
-    guard++;
+  const sizes = [1.7, 2.0, 2.4, 2.8, 3.2, 3.7, 4.3];
+  // Stratified along the flight path (one cube per equal Z slice, jittered) and
+  // round the corridor (golden-angle steps), so density stays even over time
+  // instead of clumping into dark walls.
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < count; i++) {
     const base = pick(rng, sizes);
     const size = new THREE.Vector3(base, base, base);
-    const shape = rng() + 1; // all true cubes (kept for easy tweaking)
-    if (shape < 0.03) {
-      // long horizontal slab
-      size.x = base * range(rng, 2.2, 4);
-      size.y = base * range(rng, 0.45, 0.8);
-    } else if (shape < 0.06) {
-      // tall column
-      size.y = base * range(rng, 2, 3.5);
-    } else if (shape < 0.1) {
-      // deep box
-      size.z = base * range(rng, 1.6, 3);
+    const z = snap(FIELD_FAR_Z + ((i + rng()) / count) * (FIELD_NEAR_Z - FIELD_FAR_Z));
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const ang = i * golden + (rng() - 0.5) * 1.2;
+      const rad = 1.6 + Math.pow(rng(), 0.85) * 9;
+      const x = snap(Math.cos(ang) * rad * 1.35);
+      const y = snap(Math.sin(ang) * rad * 0.85);
+      // Keep the camera's flight tunnel clear.
+      const overlapX = Math.abs(x) - size.x / 2 < TUNNEL_X;
+      const overlapY = Math.abs(y) - size.y / 2 < TUNNEL_Y;
+      if (overlapX && overlapY) {
+        continue;
+      }
+      boxes.push({ center: new THREE.Vector3(x, y, z), size });
+      break;
     }
-    // Distribute with a bias towards the tunnel so the frame stays dense.
-    const ang = rng() * Math.PI * 2;
-    const rad = 1.2 + Math.pow(rng(), 0.9) * 8.5;
-    const x = snap(Math.cos(ang) * rad * 1.35);
-    const y = snap(Math.sin(ang) * rad * 0.85);
-    const z = snap(range(rng, FIELD_FAR_Z, FIELD_NEAR_Z));
-    // Keep the camera's flight tunnel clear.
-    const overlapX = Math.abs(x) - size.x / 2 < TUNNEL_X;
-    const overlapY = Math.abs(y) - size.y / 2 < TUNNEL_Y;
-    if (overlapX && overlapY) {
-      continue;
-    }
-    boxes.push({ center: new THREE.Vector3(x, y, z), size });
   }
   return boxes;
 };
@@ -172,7 +164,7 @@ export const cubeFragmentShader = /* glsl */ `
     vec2 fw = max(fwidth(vUv), vec2(1e-6));
     vec2 distPx = min(vUv, 1.0 - vUv) / fw;
     float d = min(distPx.x, distPx.y);
-    float edge = 1.0 - smoothstep(uLineWidth - 0.75, uLineWidth + 0.75, d);
+    float edge = 1.0 - smoothstep(uLineWidth * 0.45, uLineWidth * 1.35, d);
     // Soft inner shadow along the frame makes the glass read as thick.
     float rim = 1.0 - smoothstep(0.0, 0.16, min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y)));
 
@@ -187,7 +179,7 @@ export const cubeFragmentShader = /* glsl */ `
     // Distance fade: geometry dissolves into the background haze far away and
     // is softened as it sweeps past the lens.
     float fog = 1.0 - smoothstep(uFogNear, uFogFar, vDepth);
-    float nearFade = smoothstep(0.35, 1.6, vDepth);
+    float nearFade = 0.35 + 0.65 * smoothstep(0.4, 3.2, vDepth);
     float vis = fog * nearFade;
 
     float faceA = uFaceAlpha * vShade * (1.0 + rim * 1.4);

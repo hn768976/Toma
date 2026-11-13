@@ -33,7 +33,7 @@ type Props = z.infer<typeof glassDataCubesSchema>;
 // Camera flight: a steady push forward down the cube corridor with a slow,
 // breathing drift in position, aim and roll (hand-held "drone" feel).
 const CAMERA_START_Z = 9;
-const CAMERA_SPEED = 4.6; // world units per second
+const CAMERA_SPEED = 5.2; // world units per second
 const FOV = 36;
 
 const cameraAt = (t: number) => {
@@ -67,7 +67,7 @@ const SceneContents: React.FC<Props> = ({ variant }) => {
     atlas.minFilter = THREE.LinearMipmapLinearFilter;
     atlas.magFilter = THREE.LinearFilter;
 
-    const boxes = generateBoxes(1234, 380);
+    const boxes = generateBoxes(1234, 300);
     const geo = buildCubeGeometry(boxes, 4321);
     const mat = new THREE.ShaderMaterial({
       vertexShader: cubeVertexShader,
@@ -86,7 +86,7 @@ const SceneContents: React.FC<Props> = ({ variant }) => {
         uEdgeAlpha: { value: palette.edgeAlpha },
         uInk: { value: new THREE.Color(palette.ink) },
         uInkAlpha: { value: palette.inkAlpha },
-        uLineWidth: { value: 1.5 * pxScale },
+        uLineWidth: { value: 1.9 * pxScale },
         uFogNear: { value: 8 },
         uFogFar: { value: 30 },
         uAdditive: { value: palette.additive ? 1 : 0 },
@@ -95,7 +95,7 @@ const SceneContents: React.FC<Props> = ({ variant }) => {
     const mesh = new THREE.Mesh(geo, mat);
     mesh.frustumCulled = false;
 
-    const specs = generateWaves(77, 18, FIELD_NEAR_Z - 12, FIELD_FAR_Z + 40);
+    const specs = generateWaves(77, 15, FIELD_NEAR_Z - 12, FIELD_FAR_Z + 40);
     const waveObjs = createWaveObjects(
       specs,
       palette.wave,

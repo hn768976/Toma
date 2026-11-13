@@ -25,7 +25,7 @@ export const generateWaves = (seed: number, count: number, zNear: number, zFar: 
   const rng = mulberry32(seed);
   const specs: WaveSpec[] = [];
   for (let i = 0; i < count; i++) {
-    const rows = 5 + Math.floor(rng() * 8);
+    const rows = 3 + Math.floor(rng() * 5);
     const cols = 22 + Math.floor(rng() * 18);
     const side = rng() < 0.5 ? -1 : 1;
     const width = range(rng, 3.5, 8);
@@ -33,7 +33,7 @@ export const generateWaves = (seed: number, count: number, zNear: number, zFar: 
     // Either spans the corridor above/below the flight path, or sits to one side.
     const spans = rng() < 0.45;
     const x = spans ? range(rng, -2, 2) - width / 2 : side * range(rng, 1.6, 6) - (side < 0 ? width : 0);
-    const y = spans ? (rng() < 0.5 ? -1 : 1) * range(rng, 0.9, 3.2) : range(rng, -3, 3);
+    const y = spans ? (rng() < 0.5 ? -1 : 1) * range(rng, 1.4, 3.4) : range(rng, -3, 3);
     const jitter: number[] = [];
     for (let k = 0; k < rows * cols; k++) {
       jitter.push(rng() * 2 - 1);
@@ -59,7 +59,7 @@ const nodePosition = (s: WaveSpec, r: number, c: number, t: number, out: THREE.V
   const x = u * s.width;
   const env = Math.sin(Math.PI * u) * 0.75 + 0.25; // taper at the ends
   const k = (x / s.width) * Math.PI * 2 * s.freq;
-  const rowPhase = r * 0.32;
+  const rowPhase = r * 0.55;
   const y =
     s.amp *
     env *
@@ -67,7 +67,7 @@ const nodePosition = (s: WaveSpec, r: number, c: number, t: number, out: THREE.V
       0.35 * Math.sin(k * 1.9 - t * s.speed * 1.3 + r * 0.6) +
       0.06 * s.jitter[r * s.cols + c]);
   const z = (r / Math.max(1, s.rows - 1) - 0.5) * s.depth;
-  out.set(s.origin.x + x, s.origin.y + y + r * 0.035, s.origin.z + z);
+  out.set(s.origin.x + x, s.origin.y + y + r * 0.06, s.origin.z + z);
   return out;
 };
 
@@ -110,7 +110,7 @@ export const createWaveObjects = (
   return specs.map((spec) => {
     // segments: along each row + diagonals and verticals between rows
     const rowSegs = spec.rows * (spec.cols - 1);
-    const linkSegs = (spec.rows - 1) * (spec.cols - 1) + (spec.rows - 1) * Math.ceil(spec.cols / 3);
+    const linkSegs = (spec.rows - 1) * Math.ceil(spec.cols / 4);
     const segs = new Float32Array((rowSegs + linkSegs) * 6);
     const dots = new Float32Array(spec.rows * spec.cols * 3);
     const lineGeo = new LineSegmentsGeometry();
@@ -164,10 +164,7 @@ export const updateWaveObject = (w: WaveObject, t: number) => {
     }
   }
   for (let r = 0; r < s.rows - 1; r++) {
-    for (let c = 0; c < s.cols - 1; c++) {
-      push(nodePosition(s, r, c, t, a), nodePosition(s, r + 1, c + 1, t, b));
-    }
-    for (let c = 0; c < s.cols; c += 3) {
+    for (let c = 0; c < s.cols; c += 4) {
       push(nodePosition(s, r, c, t, a), nodePosition(s, r + 1, c, t, b));
     }
   }

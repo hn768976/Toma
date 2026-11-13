@@ -35,17 +35,17 @@ export const PALETTES: Record<Variant, Palette> = {
   // Version 1: matches the reference — bright studio-white void,
   // smoky grey glass cubes, graphite edges and print.
   reference: {
-    background: ["#f6f6f5", "#cdcdcc", "#8f8e8b"],
+    background: ["#f7f7f6", "#d6d6d5", "#a3a29f"],
     hotspot: [0.5, 0.32],
     face: "#5b5b5d",
-    faceAlpha: 0.1,
-    edge: "#262628",
-    edgeAlpha: 0.72,
+    faceAlpha: 0.08,
+    edge: "#2e2e30",
+    edgeAlpha: 0.62,
     ink: "#2a2a2c",
-    inkAlpha: 0.88,
+    inkAlpha: 0.6,
     wave: "#1c1c1e",
     waveAlpha: 0.9,
-    fog: "#d6d6d5",
+    fog: "#e0e0df",
     additive: false,
   },
   // Version 2: same scene and camera, re-lit as a dark holographic blueprint —
