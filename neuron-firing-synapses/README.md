@@ -42,7 +42,7 @@ Codec (H.264), pixel format (yuv420p), CRF and the OpenGL backend are set in `re
 ### Render speed
 
 The default OpenGL backend is `swangle` (software rendering), which works on any machine, including
-servers without a GPU. Rough timings on a 4-core CPU: a 1080p render takes about 10 minutes, a 4K
+servers without a GPU. Rough timings on a 4-core CPU: a 1080p render takes about 10-15 minutes, a 4K
 render several times longer. On a machine with a GPU, add `--gl=angle` (macOS / Windows) or
 `--gl=angle-egl` (Linux) to render much faster, e.g. `npm run render:v1:4k -- --gl=angle`.
 
