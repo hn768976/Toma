@@ -48,6 +48,8 @@ const LABELS: Lb[] = [
   [700, 250, 23.0, 99],
   [1300, 260, 25.5, 99],
   [180, 700, 1.6, 99],
+  [300, 540, 0.45, 99],
+  [1450, 600, 0.55, 99],
 ];
 
 type Blk = [number, number, number, number, number]; // x, y, lines, start(s), end(s)
@@ -79,6 +81,56 @@ export const Center: React.FC<{ frame: number; p: Palette }> = ({ frame, p }) =>
   const hy = cy - R * 0.5 + Math.cos(t * 0.33) * 30;
   const rot = t * 9;
   const step8 = Math.floor(frame / 8);
+
+  // ---- floating text layout with smooth collision avoidance ----
+  // Text boxes (x, y = baseline-left; w, h in design units). Fixed/moving
+  // labels act as obstacles; each floating label fades out while it overlaps
+  // an obstacle or a label placed before it, so text never piles up.
+  type Box = { x: number; y: number; w: number; h: number; o: number };
+  const obstacles: Box[] = [
+    { x: hx + 12, y: hy - 18, w: 190, h: 40, o: ret }, // crosshair readout
+    { x: cx - R * 0.35, y: cy + R + 12, w: 200, h: 14, o: ret }, // radius caption
+    { x: cx + R * 0.72, y: cy - R * 0.72 - 10, w: 170, h: 14, o: ret }, // reticle tag
+    { x: 110, y: 676, w: 130, h: 14, o: 1 }, // bar-chart leader label
+  ];
+  SQUARES.forEach(([x, y, w, h, s0, e]) => {
+    if (w >= 150 && t > s0 && t < e) obstacles.push({ x, y: y + h + 4, w: 150, h: 14, o: 1 });
+  });
+  const overlap = (a: Box, b: Box) => {
+    const ix = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
+    const iy = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+    return (ix * iy) / Math.max(1, Math.min(a.w * a.h, b.w * b.h));
+  };
+  type Floater = { kind: "block" | "label"; key: string; i: number; x: number; y: number; n: number; slot: number; o: number };
+  const floaters: Floater[] = [];
+  const placed: Box[] = [...obstacles];
+  const place = (f: Floater, box: Box) => {
+    let hit = 0;
+    for (const ob of placed) hit = Math.max(hit, overlap(box, ob) * Math.min(1, ob.o * 1.5));
+    // fully hidden from ~10% overlap; smooth because positions move smoothly
+    const fade = 1 - Math.min(1, hit / 0.1);
+    f.o *= fade * fade * (3 - 2 * fade);
+    if (f.o > 0.001) {
+      floaters.push(f);
+      placed.push({ ...box, o: f.o });
+    }
+  };
+  BLOCKS.forEach(([x0, y0, n, s0, e], i) => {
+    const rm = roam(t, 4600 + i, 5 + (i % 4));
+    const x = x0 + rm.dx;
+    const y = y0 + rm.dy;
+    const o = boot(frame, Math.round(s0 * 30), Math.round(e * 30), 15) * glitch(frame, 4000 + i, 0.02) * rm.o;
+    if (o <= 0.001) return;
+    place({ kind: "block", key: `b${i}`, i, x, y, n, slot: rm.slot, o }, { x: x - 4, y: y - 10, w: 175, h: n * 11 + 6, o });
+  });
+  LABELS.forEach(([x0, y0, s0, e], i) => {
+    const rm = roam(t, 4800 + i, 6 + (i % 3));
+    const x = x0 + rm.dx;
+    const y = y0 + rm.dy;
+    const o = boot(frame, Math.round(s0 * 30), Math.round(e * 30), 15) * glitch(frame, 3600 + i, 0.02) * rm.o;
+    if (o <= 0.001) return;
+    place({ kind: "label", key: `l${i}`, i, x, y, n: 1, slot: rm.slot, o }, { x: x - 4, y: y - 10, w: 135, h: 18, o });
+  });
 
   return (
     <g>
@@ -144,34 +196,25 @@ export const Center: React.FC<{ frame: number; p: Palette }> = ({ frame, p }) =>
         </g>
       </G>
 
-      {/* floating multi-line data blocks */}
-      {BLOCKS.map(([x0, y0, n, s0, e], i) => {
-        const rm = roam(t, 4600 + i, 5 + (i % 4));
-        const x = x0 + rm.dx;
-        const y = y0 + rm.dy;
-        return (
-        <G key={`b${i}`} o={boot(frame, Math.round(s0 * 30), Math.round(e * 30), 15) * glitch(frame, 4000 + i, 0.02) * rm.o}>
-          {Array.from({ length: n }, (_, k) => (
-            <Txt key={k} x={x + (k === 0 ? 0 : 10)} y={y + k * 11} size={k === 0 ? 8 : 7} fill={p.text} opacity={k === 0 ? 0.75 : 0.5}>
-              {k === 0 ? `■ ${code(4100 + i, 8, rm.slot)} ${code(4200 + i, 5)}` : `${code(4300 + i * 7 + k, 4, rm.slot)}  ${digits(4400 + i * 7 + k, 6, k === 1 ? step8 : rm.slot)}  ${code(4500 + i * 7 + k, 3)}`}
-            </Txt>
-          ))}
-        </G>
-        );
-      })}
-
-      {/* floating annotation labels */}
-      {LABELS.map(([x0, y0, s, e], i) => {
-        const rm = roam(t, 4800 + i, 6 + (i % 3));
-        const x = x0 + rm.dx;
-        const y = y0 + rm.dy;
-        return (
-          <G key={i} o={boot(frame, Math.round(s * 30), Math.round(e * 30), 15) * glitch(frame, 3600 + i, 0.02) * rm.o}>
-            <Txt x={x} y={y} size={8} fill={p.text} opacity={0.7}>{`▸ ${code(3700 + i, 9, rm.slot)} ${code(3800 + i, 4)} ${digits(3900 + i, 4, i % 2 ? step8 : rm.slot)}`}</Txt>
-            <rect x={x} y={y + 5} width={60} height={1} fill={p.line} opacity={0.4} />
+      {/* floating data blocks + annotation labels (collision-faded) */}
+      {floaters.map((f) =>
+        f.kind === "block" ? (
+          <G key={f.key} o={f.o}>
+            {Array.from({ length: f.n }, (_, k) => (
+              <Txt key={k} x={f.x + (k === 0 ? 0 : 10)} y={f.y + k * 11} size={k === 0 ? 8 : 7} fill={p.text} opacity={k === 0 ? 0.75 : 0.5}>
+                {k === 0
+                  ? `■ ${code(4100 + f.i, 8, f.slot)} ${code(4200 + f.i, 5)}`
+                  : `${code(4300 + f.i * 7 + k, 4, f.slot)}  ${digits(4400 + f.i * 7 + k, 6, k === 1 ? step8 : f.slot)}  ${code(4500 + f.i * 7 + k, 3)}`}
+              </Txt>
+            ))}
           </G>
-        );
-      })}
+        ) : (
+          <G key={f.key} o={f.o}>
+            <Txt x={f.x} y={f.y} size={8} fill={p.text} opacity={0.7}>{`▸ ${code(3700 + f.i, 9, f.slot)} ${code(3800 + f.i, 4)} ${digits(3900 + f.i, 4, f.i % 2 ? step8 : f.slot)}`}</Txt>
+            <rect x={f.x} y={f.y + 5} width={60} height={1} fill={p.line} opacity={0.4} />
+          </G>
+        ),
+      )}
     </g>
   );
 };
