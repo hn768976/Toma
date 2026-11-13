@@ -21,7 +21,8 @@ const BG = new THREE.Color(0.0, 0.0165, 0.018); // linear dark teal
 const LIGHT = new THREE.Color(0.88, 0.92, 0.95);
 const LIGHT_BLUE = new THREE.Color(0.35, 0.55, 0.85);
 const BG_SCREEN = new THREE.Color(0.32, 0.45, 0.5);
-const ORANGE = new THREE.Color(1.0, 0.55, 0.18);
+const ORANGE = new THREE.Color(1.0, 0.42, 0.08);
+const WARM_WHITE = new THREE.Color(1.0, 0.86, 0.66);
 const MAP_COLOR = new THREE.Color(0.86, 0.9, 0.93);
 const LIFT = new THREE.Color(0.0, 0.0022, 0.0024);
 const SLAB = new THREE.Color(0.0, 0.0085, 0.0095);
@@ -179,7 +180,7 @@ export const makeWorldMapFactory =
       hallInner.add(m);
       return m;
     };
-    const REFL = 0.38; // reflection strength
+    const REFL = 0.3; // reflection strength
     {
       const { hx, hz } = HALL;
       const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
@@ -187,20 +188,19 @@ export const makeWorldMapFactory =
       const floor = new THREE.Mesh(plane(hx * 2, hz * 2), hallMat(LIGHT, 0.5, tex(gridTexture(70))));
       floor.rotation.x = -Math.PI / 2;
       hallInner.add(floor);
-      const floor2 = new THREE.Mesh(plane(hx * 2.4, hz * 2.4), hallMat(TEAL_HAZE, 0.55, tex(reflectionTexture(91)), false));
+      const floor2 = new THREE.Mesh(plane(hx * 2.4, hz * 2.4), hallMat(TEAL_HAZE, 0.38, tex(reflectionTexture(91)), false));
       floor2.rotation.x = -Math.PI / 2;
       floor2.position.y = -0.02;
       hallInner.add(floor2);
-      rod(v(-hx * 0.75, 0.01, hz * 0.55), v(hx, 0.01, hz * 0.55), 0.06, hallMat(LIGHT, 0.9, null));
-      rod(v(-hx * 0.6, 0.01, 0), v(hx, 0.01, 0), 0.05, hallMat(LIGHT, 0.55, null));
+      rod(v(-hx * 0.75, 0.01, hz * 0.55), v(hx * 0.3, 0.01, hz * 0.55), 0.06, hallMat(LIGHT, 0.9, null));
 
       // pillars standing on the floor, with mirrored reflections below
       for (let i = 0; i < 70; i++) {
         const x = -hx * 0.75 + rnd() * hx * 1.7;
         const z = -hz * 0.8 + rnd() * hz * 1.5;
         const h = 0.4 + Math.pow(rnd(), 1.4) * 2.6;
-        const k = 0.16 + Math.pow(rnd(), 2) * 0.6;
-        const r = 0.018 + rnd() * 0.04;
+        const k = 0.24 + Math.pow(rnd(), 2) * 0.85;
+        const r = 0.011 + rnd() * 0.022;
         const col = rnd() < 0.25 ? LIGHT_BLUE : LIGHT;
         const mat = glowMat(lineTex, col, k);
         mat.map = null;
@@ -241,7 +241,7 @@ export const makeWorldMapFactory =
         const h = 0.5 + rnd() * 2.0;
         const tx = tex(screenTexture(100 + i, 0.6 + rnd() * 0.6));
         const k = 0.25 + rnd() * 0.35;
-        const m = glowMat(tx, LIGHT, k);
+        const m = glowMat(tx, LIGHT, k, false);
         const mesh = new THREE.Mesh(plane(w, h), m);
         const x = -hx * 0.7 + rnd() * hx * 1.6;
         const z = -hz * 0.8 + rnd() * hz * 1.4;
@@ -288,10 +288,10 @@ export const makeWorldMapFactory =
       nearGroup.add(gHolder);
       hallMats.push({ mat: gridMat, color: LIGHT, k: 0.5 });
       // stacked bright window dashes on the left (small, crisp)
-      for (let i = 0; i < 5; i++) {
-        const m = hallMat(LIGHT, 1.3 + rnd() * 0.6, lineTex);
-        const d = new THREE.Mesh(plane(0.32 + rnd() * 0.2, 0.05), m);
-        d.position.set(-3.1 + rnd() * 0.15, 0.08 + i * 0.16, 0);
+      for (let i = 0; i < 7; i++) {
+        const m = hallMat(WARM_WHITE, 1.5 + rnd() * 0.7, lineTex);
+        const d = new THREE.Mesh(plane(0.3 + rnd() * 0.25, 0.05), m);
+        d.position.set(-3.85 + rnd() * 0.2, 0.0 + i * 0.13, 0);
         nearGroup.add(d);
       }
       // scattered small data dashes along the band
@@ -320,11 +320,19 @@ export const makeWorldMapFactory =
     for (let i = 0; i < 6; i++) {
       const w = 0.6 + rnd() * 1.0;
       const h = 0.4 + rnd() * 0.9;
-      const m = hallMat(LIGHT, 0.18 + rnd() * 0.15, tex(screenTexture(300 + i, 0.8)));
+      const m = hallMat(LIGHT, 0.18 + rnd() * 0.15, tex(screenTexture(300 + i, 0.8)), false);
       const mesh = new THREE.Mesh(plane(w, h), m);
       mesh.position.set(4.3 + rnd() * 1.8, -0.1 + rnd() * 1.2, -3.2 - rnd() * 1.5);
       mesh.renderOrder = 5;
       city.add(mesh);
+    }
+
+    // fixed, deterministic draw order for every element of the structure
+    {
+      let order = 10;
+      city.traverse((o) => {
+        if ((o as THREE.Mesh).isMesh) o.renderOrder = order++;
+      });
     }
 
     // --- light shafts raking down-left / down-right from the core ---
@@ -338,7 +346,12 @@ export const makeWorldMapFactory =
       const m = glowMat(shaftTex, LIGHT_BLUE, k * 1.4, false);
       const mesh = new THREE.Mesh(geo, m);
       mesh.position.set(-1.5 + gauss() * 1.4, 0.0, 1.5 + rnd() * 1.5);
-      mesh.rotation.z = (200 + rnd() * 24) * DEG;
+      if (i < 3) {
+        mesh.position.set(1.2 + rnd() * 1.2, 0.0, 1.2 + rnd() * 1.5);
+        mesh.rotation.z = (-24 - rnd() * 16) * DEG;
+      } else {
+        mesh.rotation.z = (200 + rnd() * 24) * DEG;
+      }
       hall.add(mesh);
       shafts.push({ mesh, mat: m, k, ph: rnd() * 6 });
     }
@@ -368,7 +381,7 @@ export const makeWorldMapFactory =
     speckGeo.setAttribute("aPhase", new THREE.BufferAttribute(speckPhase, 1));
     const speckMat = track(
       new THREE.ShaderMaterial({
-        uniforms: { time: { value: 0 }, color: { value: ORANGE.clone().multiplyScalar(3.0) }, pxScale: { value: 1 } },
+        uniforms: { time: { value: 0 }, color: { value: ORANGE.clone().multiplyScalar(2.2) }, pxScale: { value: 1 } },
         vertexShader: /* glsl */ `
           attribute float aPhase;
           uniform float time;
@@ -453,7 +466,7 @@ export const makeWorldMapFactory =
             float coc = clamp((abs(dist - focusDistance) - focusRange) / blurRange, 0.0, 1.0) * maxBlurPx;
             float total = sizePx + coc;
             gl_PointSize = total + 2.0;
-            float tw = 1.27 * (0.35 + 0.65 * pow(0.5 + 0.5 * sin(time * (5.0 + fract(aPhase * 3.7) * 9.0) + aPhase), 3.0));
+            float tw = 1.67 * (0.2 + 0.8 * pow(0.5 + 0.5 * sin(time * (8.0 + fract(aPhase * 3.7) * 12.0) + aPhase), 4.0));
             // a slow diagonal light sweep across the continents
             float sweep = exp(-pow((position.x + position.y * 0.6) - sheen, 2.0) * 0.5) * 0.5;
             vA = aBright * tw * (1.0 + sweep) * (sizePx * sizePx) / (total * total);
