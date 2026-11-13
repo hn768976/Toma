@@ -1,0 +1,42 @@
+{
+  "name": "glass-data-cubes",
+  "version": "1.0.0",
+  "description": "Remotion + Three.js 4K composition",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@react-three/fiber": "9.2.0",
+    "@remotion/cli": "4.0.543",
+    "@remotion/three": "4.0.543",
+    "@remotion/zod-types": "4.0.543",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.543",
+    "three": "0.178.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.543",
+    "@types/react": "19.3.0",
+    "@types/three": "0.170.0",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "render:v1:4k": "remotion render GlassDataCubes-V1-Reference out/GlassDataCubes-V1-Reference-4K.mp4",
+    "render:v2:4k": "remotion render GlassDataCubes-V2-Blueprint out/GlassDataCubes-V2-Blueprint-4K.mp4",
+    "render:v1:1080p": "remotion render GlassDataCubes-V1-Reference out/GlassDataCubes-V1-Reference-1080p.mp4 --scale=0.5",
+    "render:v2:1080p": "remotion render GlassDataCubes-V2-Blueprint out/GlassDataCubes-V2-Blueprint-1080p.mp4 --scale=0.5",
+    "still:v1": "remotion still GlassDataCubes-V1-Reference out/GlassDataCubes-V1-Reference-frame100.png --frame=100"
+  }
+}
