@@ -18,7 +18,7 @@ const world = buildWorld(20261113);
 // Version 2 orbits the hero, so it gets its own clear zone around it and
 // skips the two corner molecules that are choreographed for the V1 framing.
 const worldV2 = world.filter(
-  (m) => m.hero || (!m.scripted && Math.hypot(m.p0[0], m.p0[1], m.p0[2]) > 10.5),
+  (m) => m.hero || (!m.scripted && Math.hypot(m.p0[0], m.p0[1], m.p0[2]) > 12.5),
 );
 let sprites: SpriteSet | null = null;
 let fontPromise: Promise<void> | null = null;

@@ -45,11 +45,11 @@ vec3 rays(float a, float r, float lr, float t, float M, float rot, float seed, f
   float d = abs(fract(fa) - 0.5 - off) * (TAU / M) * r;   // perpendicular distance
   float ww = max(w, px * 0.75);
   float core = exp(-d * d / (ww * ww)) * (w / ww);
-  float glow = exp(-d / (ww * 9.0)) * 0.3;
+  float glow = exp(-d / (ww * 3.0)) * 0.22;
   // smooth flicker per ray + light pulses travelling outward along it
   float fl = vnoise(vec2(cid * 3.7 + seed, t * 2.6));
   fl = pow(fl, 2.2) * 1.8;
-  float pulse = 0.2 + 0.8 * smoothstep(0.35, 0.8, vnoise(vec2(cid * 1.9 + seed * 3.0, lr * 4.5 - t * 2.2)));
+  float pulse = 0.04 + 0.96 * smoothstep(0.4, 0.8, vnoise(vec2(cid * 1.9 + seed * 3.0, lr * 4.5 - t * 2.2)));
   float on = step(0.28, h11(cid * 7.13 + seed * 2.0));
   return vec3(core, glow, 0.0) * fl * pulse * on;
 }
@@ -66,7 +66,7 @@ vec3 shade(vec2 frag) {
   vec2 p = (frag - 0.5 * uRes) / uRes.y;
   float px = 1.0 / uRes.y;
   // gentle hand-held drift of the tunnel axis
-  p -= vec2(0.014 * sin(t * 0.37) + 0.006 * sin(t * 0.91), 0.010 * sin(t * 0.29 + 1.0) + 0.005 * sin(t * 0.83 + 2.0));
+  p -= vec2(0.03 * sin(t * 0.37) + 0.01 * sin(t * 0.91), 0.022 * sin(t * 0.29 + 1.0) + 0.008 * sin(t * 0.83 + 2.0));
   float r = length(p) + 1e-5;
   float a = atan(p.y, p.x);
   float lr = log(r);
@@ -82,7 +82,7 @@ vec3 shade(vec2 frag) {
   float hz = fbm(dir * 2.2 + vec2(lrT, -lrT * 0.6) + vec2(t * 0.05, 0.0));
   float hz2 = fbm(dir * 3.4 - vec2(lrT * 0.8, lrT) + 9.0);
   float hzMask = smoothstep(0.12, 0.55, r);
-  col += uHazeA * pow(hz, 3.6) * 0.8 * hzMask;
+  col += uHazeA * pow(hz, 4.5) * 0.6 * hzMask;
   col += uHazeB * pow(hz2, 4.0) * 1.8 * smoothstep(0.35, 0.95, r);
 
   // --- radial light rays -------------------------------------------------------
@@ -90,14 +90,14 @@ vec3 shade(vec2 frag) {
   vec3 r1 = rays(a, r, lr, t, 96.0, t * 0.010, 1.0, 0.0011, px);
   vec3 r2 = rays(a, r, lr, t, 170.0, -t * 0.006 + 0.3, 7.0, 0.0008, px);
   vec3 r3 = rays(a, r, lr, t, 44.0, t * 0.004 + 0.1, 3.0, 0.0030, px);
-  col += uCore * (r1.x * 0.45 + r2.x * 0.3) * rayMask;
-  col += uMid * (r1.x * 0.7 + r2.x * 0.5 + r1.y + r2.y + r3.x * 0.6 + r3.y * 2.0) * rayMask * 1.1;
+  col += uCore * (r1.x * 0.6 + r2.x * 0.4) * rayMask;
+  col += uMid * (r1.x * 0.8 + r2.x * 0.55 + r1.y + r2.y + r3.x * 0.6 + r3.y * 0.9) * rayMask * 1.05;
   // broad soft beams
   float beams = pow(vnoise(vec2((a / TAU + t * 0.004) * 26.0, t * 0.8)), 4.0);
-  col += uDeep * beams * 1.3 * smoothstep(0.12, 0.4, r);
+  col += uDeep * beams * 0.55 * smoothstep(0.12, 0.4, r);
 
   // light filling the ring zone
-  col += uMid * 0.22 * exp(-abs(r - 0.33) / 0.16) * (0.6 + 0.4 * beams);
+  col += uMid * 0.05 * exp(-abs(r - 0.33) / 0.16) * (0.6 + 0.4 * beams);
 
   // --- central iris: segmented ring of light ticks ------------------------------
   float irisR = 0.172;
@@ -114,27 +114,39 @@ vec3 shade(vec2 frag) {
   float dash = step(0.35, fract(a / TAU * 64.0 - t * 0.1));
   col += uMid * ringLine(rs, 0.226, 0.0012, px) * dash * 0.8;
 
-  // --- main bright ring + companions --------------------------------------------
-  float mainR = 0.375;
-  float mainVar = 0.75 + 0.25 * vnoise(dir * 3.0 + t * 0.4);
-  col += (uCore * 0.45 + uMid * 0.9) * ringLine(rs, mainR, 0.006, px) * 1.2 * mainVar;
-  col += uMid * exp(-abs(rs - mainR) / 0.035) * 1.3 * mainVar;
-  col += uDeep * exp(-abs(rs - mainR) / 0.1) * 0.35;
-  col += uMid * ringLine(rs, 0.335, 0.0022, px) * 0.8 * (0.5 + 0.5 * vnoise(dir * 4.0 - t * 0.3));
-  col += uMid * ringLine(rs, 0.41, 0.002, px) * 0.8 * (0.5 + 0.5 * vnoise(dir * 5.0 + 3.0 + t * 0.2));
-  // sparkles riding on the main ring
-  {
-    float n = 46.0;
-    float fa = a / TAU * n + t * 0.035;
-    float id = floor(fa);
-    float o = (h11(mod(id, n) * 3.3) - 0.5) * 0.6;
+  // --- hero rings: thick glowing rings sweeping outward past the camera -------
+  // Two bright rings half a cycle apart, so one is always mid-frame while the
+  // other grows past the frame edge (forward flight through the tunnel).
+  for (int k = 0; k < 3; k++) {
+    float fk = float(k);
+    float s = t / 7.2 + fk / 3.0;
+    float cyc = floor(s);
+    float f = fract(s);
+    float sd = h11(fk * 13.7 + cyc * 5.3);
+    float R = 0.24 * exp(f * log(6.0));            // 0.24 -> 1.44
+    float env = smoothstep(0.0, 0.18, f) * (1.0 - smoothstep(0.7, 1.0, f));
+    float var = 0.6 + 0.4 * vnoise(dir * 3.0 + vec2(sd * 30.0, t * 0.4));
+    float wR = 0.004 + 0.006 * R;
+    col += (uCore * 0.5 + uMid * 0.9) * ringLine(rs, R, wR, px) * 1.25 * var * env;
+    col += uMid * exp(-abs(rs - R) / (0.014 + 0.018 * R)) * 1.2 * var * env;
+    col += uDeep * exp(-abs(rs - R) / (0.04 + 0.05 * R)) * 0.18 * env;
+    // companion hairline rings
+    col += uMid * ringLine(rs, R * 0.9, 0.0018 + 0.002 * R, px) * 0.7 * env * (0.4 + 0.6 * vnoise(dir * 4.0 - t * 0.3 + sd));
+    col += uCore * ringLine(rs, R * 1.08, 0.0015 + 0.002 * R, px) * 0.45 * env * (0.3 + 0.7 * vnoise(dir * 5.0 + 3.0 + t * 0.2 + sd));
+    // white sparkles riding the ring
+    float n = floor(40.0 + 30.0 * sd);
+    float fa = a / TAU * n + t * 0.03 * (sd - 0.5);
+    float id = mod(floor(fa), n);
+    float o = (h11(id * 3.3 + sd) - 0.5) * 0.6;
     float da = (fract(fa) - 0.5 - o) * TAU / n * r;
-    float dr = rs - (mainR + (h11(mod(id, n) * 5.1) - 0.5) * 0.05);
-    float sp = exp(-(da * da + dr * dr) / pow(max(0.0028, px * 1.2), 2.0));
-    float tw = pow(vnoise(vec2(mod(id, n) * 4.1, t * 3.0)), 2.0) * step(0.35, h11(mod(id, n) * 9.7));
-    col += uCore * sp * tw * 2.2;
-    col += uMid * exp(-sqrt(da * da + dr * dr) / 0.012) * tw * 0.5;
+    float dr = rs - R * (1.0 + (h11(id * 5.1 + sd) - 0.5) * 0.12);
+    float sz = max(0.0025 + 0.002 * R, px * 1.2);
+    float sp = exp(-(da * da + dr * dr) / (sz * sz));
+    float tw = pow(vnoise(vec2(id * 4.1 + sd * 9.0, t * 3.0)), 2.0) * step(0.3, h11(id * 9.7 + sd));
+    col += (uCore * 2.0 + uMid * 0.5) * sp * tw * env;
   }
+  // steady soft halo so the ring zone never goes empty between hero rings
+  col += uMid * exp(-abs(rs - 0.36) / 0.04) * 0.18;
 
   // --- rings flying toward the camera (forward motion) --------------------------
   for (int i = 0; i < 8; i++) {
@@ -149,7 +161,7 @@ vec3 shade(vec2 frag) {
     float w = (0.0012 + 0.0035 * sd2) * (0.6 + rr);
     float d = rs - rr;
     float line = ringLine(rs, rr, w, px);
-    float glow = exp(-abs(d) / (0.012 + 0.03 * rr)) * 0.35;
+    float glow = exp(-abs(d) / (0.008 + 0.016 * rr)) * 0.3;
     // partial arcs: rings break up into bright arcs
     float arc = smoothstep(0.42, 0.7, vnoise(dir * (1.5 + 2.0 * sd) + vec2(sd * 40.0, cyc * 7.0) + t * 0.1));
     arc = mix(arc, 1.0, step(0.85, sd));
@@ -183,7 +195,7 @@ vec3 shade(vec2 frag) {
   col += uDeep * 0.12 * smoothstep(0.03, 0.14, r) * (1.0 - hole);
 
   // vignette toward corners
-  col *= mix(0.35, 1.0, smoothstep(1.1, 0.4, r));
+  col *= mix(0.25, 1.0, smoothstep(1.05, 0.38, r));
   return col;
 }
 
@@ -196,7 +208,7 @@ void main() {
     c = shade(gl_FragCoord.xy);
   }
   // filmic shoulder: hot cores roll to white, glows stay saturated
-  c = 1.0 - exp(-c * 1.55);
+  c = 1.0 - exp(-c * 2.0);
   c = pow(c, vec3(0.95));
   // dither to avoid banding in the dark gradients
   c += (h21(gl_FragCoord.xy) - 0.5) / 255.0;

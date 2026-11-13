@@ -121,8 +121,8 @@ export const buildWorld = (seed: number): Molecule[] => {
     });
   }
   // Fly-through tube along the V1 dolly path (passes the lens at speed).
-  for (let i = 0; i < 950; i++) {
-    const z = -28 - Math.pow(rnd(), 0.8) * 380;
+  for (let i = 0; i < 720; i++) {
+    const z = -40 - Math.pow(rnd(), 0.8) * 368;
     const a = rnd() * Math.PI * 2;
     const r = 1.2 + Math.sqrt(rnd()) * 20;
     push([-0.75 + Math.cos(a) * r * 1.5, Math.sin(a) * r * 0.9, z]);
@@ -164,10 +164,10 @@ export const cameraV1 = (t: number): Camera => {
 export const cameraV2 = (t: number): Camera => {
   const u = t / T_TOTAL;
   const intro = easeOutCubic(t / 3.6);
-  const dist = lerp(2.6, 9.4, intro) + 0.5 * easeInOutSine(u);
+  const dist = lerp(3.3, 8.0, intro) + 0.4 * easeInOutSine(u);
   // yaw sweeps from the right side of the hero around to its left
   const yaw = lerp(1.35, 0.42, intro) - 1.3 * easeInOutSine(clamp((t - 1.5) / (T_TOTAL - 1.5)));
-  const pitch = lerp(-0.42, -0.2, intro) + 0.08 * easeInOutSine(u);
+  const pitch = lerp(-0.22, -0.16, intro) + 0.06 * easeInOutSine(u);
   const tgt: Vec3 = [0.55 * (1 - intro) + 0.35 * intro, 0.05, 0];
   const pos: Vec3 = [
     tgt[0] - Math.sin(yaw) * Math.cos(pitch) * dist,
@@ -175,7 +175,7 @@ export const cameraV2 = (t: number): Camera => {
     tgt[2] - Math.cos(yaw) * Math.cos(pitch) * dist,
   ];
   // shift the aim a little so the hero sits on the left third at the end
-  const shift = 1.55 * smoothstep(0.6, 4.5, t);
+  const shift = 1.35 * smoothstep(0.6, 4.5, t);
   const aim: Vec3 = [tgt[0] + Math.cos(yaw) * shift, tgt[1], tgt[2] - Math.sin(yaw) * shift];
   const speedProxy = Math.max(0, 1 - t / 2.2);
   return {
@@ -200,7 +200,7 @@ const moleculeAtoms = (m: Molecule, t: number): [Vec3, Vec3] => {
     center = [0, 0.08 * Math.sin(t * 0.62 + 0.5), 0];
     // mostly upright, gently swaying and turning
     let a: Vec3 = [0, 1, 0];
-    a = rotate(a, [1, 0, 0], 0.22 + 0.12 * Math.sin(t * 0.41));
+    a = rotate(a, [1, 0, 0], 0.22 + 0.2 * Math.sin(t * 0.41));
     a = rotate(a, [0, 0, 1], 0.12 * Math.sin(t * 0.47 + 0.6) - 0.03);
     axis = norm(a);
   } else {
