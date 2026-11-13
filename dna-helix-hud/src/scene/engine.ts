@@ -131,7 +131,10 @@ export const createEngine = (
     density?: number;
     /** Pre-blurred texture, excluded from the depth pass (faint overlay only). */
     overlay?: boolean;
+    /** Fade out as the camera gets within 1.4 units of the plane (avoids a pop when passing through). */
+    fadeNear?: boolean;
   };
+  const fadeLayers: { mat: THREE.MeshBasicMaterial; plane: THREE.Plane }[] = [];
   const H90 = -Math.PI / 2;
   const layers: Layer[] = [
     { seed: 11, size: [46, 28], pos: [-6, -1.9, 1], rot: [H90, 0, 0], repeat: [2.3, 1.4], intensity: 0.3, bigLabels: 0.4, density: 0.65 },
@@ -139,7 +142,7 @@ export const createEngine = (
     { seed: 37, size: [90, 60], pos: [-2, -4.1, -6], rot: [H90, 0, -0.03], repeat: [3.0, 2.0], intensity: 0.15, density: 1.2, bigLabels: 0.3 },
     { seed: 41, size: [80, 26], pos: [-6, 3.0, -8], rot: [0, 0, 0], repeat: [2.6, 0.85], intensity: 0.17, density: 1.3, bigLabels: 0.15 },
     // ceiling layer: the V2 crane passes through it, so it must not write depth
-    { seed: 53, size: [50, 30], pos: [-4, 4.2, -1], rot: [Math.PI / 2, 0, 0], repeat: [2, 1.2], intensity: 0.07, bigLabels: 0.2, overlay: true },
+    { seed: 53, size: [50, 30], pos: [-4, 4.2, -1], rot: [Math.PI / 2, 0, 0], repeat: [2, 1.2], intensity: 0.07, bigLabels: 0.2, overlay: true, fadeNear: true },
     // near wall behind the helix: fills the upper frame with blurred data
     { seed: 61, size: [72, 14], pos: [-6, 2.2, -4.5], rot: [0, 0, 0], repeat: [3.2, 0.62], intensity: 0.11, density: 1.3, bigLabels: 0.15 },
     // faint layer in FRONT of the helix (mostly out of focus) so data passes over it
@@ -184,6 +187,8 @@ export const createEngine = (
     // it, so it writes no depth (it stays visible only in the colour pass).
     if (L.overlay) dm.visible = false;
     depthMats.set(mesh, dm);
+    if (L.fadeNear) fadeLayers.push({ mat: m, plane: new THREE.Plane().setFromNormalAndCoplanarPoint(
+      new THREE.Vector3(0, 0, 1).applyEuler(mesh.rotation), mesh.position.clone()) });
     disposables.push(tex, geo, m, dm);
   });
 
@@ -306,6 +311,9 @@ export const createEngine = (
     });
 
     const cam = rig.sample(t);
+    fadeLayers.forEach(({ mat, plane }) => {
+      mat.opacity = THREE.MathUtils.smoothstep(Math.abs(plane.distanceToPoint(cam.pos)), 0.3, 1.4);
+    });
     camera.position.copy(cam.pos);
     camera.up.set(Math.sin(cam.roll), Math.cos(cam.roll), 0);
     camera.lookAt(tmpTarget.copy(cam.target));
