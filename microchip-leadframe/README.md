@@ -81,14 +81,14 @@ src/
     leadframe.ts        the stamped lead-frame unit (real openings, extruded) + small parts
     environment.ts      procedural studio environment baked to an HDR cube map
     dieTexture.ts       die floor plan and brushed-metal textures (drawn on a canvas)
-    looks.ts            camera tracks: V1 reference orbit, V2 crane-down
+    looks.ts            per-version settings: camera tracks, light path, wipe (V1 reference orbit, V2 crane-down)
 ```
 
 ## How it works
 
-- **Lead frame** – one 10x10 unit (die paddle, 4x17 lead fingers, dam bar,
-  tie bars, rail slots and pilot holes) is built as a 2D outline with real
-  holes, extruded, and instanced on a 7x7 grid. Dies, bond pads, tie-bar ribs
+- **Lead frame** – one 10x10 unit (die paddle, 4x21 lead fingers, dam bar,
+  tie bars, rail slots and rounded pilot slots) is built as a 2D outline with
+  real holes, extruded, and instanced on a 7x7 grid. Dies, bond pads, tie-bar ribs
   and rail dimples are instanced on top.
 - **Materials** – a lean metal shader (blurred environment reflection + one
   analytic GGX highlight from a travelling light) and a thin-film shader for
@@ -96,7 +96,10 @@ src/
   the viewing direction.
 - **Camera** – long lens (8–9°), keyframed orbit / elevation / framing.
   Version 1 uses values measured from the reference by tracking the
-  perspective of the centre die.
+  perspective of the centre die, three light sweeps timed like the reference
+  and a foreground wipe (out-of-focus glass panes plus a short focus drift)
+  at 8.6–10 s. Version 2 keeps scene, materials and grade and changes only
+  the camera move and the light path.
 - **Look** – linear HDR, bokeh depth of field focused on the hero die, bloom,
   filmic tone curve, a grade that drifts from cool blue to neutral steel,
   vignette and a touch of grain.
