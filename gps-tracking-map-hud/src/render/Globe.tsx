@@ -79,7 +79,9 @@ function GlobeScene({ landColor, seaColor, lineColor, spin, tilt, size, seaDot, 
     }
     return { geom, mat, arcs, rings };
   }, [landColor, seaColor, size, seaDot, seaA, nArcs]);
-  const rot = (frame / LOOP) * Math.PI * 2 * spin;
+  // periodic in LOOP frames: frame mod LOOP and whole turns only
+  const rot = (((frame % LOOP) + LOOP) % LOOP / LOOP) * Math.PI * 2 * spin;
+  const ringRot = (((frame % LOOP) + LOOP) % LOOP / LOOP) * Math.PI * 2;
   const lineMat = useMemo(() => new THREE.LineBasicMaterial({ color: raw(lineColor), transparent: true, opacity: 0.55 }), [lineColor]);
   const arcMat = useMemo(() => new THREE.LineBasicMaterial({ color: raw(arcColor), transparent: true, opacity: 0.8 }), [arcColor]);
   const arcObjs = useMemo(() => arcs.map((g, i) => new THREE.Line(g, i % 3 === 0 ? arcMat : lineMat)), [arcs, lineMat, arcMat]);
@@ -95,7 +97,7 @@ function GlobeScene({ landColor, seaColor, lineColor, spin, tilt, size, seaDot, 
         {arcObjs.map((o, i) => <primitive key={i} object={o} />)}
       </group>
       {ringObjs.map((o, i) => (
-        <group key={i} rotation={[0.35 + i * 0.5, rot * (i % 2 ? -0.5 : 0.3), 0.3 * i]}>
+        <group key={i} rotation={[0.35 + i * 0.5, ringRot * (i % 2 ? -1 : 1), 0.3 * i]}>
           <primitive object={o} />
         </group>
       ))}
