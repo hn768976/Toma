@@ -53,10 +53,13 @@ const makeRows = () => {
       });
     }
   };
-  zone(34, 20, 700, 120, 1040, 0.35); // left field
-  zone(26, 1150, 1880, 40, 880, 0.3); // right field
-  zone(14, 400, 1500, 20, 260, 0.45); // top band
-  zone(10, 600, 1500, 800, 1060, 0.4); // bottom band
+  // grouped like the reference: a dense left-middle field and a top-right
+  // field, with sparse rows elsewhere; many are defocused/smeared
+  zone(44, 0, 640, 260, 860, 0.5); // left-middle field
+  zone(34, 1100, 1880, 30, 430, 0.45); // top-right field
+  zone(8, 300, 1100, 20, 240, 0.5); // top band
+  zone(10, 0, 1500, 880, 1060, 0.5); // bottom band
+  zone(8, 1200, 1880, 560, 880, 0.5); // right-lower
   return rows;
 };
 
@@ -71,6 +74,17 @@ const rowText = (row: Row, frame: number) => {
   }
   return s;
 };
+
+// [x, y, radius, start s, end s, warm] in 1920x1080 design units
+const ORBS: [number, number, number, number, number, boolean][] = [
+  [1880, 640, 34, 5.5, 11, true],
+  [1820, 420, 22, 6.5, 12.5, false],
+  [1560, 760, 18, 8, 14, true],
+  [1250, 690, 26, 0, 6, true],
+  [240, 980, 30, 12, 20, true],
+  [980, 110, 16, 3, 9, false],
+  [1700, 200, 20, 14, 20, true],
+];
 
 export const HudOverlay: React.FC = () => {
   const frame = useCurrentFrame();
@@ -124,7 +138,7 @@ export const HudOverlay: React.FC = () => {
       const blink = hash(row.seed, Math.floor(frame / 2)) < 0.04 ? 0.35 : 1;
       const x = row.x + row.drift * t;
       const target = row.blur ? bctx : ctx;
-      const a = row.alpha * blink * (row.blur ? 1.4 : 1);
+      const a = row.alpha * blink * (row.blur ? 1.6 : 1);
       if (row.dashes) {
         // block / dash rows (look like compressed data glyphs)
         target.fillStyle = `rgba(235,232,225,${a})`;
@@ -138,7 +152,14 @@ export const HudOverlay: React.FC = () => {
       } else {
         target.font = `${row.size}px ${HUD_FONT}`;
         target.fillStyle = `rgba(235,232,225,${a})`;
-        target.fillText(rowText(row, frame), x, row.y);
+        const txt = rowText(row, frame);
+        target.fillText(txt, x, row.y);
+        if (!row.blur) {
+          // glow halo for the sharp rows
+          bctx.font = `${row.size}px ${HUD_FONT}`;
+          bctx.fillStyle = `rgba(255,236,210,${a * 0.5})`;
+          bctx.fillText(txt, x, row.y);
+        }
       }
     }
 
@@ -212,7 +233,37 @@ export const HudOverlay: React.FC = () => {
     ctx.globalCompositeOperation = "lighter";
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(bc, 0, 0, width, height);
+    // horizontal smear: several offset copies read as a lens streak
+    const offs = [-28, -14, 0, 14, 28];
+    const wts = [0.12, 0.24, 0.38, 0.24, 0.12];
+    for (let i = 0; i < offs.length; i++) {
+      ctx.globalAlpha = wts[i];
+      ctx.drawImage(bc, offs[i] * k, 0, width, height);
+    }
+    ctx.globalAlpha = 1;
+
+    // out-of-focus bokeh orbs drifting in the foreground
+    for (let i = 0; i < ORBS.length; i++) {
+      const [ox, oy, r, s0, s1, warm] = ORBS[i];
+      const vis = interpolate(t, [s0, s0 + 1, s1 - 1, s1], [0, 1, 1, 0], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      });
+      if (vis <= 0) continue;
+      const cx = (ox + Math.sin(t * 0.3 + i) * 25 - t * 6) * k;
+      const cy = (oy + Math.cos(t * 0.25 + i * 2) * 15) * k;
+      const rr = r * k;
+      const col = warm ? "255,150,60" : "90,220,220";
+      const a = (warm ? 0.32 : 0.22) * vis * (0.85 + 0.15 * Math.sin(t * 1.3 + i));
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rr);
+      grad.addColorStop(0, `rgba(${col},${a})`);
+      grad.addColorStop(0.75, `rgba(${col},${a * 0.8})`);
+      grad.addColorStop(1, `rgba(${col},0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.globalCompositeOperation = "source-over";
 
     continueRender(handle);

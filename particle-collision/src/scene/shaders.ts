@@ -6,7 +6,7 @@ export const particleVertex = /* glsl */ `
 precision highp float;
 
 in vec3 position;          // unused placeholder (required by three.js)
-in vec4 aParams;           // x: u (0..1 along ribbon), y: v (0..1 across), z: ribbon id (0,1 = ribbon, 2 = dust), w: kind (0 = spark, 1 = glow)
+in vec4 aParams;           // x: u (0..1 along ribbon), y: v (0..1 across), z: ribbon id (0,1 = ribbon, 2 = dust), w: kind (0 = spark, 1 = glow, 2 = comb rung)
 in vec4 aRand;             // 4 uniform randoms in [0,1)
 
 uniform mat4 modelViewMatrix;
@@ -47,7 +47,8 @@ void main() {
   if (rid < 1.5) {
     bool isA = rid < 0.5;
     // particles stream along the ribbon; the shape itself stays put
-    float speed = mix(0.010, 0.032, aRand.x) * (isA ? 1.0 : -1.0);
+    // rung particles share one speed so the comb stripes stay coherent
+    float speed = (glow > 1.5 ? 0.016 : mix(0.010, 0.032, aRand.x)) * (isA ? 1.0 : -1.0);
     float u = fract(u0 + uTime * speed);
 
     vec3 c, d, w;
@@ -68,13 +69,13 @@ void main() {
     p = c + w * v * taper + nrm * wave * (0.3 + v);
     // volume jitter grows toward the trailing edge of the sheet
     vec3 j = (aRand.yzw - 0.5);
-    p += j * (0.015 + 0.10 * v * v);
+    p += j * (0.02 + 0.16 * v * v);
 
     float ends = smoothstep(0.0, 0.10, u) * smoothstep(1.0, 0.80, u);
     float edge = exp(-v * 9.0);                 // bright leading edge
-    float stripe = 0.5 + 0.5 * sin(v * 220.0);  // fine streak rows across the sheet
-    float sheet = 0.30 * (1.0 - smoothstep(0.55, 1.0, v));
-    alpha = ends * (sheet * mix(0.35, 1.0, stripe) + 1.25 * edge);
+    float sheet = 0.34 * (1.0 - smoothstep(0.5, 1.0, v));
+    if (glow > 1.5) sheet *= 2.2;               // comb rungs read brighter than the fill
+    alpha = ends * (sheet + 0.95 * edge);
     col = mix(vec3(1.0, 0.40, 0.07), vec3(1.0, 0.62, 0.22), edge);
     size = mix(1.4, 2.6, aRand.y * aRand.y);
     // occasional glints give the sheet its sparkling, granular texture
@@ -83,7 +84,7 @@ void main() {
       alpha *= 2.5;
       col = vec3(1.0, 0.66, 0.30);
     }
-    if (glow > 0.5) {
+    if (glow > 0.5 && glow < 1.5) {
       size *= 11.0;
       alpha *= 0.030;
       col = vec3(1.0, 0.38, 0.06);
@@ -105,7 +106,7 @@ void main() {
   float coc = uAperture * abs(depth - uFocus) / max(depth, 0.1);
   float s = sqrt(size * size + coc * coc);
   // conserve energy as the point spreads out
-  alpha *= clamp((size * size) / (s * s), 0.0, 1.0) * mix(1.0, 3.0, clamp(coc / 30.0, 0.0, 1.0));
+  alpha *= clamp((size * size) / (s * s), 0.0, 1.0) * mix(1.0, 1.8, clamp(coc / 30.0, 0.0, 1.0));
   vBlur = clamp(coc / (size + coc), 0.0, 1.0);
   vColor = col;
   vAlpha = alpha * smoothstep(0.3, 2.0, depth);

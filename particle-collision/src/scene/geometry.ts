@@ -21,21 +21,24 @@ export const buildParticleGeometry = (seed = 7) => {
 
   for (let r = 0; r < 2; r++) {
     for (let k = 0; k < RIBBON_PARTICLES; k++) {
-      const u = rand();
+      let u = rand();
       let v: number;
+      let kind = 0;
       const pick = rand();
-      if (pick < 0.42) {
+      if (pick < 0.3) {
         // dense, bright leading edge
         v = Math.pow(rand(), 2.5) * 0.12;
-      } else if (pick < 0.85) {
-        // streak rows across the sheet (gives the fine "scan-line" texture)
-        const rows = 70;
-        v = Math.round(Math.pow(rand(), 1.15) * rows) / rows;
-        v += (rand() - 0.5) * 0.004;
+      } else if (pick < 0.82) {
+        // "comb" rungs: lines of particles running across the sheet at
+        // discrete positions along the ribbon; they flow as rigid stripes
+        const rungs = 150;
+        u = (Math.floor(rand() * rungs) + 0.5) / rungs + (rand() - 0.5) * 0.0012;
+        v = Math.pow(rand(), 1.35) * 0.95;
+        kind = 2;
       } else {
         v = Math.pow(rand(), 1.3);
       }
-      push(u, Math.min(Math.max(v, 0), 1), r, 0);
+      push(u, Math.min(Math.max(v, 0), 1), r, kind);
     }
     for (let k = 0; k < GLOW_PARTICLES; k++) {
       push(rand(), Math.pow(rand(), 3) * 0.35, r, 1);

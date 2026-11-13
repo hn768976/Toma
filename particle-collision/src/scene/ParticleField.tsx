@@ -81,7 +81,7 @@ export const ParticleField: React.FC<{ variant: Variant }> = ({ variant }) => {
         uTime: { value: 0 },
         uPxScale: { value: pxScale },
         uFocus: { value: 12 },
-        uAperture: { value: 55 },
+        uAperture: { value: 95 },
         uViewH: { value: height },
         uA: { value: RIBBONS.A.ctrl },
         uAW0: { value: RIBBONS.A.w0 },
@@ -231,8 +231,8 @@ export const ParticleField: React.FC<{ variant: Variant }> = ({ variant }) => {
     // 3) tone map to canvas
     ctx.quad.material = ctx.toneMat;
     ctx.toneMat.uniforms.uFrame.value = frame;
-    ctx.toneMat.uniforms.uExposure.value = 1.05;
-    ctx.toneMat.uniforms.uBloomStrength.value = 1.6;
+    ctx.toneMat.uniforms.uExposure.value = 1.3;
+    ctx.toneMat.uniforms.uBloomStrength.value = 2.0;
     renderer.setRenderTarget(null);
     renderer.render(ctx.quadScene, ctx.quadCam);
     renderer.getContext().finish();

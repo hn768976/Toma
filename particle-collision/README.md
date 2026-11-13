@@ -5,8 +5,8 @@ Recreated from a 20 s reference clip (768×432, 30 fps).
 
 | Composition ID            | Size        | FPS | Frames | Duration | Description |
 |---------------------------|-------------|-----|--------|----------|-------------|
-| `ParticleCollision-V1-4K` | 3840 × 2160 | 30  | 600    | 20.000 s | **Version 1**: matches the reference. A slow downward tilt goes from an elevated view of the broad particle sheets to an almost edge-on view of two bright crossing filaments. |
-| `ParticleCollision-V2-4K` | 3840 × 2160 | 30  | 600    | 20.000 s | **Version 2**: same scene and look, filmed with a different camera: a low-angle 110° orbit around the collision point with a crane-up and push-in. |
+| `ParticleCollision-V1-4K` | 3840 × 2160 | 30  | 600    | 20.000 s | **Version 1**: matches the reference. It opens on a wedge of striated particle sheets fanning out from a bright apex, swings round into the crossing "X" by about 7 s, then tilts down until the sheets read as two bright edge-on filaments. |
+| `ParticleCollision-V2-4K` | 3840 × 2160 | 30  | 600    | 20.000 s | **Version 2**: same scene, look and HUD, filmed with a different camera: a reverse-angle orbit about 80° around the back of the collision, craning down from a high three-quarter view. The ribbons sweep the other way and never resolve into V1's frontal X. |
 
 ## Requirements
 
@@ -55,14 +55,16 @@ src/
   index.ts / Root.tsx         registers both 4K compositions (600 frames @ 30 fps)
   ParticleCollision.tsx       layers: WebGL particle field + Canvas 2D HUD
   scene/
-    geometry.ts               ~305k particles; ribbon spines (cubic Béziers) and sheet widths
+    geometry.ts               ~305k particles (edge, comb-rung and fill particles); ribbon spines
+                              (cubic Béziers) and sheet widths
     shaders.ts                GLSL ES 3.00 shaders: particle motion and depth of field,
                               bloom blur, HDR tone mapping with mesh, vignette and dither
     ParticleField.tsx         raw Three.js renderer: HDR (half-float) target,
                               2× box-downsample bloom chain, tone-map pass
-    camera.ts                 V1 tilt and V2 orbit camera paths (pure functions of time)
+    camera.ts                 V1 and V2 camera paths: Catmull-Rom keyframe splines (pure functions of time)
   hud/HudOverlay.tsx          Canvas 2D: scan line, travelling rings, sliding panel,
-                              data rows (sharp and defocused), dot matrix, frames
+                              data rows (sharp with glow, or defocused and smeared),
+                              bokeh orbs, dot matrix, frames
   lib/random.ts               seeded PRNG and hash, so every frame is deterministic
   lib/font.ts                 loads the bundled HUD font (public/fonts)
 public/fonts/                 Share Tech Mono (SIL Open Font License, see the .txt file)
