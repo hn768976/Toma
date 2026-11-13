@@ -64,7 +64,7 @@ export const drawFlyoverHud = (th: FlyTheme, fsOf: FS) => (ctx: Ctx, frame: numb
   ctx.beginPath(); ctx.moveTo(2400, 120); ctx.lineTo(2400, 70); ctx.lineTo(2560, 70); ctx.moveTo(3260, 120); ctx.lineTo(3260, 70); ctx.lineTo(3100, 70); ctx.stroke();
   ctx.fillStyle = '#FFD040'; ctx.beginPath(); ctx.arc(2480 + 700 * ((f % 120) / 120), 70, 6, 0, TAU); ctx.fill();
   // top strips (glitchy bars)
-  for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) text(ctx, `${pad(Math.floor(hash01(800, r, c) * 9999), 4)} ${pad(tick(801 + r * 6 + c, f, 15, 3), 3)}`, 40 + c * 300 + (c > 2 ? 1500 : 0), 40 + r * 28, 18, rgba(th.text, 0.7));
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 6; c++) text(ctx, `${pad(Math.floor(hash01(800, r, c) * 9999), 4)} ${pad(tick(801 + r * 6 + c, f, 15, 3), 3)}`, 40 + c * 300 + (c > 2 ? 1500 : 0), 62 + r * 26, 18, rgba(th.text, 0.7));
   strip(ctx, 150, f, th, 810, gl);
   strip(ctx, 188, f + 7, th, 811, gl);
 
@@ -102,12 +102,21 @@ export const drawFlyoverHud = (th: FlyTheme, fsOf: FS) => (ctx: Ctx, frame: numb
   dataRows(ctx, 50, 1780, 4, [4, 2, 3, 4, 3], 891, f, th, 20, 30);
 
   // right column
-  const labels = ['Input Mode GRID', 'Field Index A', 'Scan Mode', 'Field Index B', 'Wave Signal', 'Field Index C', 'Radiation Level'];
+  const labels = ['Input Mode GNSS', 'Satellite Lock', 'Signal Strength', 'Position Error', 'Ground Speed', 'Heading', 'Fix Quality'];
   labels.forEach((l, i) => {
     const y = 330 + i * 145;
     text(ctx, l, 3290, y, 26, th.text, { font: 'label' });
-    for (let r = 0; r < 2; r++) text(ctx, `${pad(Math.floor(hash01(900, i, r) * 9999), 4)}  ${pad(tick(901 + i * 2 + r, f, 20, 3), 3)}  ${pad(Math.floor(hash01(902, i, r) * 99), 2)}`, 3300, y + 36 + r * 28, 18, th.dim);
-    if (i === 4) text(ctx, `${pad(tick(915, f, 5, 6), 6)}.${pad(tick(916, f, 3, 3), 3)}`, 3300, y + 100, 26, th.accent);
+    const val = [
+      `L1/L5   ${10 + (tick(901, f, 60, 1) % 5)} SAT`,
+      `${11 + (tick(902, f, 60, 1) % 3)}/14 LOCKED`,
+      `-${118 + Math.floor(wave(903, f, 0, 9))} dBm`,
+      `\u00B1${(1.2 + wave(904, f, 0, 1.6)).toFixed(1)} m`,
+      `${Math.floor(wave(905, f, 38, 64))} km/h`,
+      `${pad(Math.floor(wave(906, f, 20, 340)), 3)}\u00B0`,
+      `3D FIX  HDOP ${(0.7 + wave(907, f, 0, 0.5)).toFixed(1)}`,
+    ][i];
+    text(ctx, val, 3300, y + 40, 22, i === 4 ? th.accent : th.text);
+    text(ctx, `${pad(Math.floor(hash01(900, i) * 9999), 4)}  ${pad(tick(908 + i, f, 20, 3), 3)}`, 3300, y + 70, 16, th.dim);
   });
   ['A1', 'A2', 'A3', 'A4', 'A5'].forEach((l, i) => {
     const y = 1440 + i * 70;
@@ -124,8 +133,8 @@ export const drawFlyoverHud = (th: FlyTheme, fsOf: FS) => (ctx: Ctx, frame: numb
   // bottom strip
   strip(ctx, 2050, f + 3, th, 940, gl);
   for (const [yy, w, a] of [[2062, 7, 1], [2090, 6, 0.85], [2116, 5, 0.7]] as const) {
-    line(ctx, 2850, yy, 3790, yy, rgba('#60F0A8', a * 0.25), w + 12);
-    line(ctx, 2850, yy, 3790, yy, rgba('#70F8B8', a), w);
+    line(ctx, 2850, yy, 3790, yy, rgba(th.accent, a * 0.25), w + 12);
+    line(ctx, 2850, yy, 3790, yy, rgba(th.accent, a), w);
   }
   text(ctx, `REF ${pad(tick(950, f, 30, 6), 6)}   LAYER 04   ${pad(tick(951, f, 10, 4), 4)}`, 40, 2120, 20, rgba(th.text, 0.7));
 };

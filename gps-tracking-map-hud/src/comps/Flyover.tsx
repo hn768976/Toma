@@ -12,7 +12,7 @@ import { drawFlyoverHud, type FlyTheme } from '../hud/flyoverHud';
 THREE.ColorManagement.enabled = false;
 
 export const FLY_BLUE: FlyStyle = {
-  land: '#3A6A88', dark: '#08141C', water: '#061017', runway: '#4E86A6',
+  land: '#3A6A88', dark: '#08141C', water: '#061017', runway: '#4E86A6', haze: '#1A3242',
   roads: {
     highway: { color: '#CFEFFF', w: 20, a: 1 },
     avenue: { color: '#A6DDF8', w: 11, a: 1 },
@@ -22,7 +22,7 @@ export const FLY_BLUE: FlyStyle = {
   },
 };
 export const FLY_AMBER: FlyStyle = {
-  land: '#8A5A2A', dark: '#1C1006', water: '#140B04', runway: '#A87440',
+  land: '#8A5A2A', dark: '#1C1006', water: '#140B04', runway: '#A87440', haze: '#3A2614',
   roads: {
     highway: { color: '#FFF0D8', w: 20, a: 1 },
     avenue: { color: '#FFD8A0', w: 11, a: 1 },
@@ -90,7 +90,7 @@ function FlyoverScene({ style }: { style: FlyStyle }) {
     post.uniforms.uMix.value = fs.mix;
     post.uniforms.uGlitch.value = fs.glitch;
     post.uniforms.uSeed.value = f;
-    post.uniforms.uBright.value = fs.bright * EXPOSURE;
+    post.uniforms.uBright.value = fs.bright * (style === FLY_AMBER ? 0.64 : EXPOSURE);
   };
 
   useLayoutEffect(() => {
@@ -100,7 +100,7 @@ function FlyoverScene({ style }: { style: FlyStyle }) {
       const res = new THREE.Vector2(size.x, size.y);
       const ground = bakeGround(gl, style, res);
       const scene = new THREE.Scene();
-      scene.background = raw(style.dark);
+      scene.background = raw(style.haze);
       scene.add(ground.group);
       const cam = new THREE.PerspectiveCamera(32, size.x / size.y, 50, 60000);
       const opts = { type: THREE.HalfFloatType, samples: 4, depthBuffer: false, colorSpace: THREE.NoColorSpace, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter } as const;
@@ -134,7 +134,7 @@ function FlyoverScene({ style }: { style: FlyStyle }) {
 }
 
 const BLUE_T: FlyTheme = { text: '#E6F6FF', dim: '#8FC4E0', faint: '#5A8CAA', accent: '#5CF0C8', accent2: '#FFFFFF', panel: '#0A1A24', panelEdge: '#3A6A88', grid: '#BFE6FF', ring: '#FFD27A' };
-const AMBER_T: FlyTheme = { text: '#FFF4E4', dim: '#E8B880', faint: '#A07040', accent: '#FFE07A', accent2: '#FFFFFF', panel: '#1C1006', panelEdge: '#8A5A2A', grid: '#FFE2B8', ring: '#7AF0FF' };
+const AMBER_T: FlyTheme = { text: '#FFF4E4', dim: '#E8B880', faint: '#A07040', accent: '#FFD27A', accent2: '#FFFFFF', panel: '#1C1006', panelEdge: '#8A5A2A', grid: '#FFE2B8', ring: '#FFF0C0' };
 
 export const Flyover: React.FC<{ variant: 'blue' | 'amber' }> = ({ variant }) => {
   const style = variant === 'blue' ? FLY_BLUE : FLY_AMBER;

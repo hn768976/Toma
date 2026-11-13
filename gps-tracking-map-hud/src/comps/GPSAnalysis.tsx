@@ -8,7 +8,7 @@ import { CITY, MAP_W, MAP_H } from '../city';
 import { HudCanvas } from '../hud/HudCanvas';
 import { Globe } from '../render/Globe';
 import {
-  type Ctx, type Theme, text, line, rect, roundRect, dataRows, barMeter, segBar, gauge, numBox, heading, tick, pad, wave, rgba, worldMap, odometer, cross, TAU,
+  type Ctx, type Theme, text, line, rect, roundRect, brackets, dataRows, barMeter, segBar, gauge, numBox, heading, tick, pad, wave, rgba, worldMap, odometer, cross, TAU,
 } from '../hud/kit';
 import { hash01 } from '../lib/rng';
 
@@ -137,6 +137,7 @@ const drawHud = (at: AnalysisTheme) => (ctx: Ctx, frame: number) => {
     lab(-260, -150, `SECTOR ${pad(Math.floor(hash01(s, 6) * 99), 2)}`, 180);
   }
   rect(ctx, tx - 9, ty - 9, 18, 18, at.lock);
+  if (locked) brackets(ctx, tx - 46, ty - 46, 92, 92, 22, rgba('#FFFFFF', 0.95), 3);
   cross(ctx, chx, MAP.y + 70, 14, rgba('#FFFFFF', 0.8), 2);
 
   // ---- right column

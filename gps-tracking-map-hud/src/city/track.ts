@@ -3,7 +3,7 @@
 // periodic function of (frame mod LOOP), precomputed once.
 import { CITY, LOOP, type Route } from './index';
 
-export interface TrackSample { x: number; y: number; heading: number; speed: number }
+export interface TrackSample { x: number; y: number; heading: number; speed: number; s: number }
 export interface Track {
   route: Route;
   dot: TrackSample[]; // per frame, LOOP entries
@@ -73,7 +73,7 @@ function build(route: Route): Track {
   for (let f = 0; f < LOOP; f++) {
     const a = at(f * SUB), b = at(f * SUB + 1);
     const sp = Math.hypot(b.x - a.x, b.y - a.y) * SUB; // metres per frame
-    dot.push({ x: a.x, y: a.y, heading: a.h, speed: sp });
+    dot.push({ x: a.x, y: a.y, heading: a.h, speed: sp, s: a.s / L });
   }
   // camera position: exponentially weighted average of the past (lag)
   const tau = 9 * SUB;

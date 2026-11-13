@@ -71,8 +71,8 @@ const drawHud = (ctx: Ctx, frame: number) => {
   });
   // corner crosses + top ticks
   for (const [x, y] of [[1300, 640], [2580, 1500]]) cross(ctx, x, y, 12, rgba(TH.text, 0.45), 2);
-  for (let i = 0; i < 28; i++) line(ctx, 420 + i * 60, 40, 420 + i * 60, i % 5 === 0 ? 62 : 52, rgba(TH.text, 0.35), 2);
-  rect(ctx, 940, 40, 18, 18, undefined, rgba(TH.text, 0.7), 2);
+  for (let i = 0; i < 28; i++) line(ctx, 420 + i * 60, 110, 420 + i * 60, i % 5 === 0 ? 132 : 122, rgba(TH.text, 0.35), 2);
+  rect(ctx, 940, 110, 18, 18, undefined, rgba(TH.text, 0.7), 2);
   // scale bar across the middle with ticks
   const sy = 1080;
   line(ctx, 500, sy, 3330, sy, rgba(TH.text, 0.5), 2);
@@ -95,20 +95,20 @@ const drawHud = (ctx: Ctx, frame: number) => {
   text(ctx, pad(Math.floor((1 - (vy - 420) / 1080) * 999), 3), vx - 34, vy + 7, 15, TH.dim, { align: 'right' });
   // top-right text blocks with bars
   for (let c = 0; c < 3; c++) {
-    const x0 = 2600 + c * 400;
-    text(ctx, `● ${['DATA', 'SCAN', 'GRID'][c]} ${pad(Math.floor(hash01(550, c) * 99), 2)} - SECTOR ${pad(Math.floor(hash01(551, c) * 9999), 4)}`, x0, 40, 18, TH.dim);
+    const x0 = 2500 + c * 380;
+    text(ctx, `● ${['DATA', 'SCAN', 'GRID'][c]} ${pad(Math.floor(hash01(550, c) * 99), 2)} - SECTOR ${pad(Math.floor(hash01(551, c) * 9999), 4)}`, x0, 110, 18, TH.dim);
     for (let r = 0; r < 3; r++) {
-      rect(ctx, x0, 58 + r * 26, 90, 16, rgba(TH.text, r === 0 ? 0.8 : 0.35));
-      text(ctx, `${pad(tick(552 + c * 3 + r, f, 15, 5), 5)}`, x0 + 110, 72 + r * 26, 18, TH.dim);
+      rect(ctx, x0, 128 + r * 26, 90, 16, rgba(TH.text, r === 0 ? 0.8 : 0.35));
+      text(ctx, `${pad(tick(552 + c * 3 + r, f, 15, 5), 5)}`, x0 + 110, 142 + r * 26, 18, TH.dim);
     }
   }
   // right column
   for (let r = 0; r < 6; r++) {
     const y0 = 1220 + r * 150;
-    text(ctx, `Secondary Grid Zone ${pad(Math.floor(hash01(560, r) * 999), 3)}`, 3560, y0, 20, TH.text);
-    text(ctx, `${pad(Math.floor(hash01(561, r) * 9999), 4)} ${pad(tick(562 + r, f, 20, 3), 3)} ${pad(Math.floor(hash01(563, r) * 99), 2)}`, 3560, y0 + 30, 18, TH.dim);
-    rect(ctx, 3560, y0 + 44, 60, 14, rgba(TH.text, 0.8));
-    rect(ctx, 3630, y0 + 44, 30 + 60 * wave(564 + r, f, 0, 1), 14, rgba(TH.text, 0.35));
+    text(ctx, `SECONDARY GRID ZONE ${pad(Math.floor(hash01(560, r) * 999), 3)}`, 3380, y0, 18, TH.text);
+    text(ctx, `${pad(Math.floor(hash01(561, r) * 9999), 4)} ${pad(tick(562 + r, f, 20, 3), 3)} ${pad(Math.floor(hash01(563, r) * 99), 2)}`, 3380, y0 + 30, 16, TH.dim);
+    rect(ctx, 3380, y0 + 44, 60, 12, rgba(TH.text, 0.7));
+    rect(ctx, 3450, y0 + 44, 30 + 60 * wave(564 + r, f, 0, 1), 12, rgba(TH.text, 0.3));
   }
   // bottom row: sector blocks + value boxes
   for (let i = 0; i < 6; i++) {

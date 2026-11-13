@@ -34,6 +34,7 @@ export const GPSTrack: React.FC<{ variant: 'teal' | 'interface' }> = ({ variant 
     m.render(
       { cx: cam.x, cy: cam.y, zoom, rot: cam.rot },
       {
+        routeHead: dot.s,
         fx: [
           { kind: 'glow', x: dot.x, y: dot.y, r: 80 * ds, color: dotCol, alpha: 0.55, world: true },
           { kind: 'ring', x: dot.x, y: dot.y, r: (34 + 70 * pulse) * ds, thick: 3, color: dotCol, alpha: 0.45 * (1 - pulse) ** 2, world: true },

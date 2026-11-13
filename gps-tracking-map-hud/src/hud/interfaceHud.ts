@@ -80,14 +80,14 @@ export const drawInterfaceHud = (ctx: Ctx, frame: number) => {
   text(ctx, 'GPS PROCESS 1', 270, 1262, 26, TH.text, { font: 'label' });
   text(ctx, `${pad(tick(90, f, 10, 4), 4)} ${pad(tick(91, f, 20, 3), 3)} ${pad(tick(92, f, 30, 4), 4)}`, 270, 1300, 24, TH.dim);
   barMeter(ctx, 270, 1320, 400, 8, wave(93, f, 0.2, 0.95, 2), TH);
-  for (let r = 0; r < 6; r++) {
+  for (let r = 0; r < 4; r++) {
     text(ctx, `${pad(Math.floor(hash01(94, r) * 9999), 4)}  ${'■'.repeat(1 + (r % 3))}`, 60, 1420 + r * 40, 22, TH.dim);
     segBar(ctx, 300, 1404 + r * 40, 260, 14, 16, wave(95 + r, f, 0.1, 0.95, 1 + (r % 3)), TH, r % 2 ? TH.dim : TH.text);
     text(ctx, pad(tick(100 + r, f, 12, 3), 3), 590, 1420 + r * 40, 22, TH.text);
   }
   heading(ctx, 'ENCODING DATA FEED', 50, 1720, TH, 30);
   line(ctx, 50, 1736, 700, 1736, rgba(TH.faint, 0.9), 2);
-  for (let r = 0; r < 4; r++) for (let c = 0; c < 9; c++) {
+  for (let r = 0; r < 2; r++) for (let c = 0; c < 9; c++) {
     const on = hash01(120, r, c, Math.floor(f / 15)) > 0.45;
     rect(ctx, 60 + c * 72, 1770 + r * 82, 56, 26, on ? rgba(TH.text, 0.85) : undefined, rgba(TH.dim, 0.8), 2);
     text(ctx, pad(Math.floor(hash01(121, r, c) * 99), 2), 88 + c * 72, 1826 + r * 82, 20, TH.dim, { align: 'center' });

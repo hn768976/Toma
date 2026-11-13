@@ -90,7 +90,18 @@ Targets are taken from the city's named points (`CITY.pois`, junctions on avenue
 an invented code `TRK-nnnn` and invented local grid coordinates (`E 482000 + x`, `N 739000 − y`
 in metres) — not latitude/longitude of any real place. One target every 60 frames, 10 per loop.
 
-TARGET_TABLE_PLACEHOLDER
+| # | Appears at frame | Code | E (m) | N (m) |
+|---|---|---|---|---|
+| 1 | 0 | TRK-6113 | 486052 | 737178 |
+| 2 | 60 | TRK-9194 | 489911 | 733599 |
+| 3 | 120 | TRK-6008 | 487210 | 736295 |
+| 4 | 180 | TRK-4796 | 489762 | 734607 |
+| 5 | 240 | TRK-6659 | 486546 | 736522 |
+| 6 | 300 | TRK-7274 | 488785 | 733842 |
+| 7 | 360 | TRK-7781 | 486110 | 735417 |
+| 8 | 420 | TRK-2386 | 489376 | 735640 |
+| 9 | 480 | TRK-2340 | 487382 | 737003 |
+| 10 | 540 | TRK-3546 | 489109 | 734976 |
 
 ## Determinism, loops, banding
 

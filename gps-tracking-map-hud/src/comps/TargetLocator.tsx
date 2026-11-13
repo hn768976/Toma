@@ -23,7 +23,7 @@ const view = (frame: number) => {
 const toScreen = (v: ReturnType<typeof view>, x: number, y: number) => ({ x: 1920 + (x - v.cx) * v.zoom, y: 1080 + (y - v.cy) * v.zoom });
 
 // schedule: target i appears at frame i*PERIOD, at a POI that is in the open part of the frame
-const SCHEDULE: POI[] = (() => {
+export const SCHEDULE: POI[] = (() => {
   const out: POI[] = [];
   const used = new Set<number>();
   for (let i = 0; i < N_T; i++) {
@@ -63,7 +63,7 @@ const drawHud = (red: boolean) => (ctx: Ctx, frame: number) => {
   }
   ctx.strokeStyle = rgba(TH.text, 0.8); ctx.lineWidth = 4;
   const ga = (f / LOOP) * TAU * 2;
-  ctx.beginPath(); ctx.arc(414, 495, 385, ga, ga + 0.9); ctx.stroke();
+  ctx.beginPath(); ctx.arc(414, 495, 362, ga, ga + 0.9); ctx.stroke();
   line(ctx, 50, 1005, 520, 1005, rgba(TH.dim, 0.8), 3);
   line(ctx, 50, 1050, 500, 1050, rgba(TH.text, 0.7), 4);
   for (let r = 0; r < 3; r++) text(ctx, `${pad(tick(700 + r, f, 30, 5), 5)}  ${pad(Math.floor(hash01(701, r) * 9999), 4)}`, 640, 975 + r * 36, 20, TH.dim);
@@ -113,7 +113,8 @@ const drawHud = (red: boolean) => (ctx: Ctx, frame: number) => {
   text(ctx, `GPS ${pad(tick(760, f, 60, 4), 4)} ${pad(tick(761, f, 60, 3), 3)}`, sp.x + 24, sp.y - 16, 18, TH.text);
   // ETA box + toggles + teal bars + gauges
   rect(ctx, 3300, 1410, 230, 40, undefined, rgba(TH.text, 0.7), 2);
-  text(ctx, `ETA  ${pad(tick(762, f, 30, 3), 3)}:${pad(tick(763, f, 6, 2), 2)}`, 3315, 1440, 26, TH.text);
+  const eta = 1500 - Math.floor(f / 2); // counts down smoothly (seconds), periodic
+  text(ctx, `ETA  ${pad(Math.floor(eta / 60), 2)}:${pad(eta % 60, 2)}`, 3315, 1440, 26, TH.text);
   for (let r = 0; r < 3; r++) { toggle(ctx, 3560, 1470 + r * 40, hash01(764, r, Math.floor(f / 120)) > 0.4, TH, 46, 20); text(ctx, `MULTI-CORE ${pad(Math.floor(hash01(765, r) * 99), 2)}`, 3300, 1488 + r * 40, 18, TH.dim); }
   for (let r = 0; r < 2; r++) {
     line(ctx, 2805, 1635 + r * 30, 3270, 1635 + r * 30, rgba(TH.accent, 0.8), 5);
@@ -153,10 +154,10 @@ const drawHud = (red: boolean) => (ctx: Ctx, frame: number) => {
     const age = f - i * PERIOD + (back && cur - back < 0 ? LOOP : 0) + (i > cur ? -LOOP : 0) + (i > cur ? LOOP : 0);
     const a = ((f - i * PERIOD) % LOOP + LOOP) % LOOP; // frames since this target appeared
     void age;
-    if (a > PERIOD + 24) continue;
+    if (a > PERIOD + 10) continue;
     const p = SCHEDULE[i];
     const s = toScreen(v, p.x, p.y);
-    const fadeOut = a > PERIOD ? 1 - (a - PERIOD) / 24 : 1;
+    const fadeOut = a > PERIOD ? 1 - (a - PERIOD) / 10 : 1;
     const sc = ease(a / 8);
     const pop = a < 8 ? 1.6 - 0.6 * sc : 1;
     const pulse = a >= 10 && a < 26 ? (a - 10) / 16 : -1;

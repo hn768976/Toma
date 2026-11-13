@@ -71,6 +71,7 @@ uniform vec4 uLineColor;
 uniform float uHalfW;
 uniform float uMode;
 uniform float uSigma;
+uniform vec2 uTrail; // x = head position (0..1 along route), y = trail length; x < 0 = off
 out vec4 fragColor;
 void main() {
   float ax = clamp(vLocal.x, 0.0, vLen);
@@ -82,7 +83,12 @@ void main() {
   } else {
     a = exp(-(d * d) / (uSigma * uSigma));
   }
-  fragColor = uLineColor * (a * vShade);
+  float sh = vShade;
+  if (uTrail.x >= 0.0) {
+    float d = fract(uTrail.x - vShade + 1.0);
+    sh = d < uTrail.y ? 0.1 + 0.9 * pow(1.0 - d / uTrail.y, 0.7) : 0.1;
+  }
+  fragColor = uLineColor * (a * sh);
 }`;
 
 // Generic screen-space effect quad: glow / disc / ring, centre & size in px.
@@ -223,10 +229,12 @@ function buildGeometryData() {
   {
     const p = CITY.routes[0].pts;
     const n = p.length / 2 - 1;
+    const S1: number[] = [0];
+    for (let i = 1; i <= n; i++) S1.push(S1[i - 1] + Math.hypot(p[i * 2] - p[i * 2 - 2], p[i * 2 + 1] - p[i * 2 - 1]));
     const verts = new Float32Array(n * 4 * 7), idx = new Uint32Array(n * 6);
     for (let i = 0; i < n; i++) {
       const corners = [[0, -1], [1, -1], [1, 1], [0, 1]];
-      for (let c = 0; c < 4; c++) verts.set([p[i * 2], p[i * 2 + 1], p[i * 2 + 2], p[i * 2 + 3], corners[c][0], corners[c][1], 1], (i * 4 + c) * 7);
+      for (let c = 0; c < 4; c++) verts.set([p[i * 2], p[i * 2 + 1], p[i * 2 + 2], p[i * 2 + 3], corners[c][0], corners[c][1], (corners[c][0] ? S1[i + 1] : S1[i]) / S1[n]], (i * 4 + c) * 7);
       idx.set([i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3], i * 6);
     }
     out.route = [{ x0: -1e9, y0: -1e9, x1: 1e9, y1: 1e9, verts, idx }];
@@ -297,6 +305,7 @@ export class PixiMap {
         uLineColor: { value: new Float32Array([1, 1, 1, 1]), type: 'vec4<f32>' },
         uMode: { value: 0, type: 'f32' },
         uSigma: { value: 1, type: 'f32' },
+        uTrail: { value: new Float32Array([-1, 0.3]), type: 'vec2<f32>' },
       });
       const uniforms = mkU();
       const glowUniforms = cs.glow ? mkU() : undefined;
@@ -371,7 +380,7 @@ export class PixiMap {
     return { x: m.a * x + m.c * y + m.tx, y: m.b * x + m.d * y + m.ty };
   }
 
-  render(view: View, opts: { fade?: number; fx?: Fx[]; classAlpha?: Partial<Record<RoadClass, number>>; vigShape?: [number, number, number] } = {}) {
+  render(view: View, opts: { fade?: number; fx?: Fx[]; classAlpha?: Partial<Record<RoadClass, number>>; vigShape?: [number, number, number]; routeHead?: number } = {}) {
     const S = this.style;
     const k = this.k;
     const z = view.zoom * k; // device px per metre
@@ -401,6 +410,7 @@ export class PixiMap {
       const c = u.uLineColor as Float32Array;
       c[0] = col[0] * a; c[1] = col[1] * a; c[2] = col[2] * a; c[3] = a;
       u.uMode = 0;
+      (u.uTrail as Float32Array)[0] = l.cls === 'route' && opts.routeHead !== undefined ? opts.routeHead : -1;
       l.uniforms.update();
       if (l.glowUniforms && st.glow) {
         const gu = l.glowUniforms.uniforms;
@@ -410,6 +420,7 @@ export class PixiMap {
         gu.uPad = 0;
         gu.uSigma = sig;
         gu.uMode = 1;
+        (gu.uTrail as Float32Array)[0] = l.cls === 'route' && opts.routeHead !== undefined ? opts.routeHead : -1;
         const gc = hex(st.glow.color);
         const ga = st.glow.alpha * (l.cls === 'route' ? 1 : (opts.classAlpha?.[l.cls] ?? 1));
         const g = gu.uLineColor as Float32Array;

@@ -176,7 +176,7 @@ export function generateCity(seed: number): CityRaw {
     for (let i = 0; i < 64; i++) {
       const t = (i / 64) * Math.PI * 2;
       const c = Math.cos(t), s = Math.sin(t);
-      const ex = 3.2;
+      const ex = 9;
       const lx = hw * Math.sign(c) * Math.abs(c) ** (2 / ex) * (1 + 0.04 * fbm(i * 0.3, 5));
       const ly = hh * Math.sign(s) * Math.abs(s) ** (2 / ex) * (1 + 0.05 * fbm(i * 0.3, 8));
       const p = rot(airport.x, airport.y, apAng, lx, ly);
@@ -404,7 +404,7 @@ export function generateCity(seed: number): CityRaw {
         const r = r0 * range(rng, 0.85, 1.15);
         if (!okSite(x, y, r, 1300)) continue;
         const pts: number[] = [];
-        const n = 72, ph = range(rng, 0, 100), elong = range(rng, 0.35, 0.8), ang = range(rng, 0, Math.PI);
+        const n = 72, ph = range(rng, 0, 100), elong = range(rng, 0.6, 0.95), ang = range(rng, 0, Math.PI);
         for (let i = 0; i < n; i++) {
           const th = (i / n) * Math.PI * 2;
           const rr = r * (1 + 0.55 * fbm(Math.cos(th) * 0.9 + ph, Math.sin(th) * 0.9 + ph, 2) + 0.12 * fbm(Math.cos(th) * 3 + ph, Math.sin(th) * 3, 2));

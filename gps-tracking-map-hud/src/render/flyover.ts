@@ -15,7 +15,7 @@ export const raw = (h: string) => {
 };
 
 export interface FlyStyle {
-  land: string; dark: string; water: string; runway: string;
+  land: string; dark: string; water: string; runway: string; haze: string;
   roads: Record<RoadClass, { color: string; w: number; a: number }>; // w = width in metres
 }
 
@@ -55,18 +55,29 @@ void main() {
 
 const GROUND_VS = `
 varying vec2 vUv;
-void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+varying float vDist;
+void main() {
+  vUv = uv;
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  vDist = -mv.z;
+  gl_Position = projectionMatrix * mv;
+}`;
 const GROUND_FS = `
 uniform sampler2D uMap;
 uniform float uBlur;
 uniform float uFocus;
 uniform vec2 uRes;
+uniform vec3 uHaze;
+uniform vec2 uHazeRange;
 varying vec2 vUv;
+varying float vDist;
 void main() {
   float sy = gl_FragCoord.y / uRes.y;
   float bias = uBlur + uFocus * smoothstep(0.62, 1.0, sy) * 2.2;
   vec3 c = texture2D(uMap, vUv, bias).rgb;
   c *= 1.0 - 0.15 * smoothstep(0.6, 1.0, sy);
+  // atmospheric haze into the distance (also hides the edge of the ground plane)
+  c = mix(c, uHaze, smoothstep(uHazeRange.x, uHazeRange.y, vDist));
   gl_FragColor = vec4(c, 1.0);
 }`;
 
@@ -209,7 +220,7 @@ export function bakeGround(gl: THREE.WebGLRenderer, style: FlyStyle, res: THREE.
   const mk = (rt: THREE.WebGLRenderTarget, x0: number, y0: number, size: number, order: number) => {
     const mat = new THREE.ShaderMaterial({
       vertexShader: GROUND_VS, fragmentShader: GROUND_FS, depthTest: false, depthWrite: false,
-      uniforms: { uMap: { value: rt.texture }, uBlur: { value: 0 }, uFocus: { value: 1 }, uRes: { value: res } },
+      uniforms: { uMap: { value: rt.texture }, uBlur: { value: 0 }, uFocus: { value: 1 }, uRes: { value: res }, uHaze: { value: raw(style.haze) }, uHazeRange: { value: new THREE.Vector2(7000, 15000) } },
     });
     mats.push(mat);
     targets.push(rt);
