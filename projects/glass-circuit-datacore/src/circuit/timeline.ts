@@ -180,6 +180,20 @@ const ambient = (t: number) => {
 };
 
 /** Glow of a plate (0..~1.3), with a soft wave travelling through the stack. */
+/**
+ * Exposure multiplier lifting the troughs of the light rhythm (1–2.4 s,
+ * 4.2–6 s, end) so the overall brightness swing matches the reference.
+ */
+export const exposureLift = (t: number) => {
+  const k = (t0: number, t1: number, x: number) => easeInOut((x - t0) / (t1 - t0));
+  return (
+    1 +
+    0.25 * k(0.7, 1.1, t) * (1 - k(2.2, 2.6, t)) +
+    0.22 * k(4.0, 4.4, t) * (1 - k(5.6, 6.2, t)) +
+    0.15 * k(6.5, 7.0, t)
+  );
+};
+
 export const plateGlow = (c: Cell, plate: number, t: number) => {
   let g = 0;
   for (const e of c.glows) {

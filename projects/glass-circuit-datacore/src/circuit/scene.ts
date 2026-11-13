@@ -12,6 +12,7 @@ import {
   CELL,
   CELLS,
   cellHeight,
+  exposureLift,
   PANELS,
   panelPose,
   PLATE_DEPTH,
@@ -135,7 +136,7 @@ void main() {
   // little specular, a second (back) face gives the slab visible thickness
   // grey-blue glass body with a Fresnel reflection, so the slab reads as glass
   float aBase = (0.13 + 0.45 * fres + band + sheen) * mix(1.0, 0.6, uBack);
-  vec3 col = uTint * aBase + uEdge * (rim * 0.6 + band * 0.35 + sheen * 0.8 + fres * 0.25 + glint) + uGlyphCol * g * 1.25;
+  vec3 col = uTint * aBase + uEdge * (rim * 0.45 + band * 0.35 + sheen * 0.8 + fres * 0.25 + glint) + uGlyphCol * g * 1.25;
   float a = clamp(aBase + rim * 0.5 + glint * 0.5 + g * 0.8, 0.0, 1.0);
   a *= inside * uOpacity;
   gl_FragColor = vec4(col * inside * uOpacity, a);
@@ -364,6 +365,7 @@ export const createCircuitScene = (
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld(true);
     dof.params.focus = pose.focus;
+    renderer.toneMappingExposure = look.exposure * exposureLift(t);
 
     // plates – drawn front-to-back so early depth rejection skips hidden fins
     const cx = camera.position.x;

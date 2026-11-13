@@ -44,7 +44,7 @@ export const LOOK: CircuitLook = {
   finMetalness: 0.8,
   finRoughness: 0.34,
   glowColor: "#bcd4ff",
-  glowIntensity: 1.2,
+  glowIntensity: 1.6,
   tipGlow: 0.0,
   glassTint: "#3a4656",
   glassEdge: "#b9d2f2",
