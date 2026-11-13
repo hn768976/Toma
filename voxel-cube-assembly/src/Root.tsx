@@ -20,7 +20,7 @@ export const RemotionRoot: React.FC = () => {
         height={HEIGHT}
         defaultProps={{ variant: "v1" as const }}
       />
-      {/* Version 2 – same scene, alternative camera: orbiting dolly-in */}
+      {/* Version 2 – alternative palette (graphite + glowing amber, dark studio) with a slow orbiting camera */}
       <Composition
         id="VoxelCube-V2-4K"
         component={VoxelCube}

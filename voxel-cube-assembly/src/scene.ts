@@ -4,6 +4,87 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 
 export type Variant = "v1" | "v2";
 
+type Look = {
+  background: number;
+  floorNear: number;
+  floorFar: number;
+  wallBottom: number;
+  wallMid: number;
+  wallTop: number;
+  shadow: number;
+  /** coloured light spilled onto the floor by the glowing voxels */
+  floorGlow: number;
+  floorGlowStrength: number;
+  hemiSky: number;
+  hemiGround: number;
+  hemiIntensity: number;
+  keyIntensity: number;
+  fillColor: number;
+  fillIntensity: number;
+  envIntensity: number;
+  /** [hue, saturation, lightness, lightness spread] per voxel family */
+  primary: [number, number, number, number];
+  secondary: [number, number, number, number];
+  accent: [number, number, number, number];
+  accentEmissive: number;
+  accentEmissiveIntensity: number;
+  chrome: number;
+};
+
+const LOOKS: Record<Variant, Look> = {
+  // Reference look: white / charcoal / pale-blue voxels in a light grey studio
+  v1: {
+    background: 0xb9babd,
+    floorNear: 0xdad9dc,
+    floorFar: 0xc4c5c9,
+    wallBottom: 0xc4c5c9,
+    wallMid: 0xb7b8bb,
+    wallTop: 0xb9babd,
+    shadow: 0.27,
+    floorGlow: 0x000000,
+    floorGlowStrength: 0,
+    hemiSky: 0xffffff,
+    hemiGround: 0xc9ccd4,
+    hemiIntensity: 0.62,
+    keyIntensity: 1.55,
+    fillColor: 0xdfe8ff,
+    fillIntensity: 0.3,
+    envIntensity: 0.42,
+    primary: [0.62, 0.06, 0.8, 0.12],
+    secondary: [0.6, 0.07, 0.09, 0.1],
+    accent: [0.59, 0.7, 0.7, 0.1],
+    accentEmissive: 0x7fb2f0,
+    accentEmissiveIntensity: 0.12,
+    chrome: 0xe6eaf0,
+  },
+  // Alternative look: graphite / steel voxels with glowing amber accents
+  // in a dark studio
+  v2: {
+    background: 0x101114,
+    floorNear: 0x2b2d33,
+    floorFar: 0x121317,
+    wallBottom: 0x121317,
+    wallMid: 0x0c0d10,
+    wallTop: 0x131418,
+    shadow: 0.55,
+    floorGlow: 0xff8a1f,
+    floorGlowStrength: 0.05,
+    hemiSky: 0xcfd8ff,
+    hemiGround: 0x2a2420,
+    hemiIntensity: 0.5,
+    keyIntensity: 2.1,
+    fillColor: 0xffb070,
+    fillIntensity: 0.55,
+    envIntensity: 0.6,
+    primary: [0.62, 0.1, 0.045, 0.05],
+    secondary: [0.6, 0.08, 0.3, 0.14],
+    accent: [0.07, 1.0, 0.42, 0.06],
+    accentEmissive: 0xff7a14,
+    accentEmissiveIntensity: 0.5,
+    chrome: 0xf2e6d8,
+  },
+};
+
 export type VoxelScene = {
   render: (timeInSeconds: number) => void;
   dispose: () => void;
@@ -22,7 +103,6 @@ const mulberry32 = (seed: number) => {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 };
-
 
 // ---------------------------------------------------------------------------
 // Scene constants
@@ -53,17 +133,27 @@ const buildVoxels = (): Voxel[] => {
   const rand = mulberry32(20240613);
   const voxels: Voxel[] = [];
   const half = (GRID - 1) / 2;
-  const counters: Record<Kind, number> = { white: 0, dark: 0, blue: 0, chrome: 0 };
+  const counters: Record<Kind, number> = {
+    white: 0,
+    dark: 0,
+    blue: 0,
+    chrome: 0,
+  };
 
   for (let x = 0; x < GRID; x++) {
     for (let y = 0; y < GRID; y++) {
       for (let z = 0; z < GRID; z++) {
-        const home = new THREE.Vector3(x - half, y - half, z - half).multiplyScalar(CELL);
+        const home = new THREE.Vector3(
+          x - half,
+          y - half,
+          z - half,
+        ).multiplyScalar(CELL);
 
         // Each voxel slides along exactly one of the cube's own axes
         const axisIndex = Math.floor(rand() * 3);
         const coord = home.getComponent(axisIndex);
-        const outward = coord === 0 ? (rand() < 0.5 ? -1 : 1) : Math.sign(coord);
+        const outward =
+          coord === 0 ? (rand() < 0.5 ? -1 : 1) : Math.sign(coord);
         const direction = rand() < 0.86 ? outward : -outward;
         const axis = new THREE.Vector3();
         axis.setComponent(axisIndex, direction);
@@ -109,11 +199,13 @@ const scatterAmount = (t: number) => {
 // ---------------------------------------------------------------------------
 // Studio backdrop (seamless cyclorama): unlit gradient shaders
 // ---------------------------------------------------------------------------
-const floorMaterial = () =>
+const floorMaterial = (look: Look) =>
   new THREE.ShaderMaterial({
     uniforms: {
-      uNear: { value: new THREE.Color(0xdad9dc) },
-      uFar: { value: new THREE.Color(0xc4c5c9) },
+      uNear: { value: new THREE.Color(look.floorNear) },
+      uGlow: { value: new THREE.Color(look.floorGlow) },
+      uGlowStrength: { value: look.floorGlowStrength },
+      uFar: { value: new THREE.Color(look.floorFar) },
       uRadius: { value: ROOM_RADIUS },
       uShadowCenter: { value: new THREE.Vector2(0, 0) },
       uShadowSize: { value: new THREE.Vector2(7.5, 5.0) },
@@ -130,6 +222,8 @@ const floorMaterial = () =>
     fragmentShader: /* glsl */ `
       uniform vec3 uNear;
       uniform vec3 uFar;
+      uniform vec3 uGlow;
+      uniform float uGlowStrength;
       uniform float uRadius;
       uniform vec2 uShadowCenter;
       uniform vec2 uShadowSize;
@@ -142,19 +236,20 @@ const floorMaterial = () =>
         vec2 d = (vWorld.xz - uShadowCenter) / uShadowSize;
         float s = exp(-dot(d, d) * 1.1);
         col *= 1.0 - uShadowStrength * s;
+        col += uGlow * uGlowStrength * exp(-dot(d, d) * 0.28);
         gl_FragColor = vec4(col, 1.0);
         #include <colorspace_fragment>
       }
     `,
   });
 
-const wallMaterial = () =>
+const wallMaterial = (look: Look) =>
   new THREE.ShaderMaterial({
     side: THREE.BackSide,
     uniforms: {
-      uBottom: { value: new THREE.Color(0xc4c5c9) },
-      uMid: { value: new THREE.Color(0xb7b8bb) },
-      uTop: { value: new THREE.Color(0xb9babd) },
+      uBottom: { value: new THREE.Color(look.wallBottom) },
+      uMid: { value: new THREE.Color(look.wallMid) },
+      uTop: { value: new THREE.Color(look.wallTop) },
       uFloorY: { value: FLOOR_Y },
     },
     vertexShader: /* glsl */ `
@@ -203,35 +298,45 @@ export const createVoxelScene = (
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NoToneMapping;
 
+  const look = LOOKS[variant];
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xb9babd);
+  scene.background = new THREE.Color(look.background);
 
   // Image-based lighting for soft studio reflections on the voxels
   const pmrem = new THREE.PMREMGenerator(renderer);
   const envTarget = pmrem.fromScene(new RoomEnvironment(), 0.04);
   scene.environment = envTarget.texture;
-  scene.environmentIntensity = 0.42;
+  scene.environmentIntensity = look.envIntensity;
 
   // Backdrop
-  const floorMat = floorMaterial();
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(ROOM_RADIUS, 96), floorMat);
+  const floorMat = floorMaterial(look);
+  const floor = new THREE.Mesh(
+    new THREE.CircleGeometry(ROOM_RADIUS, 96),
+    floorMat,
+  );
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = FLOOR_Y;
   scene.add(floor);
 
   const wall = new THREE.Mesh(
     new THREE.CylinderGeometry(ROOM_RADIUS, ROOM_RADIUS, 140, 96, 1, true),
-    wallMaterial(),
+    wallMaterial(look),
   );
   wall.position.y = FLOOR_Y + 70 - 0.01;
   scene.add(wall);
 
   // Lights
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xc9ccd4, 0.62));
-  const key = new THREE.DirectionalLight(0xffffff, 1.55);
+  scene.add(
+    new THREE.HemisphereLight(
+      look.hemiSky,
+      look.hemiGround,
+      look.hemiIntensity,
+    ),
+  );
+  const key = new THREE.DirectionalLight(0xffffff, look.keyIntensity);
   key.position.set(-7, 15, 13);
   scene.add(key);
-  const fill = new THREE.DirectionalLight(0xdfe8ff, 0.3);
+  const fill = new THREE.DirectionalLight(look.fillColor, look.fillIntensity);
   fill.position.set(12, -2, 8);
   scene.add(fill);
 
@@ -241,16 +346,28 @@ export const createVoxelScene = (
   const geometry = new RoundedBoxGeometry(VOXEL, VOXEL, VOXEL, 3, 0.022);
 
   const materials: Record<Kind, THREE.MeshStandardMaterial> = {
-    white: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.32, metalness: 0.0 }),
-    dark: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.22, metalness: 0.35 }),
+    white: new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.32,
+      metalness: 0.0,
+    }),
+    dark: new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.22,
+      metalness: 0.35,
+    }),
     blue: new THREE.MeshStandardMaterial({
       color: 0xffffff,
       roughness: 0.25,
       metalness: 0.0,
-      emissive: 0x7fb2f0,
-      emissiveIntensity: 0.12,
+      emissive: look.accentEmissive,
+      emissiveIntensity: look.accentEmissiveIntensity,
     }),
-    chrome: new THREE.MeshStandardMaterial({ color: 0xe6eaf0, roughness: 0.06, metalness: 1.0 }),
+    chrome: new THREE.MeshStandardMaterial({
+      color: look.chrome,
+      roughness: 0.06,
+      metalness: 1.0,
+    }),
   };
 
   const cube = new THREE.Group();
@@ -258,7 +375,11 @@ export const createVoxelScene = (
 
   const meshes = {} as Record<Kind, THREE.InstancedMesh>;
   (Object.keys(materials) as Kind[]).forEach((kind) => {
-    const mesh = new THREE.InstancedMesh(geometry, materials[kind], count(kind));
+    const mesh = new THREE.InstancedMesh(
+      geometry,
+      materials[kind],
+      count(kind),
+    );
     mesh.frustumCulled = false;
     meshes[kind] = mesh;
     cube.add(mesh);
@@ -267,11 +388,23 @@ export const createVoxelScene = (
   const tint = new THREE.Color();
   voxels.forEach((v) => {
     if (v.kind === "white") {
-      tint.setHSL(0.62, 0.06, 0.8 + 0.12 * v.shade);
+      tint.setHSL(
+        look.primary[0],
+        look.primary[1],
+        look.primary[2] + look.primary[3] * v.shade,
+      );
     } else if (v.kind === "dark") {
-      tint.setHSL(0.6, 0.07, 0.09 + 0.1 * v.shade);
+      tint.setHSL(
+        look.secondary[0],
+        look.secondary[1],
+        look.secondary[2] + look.secondary[3] * v.shade,
+      );
     } else if (v.kind === "blue") {
-      tint.setHSL(0.59, 0.7, 0.7 + 0.1 * v.shade);
+      tint.setHSL(
+        look.accent[0],
+        look.accent[1],
+        look.accent[2] + look.accent[3] * v.shade,
+      );
     } else {
       tint.setRGB(1, 1, 1);
     }
@@ -296,7 +429,8 @@ export const createVoxelScene = (
       camera.lookAt(target);
       return;
     }
-    // Alternative camera: high three-quarter angle, slow orbit + dolly-in
+    // Alternative version: besides the new palette, the camera drifts on a
+    // slow three-quarter orbit with a gentle dolly-in
     const p = t / duration;
     const eased = p * p * (3 - 2 * p);
     const azimuth = THREE.MathUtils.degToRad(-42 + 84 * eased);
@@ -334,8 +468,11 @@ export const createVoxelScene = (
     });
 
     // The contact shadow widens and softens when the cube opens up
-    floorMat.uniforms.uShadowSize.value.set(7.6 + 2.2 * spread, 5.2 + 1.6 * spread);
-    floorMat.uniforms.uShadowStrength.value = 0.27 - 0.05 * spread;
+    floorMat.uniforms.uShadowSize.value.set(
+      7.6 + 2.2 * spread,
+      5.2 + 1.6 * spread,
+    );
+    floorMat.uniforms.uShadowStrength.value = look.shadow * (1 - 0.18 * spread);
 
     placeCamera(t, 20);
     camera.updateProjectionMatrix();
@@ -349,7 +486,6 @@ export const createVoxelScene = (
     pmrem.dispose();
     renderer.dispose();
   };
-
 
   return { render, dispose };
 };

@@ -9,10 +9,10 @@ Built with [Remotion](https://www.remotion.dev) (project scaffolded with
 image-based lighting, shader-based seamless studio backdrop).
 No external assets are required – everything is procedural.
 
-| Composition ID    | Size      | FPS | Frames | Duration | Description                                             |
-| ----------------- | --------- | --- | ------ | -------- | ------------------------------------------------------- |
-| `VoxelCube-V1-4K` | 3840x2160 | 30  | 600    | 20.000 s | Version 1 – reference match (locked-off studio camera)  |
-| `VoxelCube-V2-4K` | 3840x2160 | 30  | 600    | 20.000 s | Version 2 – alternative camera (high orbit + dolly-in)  |
+| Composition ID    | Size      | FPS | Frames | Duration | Description                                            |
+| ----------------- | --------- | --- | ------ | -------- | ------------------------------------------------------ |
+| `VoxelCube-V1-4K` | 3840x2160 | 30  | 600    | 20.000 s | Version 1 – reference match (locked-off studio camera) |
+| `VoxelCube-V2-4K` | 3840x2160 | 30  | 600    | 20.000 s | Version 2 – graphite/amber palette, dark studio, orbit |
 
 ## Requirements
 

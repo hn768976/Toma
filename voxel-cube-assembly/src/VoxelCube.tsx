@@ -40,7 +40,9 @@ export const VoxelCube: React.FC<VoxelCubeProps> = ({ variant }) => {
   }, [frame, fps, width, height, variant]);
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#b9babd" }}>
+    <AbsoluteFill
+      style={{ backgroundColor: variant === "v1" ? "#b9babd" : "#101114" }}
+    >
       <canvas
         ref={canvasRef}
         width={width}
@@ -51,7 +53,9 @@ export const VoxelCube: React.FC<VoxelCubeProps> = ({ variant }) => {
       <AbsoluteFill
         style={{
           background:
-            "radial-gradient(ellipse 75% 85% at 50% 45%, rgba(0,0,0,0) 45%, rgba(20,22,28,0.13) 100%)",
+            variant === "v1"
+              ? "radial-gradient(ellipse 75% 85% at 50% 45%, rgba(0,0,0,0) 45%, rgba(20,22,28,0.13) 100%)"
+              : "radial-gradient(ellipse 75% 85% at 50% 45%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.5) 100%)",
         }}
       />
     </AbsoluteFill>

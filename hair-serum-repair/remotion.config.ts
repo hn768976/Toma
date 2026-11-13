@@ -15,6 +15,8 @@ Config.setOverwriteOutput(true);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
+// Tag the output as standard BT.709 (limited range) for broad player support
+Config.setColorSpace("bt709");
 
 // The scene is rendered with Three.js (WebGL 2). "swangle" is ANGLE on top of
 // the SwiftShader software rasteriser, so it renders identically on machines
