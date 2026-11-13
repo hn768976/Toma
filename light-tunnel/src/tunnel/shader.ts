@@ -30,6 +30,14 @@ float vnoise(vec2 p) {
   return mix(mix(h21(i), h21(i + vec2(1, 0)), u.x),
              mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), u.x), u.y);
 }
+// value noise that repeats every P units in x, so angle-based lookups wrap seamlessly
+float vnoiseP(vec2 p, float P) {
+  vec2 i = floor(p), f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  float x0 = mod(i.x, P), x1 = mod(i.x + 1.0, P);
+  return mix(mix(h21(vec2(x0, i.y)), h21(vec2(x1, i.y)), u.x),
+             mix(h21(vec2(x0, i.y + 1.0)), h21(vec2(x1, i.y + 1.0)), u.x), u.y);
+}
 float fbm(vec2 p) {
   float s = 0.0, a = 0.5;
   for (int i = 0; i < 4; i++) { s += a * vnoise(p); p = p * 2.03 + 17.1; a *= 0.5; }
@@ -43,13 +51,16 @@ vec3 rays(float a, float r, float lr, float t, float M, float rot, float seed, f
   float cid = mod(cell, M);
   float off = (h11(cid * 1.31 + seed) - 0.5) * 0.55;
   float d = abs(fract(fa) - 0.5 - off) * (TAU / M) * r;   // perpendicular distance
-  float ww = max(w, px * 0.75);
-  float core = exp(-d * d / (ww * ww)) * (w / ww);
+  // per-ray width variety: most are fine filaments, some are broad streaks
+  float wv = mix(0.6, 3.2, pow(h11(cid * 5.7 + seed * 1.3), 3.0));
+  float wr = w * wv;
+  float ww = max(wr, px * 0.75);
+  float core = exp(-d * d / (ww * ww)) * (wr / ww);
   float glow = exp(-d / (ww * 3.0)) * 0.22;
   // smooth flicker per ray + light pulses travelling outward along it
-  float fl = vnoise(vec2(cid * 3.7 + seed, t * 2.6));
+  float fl = vnoise(vec2(cid * 3.7 + seed, t * 1.8));
   fl = pow(fl, 2.2) * 1.8;
-  float pulse = 0.04 + 0.96 * smoothstep(0.4, 0.8, vnoise(vec2(cid * 1.9 + seed * 3.0, lr * 4.5 - t * 2.2)));
+  float pulse = 0.04 + 0.96 * smoothstep(0.4, 0.8, vnoise(vec2(cid * 1.9 + seed * 3.0, lr * 4.0 - t * 1.3)));
   float on = step(0.28, h11(cid * 7.13 + seed * 2.0));
   return vec3(core, glow, 0.0) * fl * pulse * on;
 }
@@ -66,7 +77,7 @@ vec3 shade(vec2 frag) {
   vec2 p = (frag - 0.5 * uRes) / uRes.y;
   float px = 1.0 / uRes.y;
   // gentle hand-held drift of the tunnel axis
-  p -= vec2(0.03 * sin(t * 0.37) + 0.01 * sin(t * 0.91), 0.022 * sin(t * 0.29 + 1.0) + 0.008 * sin(t * 0.83 + 2.0));
+  p -= vec2(0.045 * sin(t * 0.37) + 0.012 * sin(t * 0.91), 0.032 * sin(t * 0.29 + 1.0) + 0.01 * sin(t * 0.83 + 2.0));
   float r = length(p) + 1e-5;
   float a = atan(p.y, p.x);
   float lr = log(r);
@@ -82,8 +93,10 @@ vec3 shade(vec2 frag) {
   float hz = fbm(dir * 2.2 + vec2(lrT, -lrT * 0.6) + vec2(t * 0.05, 0.0));
   float hz2 = fbm(dir * 3.4 - vec2(lrT * 0.8, lrT) + 9.0);
   float hzMask = smoothstep(0.12, 0.55, r);
-  col += uHazeA * pow(hz, 4.5) * 0.6 * hzMask;
-  col += uHazeB * pow(hz2, 4.0) * 1.8 * smoothstep(0.35, 0.95, r);
+  col += uHazeA * pow(hz, 4.5) * 0.4 * hzMask;
+  col += uHazeB * pow(hz2, 4.5) * 1.2 * smoothstep(0.35, 0.95, r);
+  float blobs = fbm(dir * 4.0 + vec2(lrT * 1.3, 2.0));
+  col += uDeep * pow(blobs, 4.5) * 1.6 * exp(-abs(r - 0.48) / 0.16);
 
   // --- radial light rays -------------------------------------------------------
   float rayMask = smoothstep(0.11, 0.22, r);
@@ -93,8 +106,8 @@ vec3 shade(vec2 frag) {
   col += uCore * (r1.x * 0.6 + r2.x * 0.4) * rayMask;
   col += uMid * (r1.x * 0.8 + r2.x * 0.55 + r1.y + r2.y + r3.x * 0.6 + r3.y * 0.9) * rayMask * 1.05;
   // broad soft beams
-  float beams = pow(vnoise(vec2((a / TAU + t * 0.004) * 26.0, t * 0.8)), 4.0);
-  col += uDeep * beams * 0.55 * smoothstep(0.12, 0.4, r);
+  float beams = pow(vnoiseP(vec2((a / TAU + t * 0.004) * 26.0, t * 0.8), 26.0), 4.0);
+  col += uDeep * beams * 0.4 * smoothstep(0.12, 0.4, r);
 
   // light filling the ring zone
   col += uMid * 0.05 * exp(-abs(r - 0.33) / 0.16) * (0.6 + 0.4 * beams);
@@ -105,7 +118,7 @@ vec3 shade(vec2 frag) {
   float ta = fract(a / TAU * ticksN + t * 0.06);
   float tick = smoothstep(0.3, 0.1, abs(ta - 0.5));
   float band = exp(-pow((rs - irisR) / 0.012, 2.0));
-  float tickFl = 0.6 + 0.4 * vnoise(vec2(floor(a / TAU * ticksN + t * 0.06) * 2.1, t * 2.0));
+  float tickFl = 0.6 + 0.4 * vnoise(vec2(mod(floor(a / TAU * ticksN + t * 0.06), ticksN) * 2.1, t * 2.0));
   col += (uCore * 0.35 + uMid * 0.9) * tick * band * tickFl * 0.8;
   col += uMid * exp(-abs(rs - irisR) / 0.03) * 0.25;
   col += uMid * ringLine(rs, 0.142, 0.0016, px) * 0.9;
@@ -130,6 +143,9 @@ vec3 shade(vec2 frag) {
     col += (uCore * 0.5 + uMid * 0.9) * ringLine(rs, R, wR, px) * 1.25 * var * env;
     col += uMid * exp(-abs(rs - R) / (0.014 + 0.018 * R)) * 1.2 * var * env;
     col += uDeep * exp(-abs(rs - R) / (0.04 + 0.05 * R)) * 0.18 * env;
+    col += uMid * exp(-abs(rs - R) / (0.05 + 0.07 * R)) * 0.3 * var * env;   // wide bloom
+    float hot = smoothstep(0.62, 0.88, vnoise(dir * 2.2 + vec2(sd * 7.0, t * 0.3)));
+    col += vec3(1.0) * ringLine(rs, R, wR * 1.3, px) * hot * 1.6 * env;      // white-hot arcs
     // companion hairline rings
     col += uMid * ringLine(rs, R * 0.9, 0.0018 + 0.002 * R, px) * 0.7 * env * (0.4 + 0.6 * vnoise(dir * 4.0 - t * 0.3 + sd));
     col += uCore * ringLine(rs, R * 1.08, 0.0015 + 0.002 * R, px) * 0.45 * env * (0.3 + 0.7 * vnoise(dir * 5.0 + 3.0 + t * 0.2 + sd));
@@ -173,7 +189,7 @@ vec3 shade(vec2 frag) {
       float g = fract(a / TAU * n + sd * 3.0 + t * 0.02 * (sd - 0.5));
       float dd = (g - 0.5) * TAU / n * r;
       float dot2 = exp(-(dd * dd + d * d) / pow(max(w * 2.4, px), 2.0));
-      col += (uCore * 0.6 + uMid * 0.6) * dot2 * env * arc * step(0.5, h11(floor(g * 0.0 + a / TAU * n) + sd)) * 0.9;
+      col += (uCore * 0.6 + uMid * 0.6) * dot2 * env * arc * step(0.5, h11(mod(floor(a / TAU * n + sd * 3.0 + t * 0.02 * (sd - 0.5)), n) + sd)) * 0.9;
     }
   }
 
@@ -191,9 +207,22 @@ vec3 shade(vec2 frag) {
     col += (uCore * 1.4 + uMid * 0.6) * sp * on * tw * smoothstep(0.15, 0.3, r);
   }
   col *= hole;
+  // faint sparkles and structure inside the dark core
+  {
+    vec2 g = vec2((a / TAU - t * 0.01) * 24.0, lr * 5.0 - t * 0.5);
+    vec2 cid = vec2(mod(floor(g.x), 24.0), floor(g.y));
+    vec2 o = vec2(h21(cid * 2.3), h21(cid * 4.1 + 2.0)) * 0.6 + 0.2;
+    vec2 dd = (fract(g) - o) * vec2(TAU / 24.0 * r, r / 5.0);
+    float sp = exp(-dot(dd, dd) / pow(max(0.002, px * 1.2), 2.0));
+    float tw = pow(vnoise(vec2(h21(cid) * 40.0, t * 2.0)), 2.0) * step(0.6, h21(cid * 5.5));
+    col += (uCore + uMid) * sp * tw * 0.35 * smoothstep(0.02, 0.06, r) * (1.0 - hole);
+  }
   // faint inner glow so the hole reads as depth, not a cut-out
   col += uDeep * 0.12 * smoothstep(0.03, 0.14, r) * (1.0 - hole);
 
+  // light surges: the whole tunnel pulses brighter every few seconds
+  float surge = 0.82 + 0.3 * smoothstep(0.3, 0.9, vnoise(vec2(t * 0.45, 3.0))) + 0.06 * sin(t * 1.3);
+  col *= surge;
   // vignette toward corners
   col *= mix(0.25, 1.0, smoothstep(1.05, 0.38, r));
   return col;
