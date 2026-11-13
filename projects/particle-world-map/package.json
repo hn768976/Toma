@@ -1,0 +1,45 @@
+{
+  "name": "particle-world-map",
+  "version": "1.0.0",
+  "description": "Particle world map data hologram — 4K Remotion + Three.js (WebGL 2) compositions",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.543",
+    "d3-geo": "3.1.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.543",
+    "three": "0.178.0",
+    "topojson-client": "3.1.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.543",
+    "@types/d3-geo": "3.1.1",
+    "@types/react": "19.3.0",
+    "@types/three": "0.170.0",
+    "@types/topojson-client": "3.1.5",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "eslint src && tsc",
+    "render:v1:1080p": "remotion render ParticleWorldMap-V1-Reference-4K \"out/Version 1 - Particle World Map Data Hologram (1080p).mp4\" --scale=0.5",
+    "render:v1:4k": "remotion render ParticleWorldMap-V1-Reference-4K \"out/Version 1 - Particle World Map Data Hologram (4K).mp4\"",
+    "render:v2:1080p": "remotion render ParticleWorldMap-V2-OrbitCamera-4K \"out/Version 2 - Particle World Map Data Hologram - Orbit Camera (1080p).mp4\" --scale=0.5",
+    "render:v2:4k": "remotion render ParticleWorldMap-V2-OrbitCamera-4K \"out/Version 2 - Particle World Map Data Hologram - Orbit Camera (4K).mp4\"",
+    "upgrade": "remotion upgrade"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}
