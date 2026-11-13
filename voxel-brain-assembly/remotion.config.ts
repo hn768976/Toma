@@ -16,7 +16,9 @@ Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 // Tag and convert as BT.709 limited range (standard HD/UHD delivery).
 Config.setColorSpace("bt709");
-Config.setCrf(16);
+Config.setCrf(12);
+// Slower x264 preset: better quality per bit on the bright, mostly static frames.
+Config.setX264Preset("slow");
 
 // Sandboxed environments that block Remotion's own Chrome Headless Shell
 // download can ship a Playwright headless shell at this path. On a normal

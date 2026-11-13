@@ -2,8 +2,18 @@ import { clamp, easeOutCubic, mulberry32 } from "./random";
 
 /**
  * Voxel brain: a side-profile brain silhouette (frontal lobe facing left,
- * cerebellum + brain stem at the lower right) extruded into a rounded
- * relief, plus the fly-in choreography that assembles it on the pedestal.
+ * cerebellum and a short, wide brain stem at the lower right) extruded into
+ * a rounded relief, plus the fly-in choreography that assembles it on the
+ * pedestal.
+ *
+ * Choreography (matched to the reference):
+ * - ~1.2–2.4 s: a few "scout" cubes drop in from high above.
+ * - ~2.2–5.3 s: the swarm. Large tumbling glass cubes arrive from above and
+ *   the upper left, shrink as they settle and lock in sweeping from the back
+ *   (right) of the brain to the front (left). Only the front face flies;
+ *   the cubes behind it fade in place, so the swarm stays airy instead of a
+ *   dense column.
+ * - 5.5 s onwards: the finished brain holds.
  */
 
 export const VOXEL = 0.2; // world size of one voxel
@@ -15,12 +25,15 @@ const inEllipse = (x: number, y: number, cx: number, cy: number, rx: number, ry:
 
 /** Brain silhouette in voxel units: X in [-10, 10], Y in [0, 16]. */
 const insideBrain = (X: number, Y: number) => {
-  const cerebrum = inEllipse(X, Y, 0, 9.7, 9.7, 6.15);
-  const temporal = inEllipse(X, Y, -5.0, 5.4, 4.6, 3.0);
-  const frontal = inEllipse(X, Y, -6.2, 8.4, 3.8, 4.6);
-  const cerebellum = inEllipse(X, Y, 5.5, 4.3, 3.4, 2.25);
-  const stem = X >= 1.0 && X <= 3.6 && Y >= 0 && Y <= 4.6;
-  return cerebrum || temporal || frontal || cerebellum || stem;
+  const cerebrum = inEllipse(X, Y, 0, 9.4, 9.8, 6.4);
+  const frontal = inEllipse(X, Y, -6.0, 7.6, 4.0, 5.2);
+  const temporal = inEllipse(X, Y, -3.4, 4.0, 5.6, 2.9);
+  const cerebellum = inEllipse(X, Y, 5.6, 3.6, 3.6, 2.5);
+  // Short, wide stem joining the brain to the pedestal.
+  const stem = X >= 0.5 && X <= 4.5 && Y >= 0 && Y <= 3.2;
+  // Small notch between the temporal lobe and the stem.
+  const notch = inEllipse(X, Y, -0.3, 1.0, 1.0, 1.4);
+  return (cerebrum || frontal || temporal || cerebellum || stem) && !notch;
 };
 
 export type Voxel = {
@@ -28,6 +41,8 @@ export type Voxel = {
   tx: number;
   ty: number;
   tz: number;
+  /** Whether this cube flies in (surface layers) or fades in place (interior). */
+  flies: boolean;
   /** Fly-in start offset relative to the target. */
   ox: number;
   oy: number;
@@ -36,6 +51,8 @@ export type Voxel = {
   bx: number;
   by: number;
   bz: number;
+  /** Scale while in flight (shrinks to 1 as it settles). */
+  flightScale: number;
   start: number; // seconds
   dur: number; // seconds
   spinX: number;
@@ -46,14 +63,11 @@ export type Voxel = {
 
 export const buildVoxels = (): Voxel[] => {
   const rand = mulberry32(7331);
-  // 2D mask
   const mask: boolean[][] = [];
   for (let r = 0; r < ROWS; r++) {
     mask.push([]);
     for (let c = 0; c < COLS; c++) {
-      const X = c - COLS / 2 + 0.5;
-      const Y = r + 0.5;
-      mask[r].push(insideBrain(X, Y));
+      mask[r].push(insideBrain(c - COLS / 2 + 0.5, r + 0.5));
     }
   }
   // Distance (in cells) to the silhouette edge, for a rounded relief.
@@ -69,8 +83,7 @@ export const buildVoxels = (): Voxel[] => {
           if (d < best) best = d;
         }
       }
-      // Grid border counts as outside too.
-      best = Math.min(best, r + 1, c + 1, COLS - c, ROWS - r + 2);
+      best = Math.min(best, c + 1, COLS - c, ROWS - r + 2);
       dist[r][c] = best;
     }
   }
@@ -80,55 +93,54 @@ export const buildVoxels = (): Voxel[] => {
     for (let c = 0; c < COLS; c++) {
       if (!mask[r][c]) continue;
       const X = c - COLS / 2 + 0.5;
-      const isStem = X >= 1.0 && X <= 3.6 && r < 4;
+      const isStem = X >= 0.5 && X <= 4.5 && r < 3;
       const t = clamp((dist[r][c] - 1) / 3.2, 0, 1);
-      const layers = isStem ? 2 : 2 + Math.round(Math.sqrt(t) * 6);
+      const layers = isStem ? 3 : 2 + Math.round(Math.sqrt(t) * 6);
+      const xNorm = (c + 0.5) / COLS; // 0 = left (frontal), 1 = right
+      const yNorm = (r + 0.5) / ROWS;
+      // Lock-in order: sweep from the right (back of the brain) to the left.
+      const columnStart = 2.1 + (1 - xNorm) * 1.75 + yNorm * 0.12;
       for (let l = 0; l < layers; l++) {
         const z = (l - (layers - 1) / 2) * VOXEL;
-        const xNorm = (c + 0.5) / COLS; // 0 = left (frontal), 1 = right
-        const yNorm = (r + 0.5) / ROWS;
-        // Assembly sweeps from the right-hand side towards the frontal lobe.
-        const start = 2.05 + (1 - xNorm) * 1.5 + yNorm * 0.25 + rand() * 0.4;
-        const dur = 0.62 + rand() * 0.38;
-        // Off-target start: mostly above and to the right, a few in front.
-        const ox = 0.3 + rand() * 1.9;
-        const oy = 0.9 + rand() * 2.6;
-        const oz = -1.0 + rand() * 2.8;
+        // Only the visible front face flies in; the rest materialise in place.
+        const surface = l === layers - 1;
+        const start = columnStart + rand() * 0.4;
+        const dur = 0.72 + rand() * 0.3;
         voxels.push({
           tx: X * VOXEL,
           ty: (r + 0.5) * VOXEL,
-          // Slight depth jitter on the surface gives the relief a crafted, uneven feel.
-          tz: z + (l === layers - 1 ? (rand() - 0.5) * 0.05 : 0),
-          ox,
-          oy,
-          oz,
-          bx: (rand() - 0.3) * 1.6,
-          by: (rand() - 0.2) * 1.2,
-          bz: (rand() - 0.5) * 1.6,
+          // Slight depth jitter on the front surface gives a crafted, uneven relief.
+          tz: z + (l === layers - 1 ? (rand() - 0.5) * 0.04 : 0),
+          flies: surface,
+          // From above and the upper left, some towards the camera (they read larger).
+          ox: -1.6 + rand() * 2.4,
+          oy: 1.8 + rand() * 3.0,
+          oz: -0.3 + rand() * 2.6,
+          bx: (rand() - 0.5) * 1.4,
+          by: (rand() - 0.2) * 0.9,
+          bz: (rand() - 0.5) * 1.2,
+          flightScale: 2.0 + rand() * 1.8,
           start,
           dur,
-          spinX: (rand() - 0.5) * 7,
-          spinY: (rand() - 0.5) * 7,
-          spinZ: (rand() - 0.5) * 7,
-          shade: 0.78 + rand() * 0.38,
+          spinX: (rand() - 0.5) * 6,
+          spinY: (rand() - 0.5) * 6,
+          spinZ: (rand() - 0.5) * 6,
+          shade: 0.82 + rand() * 0.3,
         });
       }
     }
   }
 
-  // A handful of "scout" cubes that drop in early from high above (≈1.2–2.3 s),
-  // as in the reference, before the main swarm arrives.
-  const scouts = voxels
-    .map((v, i) => ({ v, i }))
-    .filter(({ v }) => v.ty < 1.2 && v.tx > 0.1)
-    .slice(0, 40);
-  for (let s = 0; s < 7 && scouts.length; s++) {
-    const pick = scouts[Math.floor(rand() * scouts.length)].v;
-    pick.start = 1.15 + s * 0.17 + rand() * 0.08;
-    pick.dur = 0.95 + rand() * 0.25;
-    pick.ox = 0.4 + rand() * 1.4;
-    pick.oy = 5.5 + rand() * 2.5;
-    pick.oz = -0.5 + rand() * 1.0;
+  // A handful of "scout" cubes drop in early from high above (≈1.2–2.4 s).
+  const scouts = voxels.filter((v) => v.flies && v.ty < 1.0 && v.tx > 0.1);
+  for (let s = 0; s < 6 && scouts.length; s++) {
+    const pick = scouts[Math.floor(rand() * scouts.length)];
+    pick.start = 1.15 + s * 0.2 + rand() * 0.08;
+    pick.dur = 1.0 + rand() * 0.25;
+    pick.ox = -0.2 + rand() * 1.0;
+    pick.oy = 5.5 + rand() * 2.0;
+    pick.oz = -0.3 + rand() * 0.8;
+    pick.flightScale = 1.2 + rand() * 0.5;
   }
   return voxels;
 };
@@ -147,12 +159,22 @@ export type VoxelPose = {
 /** Pose of a voxel at time t (seconds). */
 export const voxelPose = (v: Voxel, t: number, out: VoxelPose): VoxelPose => {
   const raw = clamp((t - v.start) / v.dur, 0, 1);
+  out.rx = out.ry = out.rz = 0;
+  if (!v.flies) {
+    // Interior cubes materialise in place as their column locks in.
+    const k = clamp((t - (v.start + v.dur * 0.75)) / 0.3, 0, 1);
+    out.x = v.tx;
+    out.y = v.ty;
+    out.z = v.tz;
+    out.scale = easeOutCubic(k);
+    out.glow = k > 0 && k < 1 ? 0.4 : 0;
+    return out;
+  }
   if (t < v.start) {
     out.scale = 0;
     out.x = v.tx + v.ox;
     out.y = v.ty + v.oy;
     out.z = v.tz + v.oz;
-    out.rx = out.ry = out.rz = 0;
     out.glow = 0;
     return out;
   }
@@ -171,8 +193,9 @@ export const voxelPose = (v: Voxel, t: number, out: VoxelPose): VoxelPose => {
   out.rx = v.spinX * inv;
   out.ry = v.spinY * inv;
   out.rz = v.spinZ * inv;
-  out.scale = clamp(raw / 0.12, 0, 1) * (0.92 + 0.08 * e);
-  // Brief flash as the cube locks into place.
-  out.glow = raw >= 1 ? Math.max(0, 1 - (t - v.start - v.dur) / 0.35) : e * 0.6;
+  // Appear quickly, large while tumbling, shrinking onto the lattice.
+  const appear = clamp(raw / 0.1, 0, 1);
+  out.scale = appear * (1 + (v.flightScale - 1) * inv * inv);
+  out.glow = raw >= 1 ? Math.max(0, 1 - (t - v.start - v.dur) / 0.35) : e * 0.5;
   return out;
 };

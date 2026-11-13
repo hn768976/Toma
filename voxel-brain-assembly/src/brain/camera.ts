@@ -29,18 +29,20 @@ export const cameraAt = (
     // Gentle "handheld" float of a few pixels, measured from the reference.
     const fx = 0.05 * Math.sin(t * 0.83 + 0.4) + 0.025 * Math.sin(t * 2.07 + 1.3);
     const fy = 0.035 * Math.sin(t * 1.17 + 2.1) + 0.015 * Math.sin(t * 2.6);
-    const position = new THREE.Vector3(fx, 2.43 - 0.04 * p + fy, 13.7 - 0.55 * p);
-    const target = new THREE.Vector3(-1.25 + fx * 0.4, 1.64 + fy * 0.4, 0);
-    return { position, target, fov: 40, focus: position.distanceTo(new THREE.Vector3(0, 1.8, 0)) };
+    // Framing solved from the reference: horizon ~40% down, pedestal centre at
+    // 57% across and its base at 67% down, 52-degree lens, gentle push-in.
+    const position = new THREE.Vector3(-1.12 + fx, 2.35 - 0.03 * p + fy, 10.1 - 0.4 * p);
+    const target = new THREE.Vector3(-1.12 + fx * 0.4, 1.39 + fy * 0.4, 0);
+    return { position, target, fov: 52, focus: position.distanceTo(new THREE.Vector3(0, 1.4, 0.5)) };
   }
-  const center = new THREE.Vector3(0, 2.15, 0);
+  const center = new THREE.Vector3(0.1, 1.9, 0);
   const azimuth = (-44 + 76 * p) * deg; // 0 = straight on, + = from the right
   const elevation = (22 - 11 * p) * deg;
-  const radius = 13.2 - 1.4 * p;
+  const radius = 11.8 - 1.4 * p;
   const position = new THREE.Vector3(
     center.x + Math.sin(azimuth) * Math.cos(elevation) * radius,
     center.y + Math.sin(elevation) * radius,
     center.z + Math.cos(azimuth) * Math.cos(elevation) * radius,
   );
-  return { position, target: center.clone(), fov: 32, focus: radius };
+  return { position, target: center.clone(), fov: 40, focus: radius };
 };
