@@ -1,3 +1,5 @@
 node_modules/
 out/
 dist/
+# render outputs in progress; final deliverables are committed when complete
+deliverables/*.partial
