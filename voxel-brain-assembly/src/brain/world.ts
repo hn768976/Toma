@@ -394,15 +394,18 @@ export class BrainWorld {
     poolMat.map = poolTex;
     poolMat.color.set("#ffffff");
     this.disposables.push(poolTex);
-    for (const [x0, x1, z0, z1] of POOLS) {
-      const w = x1 - x0 + TILE * 2;
-      const dpt = z1 - z0 + TILE * 2;
+    POOLS.forEach(([x0, x1, z0, z1], k) => {
+      // Slightly larger than the pool so no gap shows under the tile bevels,
+      // and each pool at its own depth: overlapping coplanar water planes
+      // z-fight and flicker from frame to frame.
+      const w = x1 - x0 + TILE;
+      const dpt = z1 - z0 + TILE;
       const p = new THREE.Mesh(new THREE.PlaneGeometry(w, dpt), poolMat);
       p.rotation.x = -Math.PI / 2;
-      p.position.set((x0 + x1) / 2, POOL_DEPTH, (z0 + z1) / 2);
+      p.position.set((x0 + x1) / 2, POOL_DEPTH - k * 0.02, (z0 + z1) / 2);
       p.receiveShadow = true;
       this.scene.add(p);
-    }
+    });
     this.disposables.push(mat, poolMat);
   }
 
