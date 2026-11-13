@@ -36,8 +36,8 @@ const DIRS: [number, number][] = [
 /** The glowing traces fanning out of the four sides of the socket. */
 export const buildMainTraces = (rng: Rng): Trace[] => {
   const traces: Trace[] = [];
-  const N = 18;
-  const pitch = 0.118;
+  const N = 14;
+  const pitch = 0.15;
   const kmax = (N - 1) / 2;
   for (let s = 0; s < 4; s++) {
     const [ox, oz] = DIRS[s];
@@ -87,7 +87,7 @@ export const buildMainTraces = (rng: Rng): Trace[] => {
         // clamp the last point to the board
         const last = pts[pts.length - 1];
         const inside = Math.abs(last[0]) < BOARD_HALF - 1 && Math.abs(last[1]) < BOARD_HALF - 1;
-        traces.push({ pts, width: 0.03, kind: 1, seed: rng(), startDist: 0, via: inside });
+        traces.push({ pts, width: 0.017 + 0.012 * rng(), kind: 1, seed: rng(), startDist: 0, via: inside });
       }
     }
   }
@@ -302,7 +302,7 @@ export const buildComponents = (
     }
     // keep the lens corridor clear
     for (const [cx, cy, cz] of camSamples) {
-      if (b.sy + (b.y ?? 0) > cy - 0.42 && Math.abs(b.x - cx) < hx + 0.75 && Math.abs(b.z - cz) < hz + 0.75)
+      if (b.sy + (b.y ?? 0) > cy - 0.3 && Math.abs(b.x - cx) < hx + 0.5 + hx && Math.abs(b.z - cz) < hz + 0.5 + hz)
         return false;
     }
     const x0 = Math.floor((b.x - hx) / oc);
@@ -416,11 +416,11 @@ export const buildComponents = (
     }
   }
   // tall parts (capacitors, inductors, headers)
-  for (let n = 0; n < 800; n++) {
+  for (let n = 0; n < 1300; n++) {
     const [x, z] = pos(5.2);
     const s = range(rng, 0.28, 0.75);
     tryPlace(
-      { x, z, sx: s, sy: range(rng, 0.3, 0.95), sz: s * range(rng, 0.7, 1.3), rot: rot90(), tone: rng() < 0.6 ? 0 : 1 },
+      { x, z, sx: s * 1.3, sy: range(rng, 0.3, 1.1), sz: s * range(rng, 0.9, 1.6), rot: rot90(), tone: rng() < 0.6 ? 0 : 1 },
       0.08,
     );
   }

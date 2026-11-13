@@ -57,8 +57,8 @@ export class Engine {
   private lidFrom: number;
 
   constructor(canvas: HTMLCanvasElement, private opts: EngineOptions) {
-    this.tLand = opts.variant === "cpu" ? 2.85 : 1.85;
-    this.lidFrom = opts.variant === "cpu" ? 1.25 : 0.45;
+    this.tLand = opts.variant === "cpu" ? 2.85 : 1.55;
+    this.lidFrom = opts.variant === "cpu" ? 1.25 : 0.15;
     this.renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: false,
@@ -212,7 +212,7 @@ export class Engine {
       new THREE.ExtrudeGeometry(frameShape, { depth: 0.12, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 2, curveSegments: 10 }),
     );
     frameGeo.rotateX(-Math.PI / 2);
-    const frame = new THREE.Mesh(frameGeo, this.holo("frame", { ...p, holo: p.chipGlow }, { uBody: 0.34, uRimI: 0.8, uAlpha: 0.4, uRimPow: 1.8 }));
+    const frame = new THREE.Mesh(frameGeo, this.holo("frame", { ...p, holo: p.chipGlow, holoRim: p.chipGlow }, { uBody: 0.16, uRimI: 1.7, uAlpha: 0.3, uRimPow: 1.5 }));
     frame.position.y = 0.03;
     frame.renderOrder = 3;
     scene.add(frame);
@@ -227,7 +227,7 @@ export class Engine {
     const dots: Box[] = [];
     for (let s = 0; s < 4; s++) {
       for (let i = 0; i < 20; i++) {
-        const u = (i - 9.5) * 0.118;
+        const u = (i - 9.5) * 0.11;
         const a = (s * Math.PI) / 2;
         const lx = 1.26;
         dots.push({ x: Math.cos(a) * lx - Math.sin(a) * u, z: Math.sin(a) * lx + Math.cos(a) * u, sx: 0.05, sy: 0.015, sz: 0.03, rot: a, tone: 4, y: 0.178 });
@@ -256,7 +256,7 @@ export class Engine {
       "beam",
       S.BEAM_VERT,
       S.BEAM_FRAG,
-      { uColor: col(p.holoRim), uBeam: 1, uEdge: 1, uTime: 0, uBottom: 0.3 },
+      { uColor: col(p.holo), uBeam: 1, uEdge: 1, uTime: 0, uBottom: 0.3 },
       { transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide },
     );
     for (let s = 0; s < 4; s++) {
@@ -345,7 +345,7 @@ export class Engine {
     ks.lineTo(0.075, -0.17);
     ks.closePath();
     const keyGeo = this.track(new THREE.ShapeGeometry(ks, 20));
-    const keyMat = this.track(new THREE.MeshBasicMaterial({ color: col(p.holoRim, 1.7), transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+    const keyMat = this.track(new THREE.MeshBasicMaterial({ color: col(p.holoRim, 1.15), transparent: true, side: THREE.DoubleSide, depthWrite: false }));
     this.u.key = { mat: { value: keyMat } };
     for (const z of [0.19, -0.19]) {
       const k = new THREE.Mesh(keyGeo, keyMat);
@@ -379,34 +379,39 @@ export class Engine {
     // ---- timeline ----
     const since = t - tLand;
     const landed = since >= 0;
-    const flash = landed ? Math.exp(-since * 3.0) : 0;
+    // `on` eases everything in over a few frames so the landing never pops
+    const on = smooth(-0.06, 0.24, since);
+    const flash = on * Math.exp(-Math.max(since, 0) * 2.6);
     const drop = clamp((t - this.lidFrom) / (tLand - this.lidFrom));
-    const glow = landed ? 1 + 1.6 * Math.exp(-since * 2.4) + 0.05 * Math.sin(t * 2.6) : 0.05 + 0.12 * drop * drop;
-    const front = landed ? 0.4 + since * 9 + since * since * 3 : -3;
+    // falls fast, then eases into the socket
+    const fall = 1 - Math.pow(1 - drop, 2.2) * (1 + 1.2 * drop);
+    const glow = lerp(0.05 + 0.12 * drop * drop, 1 + 1.6 * Math.exp(-Math.max(since, 0) * 2.2) + 0.05 * Math.sin(t * 2.6), on);
+    const s0 = Math.max(since, 0);
+    const front = landed ? 0.2 + s0 * 4.2 + s0 * s0 * 2.6 : -3;
 
     // lid
-    const lidY = LID_REST + (isLock ? 7 : 9) * (1 - drop * drop) + (landed ? 0 : 0.0);
+    const lidY = LID_REST + (isLock ? 7 : 9) * (1 - clamp(fall));
     this.lid.position.y = lidY;
-    this.u.lid.uI.value = landed ? 1.15 + 1.3 * flash : 1.25 + 0.3 * drop;
-    this.u.lid.uAlpha.value = landed ? 1 : 0.68 + 0.2 * drop;
+    this.u.lid.uI.value = lerp(0.9 + 0.2 * drop, 1.05 + 1.5 * flash, on);
+    this.u.lid.uAlpha.value = lerp(0.6 + 0.2 * drop, 1, on);
     this.lid.visible = t >= this.lidFrom - 0.01 || true;
 
     this.u.board.uGlow.value = glow * 0.55;
     this.chipLight.intensity = glow * 26;
-    (this.u.base.emissive.value as THREE.MeshStandardMaterial).emissiveIntensity = landed ? 0.5 : 0.05;
-    (this.u.dots.mat.value as THREE.MeshBasicMaterial).color.copy(col(p.chipGlow, landed ? 1.1 + 2 * flash : 0.3));
-    this.u.frame.uIntensity.value = landed ? 1.15 + 0.7 * flash : 0.6;
-    this.u.frame.uAlpha.value = landed ? 0.5 : 0.35;
+    (this.u.base.emissive.value as THREE.MeshStandardMaterial).emissiveIntensity = lerp(0.05, 0.35, on);
+    (this.u.dots.mat.value as THREE.MeshBasicMaterial).color.copy(col(p.chipCore, lerp(0.3, 1.3 + 2 * flash, on)));
+    this.u.frame.uIntensity.value = lerp(0.7, 1.25 + 1.0 * flash, on);
+    this.u.frame.uAlpha.value = lerp(0.22, 0.3, on);
 
     this.u.trace.uFront.value = front;
-    this.u.trace.uLead.value = landed ? Math.exp(-since * 0.9) : 0;
+    this.u.trace.uLead.value = on * Math.exp(-s0 * 0.8);
     this.u.trace.uTime.value = t;
     this.u.trace.uGlow.value = 1 + 1.3 * flash;
 
     // beam: full shaft before the drop, thin dashed guides afterwards
     const beamAfter = isLock ? lerp(1, 0.0, smooth(0, 4.5, since)) : lerp(1, 0, smooth(0.2, 3.2, since));
     const edgeAfter = isLock ? lerp(1, 0.0, smooth(3.6, 6.2, since)) : lerp(1, 0, smooth(0.6, 2.8, since));
-    this.u.beam.uBeam.value = landed ? beamAfter * 0.8 : 1;
+    this.u.beam.uBeam.value = (landed ? beamAfter * 0.8 : 1) * 0.5;
     this.u.beam.uEdge.value = landed ? edgeAfter : 1;
     this.u.beam.uTime.value = t;
     this.u.beam.uBottom.value = landed ? 0.3 : Math.min(lidY, 0.3);
@@ -415,22 +420,22 @@ export class Engine {
     // padlock
     let lockPos: THREE.Vector3 | null = null;
     if (this.lock) {
-      const t0 = tLand + 0.1;
-      const a = clamp((t - t0) / 3.3);
+      const t0 = tLand + 0.25;
+      const a = clamp((t - t0) / 3.9);
       const e = easeOutCubic(a);
       const rest = 1.62;
       const settle = smooth(0.85, 1, a);
       this.lock.visible = t >= t0;
       this.lock.position.set(0, lerp(6.2, rest, e) + 0.04 * Math.sin((t - t0) * 1.7) * settle, 0);
       const yaw = ((opts.lockYaw ?? 0) * Math.PI) / 180;
-      this.lock.rotation.set(0, yaw + (1 - easeInOut(clamp((t - t0) / 3.7))) * Math.PI * 4.5, 0.32 * (1 - easeInOut(clamp((t - t0) / 3.2))));
-      this.lock.scale.setScalar(1.4 * lerp(0.5, 1, easeOutCubic(clamp((t - t0) / 2.4))));
-      const fill = smooth(0.25, 2.4, t - t0);
+      this.lock.rotation.set(0, yaw + (1 - easeInOut(clamp((t - t0) / 4.2))) * Math.PI * 4.5, 0.32 * (1 - easeInOut(clamp((t - t0) / 3.8))));
+      this.lock.scale.setScalar(1.4 * lerp(0.36, 1, easeInOut(clamp((t - t0 - 0.4) / 4.4))));
+      const fill = smooth(0.25, 2.8, t - t0);
       this.u.lock.uFill.value = fill >= 1 ? 100 : lerp(-0.6, 1.35, fill);
       this.u.lock.uTime.value = t;
       this.u.lock.uIntensity.value = 0.95 + 0.05 * Math.sin(t * 2.1);
       const km = this.u.key.mat.value as THREE.MeshBasicMaterial;
-      km.opacity = smooth(1.8, 2.6, t - t0);
+      km.opacity = smooth(2.2, 3.0, t - t0);
       this.lock.children.forEach((c) => {
         if (c.userData.inner) ((c as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = km.opacity * 0.9;
       });
@@ -475,10 +480,10 @@ export class Engine {
         far: FAR,
         focus,
         aperture: cs.aperture,
-        bloom: 1 + 0.6 * flash,
-        zoom: (isLock ? 0.1 : 0.2) * Math.exp(-Math.max(since, 0) * 4.2) * (landed ? 1 : 0) + (landed ? 0 : 0.06 * smooth(tLand - 0.35, tLand, t)),
+        bloom: 1 + 0.7 * flash,
+        zoom: (isLock ? 0.08 : 0.2) * on * Math.exp(-s0 * 3.6) + 0.05 * smooth(tLand - 0.4, tLand, t) * (1 - on),
         center: [clamp(c.x * 0.5 + 0.5, 0.1, 0.9), clamp(c.y * 0.5 + 0.5, 0.1, 0.9)],
-        exposure: 0.9 + 0.2 * flash,
+        exposure: lerp(1.45, isLock ? 0.8 : 0.9, smooth(tLand - 1.2, tLand + 0.6, t)) + 0.2 * flash,
         tint: p.tint,
         saturation: p.saturation,
         seed: (frame * 7.31) % 251,

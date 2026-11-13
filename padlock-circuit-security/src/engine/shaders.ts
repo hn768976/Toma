@@ -61,7 +61,7 @@ void main(){
   col += (alb * 3.0 + uChipGlow * 0.04) * uChipGlow * uGlow * (1.3 / (1.0 + r2 * 0.2));
   vec3 N = normalize(vec3((h21(padId) - 0.5) * 0.3, 1.0, (h21(padId + 2.0) - 0.5) * 0.3));
   float graze = pow(1.0 - max(V.y, 0.0), 5.0);
-  col += uSheen * graze * (0.14 + 0.5 * detail);
+  col += uSheen * graze * (0.26 + 0.6 * detail);
   vec3 L = normalize(vec3(-0.25, 0.42, -0.85));
   float spec = pow(max(dot(reflect(-V, N), L), 0.0), 18.0);
   col += uSheen * spec * (0.25 + 1.4 * detail);
@@ -109,13 +109,14 @@ void main(){
     a = clamp((1.0 - abs(vUv.x)) / fw, 0.0, 1.0);
   }
   float reveal = smoothstep(uFront, uFront - 1.6, d);
-  float lead = exp(-abs(d - uFront) * 0.9) * uLead;
+  float lead = exp(-abs(d - uFront) * 2.4) * uLead;
   float ph = d * 0.085 - uTime * (0.32 + 0.3 * seed) + seed * 7.0;
   float pulse = pow(max(0.0, 1.0 - abs(fract(ph) - 0.5) * 2.0), 7.0);
   float near = exp(-d * 0.075);
   vec3 col;
   if (kind > 0.5) {
-    vec3 lit = mix(uFar, uNear, clamp(near * 1.15 + pulse * 0.6, 0.0, 1.0)) * (0.32 + 1.25 * near + 1.5 * pulse) * uGlow;
+    vec3 lit = mix(uFar, uNear, clamp(near * 1.15 + pulse * 0.6, 0.0, 1.0)) * (0.5 + 1.5 * near + 1.8 * pulse) * (0.55 + 0.9 * seed) * uGlow;
+    lit = mix(lit, vec3(dot(lit, vec3(0.5))) * 1.6, 0.35 * near * (1.0 - abs(vUv.x)));
     vec3 idle = uIdle * (0.28 + 0.9 * pulse * step(0.6, seed));
     col = mix(idle, lit, reveal) + uNear * lead * 2.5;
   } else {
@@ -151,7 +152,8 @@ void main(){
   float surf = exp(-abs(vObj.y - uFill) * 30.0) * step(-50.0, uFill) * step(uFill, 50.0);
   float k = mix(uGhost, 1.0, filled);
   vec3 col = uColor * uBody * (0.85 + 0.3 * vObj.y) + uRim * uRimI * fres;
-  float sp = step(0.993, h21(floor(vObj.xy * 60.0) + floor(uTime * 3.0 + h21(floor(vObj.xy * 60.0)) * 9.0)));
+  float sp = step(0.996, h21(floor(vObj.xy * 110.0) + floor(uTime * 3.0 + h21(floor(vObj.xy * 110.0)) * 9.0)));
+  sp *= smoothstep(0.5, 0.2, length(fract(vObj.xy * 110.0) - 0.5));
   col += uRim * sp * uSparkle * 2.5;
   col += uRim * surf * 2.0;
   float alpha = clamp((uAlpha + fres * 0.6 + sp * uSparkle) * k + surf, 0.0, 1.0);
@@ -178,7 +180,7 @@ void main(){
   lines += blk * ring * 0.35;
   lines += (ln(q.x, 0.01, fw) + ln(q.y, 0.01, fw)) * step(0.62, m) * step(m, 0.84) * 0.5;
   float border = smoothstep(0.84, 0.9, m);
-  vec3 topCol = mix(uGlowCol * 0.75, uCore, 0.28 + 0.6 * clamp(lines, 0.0, 1.0)) * (1.0 - 0.45 * border);
+  vec3 topCol = mix(uGlowCol * 0.8, uCore, 0.1 + 0.8 * clamp(lines, 0.0, 1.0)) * (1.0 - 0.55 * border);
   float ndv = abs(dot(normalize(vN), normalize(vV)));
   vec3 sideCol = uGlowCol * (0.25 + 0.9 * pow(1.0 - ndv, 2.0));
   vec3 col = mix(sideCol, topCol, top) * uI;
