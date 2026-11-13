@@ -29,7 +29,24 @@ export type MapParticles = {
   count: number;
 };
 
-export const buildWorldParticles = (count: number, seed = 2024, depthJitter = 0.02): MapParticles => {
+/**
+ * Optional 3x3 homography (row-major) mapping Mercator (u, v) to map-plane
+ * units (u = (lon+180)/360, v = 0.5 - ln(tan(pi/4 + lat/2)) / 2pi). Used by Version 1 to reproduce the reference's
+ * perspective-tilted map exactly (fitted to landmark positions measured on the
+ * reference: Alaska, Cape Horn, Greenland N/S, Cape Agulhas, Australia, NZ).
+ */
+export type Homography = [number, number, number, number, number, number, number, number, number];
+
+export const REFERENCE_MAP_HOMOGRAPHY: Homography = [
+  8.474522, 0.934195, -5.94696, -1.738304, -6.965612, 3.915727, -0.154765, -0.294681, 1.0,
+];
+
+export const buildWorldParticles = (
+  count: number,
+  seed = 2024,
+  depthJitter = 0.02,
+  homography?: Homography,
+): MapParticles => {
   const W = 4096;
   const H = 2048;
   const canvas = document.createElement("canvas");
@@ -67,13 +84,24 @@ export const buildWorldParticles = (count: number, seed = 2024, depthJitter = 0.
     const px = Math.min(W - 1, Math.floor(u * W));
     const py = Math.min(H - 1, Math.floor(v * H));
     if (mask[(py * W + px) * 4] < 128) continue;
-    const x = MAP_LEFT + u * (MAP_RIGHT - MAP_LEFT);
-    const y = MAP_TOP - ((v - vTop) / (vBot - vTop)) * (MAP_TOP - MAP_BOTTOM);
+    let x = MAP_LEFT + u * (MAP_RIGHT - MAP_LEFT);
+    let y = MAP_TOP - ((v - vTop) / (vBot - vTop)) * (MAP_TOP - MAP_BOTTOM);
+    let persp = 1;
+    if (homography) {
+      const H = homography;
+      const lat = ((90 - v * 180) * Math.PI) / 180;
+      const vm = 0.5 - Math.log(Math.tan(Math.PI / 4 + lat / 2)) / (2 * Math.PI);
+      const w = H[6] * u + H[7] * vm + H[8];
+      x = (H[0] * u + H[1] * vm + H[2]) / w;
+      y = (H[3] * u + H[4] * vm + H[5]) / w;
+      // dots grow on the nearer (right) side, like true perspective
+      persp = Math.min(1.6, Math.max(0.6, Math.pow(w / 0.8, -1.5)));
+    }
     positions[n * 3] = x;
     positions[n * 3 + 1] = y;
     positions[n * 3 + 2] = (rnd() - 0.5) * 2 * depthJitter;
     const r = rnd();
-    sizes[n] = 0.55 + Math.pow(rnd(), 2.2) * 1.4;
+    sizes[n] = (0.55 + Math.pow(rnd(), 2.2) * 1.4) * persp;
     brightness[n] = r > 0.98 ? 1.3 + rnd() * 1.0 : 0.18 + Math.pow(rnd(), 1.4) * 0.72;
     phases[n] = rnd() * Math.PI * 2;
     n++;

@@ -67,7 +67,7 @@ export const screenTexture = (seed: number, bright: number) => {
   const r = mulberry32(seed);
   ctx.fillStyle = `rgba(150,180,220,${0.09 * bright})`;
   ctx.fillRect(0, 0, 512, 512);
-  ctx.strokeStyle = `rgba(190,215,255,${0.35 * bright})`;
+  ctx.strokeStyle = `rgba(190,215,255,${0.12 * bright})`;
   ctx.lineWidth = 4;
   ctx.strokeRect(2, 2, 508, 508);
   const cols = 6 + Math.floor(r() * 10);
@@ -82,6 +82,24 @@ export const screenTexture = (seed: number, bright: number) => {
       ctx.fillStyle = `rgba(215,232,255,${a})`;
       ctx.fillRect(i * cw + cw * 0.15, j * ch + ch * 0.3, cw * (0.3 + r() * 0.55), ch * 0.35);
     }
+  }
+  return canvas;
+};
+
+/** Glossy floor: soft vertical reflections of light columns. */
+export const reflectionTexture = (seed: number) => {
+  const { canvas, ctx } = makeCanvas(1024, 512);
+  const r = mulberry32(seed);
+  ctx.clearRect(0, 0, 1024, 512);
+  for (let i = 0; i < 40; i++) {
+    const x = 200 + (r() + r() - 1) * 420 + 312;
+    const w = 6 + r() * 30;
+    const a = 0.08 + Math.pow(r(), 2) * 0.5;
+    const g = ctx.createLinearGradient(0, 0, 0, 512);
+    g.addColorStop(0, `rgba(220,235,245,${a})`);
+    g.addColorStop(1, "rgba(220,235,245,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(x, 0, w, 300 + r() * 212);
   }
   return canvas;
 };
