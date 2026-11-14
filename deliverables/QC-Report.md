@@ -27,9 +27,28 @@ Two motion-graphics compositions built with the Remotion CLI. Each composition h
 
 ## Technical checks
 
-<!-- BRAIN-TECH-TABLE -->
+| Check | Tunnel V1 | Tunnel V2 | Brain V1 | Brain V2 |
+|---|---|---|---|---|
+| Renders successfully | ✅ | ✅ | ✅ | ✅ |
+| Codec / profile | H.264 High | H.264 High | H.264 High | H.264 High |
+| Resolution | 1920×1080 | 1920×1080 | 1920×1080 | 1920×1080 |
+| Frame rate (r / avg) | 30/1 / 30/1 | 30/1 / 30/1 | 30/1 / 30/1 | 30/1 / 30/1 |
+| Decoded frames / duration | 300 / 10.000 s | 300 / 10.000 s | 301 / 10.033 s | 301 / 10.033 s |
+| Reference frames / duration | 300 / 10.000 s | (same reference) | 301 / 10.033 s | (same reference) |
+| Exact duration match | ✅ | ✅ | ✅ | ✅ |
+| Pixel format / colour | yuv420p, tv range, BT.709 primaries, transfer and matrix | same | same | same |
+| Audio streams | 0 (reference has none) | 0 | 0 | 0 |
+| Full decode errors | none | none | none | none |
+| Black or blank frames | 0 | 0 | 0 | 0 |
+| Global flicker frames | 0 | 0 | 0 | 0 |
+| Largest frame-to-frame luma jump | 0.45 | 0.43 | 0.51 | 0.46 |
+| Frozen pairs | 0 | 0 | 0 | 4 (orbit ease-in and ease-out) |
+| Localised flicker: alternations per block (worst block) | n/a: the whole frame moves every frame | n/a | 0 before the swarm, 4 after assembly | 0 before the swarm, 3 after assembly |
+| File size | 51.9 MB | 53.5 MB | 7.4 MB | 14.2 MB |
 
-The "frozen pairs" column counts consecutive frames that are near-identical. These are expected in two places: where V2's orbit eases in and out at its ends, and in the static stretch at the start of the brain V1 shot.
+All of the brain's higher localised-flicker counts (24–26) fall inside the swarm window, frames 40–180. They come from cubes flying through, confirmed by frame range, not from flicker in static areas.
+
+The "frozen pairs" column counts consecutive frames that are near-identical. The only non-zero count is brain V2, where the orbit eases in and out at its ends; this is expected.
 
 **Duration.** The tunnel reference is 300 frames (10.000 s). The brain reference is 301 frames (10.033 s); its frame 0 is a black stock-agency slate. Every deliverable has exactly the same frame count and duration as its reference. The slate is not reproduced, because it is not part of the shot and would be an unintended black frame.
 
@@ -75,7 +94,24 @@ A separate reviewer agent compared each deliverable with its reference, frame by
 
 **Voxel Brain Assembly**
 
-<!-- BRAIN-REVIEW -->
+| Review round | V1 score | What it found and what changed |
+|---|---|---|
+| 1 | 4.5/10 | The camera was too low and flat, the brain looked like a mushroom on a stalk, the cubes looked like opaque neon, and the swarm was a dense column. The floor tiles, fog, pools and tubes were all wrong, and the cast shadows were blotchy. In response the camera was re-solved from measurements of the reference, and the scene, choreography and materials were rebuilt. |
+| 2 | 7/10 | The cubes still looked opaque. There was a grey band at the horizon, the brain's underside had been overcorrected, the pools looked flat, the pedestal was short, the floor was too regular, and the sky showed a vignette ring. All of these were fixed. A pool z-fighting flicker was also found and fixed. |
+| 3 | 7.5/10 | Flicker fix confirmed. Silhouette overlap with the reference is 0.79, the horizon band is gone, and tube colour and timing match. One camera-tilt change had moved the horizon about 50 px too low; this was corrected. The slot was moved to the base of the pedestal, the pools were darkened, cube depth and variation were added, and the left edge of the brain now locks in later. |
+
+- **Measured against the reference after the final round:**
+  - Sky (244,255,255) vs (242,252,253).
+  - Brain darkest 5% luma 118 vs 121.
+  - Brain mean colour about (126,191,212) vs (117,203,218).
+  - First cubes at frame 44 vs 45.
+  - Tube loop footprint within a few pixels.
+- **Remaining, minor:**
+  - The cubes read as glass but are less see-through than the reference's ray-traced glass. True transmission is very expensive in software WebGL at 4K.
+  - During 3–4 s the swarm arrives more as a stream than as cubes gathering around the brain.
+- **These final adjustments were not re-scored.** They come from round 3's own measurements and were verified by side-by-side frames and measurement.
+
+**Voxel Brain Assembly, Version 2.** Approved. It is a clearly distinct elevated crane-and-orbit, starting high front-left and ending low front-right, with smooth eased motion. Concept and timing are the same as V1, it shares V1's fixes, and no defects remain.
 
 ## Fixes made during QC
 - **Colour encoding.** The first renders were full-range BT.601 (`yuvj420p`). Both projects now encode BT.709 limited range (`yuv420p`), the standard for HD and UHD delivery.
