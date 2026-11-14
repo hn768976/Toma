@@ -47,10 +47,10 @@ const D_SHAFT = (() => {
  */
 export const hairRadius = (u: number) => {
   const d = (1 - u) * HAIR_LENGTH; // distance from the tip
-  const shaft = 0.058 * Math.min(d, D_SHAFT) * (0.55 + 0.45 * clamp01(d / 2.5));
+  const shaft = 0.068 * Math.min(d, D_SHAFT) * (0.55 + 0.45 * clamp01(d / 2.5));
   const below = Math.max(0, d - D_SHAFT);
   // smooth blend into the thicker root section
-  const root = 0.135 * below * (below / (below + 0.8));
+  const root = 0.175 * below * (below / (below + 0.8));
   return shaft + root + 0.004;
 };
 
@@ -73,7 +73,7 @@ export const ringU = (t: number) => {
   const dEnter = 13.6; // distance from tip when it enters the frame
   const speed = dEnter / (T.ringAtTip - T.ringEnter);
   // the ring arrives a touch late, then settles into a constant speed
-  const lag = t < 2.4 ? 0.15 * (2.4 - t) * (2.4 - t) : 0;
+  const lag = t < 2.4 ? 0.06 * (2.4 - t) * (2.4 - t) : 0;
   const d = dEnter - speed * (t - lag - T.ringEnter);
   return clamp01(1 - d / HAIR_LENGTH);
 };
@@ -84,12 +84,12 @@ export const cameraProgress = (t: number) =>
 
 const camera = new THREE.PerspectiveCamera(FOV, WIDTH / HEIGHT, 0.1, 400);
 
-const START_POS = new THREE.Vector3(6.0, -5.4, 8.6);
-const START_TARGET = new THREE.Vector3(6.35, -2.5, 0);
+const START_POS = new THREE.Vector3(6.0, -5.3, 10.0);
+const START_TARGET = new THREE.Vector3(6.3, -2.8, 0);
 const END_DIST = 5 / Math.tan(THREE.MathUtils.degToRad(FOV / 2));
 const END_POS = new THREE.Vector3(8.89, 5, END_DIST);
 const END_TARGET = new THREE.Vector3(8.89, 5, 0);
-const MID_POS = new THREE.Vector3(6.2, -1.0, 15.5);
+const MID_POS = new THREE.Vector3(6.2, -1.0, 12.0);
 
 const bez = (a: number, b: number, c: number, p: number) =>
   (1 - p) * (1 - p) * a + 2 * (1 - p) * p * b + p * p * c;

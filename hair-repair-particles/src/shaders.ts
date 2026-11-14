@@ -14,7 +14,7 @@ float fbm(vec3 p){ return 0.55 * vnoise(p) + 0.3 * vnoise(p * 2.1 + 3.1) + 0.15 
 // Cracked, weathered cuticle: irregular 3D Voronoi plates.
 // Returns (plate lift, distance to the nearest crack, plate id).
 vec3 cuticle(vec2 uv, vec3 p){
-  vec3 q = p * 7.0;
+  vec3 q = p * 8.5;
   q += 1.1 * (vec3(vnoise(p * 4.1), vnoise(p * 4.1 + 5.1), vnoise(p * 4.1 + 9.7)) - 0.5);
   vec3 ip = floor(q); vec3 fp = fract(q);
   float f1 = 9.0; float f2 = 9.0; float id = 0.0;
@@ -86,6 +86,8 @@ void main(){
   healthy = mix(healthy, uHealthyHighlight, 0.6 * pow(d, 9.0));
   healthy *= 1.0 + 0.08 * streak;
   vec3 Hh = normalize(L + V);
+  // narrow lengthwise specular streak of a sealed cuticle
+  healthy += uHealthyHighlight * 0.55 * pow(d, 40.0);
   healthy += uHealthyHighlight * 0.45 * pow(max(dot(N, Hh), 0.0), 90.0);
   float ndv = max(dot(N, V), 0.0);
   healthy += uHealthyHighlight * 0.22 * pow(1.0 - ndv, 3.0) * max(dot(N, L2) + 0.4, 0.0);
@@ -101,7 +103,7 @@ void main(){
   damaged = mix(damaged, uDamagedLight, clamp(0.3 * pow(c.x, 2.0) + 0.4 * smoothstep(0.5, 0.85, dust) * (0.4 + 0.6 * grain), 0.0, 1.0));
   damaged *= 0.5 + 0.5 * smoothstep(0.0, 0.1, c.y);
   float dd = clamp(dot(Nd, L) * 0.75 + 0.25, 0.0, 1.0);
-  damaged *= 0.1 + 1.05 * dd;
+  damaged *= 0.1 + 0.95 * dd;
   damaged *= 0.85 + 0.3 * grain;
   damaged *= 0.55 + 0.9 * fbm(vObj * 26.0);
   damaged *= 0.8 + 0.4 * vnoise(vObj * 70.0);

@@ -17,16 +17,22 @@ const U = HEIGHT / 432; // reference pixels -> composition pixels
 
 /**
  * Right-hand callouts: [text, layer, position inside layer 0..1, stagger,
- * optional [x, z] anchor on the model]. Without an anchor the leader ends on
+ * optional [x, z, k] anchor on the model, k being its height inside the layer]. Without an anchor the leader ends on
  * the right-hand silhouette edge.
  */
-const CALLOUTS: [string, LayerId, number, number, [number, number]?][] = [
-  ["Stratum Corneum", "corneum", 0.5, 0],
-  ["Squamous Cells", "squamous", 0.5, 1],
+const CALLOUTS: [
+  string,
+  LayerId,
+  number,
+  number,
+  [number, number, number]?,
+][] = [
+  ["Stratum Corneum", "corneum", -2.6, 0],
+  ["Squamous Cells", "squamous", 0.25, 1],
   ["Basal Cells", "basal", 0.5, 2],
-  ["Hair Follicle", "dermis", 0.72, 3, [HALF, -1.2]],
-  ["Sweat Pore", "dermis", 0.3, 4, [GLANDS[2][0], HALF]],
-  ["Dermis", "dermis", 0.42, 5],
+  ["Hair Follicle", "dermis", 0.98, 3, [HALF, -1.2, 0.7]],
+  ["Sweat Pore", "dermis", 0.66, 4, [GLANDS[2][0], HALF, 0.28]],
+  ["Dermis", "dermis", 0.5, 5],
   ["Adipose Layer", "hypodermis", 0.45, 6],
 ];
 
@@ -55,7 +61,9 @@ export const Labels: React.FC<{ t: number; variant: Variant }> = ({
   let prevY = -Infinity;
   const callouts = CALLOUTS.map(([text, id, k, idx, anchor]) => {
     const edge = project(cam, HALF, yOf(id, k), -HALF);
-    const a = anchor ? project(cam, anchor[0], yOf(id, k), anchor[1]) : edge;
+    const a = anchor
+      ? project(cam, anchor[0], yOf(id, anchor[2]), anchor[1])
+      : edge;
     // label rows keep their even spacing from the silhouette edge
     const y = Math.max(edge.y, prevY + minGap);
     prevY = y;

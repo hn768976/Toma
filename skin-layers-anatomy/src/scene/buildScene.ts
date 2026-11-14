@@ -339,7 +339,7 @@ export const buildSkinScene = (): SkinScene => {
     const geo = track(new THREE.PlaneGeometry(9.5, 9.5));
     const plane = new THREE.Mesh(geo, mat);
     plane.rotation.x = -Math.PI / 2;
-    plane.position.set(0.7, -2.45, -0.4);
+    plane.position.set(-0.1, -2.3, -0.2);
     plane.renderOrder = -1;
     scene.add(plane);
   }

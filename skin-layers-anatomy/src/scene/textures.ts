@@ -116,8 +116,8 @@ export const shadowTexture = () => {
     SIZE / 2,
     SIZE / 2,
   );
-  g.addColorStop(0, "rgba(92,74,66,0.6)");
-  g.addColorStop(0.35, "rgba(100,82,74,0.36)");
+  g.addColorStop(0, "rgba(104,74,58,0.6)");
+  g.addColorStop(0.35, "rgba(112,84,68,0.36)");
   g.addColorStop(0.7, "rgba(112,94,86,0.08)");
   g.addColorStop(1, "rgba(112,94,86,0)");
   ctx.fillStyle = g;

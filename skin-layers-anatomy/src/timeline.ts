@@ -13,8 +13,8 @@ export type Variant = "reference" | "orbit";
 export const T = {
   explodeStart: 0.0,
   explodeEnd: 1.95,
-  labelsStart: 1.3,
-  labelStagger: 0.12,
+  labelsStart: 1.27,
+  labelStagger: 0.1,
   labelFade: 0.28,
   labelsOutStart: 8.35,
   labelsOutEnd: 8.9,

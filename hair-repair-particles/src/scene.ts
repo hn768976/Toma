@@ -26,7 +26,7 @@ export type HairScene = {
 };
 
 const col = (hex: string) => new THREE.Color(hex);
-const FLARE_SCALE = 1.4;
+const FLARE_SCALE = 1.25;
 
 const radialTexture = (
   size: number,
@@ -316,12 +316,12 @@ export const buildHairScene = (palette: Palette): HairScene => {
     hairMat.uniforms.uFront.value = u >= 1 ? 1.01 : u;
     const flareLevel =
       (1 -
-        0.45 *
+        0.85 *
           Math.sin(Math.PI * ramp(t, T.flareDipStart, T.flareDipEnd))) *
       palette.flareGain *
       (1 - ramp(t, T.flareOutStart, T.flareOutEnd));
     // molecules start small and tight, opening up as the camera pulls back
-    const grow = 0.8 + 0.2 * ramp(t, 1.8, 3.4);
+    const grow = 0.85 + 0.15 * ramp(t, 1.8, 3.4);
     hairMat.uniforms.uGlow.value = flareLevel;
     hairMat.uniforms.uHaze.value = palette.haze * p * p;
 
@@ -388,7 +388,7 @@ export const buildHairScene = (palette: Palette): HairScene => {
       0.9 + 0.07 * Math.sin(t * 19.0) + 0.05 * Math.sin(t * 31.0 + 1.3);
     const dist = cam.position.distanceTo(center);
     // the flare shrinks as the ring runs off the fine tip
-    const tipShrink = 1 - 0.4 * ramp(t, 6.4, 7.3);
+    const tipShrink = 1 - 0.55 * ramp(t, 5.4, 6.9);
     for (const f of flare) {
       f.sprite.scale.set(f.w * tipShrink, f.h * tipShrink, 1);
       const shimmer = f.flick
