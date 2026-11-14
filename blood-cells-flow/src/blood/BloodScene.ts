@@ -237,6 +237,8 @@ export const createBloodScene =
         uGlowCol: { value: palette.glow },
         uGlow0: { value: GLOW0 },
         uGlow1: { value: GLOW1 },
+        uNearFar: { value: new THREE.Vector2(camera.near, camera.far) },
+        uHazeDepth: { value: CELL_RANGE_FAR + 2 },
       },
     });
     const wall = new THREE.Mesh(wallGeo, wallMat);

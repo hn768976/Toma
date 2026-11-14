@@ -91,6 +91,7 @@ varying vec3 vN;
 varying vec3 vTu;
 varying vec3 vTv;
 varying vec2 vUv;
+varying float vViewZ;
 void main() {
   vUv = uv;
   vN = normal;
@@ -98,7 +99,9 @@ void main() {
   vTv = aTanV;
   vec4 wp = modelMatrix * vec4(position, 1.0);
   vWorld = wp.xyz;
-  gl_Position = projectionMatrix * viewMatrix * wp;
+  vec4 vp = viewMatrix * wp;
+  vViewZ = -vp.z;
+  gl_Position = projectionMatrix * vp;
 }
 `;
 
@@ -109,8 +112,11 @@ varying vec3 vN;
 varying vec3 vTu;
 varying vec3 vTv;
 varying vec2 vUv;
+varying float vViewZ;
 
 uniform sampler2D tTissue;
+uniform vec2 uNearFar;     // camera near / far
+uniform float uHazeDepth;  // distance the fully glowing wall is pushed back to
 uniform vec2 uTexel;       // one texel of the tissue map
 uniform vec2 uWorldPerUv;  // world length of one full u / v period
 uniform float uBump;
@@ -164,8 +170,18 @@ void main() {
   // The far end of the vessel is flooded with light.
   float g = smoothstep(uGlow0, uGlow1, d);
   vec3 glow = uGlowCol * (0.6 + 0.5 * smoothstep(0.1, 0.95, textureLod(tTissue, vUv, 1.8).r));
-  col = mix(col, glow, g * g * (3.0 - 2.0 * g));
+  float gw = g * g * (3.0 - 2.0 * g);
+  col = mix(col, glow, gw);
   gl_FragColor = vec4(col, 1.0);
+
+  // Where the wall has dissolved into the glow it is luminous haze, not a
+  // hard surface: push its depth back so cells that are behind a bend still
+  // show through the glow instead of being cut off by an edge nobody can see.
+  float push = smoothstep(0.8, 0.995, gw);
+  float zv = vViewZ * mix(1.0, max(uHazeDepth / d, 1.0), push);
+  float ndcZ = (uNearFar.y + uNearFar.x) / (uNearFar.y - uNearFar.x)
+             - (2.0 * uNearFar.y * uNearFar.x) / ((uNearFar.y - uNearFar.x) * zv);
+  gl_FragDepth = 0.5 * ndcZ + 0.5;
 }
 `;
 
