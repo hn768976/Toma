@@ -7,7 +7,7 @@ while the camera pulls back to reveal the whole strand against soft bokeh.
 | Composition    | Size      | FPS | Length           | Description                                             |
 | -------------- | --------- | --- | ---------------- | ------------------------------------------------------- |
 | `HairRepairV1` | 3840x2160 | 30  | 270 frames (9 s) | Version 1 – matches the reference (olive / amber)       |
-| `HairRepairV2` | 3840x2160 | 30  | 270 frames (9 s) | Version 2 – same animation, cool sapphire / ice palette |
+| `HairRepairV2` | 3840x2160 | 30  | 270 frames (9 s) | Version 2 – same animation, sapphire palette, jet-black strand |
 
 Both compositions are authored in 4K. The 1080p deliverables are rendered from
 the same 4K compositions with `--scale=0.5`.

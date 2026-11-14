@@ -13,10 +13,10 @@ export const FOV = 30;
  * x 0..17.78, y 0..10, so these read directly as "final frame" coordinates.
  */
 export const HAIR_POINTS: [number, number][] = [
-  [5.85, -9.5],
-  [5.98, -7],
-  [6.17, -4.5],
-  [6.45, -2.2],
+  [5.3, -9.5],
+  [5.62, -7],
+  [6.0, -4.5],
+  [6.4, -2.2],
   [6.83, 0],
   [7.5, 2],
   [8.03, 3.8],
@@ -32,9 +32,26 @@ export const hairCurve = new THREE.CatmullRomCurve3(
 export const HAIR_LENGTH = hairCurve.getLength();
 
 /** Hair radius at arc parameter u (0 = root end, 1 = tip). */
+/** Arc distance from the tip to where the strand crosses y = 0. */
+const D_SHAFT = (() => {
+  for (let i = 0; i <= 2000; i++) {
+    const u = i / 2000;
+    if (hairCurve.getPointAt(u).y >= 0) return (1 - u) * HAIR_LENGTH;
+  }
+  return HAIR_LENGTH;
+})();
+
+/**
+ * Hair radius at arc parameter u (0 = root end, 1 = tip): a fine, evenly
+ * tapering shaft that thickens noticeably towards the root.
+ */
 export const hairRadius = (u: number) => {
   const d = (1 - u) * HAIR_LENGTH; // distance from the tip
-  return 0.064 * d * (0.55 + 0.45 * clamp01(d / 2.5)) + 0.004;
+  const shaft = 0.058 * Math.min(d, D_SHAFT) * (0.55 + 0.45 * clamp01(d / 2.5));
+  const below = Math.max(0, d - D_SHAFT);
+  // smooth blend into the thicker root section
+  const root = 0.135 * below * (below / (below + 0.8));
+  return shaft + root + 0.004;
 };
 
 /** Timing (seconds), measured from the reference clip. */
@@ -56,7 +73,7 @@ export const ringU = (t: number) => {
   const dEnter = 13.6; // distance from tip when it enters the frame
   const speed = dEnter / (T.ringAtTip - T.ringEnter);
   // the ring arrives a touch late, then settles into a constant speed
-  const lag = t < 2.4 ? 0.25 * (2.4 - t) * (2.4 - t) : 0;
+  const lag = t < 2.4 ? 0.15 * (2.4 - t) * (2.4 - t) : 0;
   const d = dEnter - speed * (t - lag - T.ringEnter);
   return clamp01(1 - d / HAIR_LENGTH);
 };
@@ -67,12 +84,12 @@ export const cameraProgress = (t: number) =>
 
 const camera = new THREE.PerspectiveCamera(FOV, WIDTH / HEIGHT, 0.1, 400);
 
-const START_POS = new THREE.Vector3(6.0, -9.6, 6.6);
-const START_TARGET = new THREE.Vector3(6.6, -2.5, 0);
+const START_POS = new THREE.Vector3(6.0, -5.4, 8.6);
+const START_TARGET = new THREE.Vector3(6.35, -2.5, 0);
 const END_DIST = 5 / Math.tan(THREE.MathUtils.degToRad(FOV / 2));
 const END_POS = new THREE.Vector3(8.89, 5, END_DIST);
 const END_TARGET = new THREE.Vector3(8.89, 5, 0);
-const MID_POS = new THREE.Vector3(6.0, -1.5, 16.5);
+const MID_POS = new THREE.Vector3(6.2, -1.0, 15.5);
 
 const bez = (a: number, b: number, c: number, p: number) =>
   (1 - p) * (1 - p) * a + 2 * (1 - p) * p * b + p * p * c;

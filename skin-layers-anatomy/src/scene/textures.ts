@@ -22,17 +22,17 @@ const make = () => {
 export const squamousTexture = () => {
   const { canvas, ctx } = make();
   const rnd = makeRng(11);
-  ctx.fillStyle = "#e0566a";
+  ctx.fillStyle = "#e86a7c";
   ctx.fillRect(0, 0, SIZE, SIZE);
-  const n = 34;
+  const n = 46;
   const cell = SIZE / n;
   for (let i = -1; i <= n; i++) {
     for (let j = -1; j <= n; j++) {
       const cx = (i + 0.5 + (rnd() - 0.5) * 0.7) * cell;
       const cy = (j + 0.5 + (rnd() - 0.5) * 0.7) * cell;
       const r = cell * (0.4 + rnd() * 0.16);
-      const l = 66 + rnd() * 8;
-      ctx.fillStyle = `hsl(${352 + rnd() * 8}, 80%, ${l}%)`;
+      const l = 72 + rnd() * 7;
+      ctx.fillStyle = `hsl(${352 + rnd() * 8}, 84%, ${l}%)`;
       ctx.beginPath();
       const k = 7;
       for (let a = 0; a < k; a++) {
@@ -45,7 +45,7 @@ export const squamousTexture = () => {
       }
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = "rgba(190,40,70,0.55)";
+      ctx.fillStyle = "rgba(214,80,104,0.5)";
       ctx.beginPath();
       ctx.arc(cx, cy, cell * 0.09, 0, Math.PI * 2);
       ctx.fill();
@@ -92,8 +92,8 @@ export const mottledTexture = (seed: number, contrast: number) => {
     const light = rnd() > 0.5;
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
     const a = contrast * (0.05 + rnd() * 0.12);
-    g.addColorStop(0, light ? `rgba(255,255,255,${a})` : `rgba(170,110,80,${a})`);
-    g.addColorStop(1, light ? "rgba(255,255,255,0)" : "rgba(170,110,80,0)");
+    g.addColorStop(0, light ? `rgba(255,255,255,${a})` : `rgba(214,128,70,${a})`);
+    g.addColorStop(1, light ? "rgba(255,255,255,0)" : "rgba(214,128,70,0)");
     ctx.fillStyle = g;
     // draw wrapped copies so the texture tiles
     for (const ox of [-SIZE, 0, SIZE]) {
@@ -116,8 +116,8 @@ export const shadowTexture = () => {
     SIZE / 2,
     SIZE / 2,
   );
-  g.addColorStop(0, "rgba(96,78,70,0.46)");
-  g.addColorStop(0.35, "rgba(104,86,78,0.27)");
+  g.addColorStop(0, "rgba(92,74,66,0.6)");
+  g.addColorStop(0.35, "rgba(100,82,74,0.36)");
   g.addColorStop(0.7, "rgba(112,94,86,0.08)");
   g.addColorStop(1, "rgba(112,94,86,0)");
   ctx.fillStyle = g;

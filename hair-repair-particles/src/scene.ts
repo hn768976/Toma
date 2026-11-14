@@ -26,7 +26,7 @@ export type HairScene = {
 };
 
 const col = (hex: string) => new THREE.Color(hex);
-const FLARE_SCALE = 1.25;
+const FLARE_SCALE = 1.4;
 
 const radialTexture = (
   size: number,
@@ -145,6 +145,8 @@ export const buildHairScene = (palette: Palette): HairScene => {
         uHealthyHighlight: { value: col(palette.healthyHighlight) },
         uHealthyShadow: { value: col(palette.healthyShadow) },
         uFrontGlow: { value: col(palette.frontGlow) },
+        uHaze: { value: 0 },
+        uHazeColor: { value: col(palette.bgCenter) },
       },
     }),
   );
@@ -177,7 +179,7 @@ export const buildHairScene = (palette: Palette): HairScene => {
       y: (rnd() + rnd() - 1) * 0.75 + 0.12,
       bobF: 0.8 + rnd() * 1.6,
       bobP: rnd() * 6.28,
-      size: 0.075 + rnd() * 0.055,
+      size: 0.085 + rnd() * 0.06,
       out: rnd(),
       partner: -1,
       bondDir: new THREE.Vector3(),
@@ -245,7 +247,15 @@ export const buildHairScene = (palette: Palette): HairScene => {
       ctx.fillRect(0, 0, s, s);
     }),
   );
-  const flare: { sprite: THREE.Sprite; mat: THREE.SpriteMaterial; base: number; dx: number; flick: number }[] = [];
+  const flare: {
+    sprite: THREE.Sprite;
+    mat: THREE.SpriteMaterial;
+    base: number;
+    dx: number;
+    flick: number;
+    w: number;
+    h: number;
+  }[] = [];
   const addFlare = (
     color: string,
     w: number,
@@ -271,7 +281,15 @@ export const buildHairScene = (palette: Palette): HairScene => {
     sprite.scale.set(w * k * FLARE_SCALE, h * k * FLARE_SCALE, 1);
     sprite.renderOrder = 20;
     scene.add(sprite);
-    flare.push({ sprite, mat, base, dx: dx * k * FLARE_SCALE, flick });
+    flare.push({
+      sprite,
+      mat,
+      base,
+      dx: dx * k * FLARE_SCALE,
+      flick,
+      w: w * k * FLARE_SCALE,
+      h: h * k * FLARE_SCALE,
+    });
   };
   addFlare(palette.flareTint, 0.5, 0.42, 0.34); // soft halo
   addFlare(palette.flareTint, 0.62, 0.05, 0.85); // long anamorphic streak
@@ -303,8 +321,9 @@ export const buildHairScene = (palette: Palette): HairScene => {
       palette.flareGain *
       (1 - ramp(t, T.flareOutStart, T.flareOutEnd));
     // molecules start small and tight, opening up as the camera pulls back
-    const grow = 0.55 + 0.45 * ramp(t, 1.8, 3.4);
+    const grow = 0.8 + 0.2 * ramp(t, 1.8, 3.4);
     hairMat.uniforms.uGlow.value = flareLevel;
+    hairMat.uniforms.uHaze.value = palette.haze * p * p;
 
     // background + bokeh parallax
     bgMat.uniforms.uShift.value.set(-0.05 * p, -0.12 * p + 0.004 * t);
@@ -368,7 +387,10 @@ export const buildHairScene = (palette: Palette): HairScene => {
     const flick =
       0.9 + 0.07 * Math.sin(t * 19.0) + 0.05 * Math.sin(t * 31.0 + 1.3);
     const dist = cam.position.distanceTo(center);
+    // the flare shrinks as the ring runs off the fine tip
+    const tipShrink = 1 - 0.4 * ramp(t, 6.4, 7.3);
     for (const f of flare) {
+      f.sprite.scale.set(f.w * tipShrink, f.h * tipShrink, 1);
       const shimmer = f.flick
         ? 0.55 + 0.45 * Math.sin(t * (5 + f.flick * 2.3) + f.flick * 2.1)
         : 1;

@@ -17,28 +17,34 @@ export type Palette = {
   flareTint: string;
   /** overall flare strength (lower on light strands to avoid clipping) */
   flareGain: number;
+  /** how far the strand fades into the background at the wide end shot */
+  haze: number;
 };
 
 /** Version 1 – the warm olive / amber look of the reference. */
 const reference: Palette = {
-  bgCenter: "#58523f",
-  bgEdge: "#181812",
-  bokeh: ["#c98a2c", "#b8742a", "#d8a548", "#9c6a2a"],
-  damagedDark: "#211a14",
-  damagedMid: "#40332a",
-  damagedLight: "#6f5f4e",
-  healthy: "#70502e",
-  healthyHighlight: "#b08a62",
-  healthyShadow: "#472d15",
+  bgCenter: "#5c5843",
+  bgEdge: "#17170f",
+  bokeh: ["#b9741f", "#a8601c", "#c88a30", "#8f5518"],
+  damagedDark: "#1d1712",
+  damagedMid: "#453524",
+  damagedLight: "#7d6950",
+  healthy: "#6c4620",
+  healthyHighlight: "#94703f",
+  healthyShadow: "#33200c",
   frontGlow: "#ffd9a0",
-  bead: "#f09a3a",
-  beadRim: "#ffe0a8",
+  bead: "#c8862e",
+  beadRim: "#ffd79a",
   flareCore: "#fff4f6",
   flareTint: "#ffb8c8",
   flareGain: 1,
+  haze: 0.3,
 };
 
-/** Version 2 – cool sapphire / ice palette: silver strand, aqua molecules. */
+/**
+ * Version 2 – cool sapphire palette: the strand is sealed to a glossy jet
+ * black, with aqua molecules and blue bokeh.
+ */
 const sapphire: Palette = {
   bgCenter: "#2f5672",
   bgEdge: "#0a1120",
@@ -46,15 +52,16 @@ const sapphire: Palette = {
   damagedDark: "#17161d",
   damagedMid: "#4a4756",
   damagedLight: "#8c8a9c",
-  healthy: "#6b80a8",
-  healthyHighlight: "#cfdcf2",
-  healthyShadow: "#16223d",
+  healthy: "#0b0d12",
+  healthyHighlight: "#465a7c",
+  healthyShadow: "#040507",
   frontGlow: "#bff3ff",
   bead: "#22b6ea",
   beadRim: "#c9f7ff",
   flareCore: "#f4feff",
   flareTint: "#8fd8ff",
-  flareGain: 0.62,
+  flareGain: 0.9,
+  haze: 0.04,
 };
 
 export const PALETTES: Record<Variant, Palette> = { reference, sapphire };

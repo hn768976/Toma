@@ -11,21 +11,25 @@ float vnoise(vec3 p){
 }
 float fbm(vec3 p){ return 0.55 * vnoise(p) + 0.3 * vnoise(p * 2.1 + 3.1) + 0.15 * vnoise(p * 4.3 + 7.7); }
 
-const float ALONG = 92.0;   // cuticle scales along the strand
-const float AROUND = 27.0;  // cuticle scales around the strand
-
-// Lifted, broken cuticle scales. Returns (lift, distance to scale edge, id).
+// Cracked, weathered cuticle: irregular 3D Voronoi plates.
+// Returns (plate lift, distance to the nearest crack, plate id).
 vec3 cuticle(vec2 uv, vec3 p){
-  vec2 q = vec2(uv.x * ALONG, uv.y * AROUND);
-  q.x += 1.5 * (vnoise(p * 1.1) - 0.5) + 0.5 * (vnoise(p * 4.0 + 5.0) - 0.5);
-  float row = floor(q.x);
-  q.y += hash11(row + 3.0) * AROUND + 1.4 * (vnoise(p * 1.4 + 11.0) - 0.5) + 0.4 * (vnoise(p * 5.0 + 2.0) - 0.5);
-  vec2 f = fract(q);
-  vec2 id = vec2(row, mod(floor(q.y), AROUND));
-  float h = hash21(id + 0.5);
-  float lift = (0.2 + 0.8 * h) * smoothstep(0.0, 1.0, f.x);
-  float edge = min(min(f.x, 1.0 - f.x) * 1.3, min(f.y, 1.0 - f.y));
-  return vec3(lift, edge, h);
+  vec3 q = p * 7.0;
+  q += 1.1 * (vec3(vnoise(p * 4.1), vnoise(p * 4.1 + 5.1), vnoise(p * 4.1 + 9.7)) - 0.5);
+  vec3 ip = floor(q); vec3 fp = fract(q);
+  float f1 = 9.0; float f2 = 9.0; float id = 0.0;
+  for (int k = -1; k <= 1; k++) for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+    vec3 g = vec3(float(i), float(j), float(k));
+    vec3 c = ip + g;
+    vec3 o = vec3(hash31(c), hash31(c + 17.3), hash31(c + 41.7));
+    vec3 r = g + o - fp;
+    float d = dot(r, r);
+    if (d < f1) { f2 = f1; f1 = d; id = hash31(c + 7.7); }
+    else if (d < f2) { f2 = d; }
+  }
+  float edge = sqrt(f2) - sqrt(f1);
+  float lift = (0.25 + 0.75 * id) * smoothstep(0.0, 0.22, edge);
+  return vec3(lift, edge, id);
 }
 `;
 
@@ -41,12 +45,12 @@ ${NOISE}
 void main(){
   vUv = uv;
   vObj = position;
-  float jag = 0.006 * (vnoise(vec3(uv.y * 40.0, 1.0, 2.0)) - 0.5);
+  float jag = 0.003 * (vnoise(vec3(uv.y * 40.0, 1.0, 2.0)) - 0.5);
   vMask = smoothstep(uFront - 0.0012, uFront + 0.0012, uv.x + jag);
   vec3 c = cuticle(uv, position);
   float rough = fbm(position * 6.0);
-  float amp = 0.065 * aRadius + 0.018;
-  float disp = vMask * amp * (0.2 + 1.2 * c.x + 1.5 * rough) * smoothstep(0.0, 0.25, aRadius);
+  float amp = 0.045 * aRadius + 0.014;
+  float disp = vMask * amp * (0.2 + 1.1 * c.x + 1.3 * rough + 0.5 * fbm(position * 19.0)) * smoothstep(0.0, 0.25, aRadius);
   vec3 p = position + normal * disp;
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   vViewPos = mv.xyz;
@@ -61,6 +65,8 @@ uniform float uFront;
 uniform vec3 uDamagedDark, uDamagedMid, uDamagedLight;
 uniform vec3 uHealthy, uHealthyHighlight, uHealthyShadow, uFrontGlow;
 uniform float uGlow;
+uniform float uHaze;
+uniform vec3 uHazeColor;
 varying vec2 vUv;
 varying vec3 vObj;
 varying vec3 vViewPos;
@@ -74,13 +80,13 @@ void main(){
   vec3 L2 = normalize(vec3(0.8, 0.2, 0.3));
 
   // ---- healthy, sealed strand: glossy with a broad lengthwise highlight ----
-  float d = clamp(dot(N, L) * 0.6 + 0.4, 0.0, 1.0);
+  float d = clamp(dot(N, L) * 0.62 + 0.38, 0.0, 1.0);
   float streak = vnoise(vec3(vUv.y * 90.0, vUv.x * 6.0, 4.0)) - 0.5;
-  vec3 healthy = mix(uHealthyShadow, uHealthy, smoothstep(0.15, 0.95, d));
-  healthy = mix(healthy, uHealthyHighlight, 0.6 * pow(d, 10.0));
+  vec3 healthy = mix(uHealthyShadow, uHealthy, smoothstep(0.1, 0.9, d));
+  healthy = mix(healthy, uHealthyHighlight, 0.6 * pow(d, 9.0));
   healthy *= 1.0 + 0.08 * streak;
   vec3 Hh = normalize(L + V);
-  healthy += uHealthyHighlight * 0.75 * pow(max(dot(N, Hh), 0.0), 90.0);
+  healthy += uHealthyHighlight * 0.45 * pow(max(dot(N, Hh), 0.0), 90.0);
   float ndv = max(dot(N, V), 0.0);
   healthy += uHealthyHighlight * 0.22 * pow(1.0 - ndv, 3.0) * max(dot(N, L2) + 0.4, 0.0);
 
@@ -90,15 +96,19 @@ void main(){
   vec3 c = cuticle(vUv, vObj);
   float n = fbm(vObj * 9.0);
   float grain = vnoise(vObj * 38.0);
-  vec3 damaged = mix(uDamagedDark, uDamagedMid, clamp(0.25 + 0.5 * c.z + 0.6 * (n - 0.5), 0.0, 1.0));
-  damaged = mix(damaged, uDamagedLight, 0.5 * pow(c.x, 2.0) + 0.1 * smoothstep(0.55, 0.9, grain));
-  damaged *= 0.45 + 0.55 * smoothstep(0.0, 0.16, c.y);
+  float dust = fbm(vObj * 1.7 + 3.0);
+  vec3 damaged = mix(uDamagedDark, uDamagedMid, clamp(0.2 + 0.45 * c.z + 0.7 * (n - 0.5) + 0.5 * (dust - 0.4), 0.0, 1.0));
+  damaged = mix(damaged, uDamagedLight, clamp(0.3 * pow(c.x, 2.0) + 0.4 * smoothstep(0.5, 0.85, dust) * (0.4 + 0.6 * grain), 0.0, 1.0));
+  damaged *= 0.5 + 0.5 * smoothstep(0.0, 0.1, c.y);
   float dd = clamp(dot(Nd, L) * 0.75 + 0.25, 0.0, 1.0);
-  damaged *= 0.2 + 1.05 * dd;
+  damaged *= 0.1 + 1.05 * dd;
   damaged *= 0.85 + 0.3 * grain;
-  damaged *= 0.65 + 0.7 * fbm(vObj * 23.0);
+  damaged *= 0.55 + 0.9 * fbm(vObj * 26.0);
+  damaged *= 0.8 + 0.4 * vnoise(vObj * 70.0);
 
   vec3 col = mix(healthy, damaged, vMask);
+  // atmospheric haze as the camera pulls away
+  col = mix(col, uHazeColor, uHaze);
 
   // hot seam where the molecules are sealing the cuticle
   float seam = exp(-abs(vUv.x - uFront) * 420.0);
@@ -134,9 +144,10 @@ void main(){
   float ndv = max(dot(N, V), 0.0);
   float d = clamp(dot(N, L) * 0.5 + 0.5, 0.0, 1.0);
   // translucent amber bead: glowing core gradient, bright rim, sharp glint
-  vec3 col = uColor * (0.55 + 0.6 * d);
-  col += uRim * 0.3 * pow(ndv, 3.0);
-  col += uRim * 0.9 * pow(1.0 - ndv, 2.0);
+  // glassy bead: deep body, glowing core, bright rim
+  vec3 col = uColor * (0.3 + 0.5 * d);
+  col += mix(uColor, uRim, 0.5) * 0.9 * pow(ndv, 4.0);
+  col += uRim * 1.0 * pow(1.0 - ndv, 1.8);
   col += uRim * 0.25 * pow(max(dot(N, -L), 0.0), 2.0);
   col += vec3(1.0) * pow(max(dot(N, normalize(L + V)), 0.0), 70.0);
   gl_FragColor = vec4(col, 1.0);
@@ -157,14 +168,14 @@ uniform vec2 uShift;
 varying vec2 vUv;
 float hash21(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 void main(){
-  vec2 p = vUv - vec2(0.56, 0.62) - uShift;
+  vec2 p = vUv - vec2(0.56, 0.7) - uShift;
   p.x *= uAspect * 0.62;
   float r = length(p);
-  float g = smoothstep(0.85, 0.0, r);
+  float g = smoothstep(0.92, 0.0, r);
   vec3 col = mix(uEdge, uCenter, g * g);
   // corner vignette
   vec2 q = vUv - 0.5;
-  col *= 1.0 - 0.42 * smoothstep(0.35, 0.95, length(q * vec2(1.15, 1.25)));
+  col *= 1.0 - 0.3 * smoothstep(0.4, 1.0, length(q * vec2(1.15, 1.25)));
   col += (hash21(gl_FragCoord.xy) - 0.5) / 255.0 * 1.5; // dither against banding
   gl_FragColor = vec4(col, 1.0);
   #include <colorspace_fragment>

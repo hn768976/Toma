@@ -16,7 +16,7 @@ export const RemotionRoot: React.FC = () => {
         height={HEIGHT}
         defaultProps={{ variant: "reference" as const }}
       />
-      {/* Version 2 – same animation in a cool sapphire / ice palette. */}
+      {/* Version 2 – same animation in a sapphire palette with a jet-black strand. */}
       <Composition
         id="HairRepairV2"
         component={HairRepair}
