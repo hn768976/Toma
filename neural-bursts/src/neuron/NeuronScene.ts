@@ -47,7 +47,7 @@ const PAL = {
     [hex("#1d4fd8"), 2],
   ] as [RGB, number][],
   background: hex("#01030a"),
-  flare: hex("#7cc8ff"),
+  flare: hex("#9cd8ff"),
 };
 
 type Branch = { pts: THREE.Vector3[]; radius: number[]; gain: number };
@@ -77,7 +77,7 @@ const growBranch = (
   for (let i = 1; i <= n; i++) {
     const s = i / n;
     const x = i * step;
-    d.applyAxisAngle(bendAxis, Math.sin(x * freq + phase) * amp)
+    d.applyAxisAngle(bendAxis, Math.sin(x * freq + phase) * amp * 0.6 + gaussian(rng) * 0.03 * wiggle)
       .applyAxisAngle(axis2, Math.sin(x * freq2 + phase * 1.7) * amp * 0.6)
       // Gentle pull back to the original heading so dendrites meander
       // without curling into loops.
@@ -130,6 +130,7 @@ export type NeuronCamera = (t: number) => {
   flare: [number, number];
   flareGain: number;
   aperture: number;
+  somaGain: number;
 };
 
 // Version 1: slow drift that carries the soma from upper-left to lower-right
@@ -146,6 +147,7 @@ export const referenceCamera: NeuronCamera = (t) => {
     flare: [0.985, 0.45],
     flareGain: 1,
     aperture: 4.5,
+    somaGain: 1,
   };
 };
 
@@ -170,6 +172,7 @@ export const orbitCamera: NeuronCamera = (t) => {
     flare: [lerp(-0.02, 1.0, e), lerp(0.62, 0.42, e)],
     flareGain: 0.6,
     aperture: 7,
+    somaGain: lerp(0.6, 1, smooth((t - 1) / 4)),
   };
 };
 
@@ -211,8 +214,8 @@ export const createNeuronStage =
     const ROOTS: [number, number, number, number, number][] = [
       [176, -0.1, 0.15, 14, 1],
       [148, 0.3, 0.11, 11, 0.9],
-      [212, 0.45, 0.14, 13, 1],
-      [258, 0.65, 0.13, 10, 0.9],
+      [212, 0.85, 0.18, 13, 1],
+      [258, 0.95, 0.17, 10, 0.9],
       [42, -0.45, 0.12, 13, 0.9],
       [96, -0.6, 0.08, 8, 0.7],
       [2, -0.08, 0.2, 22, 1.9],
@@ -221,7 +224,7 @@ export const createNeuronStage =
       const ang = THREE.MathUtils.degToRad(deg + range(rng, -6, 6));
       const dir = new THREE.Vector3(Math.cos(ang), Math.sin(ang), dz).normalize();
       const start = dir.clone().multiplyScalar(0.3);
-      const b = growBranch(rng, start, dir, len * range(rng, 0.9, 1.1), thick, gain > 1.5 ? 0.4 : 1, gain);
+      const b = growBranch(rng, start, dir, len * range(rng, 0.9, 1.1), thick * 1.25, gain > 1.5 ? 0.4 : 1, gain);
       branches.push(b);
       // Some dendrites fork once, close to the soma.
       if (rng() < 0.55) {
@@ -322,11 +325,22 @@ export const createNeuronStage =
     // --- Floating light orbs --------------------------------------------
     const orbs = addCloud(
       makeCloud(
-        Array.from({ length: 70 }, () => {
-          const d = randomUnitVector(rng);
-          const r = range(rng, 1.0, 5.5);
+        Array.from({ length: 80 }, () => {
+          let pos: [number, number, number];
+          if (rng() < 0.65) {
+            // Chains of orbs riding along the first few units of a dendrite.
+            const b = branches[Math.floor(rng() * branches.length)];
+            const p = b.pts[Math.floor(Math.min(1, Math.pow(rng(), 1.5) * 0.45) * (b.pts.length - 1))];
+            const o = randomUnitVector(rng);
+            const off = range(rng, 0.15, 0.6);
+            pos = [p.x + o[0] * off, p.y + o[1] * off, p.z + o[2] * off];
+          } else {
+            const d = randomUnitVector(rng);
+            const r = range(rng, 1.0, 5.5);
+            pos = [d[0] * r, d[1] * r * 0.8, d[2] * r * 0.6];
+          }
           return {
-            pos: [d[0] * r, d[1] * r * 0.8, d[2] * r * 0.6],
+            pos,
             color: PAL.orb,
             size: range(rng, 16, 80),
             seed: tw(rng, range(rng, 0.55, 1)),
@@ -339,7 +353,7 @@ export const createNeuronStage =
 
     // --- Specks and bokeh --------------------------------------------------
     const specks: PointSpec[] = [];
-    for (let i = 0; i < 8500; i++) {
+    for (let i = 0; i < 6000; i++) {
       const d = randomUnitVector(rng);
       const r = range(rng, 2.2, 30);
       specks.push({
@@ -349,12 +363,12 @@ export const createNeuronStage =
         seed: tw(rng, range(rng, 0.3, 1)),
       });
     }
-    for (let i = 0; i < 6500; i++) {
+    for (let i = 0; i < 3200; i++) {
       const d = randomUnitVector(rng);
       const r = range(rng, 1.2, 9);
       specks.push({
         pos: [d[0] * r, d[1] * r * 0.7, d[2] * r],
-        color: rng() < 0.6 ? PAL.specks[0][0] : PAL.specks[1][0],
+        color: rng() < 0.25 ? PAL.specks[0][0] : rng() < 0.6 ? PAL.specks[1][0] : PAL.specks[2][0],
         size: range(rng, 1.4, 2.5),
         seed: tw(rng, range(rng, 2.2, 3.6)),
       });
@@ -396,7 +410,7 @@ export const createNeuronStage =
         start += len;
         k++;
       }
-      const flicker = 1 + 0.4 * (hash(k + 1000) - 0.5);
+      const flicker = 1 + 0.6 * (hash(k + 1000) - 0.5);
       // Discharges roughly every 1.5-3 s, decaying over ~6 frames.
       let flash = 0;
       for (let j = 0; j < 20; j++) {
@@ -404,7 +418,7 @@ export const createNeuronStage =
         const d = frame - at;
         if (d >= 0 && d < 10) flash = Math.max(flash, Math.exp(-d / 3) * (0.5 + 0.5 * hash(j + 7000)));
       }
-      return flicker + flash * 0.9;
+      return flicker + flash * 1.6;
     };
 
     const tmpSoma = new THREE.Vector3();
@@ -451,8 +465,8 @@ export const createNeuronStage =
       // Soma breathing: bright around 2.5 s and 15 s like the reference.
       const beat = 0.78 + 0.42 * Math.max(0, Math.cos(((t - 2.5) / 12.5) * Math.PI * 2));
       const fire = firing(frame);
-      somaGlow.u.uOpacity.value = beat * fire;
-      soma.u.uOpacity.value = (1.6 + 0.5 * beat) * (0.85 + 0.15 * fire);
+      somaGlow.u.uOpacity.value = beat * fire * cam.somaGain;
+      soma.u.uOpacity.value = (1.6 + 0.5 * beat) * (0.8 + 0.2 * fire) * cam.somaGain;
       soma.u.uScale.value = 1 + 0.025 * Math.sin(t * 1.3);
 
       // Pulses flowing toward the soma.
@@ -476,14 +490,15 @@ export const createNeuronStage =
         post: {
           bloom: 1.25,
           threshold: 0.05,
-          exposure: 0.95,
+          // Each discharge lifts the whole frame a little, like the reference.
+          exposure: 0.95 * (0.92 + 0.1 * fire),
           blackPoint: 0.0025,
           vignette: 0.45,
           background: PAL.background,
           bgGlowColor: PAL.flare,
           bgGlowPos: [cam.flare[0], cam.flare[1]] as [number, number],
-          bgGlow: (0.75 + 0.08 * Math.sin(t * 0.9)) * cam.flareGain,
-          streak: 0.06,
+          bgGlow: (0.95 + 0.08 * Math.sin(t * 0.9)) * cam.flareGain,
+          streak: 0.12,
           streakY: cam.flare[1],
           fade: 1,
         },
