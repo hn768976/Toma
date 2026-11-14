@@ -504,12 +504,12 @@ export const createBurstStage =
 
       // Burst A + bead star --------------------------------------------------
       burstA.uBurstT.value = t - 0.7;
-      burstA.uBurstDur.value = 0.5;
-      burstA.uRetract.value = easeInOutSine((t - 1.2) / 0.3);
+      burstA.uBurstDur.value = 0.65;
+      burstA.uRetract.value = easeInOutSine((t - 1.4) / 0.3);
       burstA.uOpacity.value =
-        smoothstep(0.68, 0.78, t) * (1 - smoothstep(2.15, 2.5, t)) * (1.3 - 0.5 * smoothstep(1.2, 1.5, t));
-      beads.uOpacity.value = smoothstep(1.15, 1.32, t) * (1 - smoothstep(2.2, 2.55, t));
-      hub.uOpacity.value = smoothstep(1.15, 1.32, t) * (1 - smoothstep(2.2, 2.55, t));
+        smoothstep(0.68, 0.78, t) * (1 - smoothstep(2.15, 2.5, t)) * (1.3 - 0.5 * smoothstep(1.4, 1.7, t));
+      beads.uOpacity.value = smoothstep(1.35, 1.5, t) * (1 - smoothstep(2.2, 2.55, t));
+      hub.uOpacity.value = smoothstep(1.35, 1.5, t) * (1 - smoothstep(2.2, 2.55, t));
 
       // Core ---------------------------------------------------------------
       const coreSize = track(
@@ -565,7 +565,8 @@ export const createBurstStage =
         post: {
           bloom: 1.0,
           threshold: 0.15,
-          exposure: 1.0 * pal.exposure,
+          // Darker, moodier network once the burst has fired (as in the reference).
+          exposure: pal.exposure * track([{ t: 2.3, v: 1 }, { t: 3.0, v: 0.72 }], t),
           huePreserve: 0.9,
           vignette: 0.55,
           background: pal.background,

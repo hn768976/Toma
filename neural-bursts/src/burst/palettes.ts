@@ -56,25 +56,25 @@ export const BLUE: BurstPalette = {
   exposure: 1,
 };
 
-// Version 2 — "solar" re-grade: gold / amber filaments with crimson and teal
+// Version 2 — "solar" re-grade: gold / amber filaments with crimson
 // accents and a copper-rimmed sphere. Same structure and motion as V1.
 export const SOLAR: BurstPalette = {
-  sphereRim: hex("#ff8a2a"),
-  sphereAccent: hex("#ff2f6d"),
+  sphereRim: hex("#ffa22a"),
+  sphereAccent: hex("#ff6a1f"),
   rays: [
     [hex("#ffd48a"), 5],
     [hex("#ffae45"), 5],
     [hex("#ff7a1f"), 3],
     [hex("#fff3dc"), 2],
     [hex("#ff3f6a"), 0.6],
-    [hex("#46f0d2"), 0.4],
+    [hex("#ff9d5c"), 0.4],
   ],
   beads: [
     [hex("#ff8c1a"), 5],
     [hex("#ffc04a"), 4],
     [hex("#ffe0a6"), 3],
     [hex("#d4410f"), 2],
-    [hex("#3fe0d0"), 0.6],
+    [hex("#ffb06a"), 0.6],
     [hex("#ff6f9a"), 0.6],
   ],
   particles: [
@@ -84,7 +84,7 @@ export const SOLAR: BurstPalette = {
     [hex("#ffe2a8"), 2],
     [hex("#ff4f5e"), 7],
     [hex("#ff2f8e"), 1.2],
-    [hex("#3fe8d0"), 0.8],
+    [hex("#ff7a3a"), 0.8],
     [hex("#fff6e0"), 0.6],
   ],
   node: hex("#ffd27f"),
