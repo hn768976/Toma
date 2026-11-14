@@ -10,6 +10,8 @@ export type BurstPalette = {
   star: RGB;
   core: RGB;
   background: RGB;
+  /** Faint haze behind the cluster during the fly-through. */
+  haze: RGB;
   /** Exposure trim: warm palettes read brighter at equal energy. */
   exposure: number;
 };
@@ -24,8 +26,9 @@ export const BLUE: BurstPalette = {
     [hex("#4aa8ff"), 5],
     [hex("#3c64ff"), 3],
     [hex("#d9f2ff"), 2],
-    [hex("#ff5fa8"), 0.5],
-    [hex("#ffa255"), 0.4],
+    [hex("#ff5fa8"), 0.3],
+    [hex("#8a5bff"), 0.8],
+    [hex("#3de0ff"), 0.6],
   ],
   beads: [
     [hex("#2f6bff"), 5],
@@ -39,7 +42,7 @@ export const BLUE: BurstPalette = {
     [hex("#2f5bff"), 40],
     [hex("#2230d6"), 18],
     [hex("#3fb4ff"), 14],
-    [hex("#9fd0ff"), 5],
+    [hex("#9fd0ff"), 2],
     [hex("#7a52ff"), 7],
     [hex("#ff3f9e"), 1.2],
     [hex("#ff9440"), 0.8],
@@ -49,6 +52,7 @@ export const BLUE: BurstPalette = {
   star: hex("#3040ff"),
   core: hex("#56c8ff"),
   background: [0, 0, 0],
+  haze: hex("#0d2a8a"),
   exposure: 1,
 };
 
@@ -77,7 +81,7 @@ export const SOLAR: BurstPalette = {
     [hex("#ff8a1f"), 40],
     [hex("#d8450c"), 18],
     [hex("#ffc246"), 14],
-    [hex("#ffe2a8"), 5],
+    [hex("#ffe2a8"), 2],
     [hex("#ff4f5e"), 7],
     [hex("#ff2f8e"), 1.2],
     [hex("#3fe8d0"), 0.8],
@@ -87,5 +91,6 @@ export const SOLAR: BurstPalette = {
   star: hex("#ff7a2a"),
   core: hex("#ffc45a"),
   background: [0, 0, 0],
+  haze: hex("#7a2a08"),
   exposure: 0.8,
 };

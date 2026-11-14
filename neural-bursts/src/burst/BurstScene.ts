@@ -327,7 +327,7 @@ export const createBurstStage =
     );
 
     // --- Burst B / network --------------------------------------------------
-    const N_RAYS = 130;
+    const N_RAYS = 95;
     const netDirs = Array.from({ length: N_RAYS }, () => {
       const d = randomUnitVector(rng);
       return new THREE.Vector3(d[0], d[1] * 0.85, d[2]).normalize();
@@ -339,8 +339,8 @@ export const createBurstStage =
         netDirs.map((d, i) => ({
           dir: [d.x, d.y, d.z],
           len: [range(rng, 0.05, 0.3), netLens[i] * range(rng, 1.2, 2.2), netLens[i] * range(rng, 0.25, 0.7), netSpeeds[i]],
-          color: pickWeighted(rng, pal.rays.slice(0, 3)),
-          misc: [range(rng, 0.8, 1.7), range(rng, 0.45, 1), rng() * 6, 0.25],
+          color: pickWeighted(rng, pal.rays),
+          misc: [range(rng, 1.1, 2.3), range(rng, 0.45, 1), rng() * 6, 0.25],
         })),
         ctx,
       ),
@@ -348,7 +348,7 @@ export const createBurstStage =
     // Dense short fibres around the hub.
     const fibres = addRays(
       makeRays(
-        Array.from({ length: 140 }, () => ({
+        Array.from({ length: 220 }, () => ({
           dir: randomUnitVector(rng),
           len: [0.02, range(rng, 0.3, 2.2), 0, range(rng, 0.8, 1.2)],
           color: pickWeighted(rng, pal.rays),
@@ -445,6 +445,24 @@ export const createBurstStage =
       ),
     );
 
+    // A few large, saturated star points (very visible from ~9 s).
+    const bigStars = addCloud(
+      makeCloud(
+        Array.from({ length: 45 }, () => {
+          const d = randomUnitVector(rng);
+          const r = range(rng, 4, 16);
+          return {
+            pos: [d[0] * r, d[1] * r * 0.65, d[2] * r * 0.6],
+            color: rng() < 0.6 ? pal.star : pal.node,
+            size: range(rng, 0.18, 0.32),
+            seed: tw(rng, range(rng, 0.7, 1), 1),
+          };
+        }),
+        px,
+        { world: true, twinkle: 0.3, maxSize: 70 },
+      ),
+    );
+
     const update = (t: number) => {
       // Camera ------------------------------------------------------------
       const z = track(CAM_Z, t);
@@ -504,7 +522,8 @@ export const createBurstStage =
           { t: 2.6, v: 22 },
           { t: 3.1, v: 34 },
           { t: 4.5, v: 22 },
-          { t: 14.1, v: 12 },
+          { t: 6, v: 26 },
+          { t: 14.1, v: 19 },
         ],
         t,
       );
@@ -514,12 +533,12 @@ export const createBurstStage =
       dust.uOpacity.value = smoothstep(1.6, 2.4, t) * 0.5;
 
       // Burst B / network ---------------------------------------------------
-      burstB.uBurstT.value = t - 2.3;
+      burstB.uBurstT.value = t - 2.17;
       burstB.uBurstDur.value = 1.1;
-      burstB.uRetract.value = easeInOutSine((t - 3.3) / 1.8);
+      burstB.uRetract.value = 0.55 * easeInOutSine((t - 3.3) / 1.2) + 0.45 * easeInOutSine((t - 6.6) / 2.4);
       burstB.uOpacity.value =
-        smoothstep(2.3, 2.45, t) *
-        track([{ t: 2.8, v: 1.0 }, { t: 3.6, v: 0.55 }, { t: 5, v: 0.3 }, { t: 9, v: 0.13 }, { t: 14, v: 0.08 }], t);
+        smoothstep(2.17, 2.32, t) *
+        track([{ t: 2.7, v: 1.0 }, { t: 3.6, v: 0.5 }, { t: 6.0, v: 0.75 }, { t: 7.5, v: 0.32 }, { t: 10, v: 0.14 }, { t: 14, v: 0.1 }], t);
       burstB.uScale.value = 1 + 0.06 * Math.max(0, t - 3);
       burstB.uFlicker.value = 0.3;
 
@@ -531,25 +550,28 @@ export const createBurstStage =
       for (const u of [particles, nodes]) u.uScale.value = growth;
       particles.uOpacity.value = smoothstep(3.45, 4.2, t) * track([{ t: 4, v: 1.5 }, { t: 14, v: 1.2 }], t);
       nodes.uOpacity.value = smoothstep(3.15, 3.4, t) * track([{ t: 3.6, v: 2.8 }, { t: 5, v: 2.0 }, { t: 14, v: 1.3 }], t);
-      fibres.uBurstT.value = t - 2.1;
+      fibres.uBurstT.value = t - 2.0;
       fibres.uBurstDur.value = 0.8;
-      fibres.uOpacity.value = smoothstep(2.1, 2.3, t) * track([{ t: 2.4, v: 0.9 }, { t: 3.5, v: 0.4 }, { t: 8, v: 0.2 }, { t: 14, v: 0.14 }], t);
+      fibres.uOpacity.value = smoothstep(2.0, 2.2, t) * track([{ t: 2.4, v: 0.9 }, { t: 3.5, v: 0.4 }, { t: 6, v: 0.5 }, { t: 9, v: 0.35 }, { t: 14, v: 0.42 }], t);
       fibres.uScale.value = growth;
       stars.uOpacity.value = smoothstep(4.5, 7.5, t) * 1.6;
       stars.uScale.value = growth;
+      bigStars.uOpacity.value = smoothstep(5.0, 8.0, t) * 1.8;
+      bigStars.uScale.value = growth;
 
       return {
         scene,
         camera,
         post: {
-          bloom: 0.9,
+          bloom: 1.0,
           threshold: 0.15,
-          exposure: 0.95 * pal.exposure,
+          exposure: 1.0 * pal.exposure,
+          huePreserve: 0.9,
           vignette: 0.55,
           background: pal.background,
-          bgGlowColor: [0, 0, 0] as [number, number, number],
+          bgGlowColor: pal.haze,
           bgGlowPos: [0.5, 0.5] as [number, number],
-          bgGlow: 0,
+          bgGlow: smoothstep(1.8, 2.4, t) * (1 - smoothstep(3.4, 4.2, t)) * 0.55,
           fade: 1,
         },
       };

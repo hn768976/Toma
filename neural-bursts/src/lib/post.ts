@@ -59,6 +59,7 @@ uniform vec3 uBgGlowColor;
 uniform vec2 uBgGlowPos;
 uniform float uBgGlow;
 uniform float uStreak;
+uniform float uHuePreserve;
 uniform float uStreakY;
 uniform float uFade;
 uniform float uAspect;
@@ -88,7 +89,7 @@ void main() {
   vec3 x = c * uExposure;
   float lum = max(dot(x, vec3(0.2126, 0.7152, 0.0722)), 1e-5);
   vec3 huePreserve = x * ((1.0 - exp(-lum)) / lum);
-  c = mix(1.0 - exp(-x), huePreserve, 0.55);
+  c = mix(1.0 - exp(-x), huePreserve, uHuePreserve);
 
   vec2 v = (vUv - 0.5) * vec2(uAspect, 1.0);
   c *= mix(1.0, smoothstep(1.25, 0.25, length(v)), uVignette);
@@ -112,6 +113,8 @@ export type PostSettings = {
   fade: number;
   streak?: number;
   threshold?: number;
+  /** 0 = per-channel filmic curve, 1 = fully hue-preserving (more saturated). */
+  huePreserve?: number;
   streakY?: number;
 };
 
@@ -177,6 +180,7 @@ export class PostPipeline {
       uBgGlow: { value: 0 },
       uFade: { value: 1 },
       uStreak: { value: 0 },
+      uHuePreserve: { value: 0.55 },
       uStreakY: { value: 0.5 },
       uAspect: { value: width / height },
     });
@@ -227,6 +231,7 @@ export class PostPipeline {
     u.uBgGlow.value = s.bgGlow;
     u.uFade.value = s.fade;
     u.uStreak.value = s.streak ?? 0;
+    u.uHuePreserve.value = s.huePreserve ?? 0.55;
     u.uStreakY.value = s.streakY ?? 0.5;
     this.pass(this.compMat, null);
   }

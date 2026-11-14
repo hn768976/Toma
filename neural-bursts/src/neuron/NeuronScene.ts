@@ -50,7 +50,7 @@ const PAL = {
   flare: hex("#7cc8ff"),
 };
 
-type Branch = { pts: THREE.Vector3[]; radius: number[] };
+type Branch = { pts: THREE.Vector3[]; radius: number[]; gain: number };
 
 /** A gently meandering curve that leaves the soma along `dir`. */
 const growBranch = (
@@ -60,6 +60,7 @@ const growBranch = (
   length: number,
   r0: number,
   wiggle = 1,
+  gain = 1,
 ): Branch => {
   const step = 0.07;
   const n = Math.ceil(length / step);
@@ -82,10 +83,16 @@ const growBranch = (
       // without curling into loops.
       .addScaledVector(heading, 0.06)
       .normalize();
+    // Occasional kinks give the dendrites an organic, irregular line.
+    if (rng() < 0.012 * wiggle) {
+      const kinkAxis = new THREE.Vector3(...randomUnitVector(rng)).cross(d).normalize();
+      d.applyAxisAngle(kinkAxis, range(rng, 0.25, 0.42) * (rng() < 0.5 ? -1 : 1));
+      heading.copy(d);
+    }
     pts.push(pts[i - 1].clone().addScaledVector(d, step));
     radius.push(r0 * (Math.pow(1 - s, 1.4) * 0.8 + 0.2 * Math.exp(-s * 18) * 2) + 0.03);
   }
-  return { pts, radius };
+  return { pts, radius, gain };
 };
 
 const SOMA_TRACK_X: Key[] = [
@@ -130,7 +137,7 @@ export type NeuronCamera = (t: number) => {
 export const referenceCamera: NeuronCamera = (t) => {
   const s = t / 20;
   return {
-    azimuth: lerp(-0.18, 0.32, s),
+    azimuth: lerp(-0.18, 0.75, s * s * 0.4 + s * 0.6),
     elevation: lerp(0.22, -0.3, s) + 0.03 * Math.sin(t * 0.6),
     distance: 5.4 - 0.25 * Math.sin(s * Math.PI),
     roll: lerp(0.05, -0.42, s) + 0.02 * Math.sin(t * 0.45),
@@ -197,25 +204,24 @@ export const createNeuronStage =
 
     // --- Dendrites ------------------------------------------------------
     const branches: Branch[] = [];
-    // [screen angle in degrees, depth component]: several dendrites run to
-    // the left / lower-left like the reference, and a few reach toward the
-    // camera so they fall into soft foreground blur.
-    const ROOTS: [number, number][] = [
-      [178, -0.15],
-      [158, 0.35],
-      [205, 0.55],
-      [232, 0.1],
-      [275, 0.7],
-      [300, -0.35],
-      [8, -0.2],
-      [62, -0.55],
-      [118, -0.3],
+    // [screen angle (deg), depth component, thickness, length, brightness].
+    // An irregular layout like the reference: most dendrites run left /
+    // lower-left or upper-right, one reaches toward the camera into soft
+    // foreground blur, and a bright axon runs out to the right-hand edge.
+    const ROOTS: [number, number, number, number, number][] = [
+      [176, -0.1, 0.15, 14, 1],
+      [148, 0.3, 0.11, 11, 0.9],
+      [212, 0.45, 0.14, 13, 1],
+      [258, 0.65, 0.13, 10, 0.9],
+      [42, -0.45, 0.12, 13, 0.9],
+      [96, -0.6, 0.08, 8, 0.7],
+      [2, -0.08, 0.2, 22, 1.9],
     ];
-    for (const [deg, dz] of ROOTS) {
-      const ang = THREE.MathUtils.degToRad(deg + range(rng, -8, 8));
+    for (const [deg, dz, thick, len, gain] of ROOTS) {
+      const ang = THREE.MathUtils.degToRad(deg + range(rng, -6, 6));
       const dir = new THREE.Vector3(Math.cos(ang), Math.sin(ang), dz).normalize();
       const start = dir.clone().multiplyScalar(0.3);
-      const b = growBranch(rng, start, dir, range(rng, 9, 15), range(rng, 0.1, 0.15));
+      const b = growBranch(rng, start, dir, len * range(rng, 0.9, 1.1), thick, gain > 1.5 ? 0.4 : 1, gain);
       branches.push(b);
       // Some dendrites fork once, close to the soma.
       if (rng() < 0.55) {
@@ -223,7 +229,7 @@ export const createNeuronStage =
         const along = b.pts[at + 1].clone().sub(b.pts[at]).normalize();
         const side = new THREE.Vector3(...randomUnitVector(rng)).cross(along).normalize();
         const cdir = along.clone().multiplyScalar(0.85).addScaledVector(side, 0.5).normalize();
-        branches.push(growBranch(rng, b.pts[at], cdir, range(rng, 5, 9), b.radius[at] * 0.75, 0.45));
+        branches.push(growBranch(rng, b.pts[at], cdir, range(rng, 5, 9), b.radius[at] * 0.75, 0.45, gain));
       }
     }
 
@@ -238,8 +244,8 @@ export const createNeuronStage =
         const ra = b.radius[i];
         const rb = b.radius[i + 1];
         // Dendrites dim gradually away from the soma.
-        const fa = 1 - 0.65 * (i / b.pts.length);
-        const fb = 1 - 0.65 * ((i + 1) / b.pts.length);
+        const fa = (1 - 0.65 * (i / b.pts.length)) * b.gain;
+        const fb = (1 - 0.65 * ((i + 1) / b.pts.length)) * b.gain;
         outer.push({ a, b: c, width: [ra * 2.4, rb * 2.4], color: PAL.tubeOuter, alpha: [0.12 * fa, 0.12 * fb] });
         body.push({ a, b: c, width: [ra, rb], color: PAL.tube, alpha: [0.26 * fa, 0.26 * fb] });
         cores.push({ a, b: c, width: [ra * 0.3, rb * 0.3], color: PAL.tubeCore, alpha: [0.1 * fa, 0.1 * fb] });
@@ -256,7 +262,7 @@ export const createNeuronStage =
             color: pickWeighted(rng, PAL.fuzz),
             size: range(rng, 1.4, 3),
             // Thin distal sections stay dim so they never read as hard wires.
-            seed: tw(rng, range(rng, 0.45, 1) * fa * Math.min(1, ra / 0.07)),
+            seed: tw(rng, range(rng, 0.45, 1) * Math.min(fa, 1) * Math.min(1, ra / 0.07)),
           });
         }
       }
@@ -305,8 +311,8 @@ export const createNeuronStage =
         [
           { pos: [0, 0, 0], color: PAL.somaHalo, size: 5, seed: [0, 0, 1, 0.4] },
           { pos: [0, 0, 0], color: PAL.somaHalo, size: 2.4, seed: [0, 0, 1, 0.9] },
-          { pos: [0, 0, 0], color: PAL.somaCore, size: 0.55, seed: [0, 0, 1, 1] },
-          { pos: [0, 0, 0], color: PAL.somaCore, size: 0.2, seed: [0, 0, 1, 1.5] },
+          { pos: [0, 0, 0], color: PAL.somaCore, size: 0.8, seed: [0, 0, 1, 1.2] },
+          { pos: [0, 0, 0], color: PAL.somaCore, size: 0.28, seed: [0, 0, 1, 2.2] },
         ],
         px,
         { world: true, maxSize: 520 },
@@ -343,14 +349,14 @@ export const createNeuronStage =
         seed: tw(rng, range(rng, 0.3, 1)),
       });
     }
-    for (let i = 0; i < 7000; i++) {
+    for (let i = 0; i < 6500; i++) {
       const d = randomUnitVector(rng);
-      const r = range(rng, 2.5, 12);
+      const r = range(rng, 1.2, 9);
       specks.push({
         pos: [d[0] * r, d[1] * r * 0.7, d[2] * r],
         color: rng() < 0.6 ? PAL.specks[0][0] : PAL.specks[1][0],
-        size: range(rng, 0.8, 1.5),
-        seed: tw(rng, range(rng, 0.5, 1)),
+        size: range(rng, 1.4, 2.5),
+        seed: tw(rng, range(rng, 2.2, 3.6)),
       });
     }
     const speckCloud = addCloud(makeCloud(specks, px, { twinkle: 0.6, maxSize: 80 }));
@@ -468,8 +474,9 @@ export const createNeuronStage =
         scene,
         camera,
         post: {
-          bloom: 1.5,
-          exposure: 1.05,
+          bloom: 1.25,
+          threshold: 0.05,
+          exposure: 0.95,
           vignette: 0.45,
           background: PAL.background,
           bgGlowColor: PAL.flare,
