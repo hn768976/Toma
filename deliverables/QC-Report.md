@@ -12,7 +12,7 @@ overlay for the anatomy scene.
 | `Version 1 - Skin Layers Anatomy (1080p).mp4` | `SkinLayersV1` | – (matches reference) |
 | `Version 2 - Skin Layers Anatomy - Orbit Camera (1080p).mp4` | `SkinLayersV2` | Camera movement: orbit + crane instead of a locked-off shot |
 | `Version 1 - Hair Repair Particles (1080p).mp4` | `HairRepairV1` | – (matches reference) |
-| `Version 2 - Hair Repair Particles - Sapphire Palette (1080p).mp4` | `HairRepairV2` | Colour palette: sapphire / ice instead of olive / amber |
+| `Version 2 - Hair Repair Particles - Sapphire Black Hair (1080p).mp4` | `HairRepairV2` | Colour palette: blue background, aqua molecules, strand sealed to glossy black |
 | `skin-layers-anatomy-4k-project.zip` | both skin compositions (4K) | |
 | `hair-repair-particles-4k-project.zip` | both hair compositions (4K) | |
 
@@ -20,6 +20,10 @@ Why those variations: the skin reference is a locked-off shot, so a camera
 move is the clearest change that keeps the anatomical colours meaningful. The
 hair reference already has a strong camera move, so a palette change is the
 clearest alternative there.
+
+Hair colour: in the reference the repaired strand is dark caramel brown, so
+Version 1 follows that (measured values below). Version 2 is the one that ends
+on a black strand.
 
 ## Technical checks (final files)
 
@@ -34,12 +38,10 @@ clearest alternative there.
 | Pixel format / colour | yuv420p, BT.709 limited | same | same | same |
 | Full decode with `-xerror` | clean | clean | clean | clean |
 | Black frames (`blackdetect`) | none | none | none | none |
-| Worst single-frame luma spike (of 255) | 0.00 | 0.04 | 0.11 | 0.12 |
+| Worst single-frame luma spike (of 255) | 0.00 | 0.05 | 0.11 | 0.10 |
 | Audio | none | none | none | none |
 
-The references have no usable audio, so the outputs carry no audio stream.
-An early render came out as full-range `yuvj420p`; the project config was
-changed to BT.709 limited range and everything was re-rendered.
+The references have no audio stream, so the outputs have none.
 
 ## Project ZIPs
 
@@ -48,67 +50,79 @@ changed to BT.709 limited range and everything was re-rendered.
   project), `package.json`, `package-lock.json`, `remotion.config.ts`,
   `tsconfig.json`, ESLint/Prettier config and a README with the commands.
   `node_modules` and rendered output are excluded.
-- Clean-room test: both ZIPs were extracted to an empty directory,
+- Clean-room test on the final archives: extracted to an empty directory,
   `npm install` succeeded (346 packages each), then the documented scripts
   were run from the extracted copies:
   - `npm run render:v1:4k` and `render:v2:4k` on a 12-frame range – all four
     produced 3840x2160 H.264 30 fps files that decode cleanly.
   - `npm run render:v1` on a 30-frame range – 1920x1080 output; a frame
-    compared against the delivered video gives PSNR 44.0 dB (skin) and
-    46.1 dB (hair), i.e. the same picture apart from encoder noise.
+    compared against the delivered video gives PSNR 44.2 dB (skin) and
+    45.1 dB (hair), i.e. the same picture apart from encoder noise.
 - Not done: a full-length native 4K render. The delivered 1080p files were
   rendered full-length with the same documented scripts from the same source.
 - TypeScript (`tsc`) and ESLint are clean in both projects.
 
 ## Independent visual verification
 
-A separate reviewing agent compared the videos with the references three
+A separate reviewing agent compared the videos with the references five
 times (timestamp-matched side-by-sides, full-resolution frames, per-frame
-difference statistics). Two rounds of fixes were made from its findings.
+difference statistics); fixes were made after each round.
 
-Final verdict:
+Its last pass (all four videos):
 
 - No black or corrupt frames, flicker, popping, stutter, text overlap or
   elements leaving frame in any of the four videos.
-- Skin V1: 7.5/10 similarity (first pass 5.5). Hair V1: 7.5/10 (first pass 6.5).
-- Both Version 2s: clearly distinguishable, concept, timing and quality preserved.
+- Skin V1: 8/10 similarity (first pass 5.5). Hair V1: 7.5/10 (first pass 6.5).
+- Both Version 2s: clearly distinguishable, concept, timing and quality
+  preserved; hair V2 reads as a glossy black strand.
 
-Matched after fixes: explode 0.0–2.0 s and collapse 8.4–10.4 s with
-near-linear rate; stack opens downward with the top sheet fixed; label wording,
-spelling, column positions, bracket orientation and fade timing; hair count
-and length; particle entry at 1.3 s; ring travel; flare width and 7.8 s
-cut-off; end framing of the hair strand.
+After that pass one more change was made to the hair project only, to fix the
+reviewer's top remaining item (repaired strand too thin and too bright). That
+change was checked by direct measurement on the final file, not by another
+review round:
 
-Remaining differences from the references (not fixed):
+| Time | Strand width, final / reference (px at 960 wide) | Strand colour, final / reference (mean RGB) |
+| --- | --- | --- |
+| 3.0 s | 219 / 235 | (96, 66, 32) / (93, 65, 35) |
+| 4.4 s | 144 / 159 | (94, 66, 34) / (95, 67, 38) |
+| 6.0 s | 91 / 89 | (90, 67, 38) / (104, 79, 54) |
+| 8.8 s | 67 / 55 | (95, 73, 44) / (103, 77, 50) |
 
-1. Skin layers are procedural slabs with gentle waves; the reference model has
-   thicker, more organic folds, a vessel lattice drawn on the dermis faces and
-   coiled sweat glands with ducts.
-2. Hair opening shot (0–2 s): the strand is still somewhat more curved and
-   conical than the near-straight reference.
-3. Damaged-hair texture reads as regular rows of scales rather than an
-   irregular cracked mosaic; the repaired strand is slightly more matte.
-4. Hair: glow appears about 0.15 s early and the ring leads slightly until
-   about 3.5 s; the flare only partly dips at about 7.0 s.
-5. Skin labels: "Hair Follicle" / "Sweat Pore" leaders stop at the model edge;
-   some labels sit 10–33 px off the reference positions; the last labels land
-   about 0.2 s late.
-6. Skin shadow is a little fainter and further from the block.
-7. Skin V2: right-hand leader dots sit over vessel loops near 8 s and the
-   ground shadow does not follow the orbit.
-8. Hair V2: slight highlight clipping along the flare line.
-9. Skin V1: a small dark wedge at the right end of the squamous layer and one
-   short hair segment visible between layers.
+Matched: explode 0.0–2.0 s and collapse 8.4–10.4 s; stack opens downward with
+the top sheet fixed; all 11 labels (wording, spelling, columns, bracket
+orientation, first label at 1.3 s, fade timing); wavy layers, vessel lattice
+on the dermis faces, sweat glands with ducts, leaders reaching the follicle
+and gland; hair opening shot near-straight; irregular cracked damaged texture;
+first particles at 1.3 s; ring travel; flare dip at 7.0 s and cut-off at 7.8 s;
+end framing of the strand.
+
+Remaining differences from the references:
+
+1. Hair: molecules rush in about 1.7x as energetically as the reference and
+   the flare enters about 0.15 s early; the late flare (7.1–7.6 s) is smaller
+   than the reference's.
+2. Hair: the highlight on the repaired strand is a soft band rather than a
+   crisp streak; the damaged texture is slightly more pebbled; the opening
+   shaft is a little wider at the base.
+3. Skin: layer tops are flatter and thinner than the reference's organic
+   folds; vessels are slightly thick and protrude at the block edges; dermis
+   shading is flat.
+4. Skin labels: Epidermis bracket section about 43 px too tall; right-hand
+   labels 2–28 px above the reference positions.
+5. Skin: short hair segments are visible in the gaps between exploded layers;
+   the shadow is centred and faint when exploded.
+6. Skin V2: leader lines cross early in the orbit and bunch late; the ground
+   shadow does not follow the camera.
 
 The stock watermark in the references was not reproduced.
 
 ## SHA-256
 
 ```
-8a263dc417ae5a5170f5062a3a60081adc17d8a3d989b91d95e2db70f3aea30d  Version 1 - Skin Layers Anatomy (1080p).mp4
-ae3b088153139028c714a261f8d221a083536d3d63350a714c7830db337f4917  Version 2 - Skin Layers Anatomy - Orbit Camera (1080p).mp4
-a51e096c6c91a8f7755979dcec1aedc5fffd746d095bcb7c83b1313a9f8868cd  Version 1 - Hair Repair Particles (1080p).mp4
-6102e6473665cb84ad24e9e267f424d27e2bdaeffcc94cc4d60bd127663dcc86  Version 2 - Hair Repair Particles - Sapphire Palette (1080p).mp4
-70503f30071ea3c5701dc92e8a95c95bf6c94b3e95d49d15ea5fb305281cd80f  skin-layers-anatomy-4k-project.zip
-0756113e26fb86f0d05651fd30a25a988d48108f2ccba1e76606dbe15353de7a  hair-repair-particles-4k-project.zip
+7c9ed656c553ef2d2758dbfa9c8d2e957219a26c1961b764604e7a0034ee13bd  Version 1 - Skin Layers Anatomy (1080p).mp4
+dad75807452fc6932a491070e5be8ecc52db2eeb112e8719d8b1cf5dd5687dfe  Version 2 - Skin Layers Anatomy - Orbit Camera (1080p).mp4
+0557ee80674867eb17fd1c7d86f70feed36cc9a7eb613f51082e61a2ead91104  Version 1 - Hair Repair Particles (1080p).mp4
+59bbb80fb4c145ea35332970160c344520324aaf4df0abcc2097d1785e41beaa  Version 2 - Hair Repair Particles - Sapphire Black Hair (1080p).mp4
+4d15a57f774ff2103b2d5ec1d7014d04e7663efddec41f096baab00c1458beea  skin-layers-anatomy-4k-project.zip
+7de0b4b335030ac70cfd67bd6237bdb769d608ae8a95868adb9415a81e9eb9eb  hair-repair-particles-4k-project.zip
 ```
