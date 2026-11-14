@@ -47,8 +47,9 @@ export type FrameState = {
 export type Look = {
   background: [number, number, number];
   fog: [number, number, number]; // faint centre haze colour
-  tissueA: [number, number, number];
-  tissueB: [number, number, number];
+  tissueBase: [number, number, number]; // pale body colour of striped tissue
+  tissueA: [number, number, number]; // vein colour
+  tissueB: [number, number, number]; // patch colour
   fireColor: [number, number, number];
   pulseColor: [number, number, number];
   light: [number, number, number];
@@ -119,7 +120,7 @@ void main() {
     float th = fract(seed * 7.31) * 0.85;
     float g = smoothstep(th, th + 0.22, uBurst);
     float flick = 0.8 + 0.2 * sin(uTime * 23.0 + seed * 100.0);
-    float s = g * (0.55 + 0.9 * uBurst) * flick;
+    float s = g * (0.55 + 0.55 * uBurst) * flick;
     ra *= s; rb *= s;
   }
 
@@ -192,6 +193,7 @@ uniform float uPulse;
 uniform float uPulseWidth;
 uniform float uFire;
 uniform float uBurst;
+uniform vec3 uTissueBase;
 uniform vec3 uTissueA;
 uniform vec3 uTissueB;
 uniform vec3 uFireColor;
@@ -227,10 +229,15 @@ void main() {
     float R = r + c;
     float e = max(1.0, 0.5 * R);
     cov = 1.0 - smoothstep(R - e, R + 0.75, d);
-    amp = min(1.0, pow(r / max(R, 0.75), 1.45) * 1.25);
+    amp = min(1.0, pow(r / max(R, 0.75), mat > 4.5 ? 1.3 : 1.45) * 1.25);
     amp *= min(1.0, r / 0.6 + 0.15);
   } else {
     cov = 1.0 - smoothstep(max(r - w, 0.0), r + w, d);
+    if (mat > 3.5 && L2 > 1e-4) {
+      // sheaths are cylinders: cut the rounded ends off flat
+      float wt = w / sqrt(L2);
+      cov *= smoothstep(-wt, wt, tu) * (1.0 - smoothstep(1.0 - wt, 1.0 + wt, tu));
+    }
     amp = min(1.0, 1.15 * r / w);
   }
   float alpha = min(1.0, cov * amp * vBoost);
@@ -239,7 +246,7 @@ void main() {
   // fake tube normal
   float rr = max(r, 0.75);
   vec2 nxy = dq / rr;
-  if (!isPoint && (mat < 3.5) && L2 > 1e-4) {
+  if (!isPoint && L2 > 1e-4) {
     // tubes use a pure cylinder normal so consecutive capsules join seamlessly
     vec2 pd = vec2(-ab.y, ab.x) / sqrt(L2);
     nxy = pd * dot(nxy, pd);
@@ -268,37 +275,39 @@ void main() {
   float pulse = fireW > 0.0 ? exp(-pow((s - uPulse) / uPulseWidth, 2.0)) : 0.0;
 
   if (mat < 0.5) {
-    col = base * (0.22 + 0.95 * wrap * wrap + 0.25 * diff) + base * rim * 0.35 + spec * 0.35;
+    col = base * (0.2 + 0.95 * wrap * wrap + 0.25 * diff) + base * rim * 0.35 + spec * 0.2;
     col += base * glow;
   } else if (mat < 1.5) {
-    // striped two-tone tissue, stripes run along the fibre
-    // defocused tissue reads as soft patches of either tone rather than an averaged mix
-    float m = smoothstep(0.35, 0.65, fract(seed * 7.7 + floor(s * 1.3) * 0.37));
-    float edge = 0.0;
+    // veined tissue: a pale body with coloured patches and thin bright veins running along the fibre
+    float patchM = 0.45; // defocused: the average look
+    float vein = 0.17;
     if (sharp > 0.0 && vExtra.z < 1.0) {
       vec2 dirn = L2 > 1e-4 ? ab / sqrt(L2) : vec2(1.0, 0.0);
       float u = clamp(dot(dq, vec2(-dirn.y, dirn.x)) / rr, -1.0, 1.0);
       float ang = asin(u);
-      float st = sin(ang * 2.6 + seed * 31.0 + 1.6 * sin(s * 1.7 + seed * 9.0) + s * 0.9);
-      float st2 = sin(ang * 5.3 - seed * 17.0 + s * 2.3);
-      m = mix(m, smoothstep(0.0, 0.5, st + 0.35 * st2), sharp);
-      edge = 1.0 - smoothstep(0.0, 0.35, abs(st + 0.35 * st2 - 0.25));
+      float n1 = sin(ang * 2.3 + seed * 31.0 + 1.4 * sin(s * 1.3 + seed * 9.0) + s * 0.6);
+      float n2 = sin(ang * 4.9 - seed * 17.0 + s * 1.7 + 1.1 * sin(s * 0.8 + seed * 3.0));
+      float n3 = sin(ang * 1.2 + seed * 5.3 + s * 0.9 + 0.8 * sin(s * 0.5));
+      float v = max(1.0 - smoothstep(0.08, 0.42, abs(n1 + 0.3 * n2)), 0.8 * (1.0 - smoothstep(0.05, 0.28, abs(n2 - 0.45))));
+      vein = mix(vein, v, sharp);
+      patchM = mix(patchM, smoothstep(-0.25, 0.35, n3 + 0.35 * n2), sharp);
     }
-    vec3 tc = mix(uTissueA, uTissueB, m);
-    tc = mix(tc, vec3(0.9, 0.88, 0.92), edge * 0.28 * sharp);
-    tc = mix(tc, vec3(0.78, 0.6, 0.6), (1.0 - sharp) * 0.3);
+    vec3 tc = mix(uTissueBase, uTissueB, patchM * 0.9);
+    tc = mix(tc, uTissueA, vein);
     tc = mix(tc, base, vExtra.z);
-    col = tc * (0.16 + 0.95 * wrap * wrap + 0.25 * diff) + tc * rim * 0.3 + spec * 0.3;
+    col = tc * (0.12 + 0.72 * wrap * wrap + 0.2 * diff) + tc * rim * 0.25 + spec * 0.22;
+    col += uTissueA * vein * 0.22 * (1.0 - vExtra.z); // veins glow slightly
     col += uPulseColor * pulse * 0.45 * fireW;
   } else if (mat < 2.5) {
     // emissive glass-like tube
-    col = base * (0.4 + 0.7 * wrap + 0.8 * rim) + base * spec * 1.0 + vec3(spec) * 0.12;
+    // glassy tube: darker core, bright rim
+    col = base * (0.22 + 0.5 * wrap + 1.25 * rim) + base * spec * 1.3 + vec3(spec) * 0.15;
     col += mix(base, vec3(0.75, 0.85, 1.0), 0.5) * max(base.r, max(base.g, base.b)) * (0.55 * rim + 0.5 * spec);
     col += base * glow;
     float f = clamp(pulse * uFire * fireW, 0.0, 1.0);
-    vec3 hot = uFireColor * (0.6 + 0.6 * nz) + vec3(1.0, 0.9, 0.7) * nz * nz * 0.22;
+    vec3 hot = uFireColor * (0.85 + 0.9 * nz) + vec3(1.0, 0.92, 0.75) * nz * nz * nz * 0.6;
     col = mix(col, hot, f);
-    col += uFireColor * vExtra.z * (0.5 + 0.7 * rim + 0.5 * spec); // permanently tinted parts
+    col += uFireColor * vExtra.z * (0.3 + 1.2 * rim + 1.0 * spec + 0.25 * wrap); // permanently tinted, glassy parts
   } else if (mat < 3.5) {
     float tw = 0.75 + 0.25 * sin(uTime * 1.7 + seed * 50.0);
     col = base * tw;
@@ -311,7 +320,7 @@ void main() {
     col += uPulseColor * glow * (0.3 + 0.7 * nz);
   } else {
     float hotc = 1.0 - smoothstep(0.0, 1.0, d / max(r + c, 0.75));
-    col = base * (0.75 + 0.6 * hotc);
+    col = base * (1.0 + 1.1 * hotc);
   }
 
   float op = abs(vCol.a);
@@ -566,6 +575,7 @@ export class NeuronRenderer {
         uPulse: { value: 0 },
         uPulseWidth: { value: 1 },
         uFire: { value: 0 },
+        uTissueBase: { value: new THREE.Vector3(...look.tissueBase) },
         uTissueA: { value: new THREE.Vector3(...look.tissueA) },
         uTissueB: { value: new THREE.Vector3(...look.tissueB) },
         uFireColor: { value: new THREE.Vector3(...look.fireColor) },

@@ -116,6 +116,16 @@ export type BranchOpts = {
   wobble: number;
   /** wander strength of thick fibres (thin ones always curl freely) */
   thickWobble?: number;
+  /** wander strength of thin fibres: ~4 = curly hair, ~1 = straight twigs (default 4) */
+  thinWobble?: number;
+  /** how much a side twig follows its parent's direction: 0.35 = sticks out, 1+ = feathered (default 0.35) */
+  twigForward?: number;
+  /** shortest capsule length; straight twigs can use longer pieces (default 0.07) */
+  minStep?: number;
+  /** most capsules one side twig (with its own sub-twigs) may use (default 45) */
+  twigBudget?: number;
+  /** squash factor for the depth (z) component of growth directions: <1 keeps the tree nearer one plane */
+  flatten?: number;
   /** side twigs per unit length */
   twigRate: number;
   twigLen: [number, number];
@@ -149,7 +159,7 @@ export const growBranch = (
   if (o.budget.left <= 0) return;
   let p = p0;
   let d = norm(d0);
-  const step = Math.min(0.24, Math.max(0.07, r0 * 2.2));
+  const step = Math.min(0.24, Math.max(o.minStep ?? 0.07, r0 * 2.2));
   const n = Math.max(2, Math.ceil(length / step));
   const rEnd = Math.max(o.minR * 0.7, r0 * 0.62);
   let s = s0;
@@ -160,8 +170,9 @@ export const growBranch = (
     const t1 = (i + 1) / n;
     // smoothly varying wander direction
     wob = norm(add(mul(wob, 0.75), mul(rng.dir(), 0.5)));
-    let nd = add(d, mul(wob, o.wobble * step * (r0 > 0.03 ? (o.thickWobble ?? 1.8) : 4)));
+    let nd = add(d, mul(wob, o.wobble * step * (r0 > 0.03 ? (o.thickWobble ?? 1.8) : (o.thinWobble ?? 4))));
     if (o.bias) nd = add(nd, mul(o.bias, (o.biasK ?? 0.1) * step));
+    if (o.flatten !== undefined) nd = [nd[0], nd[1], nd[2] * lerp(1, o.flatten, Math.min(1, step * 2))];
     d = norm(nd);
     const p1 = add(p, mul(d, step));
     const ra = lerp(r0, rEnd, t0);
@@ -171,10 +182,15 @@ export const growBranch = (
     o.budget.left--;
     if (o.onStep) o.onStep(p1, d, rb, s1, depth);
     if (rng.next() < o.twigRate * step && depth < o.maxDepth) {
-      const side = norm(add(mul(d, 0.35), rng.dir()));
+      const side = norm(add(mul(d, o.twigForward ?? 0.35), rng.dir()));
       const tr = Math.min(rb * 0.5, o.twigR * rng.range(0.7, 1.4));
-      if (tr >= o.minR * 0.6)
-        growBranch(b, rng, p1, side, tr, rng.range(o.twigLen[0], o.twigLen[1]), depth + 1, s1, o);
+      if (tr >= o.minR * 0.6) {
+        // a twig gets a small budget of its own, so early twigs cannot starve the rest of the tree
+        const sub = { left: Math.min(o.budget.left, o.twigBudget ?? 45) };
+        const before = sub.left;
+        growBranch(b, rng, p1, side, tr, rng.range(o.twigLen[0], o.twigLen[1]), depth + 1, s1, { ...o, budget: sub });
+        o.budget.left -= before - sub.left;
+      }
     }
     p = p1;
     s = s1;
@@ -183,9 +199,13 @@ export const growBranch = (
   const cr = rEnd * o.childScale;
   if (depth < o.maxDepth && cr >= o.minR) {
     const kids = rng.next() < 0.25 ? 3 : 2;
+    // the remaining budget is shared out evenly between the child branches
+    const share = Math.floor(o.budget.left / kids);
     for (let k = 0; k < kids; k++) {
       const cd = norm(add(d, mul(rng.dir(), o.spread)));
-      growBranch(b, rng, p, cd, cr * rng.range(0.85, 1.1), length * o.lenScale * rng.range(0.75, 1.2), depth + 1, s, o);
+      const sub = { left: share };
+      growBranch(b, rng, p, cd, cr * rng.range(0.85, 1.1), length * o.lenScale * rng.range(0.75, 1.2), depth + 1, s, { ...o, budget: sub });
+      o.budget.left -= share - sub.left;
     }
   } else if (o.onTip) {
     o.onTip(p, s, depth);
