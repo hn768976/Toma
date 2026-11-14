@@ -165,6 +165,11 @@ export const growBranch = (
   let s = s0;
   const seed = rng.next();
   let wob = rng.dir();
+  // a ball joint hides the flat tube ends where thick branches meet
+  if (r0 > 0.02 && depth > 0) {
+    b.point(p0, r0, o.style(r0, s0, depth, rng), seed, s0);
+    o.budget.left--;
+  }
   for (let i = 0; i < n; i++) {
     const t0 = i / n;
     const t1 = (i + 1) / n;

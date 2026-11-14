@@ -61,6 +61,8 @@ export type Look = {
   vignette: number;
   grain: number;
   saturation: number;
+  /** 0 = none; higher deepens the blacks and lifts the highlights (S-curve) */
+  contrast: number;
 };
 
 const VERT = /* glsl */ `
@@ -88,6 +90,7 @@ flat out vec4 vCol;
 flat out vec4 vMisc;
 flat out vec4 vExtra;
 flat out float vBoost;
+flat out float vKz;
 
 vec3 swayOf(vec3 p, float amt) {
   return amt * vec3(
@@ -170,6 +173,10 @@ void main() {
     }
   }
 
+  vec3 axisV = vb.xyz - va.xyz;
+  float axisL = length(axisV);
+  vKz = axisL > 1e-6 ? abs(axisV.z) / axisL : 0.0; // how much the capsule points at the camera
+
   vAB = vec4(xa, xb);
   vRC = vec4(rpa, rpb, cocA, cocB);
   vCol = iCol;
@@ -187,6 +194,7 @@ flat in vec4 vCol;
 flat in vec4 vMisc;
 flat in vec4 vExtra;
 flat in float vBoost;
+flat in float vKz;
 
 uniform float uTime;
 uniform float uPulse;
@@ -233,10 +241,21 @@ void main() {
     amp *= min(1.0, r / 0.6 + 0.15);
   } else {
     cov = 1.0 - smoothstep(max(r - w, 0.0), r + w, d);
-    if (mat > 3.5 && L2 > 1e-4) {
-      // sheaths are cylinders: cut the rounded ends off flat
-      float wt = w / sqrt(L2);
-      cov *= smoothstep(-wt, wt, tu) * (1.0 - smoothstep(1.0 - wt, 1.0 + wt, tu));
+    if (L2 > 1e-4 && vExtra.w < 0.01 && vExtra.z < 0.5) {
+      // End treatment. Consecutive tube pieces only overlap a little, so patterns stay continuous
+      // and thin or defocused fibres are not double-blended into dots at every joint. Sheaths are
+      // true cylinders: flat ends seen side-on, bulging into an ellipse as they turn to the camera.
+      float len = sqrt(L2);
+      float wt = w / len;
+      float over;
+      if (mat > 3.5) {
+        vec2 pdn = vec2(-ab.y, ab.x) / len;
+        float uu = clamp(dot(p - a, pdn) / max(r, 0.75), -1.0, 1.0);
+        over = vKz * r * sqrt(max(0.0, 1.0 - uu * uu)) / len;
+      } else {
+        over = 0.35 * r * clamp(r / w, 0.0, 1.0) / len;
+      }
+      cov *= smoothstep(-wt, wt, tu + over) * (1.0 - smoothstep(1.0 - wt, 1.0 + wt, tu - over));
     }
     amp = min(1.0, 1.15 * r / w);
   }
@@ -288,7 +307,7 @@ void main() {
       float n1 = sin(ang * 2.3 + seed * 31.0 + 1.4 * sin(s * 1.3 + seed * 9.0) + s * 0.6);
       float n2 = sin(ang * 4.9 - seed * 17.0 + s * 1.7 + 1.1 * sin(s * 0.8 + seed * 3.0));
       float n3 = sin(ang * 1.2 + seed * 5.3 + s * 0.9 + 0.8 * sin(s * 0.5));
-      float v = max(1.0 - smoothstep(0.08, 0.42, abs(n1 + 0.3 * n2)), 0.8 * (1.0 - smoothstep(0.05, 0.28, abs(n2 - 0.45))));
+      float v = max(1.0 - smoothstep(0.12, 0.5, abs(n1 + 0.3 * n2)), 0.8 * (1.0 - smoothstep(0.08, 0.34, abs(n2 - 0.45))));
       vein = mix(vein, v, sharp);
       patchM = mix(patchM, smoothstep(-0.25, 0.35, n3 + 0.35 * n2), sharp);
     }
@@ -296,7 +315,7 @@ void main() {
     tc = mix(tc, uTissueA, vein);
     tc = mix(tc, base, vExtra.z);
     col = tc * (0.12 + 0.72 * wrap * wrap + 0.2 * diff) + tc * rim * 0.25 + spec * 0.22;
-    col += uTissueA * vein * 0.22 * (1.0 - vExtra.z); // veins glow slightly
+    col += uTissueA * vein * 0.4 * (1.0 - vExtra.z); // veins glow slightly
     col += uPulseColor * pulse * 0.45 * fireW;
   } else if (mat < 2.5) {
     // emissive glass-like tube
@@ -337,6 +356,7 @@ uniform float uVignette;
 uniform float uGrain;
 uniform float uSeed;
 uniform float uSaturation;
+uniform float uContrast;
 in vec2 vUv;
 out vec4 outColor;
 
@@ -352,6 +372,8 @@ void main() {
   c = 1.0 - exp(-c * 1.25);
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
   c = mix(vec3(l), c, uSaturation);
+  c = clamp(c, 0.0, 1.0);
+  c = mix(c, c * c * (3.0 - 2.0 * c), uContrast);
   vec2 q = vUv - 0.5;
   q.x *= uRes.x / uRes.y;
   float v = smoothstep(1.05, 0.25, length(q));
@@ -640,6 +662,7 @@ export class NeuronRenderer {
           uGrain: { value: look.grain },
           uSeed: { value: 0 },
           uSaturation: { value: look.saturation },
+          uContrast: { value: look.contrast },
         },
       }),
     );

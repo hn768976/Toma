@@ -50,23 +50,26 @@ const buildNeuron = (b: Builder, rng: Rng, pal: Palette) => {
   // synapse sparks are tiny dashes, so they read as flecks when sharp and as discs when defocused
   const spark = (p: V3, s: number) => {
     const a = add(p, mul(rng.dir(), 0.03));
-    const r = rng.range(0.014, 0.03);
+    const r = rng.range(0.011, 0.024);
     b.capsule(a, r, add(a, mul(rng.dir(), rng.range(0.02, 0.09))), r, { col: mul(pal.particle, rng.range(1.1, 2.0)), opacity: 0.7, mat: MAT_SYNAPSE }, rng.next(), s, s);
   };
   const onStep = (p: V3, _d: V3, r: number, s: number) => {
-    if (r < 0.02 && rng.next() < 0.07) spark(p, s);
+    if (r < 0.02 && rng.next() < 0.12) spark(p, s);
   };
   const onTip = (p: V3, s: number) => {
     if (rng.next() < 0.6) spark(p, s);
   };
 
+  // the cell body and dendrites are tilted away from the camera, so the tree is seen obliquely
+  b.rot = 0.42;
+  b.rotX = 0.38;
   // --- soma: an irregular, elongated cluster of lobes ------------------------------------
   const somaStyle = { col: pal.trunk, opacity: 1, mat: MAT_GLOW, fire: 1, bias: 0.9 };
-  b.capsule([-0.14, -0.5, 0], 0.4, [0.12, 0.45, 0], 0.44, somaStyle, rng.next(), -0.2, 0.2);
-  for (let i = 0; i < 10; i++) {
+  b.capsule([-0.12, -0.42, 0], 0.3, [0.1, 0.38, 0], 0.34, somaStyle, rng.next(), -0.2, 0.2);
+  for (let i = 0; i < 7; i++) {
     const d = rng.dir();
     const o: V3 = [0, rng.range(-0.35, 0.35), 0];
-    b.capsule(add(o, mul(d, rng.range(0.05, 0.2))), rng.range(0.24, 0.36), add(o, mul(d, rng.range(0.4, 0.62))), rng.range(0.12, 0.2), somaStyle, rng.next(), -0.3, 0);
+    b.capsule(add(o, mul(d, rng.range(0.05, 0.2))), rng.range(0.24, 0.32), add(o, mul(d, rng.range(0.3, 0.5))), rng.range(0.16, 0.22), somaStyle, rng.next(), -0.3, 0);
   }
 
   // --- dendrites: tapering trunks that end in dense feathery tufts ------------------------
@@ -109,6 +112,8 @@ const buildNeuron = (b: Builder, rng: Rng, pal: Palette) => {
     });
   });
 
+  b.rot = 0;
+  b.rotX = 0;
   // --- axon ----------------------------------------------------------------------------
   axonPath.push([0, 0, 0], A0);
   const seed = rng.next();
@@ -210,14 +215,15 @@ const makeLook = (pal: Palette): Look => ({
   fireColor: pal.fire,
   pulseColor: pal.fire,
   light: [-0.3, 0.7, 0.65],
-  bloomStrength: 0.5,
-  bloomRadius: 0.55,
+  bloomStrength: 0.3,
+  bloomRadius: 0.4,
   bloomThreshold: 0.72,
-  maxCoc: 0.024,
-  sway: 0.03,
+  maxCoc: 0.021,
+  sway: 0.07,
   vignette: 0.5,
   grain: 0.018,
-  saturation: 1.1,
+  saturation: 1.3,
+  contrast: 0.3,
 });
 
 const ease = (t: number) => t * t * (3 - 2 * t);
@@ -249,7 +255,7 @@ const firing = (frame: number) => {
   if (frame >= next - 2) burst += 0.19;
   const fire = frame === flash ? 0.8 : 1;
   // the hot front sits on the soma and slides a little way out along the axon
-  const front = lerp(-0.2, AXON_END_S * 0.75, smooth(0.5, 1.0, u));
+  const front = lerp(-0.2, AXON_END_S * 0.45, smooth(0.5, 1.0, u));
   return { burst, fire, front };
 };
 
@@ -277,21 +283,21 @@ const makeState = () => (frame: number, fps: number, dur: number): FrameState =>
     camUp: [0.03, 1, 0],
     fovDeg: 32,
     focusDist: lerp(nearF, farF, rack),
-    aperture: lerp(0.055, 0.058, rack),
+    aperture: lerp(0.042, 0.058, rack),
     time,
     pulse: f.front,
-    pulseWidth: 2.2,
+    pulseWidth: 3.3,
     fire: f.fire,
     burst: f.burst,
-    exposure: 1.0,
+    exposure: 1.22,
   };
 };
 
 /** Version 1 - the reference palette: electric blue cell, orange / amber firing. */
 export const BLUE_AMBER: Palette = {
-  trunk: [0.06, 0.48, 1.0],
-  hair: [0.05, 0.36, 1.0],
-  hairAlt: [0.12, 0.6, 1.0],
+  trunk: [0.04, 0.42, 1.0],
+  hair: [0.03, 0.3, 1.0],
+  hairAlt: [0.12, 0.58, 1.0],
   particle: [1.0, 0.3, 0.02],
   fire: [1.0, 0.42, 0.06],
   background: [0.0, 0.0001, 0.0005],

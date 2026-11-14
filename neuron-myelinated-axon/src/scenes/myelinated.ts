@@ -8,8 +8,8 @@ import { FrameState, Look, MAT_DUST, MAT_LIT, MAT_MYELIN, MAT_TISSUE } from "../
  * nodes, a terminal tree, a row of sister neurons receding into the blur and fine dust.
  */
 
-const GREY: V3 = [0.36, 0.33, 0.32];
-const GREY_WARM: V3 = [0.42, 0.33, 0.3];
+const GREY: V3 = [0.37, 0.36, 0.37];
+const GREY_WARM: V3 = [0.42, 0.37, 0.36];
 const MYELIN: V3 = [0.2, 0.16, 0.14];
 const NODE: V3 = [1.0, 0.24, 0.2];
 
@@ -99,6 +99,7 @@ const buildNeuron = (b: Builder, rng: Rng, detail: number) => {
     [[1.7, 0.09, 0], SOMA_END, 0.4],
   ];
   const somaR = [0.34, 0.6, 0.56, 0.4, 0.22];
+  b.point(spinePts[0][0], somaR[0], somaTissue, somaSeed, spinePts[0][0][0]); // rounded rear end
   spinePts.forEach(([a, c], i) => b.capsule(a, somaR[i], c, somaR[i + 1], somaTissue, somaSeed, a[0], c[0]));
   if (hero) {
     for (let i = 0; i < 110; i++) {
@@ -124,7 +125,7 @@ const buildNeuron = (b: Builder, rng: Rng, detail: number) => {
       style,
       sSign: -1,
       wobble: 0.5,
-      thickWobble: 1.0,
+      thickWobble: 0.55,
       thinWobble: 1.3,
       twigForward: 0.75,
       minStep: 0.13,
@@ -168,7 +169,7 @@ const buildNeuron = (b: Builder, rng: Rng, detail: number) => {
     b.capsule(p, 0.215, q, 0.215, { col: MYELIN, opacity: 1, mat: MAT_MYELIN, fire: 1, glow: i % 2 === 1 ? 0.16 : 0.02 }, rng.next(), S0 + l, S0 + l + SHEATH_LEN);
     l += SHEATH_LEN;
     const n = axonAt(l + NODE_GAP);
-    b.capsule(q, 0.1, n, 0.1, { col: mul(NODE, 0.5), opacity: 1, mat: MAT_MYELIN, fire: 1, glow: 0.4 }, rng.next(), S0 + l, S0 + l + NODE_GAP);
+    b.capsule(q, 0.1, n, 0.1, { col: mul(NODE, 0.5), opacity: 1, mat: MAT_MYELIN, fire: 1, glow: 1.3 }, rng.next(), S0 + l, S0 + l + NODE_GAP);
     l += NODE_GAP;
     if (hero) axonPath.push(n);
   }
@@ -190,7 +191,7 @@ const buildNeuron = (b: Builder, rng: Rng, detail: number) => {
       style,
       sSign: 1,
       wobble: 0.5,
-      thickWobble: 1.4,
+      thickWobble: 0.8,
       thinWobble: 1.2,
       twigForward: 0.75,
       minStep: 0.13,
@@ -231,9 +232,9 @@ const build = () => {
     b.rot = jr.range(-0.08, 0.08);
     b.rotX = jr.range(-0.1, 0.1);
     b.scale = 1.05;
-    b.tint = 0.47;
+    b.tint = 0.4 - 0.04 * i;
     b.fade = 0.9;
-    buildNeuron(b, makeRng(sd), 0.07);
+    buildNeuron(b, makeRng(sd), 0.1);
   });
   b.offset = [0, 0, 0];
   b.rot = 0;
@@ -245,7 +246,7 @@ const build = () => {
   // dust: lots of tiny white specks and a few soft red motes
   const rng = makeRng(555);
   for (let i = 0; i < 3200; i++) {
-    const red = rng.next() < 0.08;
+    const red = rng.next() < 0.05;
     const p: V3 = [rng.range(-18, 24), rng.range(-11, 13), rng.range(-1, 1) * rng.range(0.3, red ? 7 : 4.5) - 0.3];
     b.point(
       p,
@@ -267,14 +268,15 @@ const look: Look = {
   fireColor: [1.0, 0.3, 0.1],
   pulseColor: [1.0, 0.14, 0.08],
   light: [-0.3, 0.8, 0.55],
-  bloomStrength: 0.3,
-  bloomRadius: 0.55,
-  bloomThreshold: 0.7,
+  bloomStrength: 0.26,
+  bloomRadius: 0.45,
+  bloomThreshold: 0.78,
   maxCoc: 0.045,
   sway: 0.03,
   vignette: 0.5,
   grain: 0.014,
   saturation: 1.3,
+  contrast: 0.55,
 };
 
 const ease = (t: number) => t * t * (3 - 2 * t);
@@ -313,7 +315,7 @@ const stateV1 = (frame: number, fps: number, dur: number): FrameState => {
     camUp: [Math.sin(lerp(0.0, 0.03, e)), 1, 0],
     fovDeg: 30,
     focusDist: depthOf(camPos, target, [5, 0.6, -0.25]),
-    aperture: lerp(0.062, 0.1, e),
+    aperture: lerp(0.04, 0.1, e),
     time,
     pulse: pulseAt(time),
     pulseWidth: 0.75,
