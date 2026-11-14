@@ -76,9 +76,11 @@ float starLayer(float a, float r, float cells, float lr, float travel, float see
   vec2 c = vec2(0.3 + 0.4 * hash2(id + seed + 7.1), 0.3 + 0.4 * hash2(id + seed + 3.7));
   float dA = (f.x - c.x) * (TAU * r / cells);   // tangential distance (height units)
   float dR = (f.y - c.y) * (r / lr);             // radial distance
-  float size = 0.6 + 0.8 * hash2(id + seed + 9.9);
-  float w = (0.0015 + 0.0008 * r) * size;
-  float len = (0.004 + 0.026 * r * r) * size;
+  float hs = hash2(id + seed + 9.9);
+  float size = 0.5 + 0.7 * hs;
+  float w = (0.0011 + 0.0006 * r) * size;
+  // mostly short dots; ~1 in 6 stars is a long streak
+  float len = (0.0025 + mix(0.008, 0.03, step(0.83, hs)) * r * r) * size;
   float s = exp(-pow(dA / w, 2.0) - pow(dR / len, 2.0));
   return s * (0.35 + 0.85 * hash2(id + seed + 1.3)) * smoothstep(uHole * 1.1, uHole * 1.1 + 0.18, r);
 }
@@ -114,17 +116,17 @@ void main() {
   float clumpTex = fbm3(vec3(dir * 26.0, lr * 5.0 - uTravel * 2.2));
   neb *= 0.55 + 0.9 * smoothstep(0.3, 0.7, clumpTex);
   // Dim, grainy nebula floor so the gaps between streams are never empty
-  float floorNeb = (0.13 + 0.2 * fibre) * smoothstep(0.25, 0.6, body) * uDensity;
+  float floorNeb = (0.16 + 0.28 * strands) * smoothstep(0.25, 0.6, body) * uDensity;
   neb = max(neb, floorNeb);
   // Fibrous grain / dust inside the streams
-  float grain = noise3(vec3(dir * 150.0, lr * 26.0 - uTravel * 3.0));
+  float grain = 0.6 * noise3(vec3(dir * 260.0, lr * 40.0 - uTravel * 3.0)) + 0.4 * noise3(vec3(dir * 520.0 + 3.0, lr * 70.0 - uTravel * 3.0));
   float dust = noise3(vec3(dir * 70.0 + 5.0, lr * 12.0 - uTravel * 2.6));
   neb *= 0.68 + 0.45 * grain + 0.25 * (dust - 0.5);
   neb = clamp(neb, 0.0, 1.4);
 
   // Dark core with an irregular, soft rim
   float holeR = uHole * (0.75 + 0.5 * fbm3(vec3(dir * 2.2, uTime * 0.35)));
-  float core = smoothstep(holeR, holeR + 0.16, r);
+  float core = smoothstep(holeR * 0.8, holeR + 0.24, r);
   float radial = core * (0.55 + 0.6 * smoothstep(0.1, 0.9, r));
 
   vec3 col = uDeep * neb * 1.5;
@@ -133,7 +135,7 @@ void main() {
   col = mix(col, uLavender, smoothstep(0.85, 1.25, neb) * 0.65);
   // Occasional pink / magenta accents inside dense clumps
   float pinkMask = smoothstep(0.66, 0.82, fbm3(vec3(dir * 5.0 + 21.0, w * 0.8)));
-  col = mix(col, uPink * (0.6 + 0.6 * neb), pinkMask * smoothstep(0.4, 0.9, neb) * 0.55);
+  col = mix(col, uPink * (0.6 + 0.6 * neb), pinkMask * smoothstep(0.35, 0.9, neb) * 0.7);
   col *= radial * 1.1;
 
   // Cyan / white flares racing past
@@ -147,8 +149,8 @@ void main() {
 
   // Star streaks (three depth layers)
   float stars = 0.0;
-  stars += starLayer(a, r, 220.0, 9.0, uTravel * 2.6, 1.0, 0.13);
-  stars += starLayer(a, r, 380.0, 14.0, uTravel * 3.4, 17.0, 0.06) * 0.8;
+  stars += starLayer(a, r, 220.0, 9.0, uTravel * 2.6, 1.0, 0.1);
+  stars += starLayer(a, r, 380.0, 14.0, uTravel * 3.4, 17.0, 0.055) * 0.8;
   stars += starLayer(a, r, 600.0, 22.0, uTravel * 4.6, 41.0, 0.04) * 0.6;
   col += mix(vec3(0.85, 0.85, 1.0), uCyan, 0.25) * stars * 1.1;
 

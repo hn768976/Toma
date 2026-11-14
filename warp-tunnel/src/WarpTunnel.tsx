@@ -24,8 +24,8 @@ export type WarpTunnelProps = z.infer<typeof warpTunnelSchema>;
 // then the nebula thickens again toward the end.
 const DENSITY: Keys = [
   [0, 0.76], [1, 0.7], [2, 0.7], [4, 0.68], [6, 0.82], [7.3, 0.96],
-  [8.1, 1.08], [9, 0.82], [10, 0.55], [11.5, 0.34], [12.5, 0.42], [14, 0.6],
-  [16, 0.7], [17.5, 0.8], [19, 0.66],
+  [8.1, 1.08], [9, 0.82], [10, 0.55], [11.5, 0.36], [12.5, 0.5], [14, 0.68],
+  [16, 0.78], [17.5, 0.82], [19, 0.72],
 ];
 const FLARE: Keys = [
   [0, 0.25], [3, 0.3], [5, 0.42], [7, 0.6], [8, 0.85], [8.8, 0.68],
@@ -35,7 +35,7 @@ const FLARE: Keys = [
 const SPEED_REFERENCE: Keys = [[0, 1.4], [19, 1.4]];
 // Version 2: the camera surges through the bright section, then eases off.
 const SPEED_ORBIT: Keys = [
-  [0, 1.15], [4, 1.5], [7.5, 2.6], [9.5, 2.4], [12, 1.4], [19, 1.25],
+  [0, 1.2], [4, 1.5], [7.5, 2.0], [9.5, 1.9], [12, 1.4], [19, 1.25],
 ];
 
 type Camera = { center: [number, number]; roll: number; travel: number };
@@ -57,8 +57,8 @@ const cameraAt = (mode: WarpTunnelProps["camera"], t: number, duration: number):
   // tunnel.
   const u = (Math.PI * 2 * t) / duration;
   return {
-    center: [0.34 * Math.sin(u), 0.15 * Math.sin(2 * u)],
-    roll: -0.55 * Math.sin(u) + 0.6 * (t / duration) * Math.PI,
+    center: [0.28 * Math.sin(u), 0.13 * Math.sin(2 * u)],
+    roll: -0.45 * Math.sin(u) + 0.5 * (t / duration) * Math.PI,
     travel: integrateKeys(SPEED_ORBIT, t),
   };
 };
@@ -88,7 +88,7 @@ export const WarpTunnel: React.FC<WarpTunnelProps> = ({
         uTravel: cam.travel,
         uDensity: sampleKeys(DENSITY, t),
         uFlare: sampleKeys(FLARE, t),
-        uHole: 0.17,
+        uHole: 0.13,
         uDeep: deep,
         uViolet: violet,
         uLavender: lavender,
