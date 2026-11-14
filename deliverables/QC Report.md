@@ -107,14 +107,17 @@ These are approximated, not reproduced: the exact crack layout (procedural), tru
 
 | | Water V2 (Golden Palette) | Serum V2 (Orbit Camera) |
 |---|---|---|
-| Distinct from V1 | **Clearly distinct** - mean colour difference deltaE 27-37 per phase, drops cyan vs amber | See below |
-| Concept and timing preserved | Yes - camera offset 0 px on all sampled frames, drop events frame-locked | See below |
-| Quality on par with V1 | Yes - one minor note: cracks inside the golden halo read slightly olive | See below |
+| Distinct from V1 | **Clearly distinct** - mean colour difference deltaE 27-37 per phase, drops cyan vs amber | **Clearly distinct as a whole clip**, but not in every phase: frames 0-25 and 75-292 are unmistakably different; frames 30-60 (touchdown) and the final still are framed much like V1 |
+| Concept and timing preserved | Yes - camera offset 0 px on all sampled frames, drop events frame-locked | Yes - touchdown, first glow, ring and last cracks on the same frames; colours within 1-5 levels |
+| Quality on par with V1 | Yes - one minor note: cracks inside the golden halo read slightly olive | **Slightly lower** - no technical defects, three composition notes (below) |
 
-SERUM_V2_RESULT
+Serum V2 composition notes from the reviewer: (1) the backdrop band only slides into frame during the last 7 frames, so the ending does not settle; (2) the tip of the drop is cropped by the top edge by 30-45 px around frames 8-12; (3) the touchdown (frames 30-60) is framed almost like Version 1. Horizon is level (-0.11 degrees at the end, +0.1 at the start); camera motion has no kinks. One implementation note: besides the camera keys, Version 2 extends the skin plane (one uniform) so that the orbiting camera sees a level horizon - colours, shapes and animation curves are shared with Version 1.
+
+An earlier build of Serum V2 was also reviewed (opening too similar to V1, far edge tilted 4.6 degrees on the closing shot); the delivered build is the reworked one described above.
 
 ## 6. Summary
 
 - All four MP4s: H.264, 1920x1080, exactly 30 fps, frame count and duration identical to their references, video-only, no rendering or decoding defects found.
 - Both ZIPs: intact, complete, install and render with the documented commands at 1080p and at native 4K.
 - Match to reference: Water Droplets V1 is a close match with minor differences; Serum Drop V1 is a partial match at the upper end and was not signed off by the reviewer as the closest achievable. The specific open items are listed above.
+- Version 2: Water Droplets V2 is clearly distinct and on par with V1; Serum Drop V2 is clearly distinct overall with timing preserved, slightly lower on composition at its first and last second.
