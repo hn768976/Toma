@@ -83,11 +83,11 @@ void main(){
   float d = clamp(dot(N, L) * 0.62 + 0.38, 0.0, 1.0);
   float streak = vnoise(vec3(vUv.y * 90.0, vUv.x * 6.0, 4.0)) - 0.5;
   vec3 healthy = mix(uHealthyShadow, uHealthy, smoothstep(0.1, 0.9, d));
-  healthy = mix(healthy, uHealthyHighlight, 0.6 * pow(d, 9.0));
+  healthy = mix(healthy, uHealthyHighlight, 0.3 * pow(d, 9.0));
   healthy *= 1.0 + 0.08 * streak;
   vec3 Hh = normalize(L + V);
   // narrow lengthwise specular streak of a sealed cuticle
-  healthy += uHealthyHighlight * 0.55 * pow(d, 40.0);
+  healthy += uHealthyHighlight * 0.5 * pow(d, 70.0);
   healthy += uHealthyHighlight * 0.45 * pow(max(dot(N, Hh), 0.0), 90.0);
   float ndv = max(dot(N, V), 0.0);
   healthy += uHealthyHighlight * 0.22 * pow(1.0 - ndv, 3.0) * max(dot(N, L2) + 0.4, 0.0);

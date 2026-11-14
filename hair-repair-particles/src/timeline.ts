@@ -47,7 +47,7 @@ const D_SHAFT = (() => {
  */
 export const hairRadius = (u: number) => {
   const d = (1 - u) * HAIR_LENGTH; // distance from the tip
-  const shaft = 0.068 * Math.min(d, D_SHAFT) * (0.55 + 0.45 * clamp01(d / 2.5));
+  const shaft = 0.075 * Math.min(d, D_SHAFT) * (0.55 + 0.45 * clamp01(d / 2.5));
   const below = Math.max(0, d - D_SHAFT);
   // smooth blend into the thicker root section
   const root = 0.175 * below * (below / (below + 0.8));
@@ -84,12 +84,12 @@ export const cameraProgress = (t: number) =>
 
 const camera = new THREE.PerspectiveCamera(FOV, WIDTH / HEIGHT, 0.1, 400);
 
-const START_POS = new THREE.Vector3(6.0, -5.3, 10.0);
+const START_POS = new THREE.Vector3(6.0, -5.5, 11.4);
 const START_TARGET = new THREE.Vector3(6.3, -2.8, 0);
 const END_DIST = 5 / Math.tan(THREE.MathUtils.degToRad(FOV / 2));
 const END_POS = new THREE.Vector3(8.89, 5, END_DIST);
 const END_TARGET = new THREE.Vector3(8.89, 5, 0);
-const MID_POS = new THREE.Vector3(6.2, -1.0, 12.0);
+const MID_POS = new THREE.Vector3(6.2, -1.0, 8.5);
 
 const bez = (a: number, b: number, c: number, p: number) =>
   (1 - p) * (1 - p) * a + 2 * (1 - p) * p * b + p * p * c;
