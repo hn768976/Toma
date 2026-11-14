@@ -477,6 +477,7 @@ export const createNeuronStage =
           bloom: 1.25,
           threshold: 0.05,
           exposure: 0.95,
+          blackPoint: 0.0025,
           vignette: 0.45,
           background: PAL.background,
           bgGlowColor: PAL.flare,

@@ -60,6 +60,7 @@ uniform vec2 uBgGlowPos;
 uniform float uBgGlow;
 uniform float uStreak;
 uniform float uHuePreserve;
+uniform float uBlackPoint;
 uniform float uStreakY;
 uniform float uFade;
 uniform float uAspect;
@@ -94,6 +95,8 @@ void main() {
   vec2 v = (vUv - 0.5) * vec2(uAspect, 1.0);
   c *= mix(1.0, smoothstep(1.25, 0.25, length(v)), uVignette);
   c *= uFade;
+  // Black point: pull lifted shadows (bloom/haze floor) back to true black.
+  c = max(c - uBlackPoint, 0.0) / (1.0 - uBlackPoint);
 
   c = pow(max(c, 0.0), vec3(1.0 / 2.2));
   // +-0.5 LSB blue-noise-ish dither keeps the dark gradients from banding
@@ -115,6 +118,8 @@ export type PostSettings = {
   threshold?: number;
   /** 0 = per-channel filmic curve, 1 = fully hue-preserving (more saturated). */
   huePreserve?: number;
+  /** Linear-light value mapped to black after tone mapping. */
+  blackPoint?: number;
   streakY?: number;
 };
 
@@ -181,6 +186,7 @@ export class PostPipeline {
       uFade: { value: 1 },
       uStreak: { value: 0 },
       uHuePreserve: { value: 0.55 },
+      uBlackPoint: { value: 0 },
       uStreakY: { value: 0.5 },
       uAspect: { value: width / height },
     });
@@ -232,6 +238,7 @@ export class PostPipeline {
     u.uFade.value = s.fade;
     u.uStreak.value = s.streak ?? 0;
     u.uHuePreserve.value = s.huePreserve ?? 0.55;
+    u.uBlackPoint.value = s.blackPoint ?? 0;
     u.uStreakY.value = s.streakY ?? 0.5;
     this.pass(this.compMat, null);
   }
