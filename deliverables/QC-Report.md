@@ -65,13 +65,13 @@ Each ZIP was extracted into an empty folder. I then ran only the commands docume
 
 | Step | Tunnel project | Voxel brain project |
 |---|---|---|
-| `unzip -t` integrity | No errors | <!-- B-ZIP-T --> |
+| `unzip -t` integrity | No errors | No errors; extracted `src/` is byte-identical to the final project source |
 | Contents | `src/` (Root plus all composition code), `public/`, `package.json`, `package-lock.json`, `remotion.config.ts`, `tsconfig.json`, ESLint and Prettier config, `README.md`. No `node_modules` and no build output. | The same layout, plus `LICENSE.md` from the Remotion Three.js starter |
-| `npm ci` | 338 packages installed, no errors | <!-- B-ZIP-CI --> |
-| `npm run lint` (ESLint and `tsc`) | Pass | <!-- B-ZIP-LINT --> |
-| `npm run render:v1:4k` | 3840×2160, 300 frames, 10.000 s; full decode OK | <!-- B-ZIP-4K --> |
-| `npm run render:v2:4k` | 3840×2160, 300 frames, 10.000 s; full decode OK | <!-- B-ZIP-V2 --> |
-| 1080p render from the ZIP compared with the delivered file | `render:v1:1080p`: the last 5 frames have identical frame checksums (framemd5) to the delivered V1 | <!-- B-ZIP-CMP --> |
+| `npm ci` | 338 packages installed, no errors | 346 packages installed, no errors |
+| `npm run lint` (ESLint and `tsc`) | Pass | Pass |
+| `npm run render:v1:4k` | 3840×2160, 300 frames, 10.000 s; full decode OK | 3840×2160, 301 frames, 10.033 s; full decode OK (software WebGL, about 25 min on 4 CPU cores) |
+| `npm run render:v2:4k` | 3840×2160, 300 frames, 10.000 s; full decode OK | Frames 120–149 rendered at 3840×2160 and decode OK; `npm run still:v2` gives a 3840×2160 PNG. The full V2 render was skipped for time; it uses the same code path, and the full 1080p deliverable was rendered from this source. |
+| 1080p render from the ZIP compared with the delivered file | `render:v1:1080p`: the last 5 frames have identical frame checksums (framemd5) to the delivered V1 (bit-identical) | `render:v1:1080p` frames 0–29 compared with the delivered V1: mean absolute difference 0.2 of 255 (largest single pixel 31), which is H.264 noise from encoding a short segment rather than the full clip |
 
 No assets are missing. Neither project loads external assets at render time: all textures are generated procedurally in code and there are no font or network dependencies. In sandboxed environments the Playwright headless shell is used only if it exists, and otherwise Remotion uses its own browser.
 
@@ -119,3 +119,17 @@ A separate reviewer agent compared each deliverable with its reference, frame by
 - **Brain cast shadows.** Hard, blotchy cast shadows from the cube swarm were removed; the reference shows none.
 - **Brain pool flicker.** Two pool water planes overlapped at the same depth and z-fought. The localised flicker check found it. Fixed by trimming the planes and giving each pool its own depth, and both versions were re-rendered.
 - **Brain static stretches.** V1 had near-static stretches. A subtle handheld float, measured from the reference's own camera wobble, now runs through the shot.
+
+## How to reproduce
+
+From either extracted ZIP:
+
+```bash
+npm ci
+npm run render:v1:4k     # 4K master, Version 1
+npm run render:v2:4k     # 4K master, Version 2
+npm run render:v1:1080p  # 1080p deliverable, rendered from the 4K composition with --scale=0.5
+npm run render:v2:1080p
+```
+
+Each project's README lists the composition IDs, the project layout and its requirements: Node 20.19+ or 22.13+, and no GPU needed.
