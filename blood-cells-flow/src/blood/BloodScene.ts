@@ -28,6 +28,9 @@ const CELL_COUNT = 250;
 const CELL_RANGE_NEAR = -2;
 const CELL_RANGE_FAR = 43;
 const CELL_RADIUS = 0.165;
+// Distance range (in front of the camera) over which far cells shrink to nothing.
+const CELL_FADE_START = 15;
+const CELL_FADE_END = 31;
 // All cells drift towards the lens at the same speed (plug flow) and only
 // tumble individually, so their mutual distances never change.
 const CELL_FLOW_SPEED = -0.45;
@@ -416,8 +419,11 @@ export const createBloodScene =
           .addScaledVector(tmpFrame.b, Math.sin(c.phi) * c.rho);
         spin.setFromAxisAngle(c.axis, c.rate * t);
         quat.copy(spin).multiply(c.rot0);
+        // Far cells shrink away as they recede (on top of the haze in the
+        // shader), so no opaque mass of cells is left at the far end of the
+        // vessel; approaching cells emerge from the glow.
         const fade =
-          smoothstep(CELL_RANGE_FAR, CELL_RANGE_FAR - 6, rel) *
+          smoothstep(CELL_FADE_END, CELL_FADE_START, rel) *
           smoothstep(CELL_RANGE_NEAR, CELL_RANGE_NEAR + 0.4, rel);
         const k = c.scale * fade;
         scl.set(k, k * c.thick, k);
