@@ -61,7 +61,7 @@ const makeCubeTexture = () => {
   // Back face edges and the edges joining them to the front corners.
   const b0 = s * 0.3;
   const b1 = s * 0.82;
-  g.strokeStyle = "rgba(24,62,86,0.62)";
+  g.strokeStyle = "rgba(20,56,80,0.74)";
   g.lineWidth = s * 0.03;
   g.strokeRect(b0, b0, b1 - b0, b1 - b0);
   g.beginPath();
@@ -384,9 +384,9 @@ export class BrainWorld {
     pc.height = 128;
     const pg = pc.getContext("2d")!;
     const grad = pg.createLinearGradient(0, 0, 0, 128);
-    grad.addColorStop(0, "#d9f1f8");
-    grad.addColorStop(0.45, "#9fcfe0");
-    grad.addColorStop(1, "#3f7f9c");
+    grad.addColorStop(0, "#b7dde9");
+    grad.addColorStop(0.4, "#6fa9c0");
+    grad.addColorStop(1, "#24607c");
     pg.fillStyle = grad;
     pg.fillRect(0, 0, 4, 128);
     const poolTex = new THREE.CanvasTexture(pc);
@@ -422,15 +422,22 @@ export class BrainWorld {
     this.scene.add(ped);
 
     // Recessed connector slot on the pedestal's front face.
-    const slotMat = new THREE.MeshStandardMaterial({ color: "#7d93a1", roughness: 0.8 });
-    const slot = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.34, 0.06), slotMat);
-    slot.position.set(0, 0.17, PEDESTAL.d / 2 + 0.005);
+    // Lit openings: pale cyan with a faint glow from the circuit inside.
+    const slotMat = new THREE.MeshStandardMaterial({
+      color: "#a9cfdc",
+      emissive: "#4cb6d6",
+      emissiveIntensity: 0.25,
+      roughness: 0.6,
+    });
+    // Connector slot at the base of the front face; the traces run out of it.
+    const slot = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.24, 0.06), slotMat);
+    slot.position.set(0, 0.12, PEDESTAL.d / 2 + 0.005);
     this.scene.add(slot);
     const prongMat = new THREE.MeshStandardMaterial({ color: "#f3f8fa", roughness: 0.5 });
     // White frame pieces split the slot into two openings.
     for (const [sx, w] of [[0, 0.16], [-0.6, 0.12], [0.6, 0.12]] as const) {
-      const prong = new THREE.Mesh(new THREE.BoxGeometry(w, 0.36, 0.08), prongMat);
-      prong.position.set(sx, 0.17, PEDESTAL.d / 2 + 0.01);
+      const prong = new THREE.Mesh(new THREE.BoxGeometry(w, 0.26, 0.08), prongMat);
+      prong.position.set(sx, 0.13, PEDESTAL.d / 2 + 0.01);
       this.scene.add(prong);
     }
 

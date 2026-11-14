@@ -8,7 +8,7 @@ import { clamp, easeOutCubic, mulberry32 } from "./random";
  *
  * Choreography (matched to the reference):
  * - ~1.2–2.4 s: a few "scout" cubes drop in from high above.
- * - ~2.2–5.3 s: the swarm. Large tumbling glass cubes arrive from above and
+ * - ~2.2–5.7 s: the swarm. Large tumbling glass cubes arrive from above and
  *   the upper left, shrink as they settle and lock in sweeping from the back
  *   (right) of the brain to the front (left). Only the front face flies;
  *   the cubes behind it fade in place, so the swarm stays airy instead of a
@@ -99,7 +99,7 @@ export const buildVoxels = (): Voxel[] => {
       const xNorm = (c + 0.5) / COLS; // 0 = left (frontal), 1 = right
       const yNorm = (r + 0.5) / ROWS;
       // Lock-in order: sweep from the right (back of the brain) to the left.
-      const columnStart = 2.1 + (1 - xNorm) * 1.75 + yNorm * 0.12;
+      const columnStart = 2.1 + (1 - xNorm) * 2.2 + yNorm * 0.12;
       for (let l = 0; l < layers; l++) {
         const z = (l - (layers - 1) / 2) * VOXEL;
         // Only the visible front face flies in; the rest materialise in place.
@@ -110,7 +110,7 @@ export const buildVoxels = (): Voxel[] => {
           tx: X * VOXEL,
           ty: (r + 0.5) * VOXEL,
           // Slight depth jitter on the front surface gives a crafted, uneven relief.
-          tz: z + (l === layers - 1 ? (rand() - 0.5) * 0.04 : 0),
+          tz: z + (l === layers - 1 ? (rand() - 0.5) * 0.08 : 0),
           // About half of the front face flies; the rest materialise, keeping the swarm sparse.
           flies: surface && rand() < 0.5,
           // From above and the upper left, some towards the camera (they read larger).
@@ -126,7 +126,7 @@ export const buildVoxels = (): Voxel[] => {
           spinX: (rand() - 0.5) * 6,
           spinY: (rand() - 0.5) * 6,
           spinZ: (rand() - 0.5) * 6,
-          shade: 0.82 + rand() * 0.3,
+          shade: 0.72 + rand() * 0.42,
         });
       }
     }
