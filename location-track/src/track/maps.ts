@@ -381,6 +381,9 @@ const hubPads = (h: Hub) => {
 };
 
 const drawCompound = (g: Ctx, o: Ctx, grain: CanvasPattern, detail: number) => {
+  // In the wide shot (detail < 1) the hubs stay low-contrast so the close-up still
+  // reveals them.
+  const wide = detail < 1;
   const asphalt: RoadStyle = { width: 9, asphalt: 0.1, edge: 0.5 };
   const minor: RoadStyle = { width: 4, asphalt: 0.16, edge: 0.55, edgeW: 0.9 };
 
@@ -550,14 +553,14 @@ const drawCompound = (g: Ctx, o: Ctx, grain: CanvasPattern, detail: number) => {
   for (const h of HUBS) {
     g.beginPath();
     g.arc(h.x, h.y, h.r + 11, 0, Math.PI * 2);
-    g.fillStyle = gray(0.34);
+    g.fillStyle = gray(wide ? 0.3 : 0.34);
     g.fill();
     g.beginPath();
     g.arc(h.x, h.y, h.r, 0, Math.PI * 2);
-    g.strokeStyle = gray(0.55);
+    g.strokeStyle = gray(wide ? 0.38 : 0.55);
     g.lineWidth = 9;
     g.stroke();
-    g.strokeStyle = gray(0.1);
+    g.strokeStyle = gray(wide ? 0.24 : 0.1);
     g.lineWidth = 6;
     g.stroke();
     g.beginPath();
@@ -621,7 +624,7 @@ const drawCompound = (g: Ctx, o: Ctx, grain: CanvasPattern, detail: number) => {
     [668, 512],
     [640, 470],
   ]);
-  g.fillStyle = gray(0.92);
+  g.fillStyle = gray(wide ? 0.5 : 0.92);
   g.fill();
   g.fillStyle = gray(0.7);
   g.fillRect(616, 500, 48, 14);
@@ -630,7 +633,7 @@ const drawCompound = (g: Ctx, o: Ctx, grain: CanvasPattern, detail: number) => {
   o.strokeStyle = OVERLAY;
   o.lineCap = "round";
   o.lineJoin = "round";
-  for (const h of HUBS) {
+  for (const h of wide ? [] : HUBS) {
     o.lineWidth = 1.1;
     o.beginPath();
     o.arc(h.x, h.y, h.r + 5, 0, Math.PI * 2);

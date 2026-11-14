@@ -15,6 +15,7 @@ export type Palette = {
   hudDim: string;
   panel: string; // left panel fill
   warn: string;
+  lockOn: string; // hexagon colour during the lock-on pulse
   target: string; // rings on the hubs
   marker: string; // triangles
 };
@@ -35,6 +36,7 @@ export const STEEL_BLUE: Palette = {
   hudDim: "rgba(170, 210, 240, 0.55)",
   panel: "rgba(3, 8, 15, 0.82)",
   warn: "#ff3a2e",
+  lockOn: "#ff3a2e",
   target: "#d6d23a",
   marker: "#3a6cff",
 };
@@ -49,6 +51,8 @@ export const THERMAL_AMBER: Palette = {
   hudDim: "rgba(255, 210, 150, 0.55)",
   panel: "rgba(14, 7, 2, 0.84)",
   warn: "#ff3a2e",
+  // Red sinks into the amber map; magenta-red keeps the pulse readable.
+  lockOn: "#ff2f86",
   target: "#4fe3ff",
   marker: "#ffffff",
 };

@@ -44,7 +44,8 @@ export const viewAt = (t: number): View => {
     cx: mix(590, 600, hold),
     cy: mix(332, 340, hold),
     blur: sharpen * 3.6,
-    exposure: 1 + sharpen * 0.14,
+    // The close-up reads brighter than the wide shot, as in the reference.
+    exposure: 1.36 + sharpen * 0.08,
   };
   return { a, b, mix: smoothstep(FADE_START, FADE_END, t) };
 };

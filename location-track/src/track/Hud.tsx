@@ -89,7 +89,7 @@ export const Hud: React.FC<Props> = ({ t, frame, view, palette: P }) => {
   const hexSx = 1;
   const hexSy = 1 + (1 - hexIn) * 0.28;
   const hexFlicker = hexWarn ? (Math.floor(t * 30) % 3 === 0 ? 0.55 : 1) : 1;
-  const hexColor = hexWarn ? P.warn : P.hud;
+  const hexColor = hexWarn ? P.lockOn : P.hud;
 
   const title = typed("LOCATION TRACK", t, 0.05, 19);
   const sub = typed("DESTINATION APPROVED", t, 0.7, 34);
