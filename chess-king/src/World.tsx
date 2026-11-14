@@ -37,7 +37,7 @@ const Environment: React.FC<{ palette: Palette }> = ({ palette }) => {
     scene.environment = env;
     scene.environmentIntensity = 0.85;
     // Fog fades the far stage into the backdrop's haze tone.
-    const haze = new THREE.Color(palette.backdropBottom).lerp(new THREE.Color(palette.backdropTop), 0.55);
+    const haze = new THREE.Color(palette.backdropTop);
     scene.fog = new THREE.Fog(haze, 11, 24);
     return () => {
       env.dispose();
@@ -116,6 +116,11 @@ const Backdrop: React.FC<{ palette: Palette; time: TimeRef }> = ({ palette, time
   );
 };
 
+// Radial light pool on the board (world units from the king).
+const POOL_INNER = "1.6";
+const POOL_OUTER = "4.6";
+const POOL_FLOOR = "0.3";
+
 const reflectorShader = {
   name: "BoardReflection",
   uniforms: {
@@ -165,13 +170,41 @@ const reflectorShader = {
       vec2 a = abs(vWorld.xz);
       float inBoard = step(max(a.x, a.y), uLimit);
       float fogFade = 1.0 - smoothstep(uFogNear, uFogFar, length(uCam - vWorld));
-      gl_FragColor = vec4(c * k * fres * uStrength * inBoard * fogFade, 1.0);
+      float pool = mix(1.0, ${POOL_FLOOR}, smoothstep(${POOL_INNER}, ${POOL_OUTER}, length(vWorld.xz)));
+      gl_FragColor = vec4(c * k * fres * uStrength * inBoard * fogFade * pool, 1.0);
     }`,
 };
 
 const Board: React.FC<{ palette: Palette }> = ({ palette }) => {
   const { size, gl, camera } = useThree();
   const tex = useMemo(() => checkerTexture(palette.boardLight, palette.boardDark), [palette]);
+  // Board surface with a light pool around the king that falls off toward
+  // the camera and the board edges, as in the reference.
+  const boardMat = useMemo(() => {
+    const m = new THREE.MeshPhysicalMaterial({
+      map: tex,
+      roughness: 0.32,
+      metalness: 0,
+      clearcoat: 0.1,
+      clearcoatRoughness: 0.3,
+      envMapIntensity: 0.08,
+    });
+    m.onBeforeCompile = (shader) => {
+      shader.vertexShader = shader.vertexShader
+        .replace("#include <common>", "#include <common>\nvarying vec3 vBoardPos;")
+        .replace(
+          "#include <worldpos_vertex>",
+          "#include <worldpos_vertex>\nvBoardPos = (modelMatrix * vec4(transformed, 1.0)).xyz;",
+        );
+      shader.fragmentShader = shader.fragmentShader
+        .replace("#include <common>", "#include <common>\nvarying vec3 vBoardPos;")
+        .replace(
+          "#include <dithering_fragment>",
+          `gl_FragColor.rgb *= mix(1.0, ${POOL_FLOOR}, smoothstep(${POOL_INNER}, ${POOL_OUTER}, length(vBoardPos.xz)));\n#include <dithering_fragment>`,
+        );
+    };
+    return m;
+  }, [tex]);
   const half = (BOARD_SQUARES * SQUARE) / 2;
   const reflector = useMemo(() => {
     const dpr = gl.getPixelRatio();
@@ -214,13 +247,13 @@ const Board: React.FC<{ palette: Palette }> = ({ palette }) => {
       </mesh>
       <mesh rotation-x={-Math.PI / 2} position={[0, 0.0005, 0]} receiveShadow>
         <planeGeometry args={[half * 2, half * 2]} />
-        <meshPhysicalMaterial map={tex} roughness={0.32} metalness={0} clearcoat={0.1} clearcoatRoughness={0.3} envMapIntensity={0.08} />
+        <primitive object={boardMat} attach="material" />
       </mesh>
       <primitive object={reflector} />
       {/* Stage floor beyond the board */}
       <mesh rotation-x={-Math.PI / 2} position={[0, -0.12, 0]} receiveShadow>
         <planeGeometry args={[120, 120]} />
-        <meshBasicMaterial color={new THREE.Color(palette.backdropBottom).lerp(new THREE.Color(palette.backdropTop), 0.9)} fog={false} />
+        <meshBasicMaterial color={new THREE.Color(palette.backdropBottom).lerp(new THREE.Color(palette.backdropTop), 0.9)} />
       </mesh>
     </group>
   );
@@ -241,13 +274,29 @@ const King: React.FC<{ palette: Palette; time: TimeRef }> = ({ palette, time }) 
       }),
     [palette],
   );
+  // Narrow front spot that follows the king so the crown reads in every shot.
+  const spot = useMemo(() => {
+    const l = new THREE.SpotLight(palette.keyLight, 2.4, 0, 0.12, 0.6, 0);
+    l.position.set(0.8, 3, 9);
+    return l;
+  }, [palette]);
   useFrame(() => {
     const t = time.current;
     const m = ref.current!;
-    m.position.set(0, kingY(t), 0);
+    const y = kingY(t);
+    m.position.set(0, y, 0);
     m.rotation.y = lerp(0.9, 0.0, Math.min(1, t / T_KING_LAND)) + 0.25;
+    spot.position.set(0.8, y + 2.6, 9);
+    spot.target.position.set(0, y + 1.5, 0);
+    spot.target.updateMatrixWorld();
   });
-  return <mesh ref={ref} geometry={pieceGeometry("king")} material={mat} castShadow receiveShadow />;
+  return (
+    <>
+      <primitive object={spot} />
+      <primitive object={spot.target} />
+      <mesh ref={ref} geometry={pieceGeometry("king")} material={mat} castShadow receiveShadow />
+    </>
+  );
 };
 
 const Army: React.FC<{ palette: Palette; time: TimeRef }> = ({ palette, time }) => {
@@ -425,9 +474,9 @@ const Dust: React.FC<{ palette: Palette; time: TimeRef }> = ({ palette, time }) 
 
 const Lights: React.FC<{ palette: Palette }> = ({ palette }) => {
   const key = useMemo(() => {
-    const l = new THREE.SpotLight(palette.keyLight, 3.0, 0, 0.36, 0.9, 0);
-    l.position.set(0.6, 11, 4.5);
-    l.target.position.set(0, 0.6, 0.2);
+    const l = new THREE.SpotLight(palette.keyLight, 3.0, 0, 0.3, 0.9, 0);
+    l.position.set(0.4, 11, 1.2);
+    l.target.position.set(0, 0.4, -0.2);
     l.castShadow = true;
     l.shadow.mapSize.set(2048, 2048);
     l.shadow.bias = -0.0002;
@@ -438,15 +487,17 @@ const Lights: React.FC<{ palette: Palette }> = ({ palette }) => {
     return l;
   }, [palette]);
   const rimL = useMemo(() => {
-    const l = new THREE.SpotLight(palette.rimLight, 3.2, 0, 0.5, 0.9, 0);
+    // Rims aim at the crown so their cones pass over the camera instead of
+    // spilling onto the board in front of it.
+    const l = new THREE.SpotLight(palette.rimLight, 3.2, 0, 0.32, 0.9, 0);
     l.position.set(-4, 7, -7);
-    l.target.position.set(0, 1, 0);
+    l.target.position.set(0, 2.6, 0);
     return l;
   }, [palette]);
   const rimR = useMemo(() => {
-    const l = new THREE.SpotLight(palette.rimLight, 2.6, 0, 0.5, 0.9, 0);
+    const l = new THREE.SpotLight(palette.rimLight, 2.6, 0, 0.32, 0.9, 0);
     l.position.set(4.5, 6.5, -6);
-    l.target.position.set(0, 1, 0);
+    l.target.position.set(0, 2.6, 0);
     return l;
   }, [palette]);
   return (

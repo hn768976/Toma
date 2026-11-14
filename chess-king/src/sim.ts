@@ -94,7 +94,7 @@ const buildPieces = (): PieceSpec[] => {
   const starts: THREE.Vector2[] = [];
   const handStarts: [number, number][] = [
     [-2.9, 1.6], [-1.7, 2.4], [-1.35, 0.6], [1.4, 0.5], [1.6, -0.6], [1.35, 2.0],
-    [-1.9, -0.4], [2.9, 1.7], [-0.6, -1.4], [0.7, -1.5], [-3.2, -1.2], [3.4, -0.9],
+    [-1.9, -0.4], [2.9, 1.7], [-2.4, -1.9], [2.3, -2.1], [-3.2, -1.2], [3.4, -0.9],
   ];
   handStarts.forEach(([x, z]) => starts.push(new THREE.Vector2(x, z)));
   while (starts.length < types.length) {
@@ -102,8 +102,9 @@ const buildPieces = (): PieceSpec[] => {
     const z = -3.8 + rnd() * 6.3;
     const p = new THREE.Vector2(x, z);
     if (p.length() < 1.1) continue;
-    // Nothing stands directly between the camera and the king.
-    if (z > -0.3 && Math.abs(x) < 1.25) continue;
+    // Keep a clear corridor in front of and behind the king, so no piece
+    // blocks it or hangs behind its crown during the slow-motion hang.
+    if (Math.abs(x) < 1.25) continue;
     if (starts.some((s) => s.distanceTo(p) < 0.95)) continue;
     starts.push(p);
   }
@@ -269,8 +270,8 @@ type CamKey = { t: number; pos: [number, number, number]; target: [number, numbe
 // Camera path: tracks the falling king, sinks to board level for the impact,
 // holds through the slow-motion hang, then pushes in for the hero ending.
 const CAM_KEYS: CamKey[] = [
-  { t: 0.0, pos: [0.5, 5.7, 8.4], target: [0.15, 5.6, 0] },
-  { t: 0.3, pos: [0.35, 4.0, 8.0], target: [0.05, 4.1, 0] },
+  { t: 0.0, pos: [0.35, 5.6, 6.6], target: [0.05, 5.45, 0] },
+  { t: 0.3, pos: [0.25, 4.0, 7.2], target: [0.03, 4.0, 0] },
   { t: 0.55, pos: [0.05, 0.9, 7.5], target: [0, 1.4, 0] },
   { t: 0.8, pos: [0.0, 0.42, 7.35], target: [0, 1.15, 0] },
   { t: 3.6, pos: [0.0, 0.4, 7.0], target: [0, 1.15, 0] },
