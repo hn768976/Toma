@@ -1,0 +1,31 @@
+measure             reference       ours        diff  verdict
+lum_p1                 0.1389     0.1367       -1.6%  ok
+lum_p5                 0.1429     0.1398       -2.2%  ok
+lum_p50                0.1759     0.1759       +0.0%  ok
+lum_p95                0.4231     0.3741      -11.6%  FAIL
+lum_p99                0.6892     0.7314       +6.1%  ok
+pct_above_90           0.2268     0.0970      -57.2%  ok
+pct_below_5            0.0000     0.0000       +0.0%  ok
+sat_mean               0.1560     0.1539       -1.3%  ok
+hue_shadows           50.7772    52.8528    +2.1 deg  ok
+hue_midtones          28.9386    48.9678   +20.0 deg  FAIL
+hue_highlights        30.0047    31.4077    +1.4 deg  ok
+glow_peak              0.8854     0.9020       +1.9%  ok
+glow_cx                0.7600     0.8967      +18.0%  FAIL
+glow_cy                0.5222     0.8766      +67.9%  FAIL
+glow_r50               3.0000     2.6667      -11.1%  ok
+glow_r25              19.6667     7.0000      -64.4%  FAIL
+glow_r10              81.0000   101.0000      +24.7%  FAIL
+contrast_top           0.2595     0.1966      -24.2%  FAIL
+contrast_mid           0.3200     0.2499      -21.9%  FAIL
+contrast_bottom        0.3047     0.3223       +5.8%  ok
+contrast_far           0.2708     0.1833      -32.3%  FAIL
+contrast_near          0.2817     0.3297      +17.1%  FAIL
+mean_top               0.2118     0.1937       -8.6%  ok
+mean_mid               0.2061     0.2111       +2.4%  ok
+mean_bottom            0.2040     0.2062       +1.1%  ok
+grain                  0.0007     0.0014     +114.3%  ok
+detail_lapvar         67.0622    61.5709       -8.2%  ok
+vignette_ratio         1.3985     1.0987      -21.4%  FAIL
+mean_lum               0.2073     0.2036       -1.7%  ok
+11 of 29 measures outside target
