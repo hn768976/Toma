@@ -1,15 +1,31 @@
-import { SAND_KEYS, SHAPE } from "../config";
+import { OUTER_PROFILE, SAND_KEYS, SHAPE } from "../config";
 import { keyframes } from "../lib/rng";
 
-/** radius of the glass at height y (neck at y = 0) */
+/** radius of the outside of the glass at height y (neck at y = 0) */
+export const outerRadius = (y: number) => {
+  const p = OUTER_PROFILE;
+  if (y <= p[0][0]) return p[0][1];
+  for (let i = 1; i < p.length; i++) {
+    if (y <= p[i][0]) {
+      const u = (y - p[i - 1][0]) / (p[i][0] - p[i - 1][0]);
+      return p[i - 1][1] + (p[i][1] - p[i - 1][1]) * u;
+    }
+  }
+  return p[p.length - 1][1];
+};
+
+/** radius of the cavity inside the glass at height y: this is the wall the sand touches */
 export const glassRadius = (y: number) => {
   const h = SHAPE.neckHalfHeight;
-  if (y >= 0) return Math.sqrt(SHAPE.neckRadius ** 2 + (SHAPE.upperSlope * Math.max(y - h, 0)) ** 2);
-  y = Math.min(y + h, 0);
-  return (
-    Math.sqrt(SHAPE.neckRadius ** 2 + (SHAPE.lowerSlope * y) ** 2) +
-    SHAPE.lowerShoulder * (1 - Math.exp(y / SHAPE.lowerShoulderFall))
-  );
+  const slope = y >= 0 ? SHAPE.upperSlope : SHAPE.lowerSlope;
+  const d = Math.max(Math.abs(y) - h, 0);
+  const r = Math.sqrt(SHAPE.neckRadius ** 2 + (slope * d) ** 2);
+  return Math.min(r, outerRadius(y) - SHAPE.minWall);
+};
+
+export const outerPoint = (y: number, phi: number): [number, number, number] => {
+  const r = outerRadius(y);
+  return [Math.sin(phi) * r, y, Math.cos(phi) * r];
 };
 
 /** outward surface normal of the glass at height y and angle phi (radians, 0 = towards +z, + = towards +x) */

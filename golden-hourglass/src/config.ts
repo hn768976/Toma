@@ -18,16 +18,37 @@ export const TIMING = {
 
 /** geometry, in world units (1 unit = distance from the neck to the top of the reference frame) */
 export const SHAPE = {
-  neckRadius: 0.1,
-  neckHalfHeight: 0.07, // straight section of the neck above and below the middle
-  upperSlope: 0.94, // radius gained per unit height, upper bulb
-  lowerSlope: 0.72, // radius gained per unit depth, lower bulb
-  lowerShoulder: 0.34, // extra bulge just under the neck
-  lowerShoulderFall: 0.12,
+  // inner cavity (where the sand is): pinches to a small hole at the neck
+  neckRadius: 0.085,
+  neckHalfHeight: 0.04, // straight section of the hole above and below the middle
+  upperSlope: 1.08, // radius gained per unit height, upper cavity
+  lowerSlope: 0.92, // radius gained per unit depth, lower cavity
+  minWall: 0.035, // the cavity never comes closer than this to the outside of the glass
   upperTop: 1.9,
   lowerBottom: -4.2,
   streamRadius: 0.07,
 };
+
+/**
+ * Outside of the glass, as [height, radius] points (neck at height 0), joined by straight lines.
+ * Thick glass: the outside
+ * stays wide at the waist (a collar) while the cavity inside pinches to a pinhole, and the lower
+ * bulb starts with a flat shoulder before its flanks run out.
+ */
+export const OUTER_PROFILE: [number, number][] = [
+  [-4.2, 3.24],
+  [-1.56, 1.39], // lower bulb: an almost straight cone
+  [-0.6, 0.72],
+  [-0.2, 0.445],
+  [-0.125, 0.395], // hard break where the lower bulb begins
+  [-0.1, 0.372],
+  [0.0, 0.365], // short, tight waist
+  [0.1, 0.372],
+  [0.14, 0.39],
+  [0.3, 0.51], // upper bulb runs almost straight into the waist
+  [0.97, 1.04],
+  [1.9, 1.77],
+];
 
 /**
  * Sand level in the upper bulb. Rows: time (s), height where the sand meets the glass, height of the
@@ -50,11 +71,11 @@ export const COUNTS = {
   tinyGlints: 16, // small extra glints in a loose band left of the stream
 };
 
-/** star glints: where they sit (lower bulb unless `fixed`), angle around the axis (deg), size */
-export const GLINTS: { y: number; phi: number; size: number; fixed?: [number, number, number]; seed: number }[] = [
+/** star glints: height, angle around the axis (deg), size. They sit on the cavity wall unless `outer` (then on the outside of the glass) */
+export const GLINTS: { y: number; phi: number; size: number; outer?: boolean; seed: number }[] = [
   { y: -0.24, phi: 31, size: 1.0, seed: 0.11 },
   { y: -1.19, phi: 75, size: 0.85, seed: 0.37 },
-  { y: 0.1, phi: 0, size: 0.62, fixed: [-0.24, 0.06, 0.12], seed: 0.53 },
+  { y: 0.13, phi: -40, size: 0.62, outer: true, seed: 0.53 },
   { y: -0.68, phi: -36, size: 0.3, seed: 0.71 },
   { y: -0.8, phi: -17, size: 0.2, seed: 0.23 },
   { y: -1.0, phi: -14, size: 0.24, seed: 0.89 },

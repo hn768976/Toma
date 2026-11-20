@@ -24,6 +24,10 @@ export const LOOK = {
   caustics: 0.0, // hair-fine lines of light running down the lower glass
   filmUpper: 0.6, // opacity of gold dust coating on the upper glass
   filmLower: 0.012,
+  // outside of the glass
+  shellEdge: 1.3, // bright line along the silhouette of the thick glass
+  shellShelf: 0.55, // gold reflection on the flat shoulder of the lower bulb
+  shellBody: 0.03, // faint warm reflections across the body of the glass
   // glints
   glintIntensity: 4.2,
   glintSize: 0.25, // world units for size = 1

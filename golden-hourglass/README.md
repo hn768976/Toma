@@ -65,7 +65,9 @@ setting are identical to Version 1.
 | Colours | `src/config.ts` -> `PALETTE` |
 | Counts (grains on the glass, mesh detail) | `src/config.ts` -> `COUNTS` |
 | Timings (when the sand runs out, stream tail) | `src/config.ts` -> `TIMING` |
-| Glass shape, sand level and slope, stream width | `src/config.ts` -> `SHAPE` |
+| Outline of the glass (waist, collar, shoulder, flanks) | `src/config.ts` -> `OUTER_PROFILE` |
+| Cavity inside the glass, stream width | `src/config.ts` -> `SHAPE` |
+| Sand level over time | `src/config.ts` -> `SAND_KEYS` |
 | Star glints (position, size) | `src/config.ts` -> `GLINTS` |
 | Camera paths | `src/config.ts` -> `CAMERA_V1`, `CAMERA_V2`, `CAMERA_FOV` |
 | Duration / fps / resolution | `src/config.ts` -> `DURATION_FRAMES`, `FPS`, `WIDTH`, `HEIGHT` |
@@ -80,8 +82,10 @@ setting are identical to Version 1.
   but the frame number can drive the picture.
 - `src/lib/post.ts`: half-float MSAA scene target -> bloom mip chain -> ACES tone map, grade,
   fixed film grain (hash of pixel + frame), +-1/255 dither.
-- `src/scene/profile.ts`: the glass profile and the sand level. Sand leaves at a constant rate, so
-  the level follows a cube-root curve and drops faster and faster, as it does in a real cone.
+- `src/scene/profile.ts`: the glass and the sand level. The glass is thick-walled: an outer shell
+  (`OUTER_PROFILE`: a short collared waist, a hard break where the lower bulb begins, near-straight cones) around an inner cavity
+  that pinches to a pinhole. The sand level follows `SAND_KEYS`: the middle sinks first, the rim
+  collapses near the end.
 - `src/scene/createScene.ts`, `src/scene/shaders.ts`: lathe meshes for glass and sand, the stream,
   grains on the glass, star glints and the per-frame update. No physics is simulated live and no
   textures, fonts or models are loaded: everything is procedural and seeded with `mulberry32`.

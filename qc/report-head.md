@@ -17,7 +17,7 @@ myself: `circuit-chip-beam` (reference A, `...1083716650-preview.mp4`) and `gold
 
 **Headline result.** All technical checks pass for all four videos (specs, duration, integrity, frame
 scan, determinism, ZIP test). The look and visual-match targets are **only partly met**: after three
-look-dev rounds and three visual-match rounds per reference, between 6 and 18 of the 29 look measures are still
+look-dev rounds and three visual-match rounds per reference, between 2 and 14 of the 29 look measures are still
 outside the +-10% target depending on the video and frame, and the independent reviewers still list visible
 differences. Reference A is a close stylistic match; reference B is live-action macro footage of real
 glass and is reproduced as a stylised CG hourglass, not a photoreal one. Details are in sections 3, 5 and 8.

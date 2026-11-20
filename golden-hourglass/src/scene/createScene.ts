@@ -6,7 +6,7 @@ import { PostChain } from "../lib/post";
 import { keyframes, mulberry32, smoothstep } from "../lib/rng";
 import type { StageContext, StageScene } from "../lib/ThreeStage";
 import { LOOK, POST } from "../look";
-import { glassNormal, glassPoint, glassRadius, sandState, sandSurface } from "./profile";
+import { glassNormal, glassPoint, glassRadius, outerPoint, outerRadius, sandState, sandSurface } from "./profile";
 import * as S from "./shaders";
 
 const lin = (hex: string) => new THREE.Color(hex);
@@ -159,23 +159,30 @@ export const createHourglassScene =
     body.renderOrder = top.renderOrder = stream.renderOrder = 3;
     scene.add(body, top, stream);
 
-    // ---- collar pieces either side of the neck (kept side-on to the camera)
-    const collarMat = new THREE.ShaderMaterial({
-      vertexShader: S.SAND_VERT, fragmentShader: S.COLLAR_FRAG,
+    // ---- outside of the glass: thick-walled shell with the collar at the waist and the flat shoulder below it
+    const shellPts: THREE.Vector2[] = [];
+    for (let i = 0; i <= 260; i++) {
+      // more points around the waist, where the outline changes quickly
+      const u = i / 260;
+      const y = SHAPE.lowerBottom + (SHAPE.upperTop - SHAPE.lowerBottom) * u;
+      shellPts.push(new THREE.Vector2(outerRadius(y), y));
+    }
+    for (let i = 0; i <= 120; i++) shellPts.push(new THREE.Vector2(outerRadius(-0.6 + i / 100), -0.6 + i / 100));
+    shellPts.sort((a, b) => a.y - b.y);
+    const shellGeo = new THREE.LatheGeometry(shellPts, COUNTS.latheSegments);
+    const shellMat = new THREE.ShaderMaterial({
+      vertexShader: S.SAND_VERT, fragmentShader: S.SHELL_FRAG, side: THREE.FrontSide, transparent: true,
+      depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
       uniforms: {
-        uBase: { value: v3(lin(pal.hardware)) }, uAccent: { value: v3(lin(pal.accent)) },
-        uKeyDir: { value: keyDir }, uKeyCol: { value: keyCol }, uCam,
+        uCam, uTime, uRim: { value: v3(lin(pal.rimWarm)) }, uGold: { value: v3(lin(pal.sandLight)) },
+        uAccent: { value: v3(lin(pal.accent)) }, uKeyCol: { value: keyCol }, uKeyDir: { value: keyDir },
+        uEdge: { value: LOOK.shellEdge }, uShelf: { value: LOOK.shellShelf }, uBody: { value: LOOK.shellBody },
       },
     });
-    const collarGeo = new THREE.SphereGeometry(1, 40, 24);
-    const collars = [-1, 1].map((sgn) => {
-      const m = new THREE.Mesh(collarGeo, collarMat);
-      m.scale.set(0.17, 0.1, 0.13);
-      m.renderOrder = 2;
-      scene.add(m);
-      return { m, sgn };
-    });
-    disposables.push(collarMat, collarGeo);
+    const shell = new THREE.Mesh(shellGeo, shellMat);
+    shell.renderOrder = 7;
+    scene.add(shell);
+    disposables.push(shellGeo, shellMat);
 
     // ---- grains stuck to the glass
     const rs = mulberry32(SEED + 3);
@@ -220,12 +227,12 @@ export const createHourglassScene =
     const rg = mulberry32(SEED + 9);
     const allGlints = [...GLINTS];
     for (let i = 0; i < COUNTS.tinyGlints; i++) {
-      allGlints.push({ y: -0.2 - rg() * 1.25, phi: -4 - rg() * 34, size: 0.06 + rg() * 0.1, seed: rg() });
+      allGlints.push({ y: -0.3 - rg() * 1.15, phi: -4 - rg() * 34, size: 0.06 + rg() * 0.1, seed: rg() });
     }
     const gp = new Float32Array(allGlints.length * 3);
     const gi = new Float32Array(allGlints.length * 3);
     allGlints.forEach((g, i) => {
-      gp.set(g.fixed ?? glassPoint(g.y, rad(g.phi)), i * 3);
+      gp.set(g.outer ? outerPoint(g.y, rad(g.phi)) : glassPoint(g.y, rad(g.phi)), i * 3);
       gi.set([g.size, g.seed, g.seed * 2.7], i * 3);
     });
     glintGeo.setAttribute("aPos", new THREE.InstancedBufferAttribute(gp, 3));
@@ -296,11 +303,6 @@ export const createHourglassScene =
         g.translate(0, (sTop + sBot) / 2, 0);
         swap(stream, g);
         streamMat.uniforms.uFlow.value = t * 2.6;
-      }
-
-      // collar pieces stay left and right of the neck as seen from the camera
-      for (const c of collars) {
-        c.m.position.set(Math.cos(az) * 0.25 * c.sgn, 0.0, -Math.sin(az) * 0.25 * c.sgn);
       }
 
       renderer.setRenderTarget(post.sceneRT);

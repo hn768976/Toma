@@ -17,7 +17,7 @@ myself: `circuit-chip-beam` (reference A, `...1083716650-preview.mp4`) and `gold
 
 **Headline result.** All technical checks pass for all four videos (specs, duration, integrity, frame
 scan, determinism, ZIP test). The look and visual-match targets are **only partly met**: after three
-look-dev rounds and three visual-match rounds per reference, between 6 and 18 of the 29 look measures are still
+look-dev rounds and three visual-match rounds per reference, between 2 and 14 of the 29 look measures are still
 outside the +-10% target depending on the video and frame, and the independent reviewers still list visible
 differences. Reference A is a close stylistic match; reference B is live-action macro footage of real
 glass and is reproduced as a stylised CG hourglass, not a photoreal one. Details are in sections 3, 5 and 8.
@@ -219,36 +219,36 @@ Side-by-side images (reference | ours | difference x2), in each project and in i
 
 | measure | start ref / ours (diff) | peak ref / ours (diff) | late ref / ours (diff) |
 |---|---|---|---|
-| lum_p1 | 0.139 / 0.138 (-1.0%) | 0.139 / 0.138 (-1.0%) | 0.139 / 0.138 (-1.0%) |
+| lum_p1 | 0.139 / 0.138 (-1.0%) | 0.139 / 0.138 (-1.0%) | 0.139 / 0.140 (+1.0%) |
 | lum_p5 | 0.141 / 0.140 (-0.2%) | 0.141 / 0.140 (-0.2%) | 0.143 / 0.140 (-1.8%) |
-| lum_p50 | 0.172 / 0.156 (-9.6%) | 0.176 / 0.155 (-11.6%) **x** | 0.176 / 0.156 (-11.3%) |
-| lum_p95 | 0.442 / 0.495 (+11.8%) **x** | 0.439 / 0.485 (+10.3%) **x** | 0.423 / 0.388 (-8.3%) |
-| lum_p99 | 0.669 / 0.760 (+13.6%) **x** | 0.684 / 0.764 (+11.7%) **x** | 0.689 / 0.771 (+11.8%) **x** |
-| pct_above_90 | 0.159 / 0.021 (-86.8%) | 0.200 / 0.020 (-90.2%) | 0.227 / 0.030 (-86.7%) |
+| lum_p50 | 0.172 / 0.160 (-7.4%) | 0.176 / 0.159 (-9.4%) | 0.176 / 0.159 (-9.4%) |
+| lum_p95 | 0.442 / 0.539 (+21.8%) **x** | 0.439 / 0.513 (+16.8%) **x** | 0.423 / 0.495 (+16.9%) **x** |
+| lum_p99 | 0.669 / 0.759 (+13.3%) **x** | 0.684 / 0.762 (+11.3%) **x** | 0.689 / 0.768 (+11.5%) **x** |
+| pct_above_90 | 0.159 / 0.020 (-87.4%) | 0.200 / 0.023 (-88.7%) | 0.227 / 0.026 (-88.4%) |
 | pct_below_5 | 0.000 / 0.000 (+0.0%) | 0.000 / 0.000 (+0.0%) | 0.000 / 0.000 (+0.0%) |
-| sat_mean | 0.154 / 0.149 (-3.6%) | 0.160 / 0.146 (-8.5%) | 0.156 / 0.145 (-7.3%) |
-| hue_shadows | 60.967 / 48.827 (-12.1 deg) **x** | 54.208 / 48.582 (-5.6 deg) | 50.777 / 48.252 (-2.5 deg) |
-| hue_midtones | 28.769 / 40.229 (+11.5 deg) **x** | 29.675 / 40.065 (+10.4 deg) **x** | 28.939 / 39.973 (+11.0 deg) **x** |
-| hue_highlights | 30.125 / 32.264 (+2.1 deg) | 29.969 / 31.667 (+1.7 deg) | 30.005 / 31.014 (+1.0 deg) |
-| glow_peak | 0.868 / 0.815 (-6.1%) | 0.878 / 0.815 (-7.2%) | 0.885 / 0.819 (-7.5%) |
-| glow_cx | 0.722 / 0.675 (-6.5%) | 0.747 / 0.707 (-5.4%) | 0.760 / 0.707 (-7.0%) |
-| glow_cy | 0.522 / 0.804 (+53.9%) **x** | 0.525 / 0.361 (-31.3%) **x** | 0.522 / 0.858 (+64.2%) **x** |
-| glow_r50 | 2.667 / 2.000 (-25.0%) | 3.000 / 2.333 (-22.2%) | 3.000 / 2.000 (-33.3%) |
-| glow_r25 | 16.333 / 10.333 (-36.7%) **x** | 24.000 / 20.333 (-15.3%) **x** | 19.667 / 7.333 (-62.7%) **x** |
-| glow_r10 | 77.333 / 80.000 (+3.4%) | 79.667 / 78.333 (-1.7%) | 81.000 / 84.000 (+3.7%) |
-| contrast_top | 0.355 / 0.390 (+9.7%) | 0.311 / 0.372 (+19.4%) **x** | 0.259 / 0.292 (+12.6%) **x** |
-| contrast_mid | 0.264 / 0.158 (-40.1%) **x** | 0.291 / 0.179 (-38.2%) **x** | 0.320 / 0.178 (-44.4%) **x** |
-| contrast_bottom | 0.216 / 0.263 (+21.7%) **x** | 0.266 / 0.243 (-8.6%) | 0.305 / 0.235 (-22.9%) **x** |
-| contrast_far | 0.392 / 0.467 (+19.0%) **x** | 0.333 / 0.380 (+14.1%) **x** | 0.271 / 0.290 (+7.2%) |
-| contrast_near | 0.207 / 0.233 (+12.4%) | 0.243 / 0.200 (-17.7%) **x** | 0.282 / 0.185 (-34.4%) **x** |
-| mean_top | 0.227 / 0.222 (-2.3%) | 0.225 / 0.207 (-8.0%) | 0.212 / 0.192 (-9.5%) |
-| mean_mid | 0.199 / 0.187 (-5.9%) | 0.203 / 0.190 (-6.7%) | 0.206 / 0.190 (-7.8%) |
-| mean_bottom | 0.194 / 0.185 (-4.6%) | 0.200 / 0.183 (-8.7%) | 0.204 / 0.183 (-10.3%) **x** |
-| grain | 0.000 / 0.001 (+345.4%) | 0.001 / 0.001 (+166.3%) | 0.001 / 0.001 (+123.7%) |
-| detail_lapvar | 67.514 / 22.287 (-67.0%) **x** | 69.544 / 24.389 (-64.9%) **x** | 67.062 / 30.281 (-54.8%) **x** |
-| vignette_ratio | 1.106 / 0.968 (-12.5%) **x** | 1.296 / 0.978 (-24.5%) **x** | 1.398 / 0.983 (-29.7%) **x** |
-| mean_lum | 0.206 / 0.198 (-4.2%) | 0.210 / 0.193 (-7.8%) | 0.207 / 0.188 (-9.2%) |
-| **outside target** | 11 of 29 | 12 of 29 | 11 of 29 |
+| sat_mean | 0.154 / 0.171 (+11.2%) | 0.160 / 0.170 (+6.3%) | 0.156 / 0.170 (+8.7%) |
+| hue_shadows | 60.967 / 47.209 (-13.8 deg) **x** | 54.208 / 45.965 (-8.2 deg) | 50.777 / 46.282 (-4.5 deg) |
+| hue_midtones | 28.769 / 40.752 (+12.0 deg) **x** | 29.675 / 40.912 (+11.2 deg) **x** | 28.939 / 40.466 (+11.5 deg) **x** |
+| hue_highlights | 30.125 / 31.741 (+1.6 deg) | 29.969 / 31.057 (+1.1 deg) | 30.005 / 30.630 (+0.6 deg) |
+| glow_peak | 0.868 / 0.815 (-6.1%) | 0.878 / 0.826 (-6.0%) | 0.885 / 0.825 (-6.8%) |
+| glow_cx | 0.722 / 0.675 (-6.5%) | 0.747 / 0.702 (-6.0%) | 0.760 / 0.713 (-6.1%) |
+| glow_cy | 0.522 / 0.804 (+53.9%) **x** | 0.525 / 0.453 (-13.9%) | 0.522 / 0.465 (-10.9%) |
+| glow_r50 | 2.667 / 2.000 (-25.0%) | 3.000 / 4.333 (+44.4%) **x** | 3.000 / 4.000 (+33.3%) |
+| glow_r25 | 16.333 / 10.333 (-36.7%) **x** | 24.000 / 26.000 (+8.3%) | 19.667 / 26.333 (+33.9%) **x** |
+| glow_r10 | 77.333 / 80.000 (+3.4%) | 79.667 / 76.000 (-4.6%) | 81.000 / 76.667 (-5.3%) |
+| contrast_top | 0.355 / 0.479 (+34.7%) **x** | 0.311 / 0.382 (+22.7%) **x** | 0.259 / 0.372 (+43.3%) **x** |
+| contrast_mid | 0.264 / 0.306 (+15.8%) **x** | 0.291 / 0.319 (+9.8%) | 0.320 / 0.319 (-0.3%) |
+| contrast_bottom | 0.216 / 0.330 (+52.6%) **x** | 0.266 / 0.325 (+22.2%) **x** | 0.305 / 0.327 (+7.4%) |
+| contrast_far | 0.392 / 0.502 (+27.9%) **x** | 0.333 / 0.387 (+16.2%) **x** | 0.271 / 0.374 (+38.2%) **x** |
+| contrast_near | 0.207 / 0.304 (+47.0%) **x** | 0.243 / 0.295 (+21.2%) **x** | 0.282 / 0.294 (+4.5%) |
+| mean_top | 0.227 / 0.251 (+10.5%) **x** | 0.225 / 0.234 (+3.6%) | 0.212 / 0.225 (+6.0%) |
+| mean_mid | 0.199 / 0.197 (-1.0%) | 0.203 / 0.198 (-2.5%) | 0.206 / 0.198 (-3.9%) |
+| mean_bottom | 0.194 / 0.192 (-1.0%) | 0.200 / 0.191 (-4.6%) | 0.204 / 0.192 (-5.9%) |
+| grain | 0.000 / 0.001 (+358.9%) | 0.001 / 0.001 (+169.8%) | 0.001 / 0.001 (+125.7%) |
+| detail_lapvar | 67.514 / 30.844 (-54.3%) **x** | 69.544 / 31.469 (-54.8%) **x** | 67.062 / 35.477 (-47.1%) **x** |
+| vignette_ratio | 1.106 / 0.973 (-12.0%) **x** | 1.296 / 1.102 (-14.9%) **x** | 1.398 / 1.137 (-18.7%) **x** |
+| mean_lum | 0.206 / 0.213 (+3.2%) | 0.210 / 0.208 (-1.0%) | 0.207 / 0.205 (-1.2%) |
+| **outside target** | 14 of 29 | 10 of 29 | 8 of 29 |
 
 
 ### 3.2 Look over time: 5 frames of each final video against the same moments of its reference
@@ -329,72 +329,72 @@ Side-by-side images (reference | ours | difference x2), in each project and in i
 
 | measure | 0.5s ref / ours (diff) | 4.0s ref / ours (diff) | 9.0s ref / ours (diff) | 13.0s ref / ours (diff) | 16.0s ref / ours (diff) |
 |---|---|---|---|---|---|
-| lum_p1 | 0.139 / 0.136 (-1.8%) | 0.139 / 0.140 (+0.6%) | 0.139 / 0.136 (-1.8%) | 0.139 / 0.140 (+0.6%) | 0.139 / 0.140 (+1.0%) |
+| lum_p1 | 0.139 / 0.136 (-1.8%) | 0.139 / 0.140 (+1.0%) | 0.139 / 0.136 (-1.8%) | 0.139 / 0.140 (+1.0%) | 0.139 / 0.140 (+1.0%) |
 | lum_p5 | 0.141 / 0.140 (-0.2%) | 0.141 / 0.140 (-0.2%) | 0.141 / 0.140 (-0.2%) | 0.143 / 0.140 (-1.8%) | 0.143 / 0.140 (-1.8%) |
-| lum_p50 | 0.172 / 0.152 (-11.8%) **x** | 0.174 / 0.152 (-12.6%) **x** | 0.176 / 0.152 (-13.5%) **x** | 0.176 / 0.152 (-13.5%) **x** | 0.173 / 0.150 (-13.4%) **x** |
-| lum_p95 | 0.442 / 0.490 (+10.7%) **x** | 0.442 / 0.489 (+10.7%) **x** | 0.439 / 0.481 (+9.4%) | 0.423 / 0.383 (-9.5%) | 0.377 / 0.267 (-29.3%) **x** |
-| lum_p99 | 0.669 / 0.754 (+12.6%) **x** | 0.669 / 0.764 (+14.2%) **x** | 0.684 / 0.759 (+11.0%) **x** | 0.689 / 0.765 (+10.9%) **x** | 0.666 / 0.562 (-15.5%) **x** |
-| pct_above_90 | 0.159 / 0.017 (-89.4%) | 0.170 / 0.021 (-87.9%) | 0.200 / 0.017 (-91.6%) | 0.227 / 0.022 (-90.5%) | 0.242 / 0.021 (-91.5%) |
+| lum_p50 | 0.172 / 0.156 (-9.6%) | 0.174 / 0.156 (-10.3%) | 0.176 / 0.155 (-12.1%) **x** | 0.176 / 0.156 (-11.5%) **x** | 0.173 / 0.152 (-12.0%) **x** |
+| lum_p95 | 0.442 / 0.534 (+20.7%) **x** | 0.442 / 0.534 (+20.7%) **x** | 0.439 / 0.508 (+15.5%) **x** | 0.423 / 0.490 (+15.8%) **x** | 0.377 / 0.424 (+12.3%) **x** |
+| lum_p99 | 0.669 / 0.752 (+12.4%) **x** | 0.669 / 0.763 (+14.0%) **x** | 0.684 / 0.757 (+10.6%) **x** | 0.689 / 0.762 (+10.6%) **x** | 0.666 / 0.605 (-9.2%) |
+| pct_above_90 | 0.159 / 0.015 (-90.7%) | 0.170 / 0.022 (-87.0%) | 0.200 / 0.015 (-92.3%) | 0.227 / 0.020 (-91.2%) | 0.242 / 0.017 (-93.0%) |
 | pct_below_5 | 0.000 / 0.000 (+0.0%) | 0.000 / 0.000 (+0.0%) | 0.000 / 0.000 (+0.0%) | 0.000 / 0.000 (+0.0%) | 0.000 / 0.000 (+0.0%) |
-| sat_mean | 0.154 / 0.165 (+7.2%) | 0.156 / 0.164 (+5.2%) | 0.160 / 0.162 (+1.8%) | 0.156 / 0.161 (+3.4%) | 0.145 / 0.153 (+5.6%) |
-| hue_shadows | 60.967 / 49.207 (-11.8 deg) **x** | 59.821 / 49.202 (-10.6 deg) **x** | 54.208 / 48.920 (-5.3 deg) | 50.777 / 48.921 (-1.9 deg) | 48.351 / 48.930 (+0.6 deg) |
-| hue_midtones | 28.769 / 43.118 (+14.3 deg) **x** | 27.917 / 43.546 (+15.6 deg) **x** | 29.675 / 43.110 (+13.4 deg) **x** | 28.939 / 42.453 (+13.5 deg) **x** | 26.632 / 43.944 (+17.3 deg) **x** |
-| hue_highlights | 30.125 / 31.841 (+1.7 deg) | 30.141 / 31.906 (+1.8 deg) | 29.969 / 31.119 (+1.1 deg) | 30.005 / 30.573 (+0.6 deg) | 28.587 / 28.429 (-0.2 deg) |
-| glow_peak | 0.868 / 0.808 (-6.9%) | 0.870 / 0.805 (-7.5%) | 0.878 / 0.811 (-7.6%) | 0.885 / 0.812 (-8.3%) | 0.890 / 0.786 (-11.7%) **x** |
-| glow_cx | 0.722 / 0.675 (-6.5%) | 0.732 / 0.688 (-5.9%) | 0.747 / 0.707 (-5.4%) | 0.760 / 0.707 (-7.0%) | 0.772 / 0.775 (+0.4%) |
-| glow_cy | 0.522 / 0.804 (+53.9%) **x** | 0.522 / 0.456 (-12.7%) | 0.525 / 0.361 (-31.3%) **x** | 0.522 / 0.851 (+63.0%) **x** | 0.525 / 0.487 (-7.2%) |
-| glow_r50 | 2.667 / 2.000 (-25.0%) | 2.667 / 2.333 (-12.5%) | 3.000 / 2.333 (-22.2%) | 3.000 / 2.000 (-33.3%) | 3.000 / 1.667 (-44.4%) **x** |
-| glow_r25 | 16.333 / 10.333 (-36.7%) **x** | 23.667 / 26.000 (+9.9%) | 24.000 / 19.667 (-18.1%) **x** | 19.667 / 7.667 (-61.0%) **x** | 6.333 / 4.000 (-36.8%) **x** |
-| glow_r10 | 77.333 / 80.000 (+3.4%) | 78.333 / 74.667 (-4.7%) | 79.667 / 78.333 (-1.7%) | 81.000 / 84.000 (+3.7%) | 82.000 / 82.333 (+0.4%) |
-| contrast_top | 0.355 / 0.385 (+8.5%) | 0.345 / 0.377 (+9.3%) | 0.311 / 0.371 (+19.1%) **x** | 0.259 / 0.287 (+10.8%) | 0.272 / 0.186 (-31.4%) **x** |
-| contrast_mid | 0.264 / 0.155 (-41.5%) **x** | 0.266 / 0.167 (-37.3%) **x** | 0.291 / 0.174 (-40.0%) **x** | 0.320 / 0.173 (-46.0%) **x** | 0.207 / 0.101 (-51.3%) **x** |
-| contrast_bottom | 0.216 / 0.263 (+21.6%) **x** | 0.233 / 0.258 (+10.9%) | 0.266 / 0.241 (-9.5%) | 0.305 / 0.233 (-23.5%) **x** | 0.167 / 0.072 (-56.6%) **x** |
-| contrast_far | 0.392 / 0.462 (+17.9%) **x** | 0.372 / 0.434 (+16.8%) **x** | 0.333 / 0.380 (+14.0%) **x** | 0.271 / 0.286 (+5.5%) | 0.275 / 0.221 (-19.4%) **x** |
-| contrast_near | 0.207 / 0.231 (+11.7%) | 0.215 / 0.231 (+7.8%) | 0.243 / 0.199 (-18.2%) **x** | 0.282 / 0.184 (-34.6%) **x** | 0.158 / 0.050 (-68.6%) **x** |
-| mean_top | 0.227 / 0.219 (-3.7%) | 0.227 / 0.216 (-5.1%) | 0.225 / 0.204 (-9.3%) | 0.212 / 0.189 (-10.8%) **x** | 0.211 / 0.179 (-15.1%) **x** |
-| mean_mid | 0.199 / 0.184 (-7.4%) | 0.200 / 0.186 (-7.0%) | 0.203 / 0.187 (-8.2%) | 0.206 / 0.187 (-9.3%) | 0.196 / 0.173 (-11.9%) **x** |
-| mean_bottom | 0.194 / 0.181 (-6.7%) | 0.196 / 0.180 (-7.9%) | 0.200 / 0.179 (-10.7%) **x** | 0.204 / 0.179 (-12.3%) **x** | 0.191 / 0.162 (-15.1%) **x** |
-| grain | 0.000 / 0.000 (+40.7%) | 0.001 / 0.000 (-38.2%) | 0.001 / 0.001 (+61.9%) | 0.001 / 0.001 (-3.1%) | 0.001 / 0.000 (-27.0%) |
-| detail_lapvar | 67.514 / 21.884 (-67.6%) **x** | 67.642 / 21.899 (-67.6%) **x** | 69.544 / 23.978 (-65.5%) **x** | 67.062 / 29.548 (-55.9%) **x** | 71.704 / 29.539 (-58.8%) **x** |
-| vignette_ratio | 1.106 / 0.971 (-12.2%) **x** | 1.163 / 0.980 (-15.8%) **x** | 1.296 / 0.981 (-24.3%) **x** | 1.398 / 0.987 (-29.4%) **x** | 1.440 / 0.978 (-32.1%) **x** |
-| mean_lum | 0.206 / 0.194 (-5.8%) | 0.208 / 0.194 (-6.6%) | 0.210 / 0.190 (-9.4%) | 0.207 / 0.185 (-10.8%) **x** | 0.199 / 0.171 (-14.0%) **x** |
-| **outside target** | 12 of 29 | 9 of 29 | 12 of 29 | 13 of 29 | 18 of 29 |
+| sat_mean | 0.154 / 0.187 (+21.5%) | 0.156 / 0.186 (+19.1%) | 0.160 / 0.186 (+16.5%) | 0.156 / 0.186 (+19.2%) | 0.145 / 0.180 (+24.0%) |
+| hue_shadows | 60.967 / 50.416 (-10.6 deg) **x** | 59.821 / 50.107 (-9.7 deg) | 54.208 / 49.633 (-4.6 deg) | 50.777 / 49.536 (-1.2 deg) | 48.351 / 48.093 (-0.3 deg) |
+| hue_midtones | 28.769 / 39.247 (+10.5 deg) **x** | 27.917 / 39.464 (+11.5 deg) **x** | 29.675 / 39.682 (+10.0 deg) **x** | 28.939 / 39.485 (+10.5 deg) **x** | 26.632 / 42.075 (+15.4 deg) **x** |
+| hue_highlights | 30.125 / 31.393 (+1.3 deg) | 30.141 / 31.541 (+1.4 deg) | 29.969 / 30.794 (+0.8 deg) | 30.005 / 30.395 (+0.4 deg) | 28.587 / 29.078 (+0.5 deg) |
+| glow_peak | 0.868 / 0.809 (-6.8%) | 0.870 / 0.825 (-5.1%) | 0.878 / 0.821 (-6.5%) | 0.885 / 0.817 (-7.7%) | 0.890 / 0.736 (-17.2%) **x** |
+| glow_cx | 0.722 / 0.675 (-6.5%) | 0.732 / 0.688 (-5.9%) | 0.747 / 0.702 (-6.0%) | 0.760 / 0.713 (-6.1%) | 0.772 / 0.745 (-3.5%) |
+| glow_cy | 0.522 / 0.801 (+53.3%) **x** | 0.522 / 0.465 (-10.9%) | 0.525 / 0.456 (-13.3%) | 0.522 / 0.462 (-11.5%) | 0.525 / 0.472 (-10.2%) |
+| glow_r50 | 2.667 / 2.000 (-25.0%) | 2.667 / 4.333 (+62.5%) **x** | 3.000 / 4.333 (+44.4%) **x** | 3.000 / 4.000 (+33.3%) | 3.000 / 2.000 (-33.3%) |
+| glow_r25 | 16.333 / 10.333 (-36.7%) **x** | 23.667 / 27.333 (+15.5%) **x** | 24.000 / 25.667 (+6.9%) | 19.667 / 26.000 (+32.2%) **x** | 6.333 / 29.667 (+368.4%) **x** |
+| glow_r10 | 77.333 / 79.667 (+3.0%) | 78.333 / 74.333 (-5.1%) | 79.667 / 76.000 (-4.6%) | 81.000 / 77.000 (-4.9%) | 82.000 / 79.667 (-2.8%) |
+| contrast_top | 0.355 / 0.474 (+33.4%) **x** | 0.345 / 0.456 (+32.4%) **x** | 0.311 / 0.377 (+21.0%) **x** | 0.259 / 0.367 (+41.3%) **x** | 0.272 / 0.326 (+20.0%) **x** |
+| contrast_mid | 0.264 / 0.301 (+13.9%) **x** | 0.266 / 0.315 (+18.6%) **x** | 0.291 / 0.314 (+8.1%) | 0.320 / 0.315 (-1.7%) | 0.207 / 0.190 (-7.8%) |
+| contrast_bottom | 0.216 / 0.326 (+50.7%) **x** | 0.233 / 0.327 (+40.4%) **x** | 0.266 / 0.323 (+21.2%) **x** | 0.305 / 0.324 (+6.4%) | 0.167 / 0.160 (-4.3%) |
+| contrast_far | 0.392 / 0.496 (+26.5%) **x** | 0.372 / 0.482 (+29.5%) **x** | 0.333 / 0.386 (+15.8%) **x** | 0.271 / 0.369 (+36.2%) **x** | 0.275 / 0.344 (+25.0%) **x** |
+| contrast_near | 0.207 / 0.300 (+45.1%) **x** | 0.215 / 0.299 (+39.3%) **x** | 0.243 / 0.293 (+20.5%) **x** | 0.282 / 0.291 (+3.2%) | 0.158 / 0.140 (-11.1%) |
+| mean_top | 0.227 / 0.248 (+9.0%) | 0.227 / 0.244 (+7.2%) | 0.225 / 0.230 (+2.1%) | 0.212 / 0.221 (+4.4%) | 0.211 / 0.217 (+2.5%) |
+| mean_mid | 0.199 / 0.194 (-2.4%) | 0.200 / 0.196 (-2.0%) | 0.203 / 0.195 (-4.0%) | 0.206 / 0.195 (-5.4%) | 0.196 / 0.182 (-6.9%) |
+| mean_bottom | 0.194 / 0.187 (-3.2%) | 0.196 / 0.187 (-4.3%) | 0.200 / 0.187 (-6.8%) | 0.204 / 0.187 (-8.1%) | 0.191 / 0.171 (-10.8%) **x** |
+| grain | 0.000 / 0.000 (+48.3%) | 0.001 / 0.000 (-21.9%) | 0.001 / 0.001 (+59.2%) | 0.001 / 0.001 (-9.0%) | 0.001 / 0.001 (-10.3%) |
+| detail_lapvar | 67.514 / 30.295 (-55.1%) **x** | 67.642 / 30.261 (-55.3%) **x** | 69.544 / 31.293 (-55.0%) **x** | 67.062 / 35.309 (-47.3%) **x** | 71.704 / 33.597 (-53.1%) **x** |
+| vignette_ratio | 1.106 / 0.976 (-11.8%) **x** | 1.163 / 1.041 (-10.5%) **x** | 1.296 / 1.105 (-14.8%) **x** | 1.398 / 1.138 (-18.6%) **x** | 1.440 / 1.135 (-21.1%) **x** |
+| mean_lum | 0.206 / 0.210 (+1.5%) | 0.208 / 0.209 (+0.6%) | 0.210 / 0.204 (-2.7%) | 0.207 / 0.201 (-3.0%) | 0.199 / 0.190 (-4.8%) |
+| **outside target** | 13 of 29 | 12 of 29 | 11 of 29 | 9 of 29 | 10 of 29 |
 
 
 #### 04-V2-golden-hourglass (camera movement changed: position- and framing-dependent measures skipped)
 
 | measure | 0.5s ref / ours (diff) | 4.0s ref / ours (diff) | 9.0s ref / ours (diff) | 13.0s ref / ours (diff) | 16.0s ref / ours (diff) |
 |---|---|---|---|---|---|
-| lum_p1 | 0.139 / 0.136 (-1.8%) | 0.139 / 0.136 (-1.8%) | 0.139 / 0.136 (-1.8%) | 0.139 / 0.136 (-1.8%) | 0.139 / 0.140 (+1.0%) |
+| lum_p1 | 0.139 / 0.136 (-1.8%) | 0.139 / 0.136 (-1.8%) | 0.139 / 0.136 (-1.8%) | 0.139 / 0.140 (+1.0%) | 0.139 / 0.140 (+1.0%) |
 | lum_p5 | 0.141 / 0.140 (-0.2%) | 0.141 / 0.140 (-0.2%) | 0.141 / 0.140 (-0.2%) | 0.143 / 0.140 (-1.8%) | 0.143 / 0.140 (-1.8%) |
-| lum_p50 | 0.172 / 0.148 (-14.0%) **x** | 0.174 / 0.150 (-14.0%) **x** | 0.176 / 0.152 (-13.5%) **x** | 0.176 / 0.156 (-11.3%) | 0.173 / 0.156 (-9.7%) |
-| lum_p95 | 0.442 / 0.333 (-24.7%) **x** | 0.442 / 0.413 (-6.5%) | 0.439 / 0.502 (+14.2%) **x** | 0.423 / 0.520 (+23.0%) **x** | 0.377 / 0.387 (+2.7%) |
-| lum_p99 | 0.669 / 0.624 (-6.8%) | 0.669 / 0.704 (+5.2%) | 0.684 / 0.762 (+11.4%) **x** | 0.689 / 0.787 (+14.2%) **x** | 0.666 / 0.635 (-4.6%) |
-| pct_above_90 | 0.159 / 0.013 (-91.7%) | 0.170 / 0.018 (-89.4%) | 0.200 / 0.021 (-89.7%) | 0.227 / 0.021 (-90.9%) | 0.242 / 0.046 (-81.0%) |
+| lum_p50 | 0.172 / 0.152 (-11.8%) **x** | 0.174 / 0.152 (-12.6%) **x** | 0.176 / 0.156 (-11.3%) | 0.176 / 0.162 (-7.8%) | 0.173 / 0.168 (-2.9%) |
+| lum_p95 | 0.442 / 0.433 (-2.1%) | 0.442 / 0.484 (+9.4%) | 0.439 / 0.540 (+22.9%) **x** | 0.423 / 0.571 (+34.9%) **x** | 0.377 / 0.531 (+40.6%) **x** |
+| lum_p99 | 0.669 / 0.632 (-5.6%) | 0.669 / 0.694 (+3.7%) | 0.684 / 0.760 (+11.1%) **x** | 0.689 / 0.794 (+15.2%) **x** | 0.666 / 0.700 (+5.2%) |
+| pct_above_90 | 0.159 / 0.008 (-94.7%) | 0.170 / 0.016 (-90.7%) | 0.200 / 0.017 (-91.6%) | 0.227 / 0.015 (-93.5%) | 0.242 / 0.034 (-86.1%) |
 | pct_below_5 | 0.000 / 0.000 (+0.0%) | 0.000 / 0.000 (+0.0%) | 0.000 / 0.000 (+0.0%) | 0.000 / 0.000 (+0.0%) | 0.000 / 0.000 (+0.0%) |
-| sat_mean | 0.154 / 0.161 (+4.9%) | 0.156 / 0.164 (+4.9%) | 0.160 / 0.171 (+7.4%) | 0.156 / 0.183 (+17.1%) | 0.145 / 0.195 (+34.3%) **x** |
-| hue_shadows | 60.967 / 49.976 (-11.0 deg) **x** | 59.821 / 49.751 (-10.1 deg) **x** | 54.208 / 50.658 (-3.6 deg) | 50.777 / 52.495 (+1.7 deg) | 48.351 / 50.864 (+2.5 deg) |
-| hue_midtones | 28.769 / 44.895 (+16.1 deg) **x** | 27.917 / 44.937 (+17.0 deg) **x** | 29.675 / 42.517 (+12.8 deg) **x** | 28.939 / 40.770 (+11.8 deg) **x** | 26.632 / 42.869 (+16.2 deg) **x** |
-| hue_highlights | 30.125 / 28.995 (-1.1 deg) | 30.141 / 30.304 (+0.2 deg) | 29.969 / 30.821 (+0.9 deg) | 30.005 / 29.735 (-0.3 deg) | 28.587 / 26.703 (-1.9 deg) |
-| glow_peak | 0.868 / 0.727 (-16.2%) (skipped) | 0.870 / 0.774 (-11.0%) (skipped) | 0.878 / 0.816 (-7.0%) (skipped) | 0.885 / 0.829 (-6.3%) (skipped) | 0.890 / 0.834 (-6.3%) (skipped) |
-| glow_cx | 0.722 / 0.597 (-17.3%) (skipped) | 0.732 / 0.673 (-8.0%) (skipped) | 0.747 / 0.622 (-16.7%) (skipped) | 0.760 / 0.602 (-20.8%) (skipped) | 0.772 / 0.612 (-20.7%) (skipped) |
-| glow_cy | 0.522 / 0.804 (+53.9%) (skipped) | 0.522 / 0.541 (+3.6%) (skipped) | 0.525 / 0.484 (-7.8%) (skipped) | 0.522 / 0.997 (+90.9%) (skipped) | 0.525 / 0.715 (+36.1%) (skipped) |
-| glow_r50 | 2.667 / 2.000 (-25.0%) (skipped) | 2.667 / 1.667 (-37.5%) (skipped) | 3.000 / 2.667 (-11.1%) (skipped) | 3.000 / 2.333 (-22.2%) (skipped) | 3.000 / 2.333 (-22.2%) (skipped) |
-| glow_r25 | 16.333 / 10.333 (-36.7%) (skipped) | 23.667 / 23.667 (+0.0%) (skipped) | 24.000 / 24.667 (+2.8%) (skipped) | 19.667 / 26.333 (+33.9%) (skipped) | 6.333 / 5.667 (-10.5%) (skipped) |
-| glow_r10 | 77.333 / 73.333 (-5.2%) (skipped) | 78.333 / 73.333 (-6.4%) (skipped) | 79.667 / 68.000 (-14.6%) (skipped) | 81.000 / 80.000 (-1.2%) (skipped) | 82.000 / 72.000 (-12.2%) (skipped) |
-| contrast_top | 0.355 / 0.309 (-12.9%) (skipped) | 0.345 / 0.352 (+2.0%) (skipped) | 0.311 / 0.389 (+25.0%) (skipped) | 0.259 / 0.388 (+49.6%) (skipped) | 0.272 / 0.315 (+15.8%) (skipped) |
-| contrast_mid | 0.264 / 0.114 (-56.8%) (skipped) | 0.266 / 0.139 (-47.7%) (skipped) | 0.291 / 0.191 (-34.4%) (skipped) | 0.320 / 0.242 (-24.3%) (skipped) | 0.207 / 0.134 (-35.3%) (skipped) |
-| contrast_bottom | 0.216 / 0.062 (-71.4%) (skipped) | 0.233 / 0.098 (-58.1%) (skipped) | 0.266 / 0.336 (+26.2%) (skipped) | 0.305 / 0.434 (+42.4%) (skipped) | 0.167 / 0.214 (+28.2%) (skipped) |
-| contrast_far | 0.392 / 0.309 (-21.1%) (skipped) | 0.372 / 0.367 (-1.4%) (skipped) | 0.333 / 0.405 (+21.7%) (skipped) | 0.271 / 0.356 (+31.5%) (skipped) | 0.275 / 0.322 (+17.3%) (skipped) |
-| contrast_near | 0.207 / 0.059 (-71.3%) (skipped) | 0.215 / 0.082 (-62.0%) (skipped) | 0.243 / 0.371 (+52.5%) (skipped) | 0.282 / 0.461 (+63.5%) (skipped) | 0.158 / 0.230 (+45.9%) (skipped) |
-| mean_top | 0.227 / 0.195 (-14.2%) (skipped) | 0.227 / 0.204 (-10.1%) (skipped) | 0.225 / 0.219 (-3.0%) (skipped) | 0.212 / 0.217 (+2.3%) (skipped) | 0.211 / 0.230 (+8.8%) (skipped) |
-| mean_mid | 0.199 / 0.173 (-12.8%) (skipped) | 0.200 / 0.179 (-10.3%) (skipped) | 0.203 / 0.187 (-8.1%) (skipped) | 0.206 / 0.189 (-8.4%) (skipped) | 0.196 / 0.173 (-11.9%) (skipped) |
-| mean_bottom | 0.194 / 0.162 (-16.3%) (skipped) | 0.196 / 0.168 (-13.9%) (skipped) | 0.200 / 0.187 (-6.9%) (skipped) | 0.204 / 0.203 (-0.7%) (skipped) | 0.191 / 0.179 (-6.3%) (skipped) |
-| grain | 0.000 / 0.000 (-22.9%) | 0.001 / 0.000 (-100.0%) | 0.001 / 0.001 (+24.8%) | 0.001 / 0.000 (-24.5%) | 0.001 / 0.000 (-64.3%) |
-| detail_lapvar | 67.514 / 21.612 (-68.0%) (skipped) | 67.642 / 25.116 (-62.9%) (skipped) | 69.544 / 24.898 (-64.2%) (skipped) | 67.062 / 27.863 (-58.5%) (skipped) | 71.704 / 25.398 (-64.6%) (skipped) |
-| vignette_ratio | 1.106 / 0.717 (-35.2%) (skipped) | 1.163 / 0.803 (-31.0%) (skipped) | 1.296 / 0.751 (-42.1%) (skipped) | 1.398 / 0.694 (-50.4%) (skipped) | 1.440 / 0.706 (-51.0%) (skipped) |
-| mean_lum | 0.206 / 0.177 (-14.4%) **x** | 0.208 / 0.184 (-11.4%) **x** | 0.210 / 0.197 (-5.9%) | 0.207 / 0.203 (-2.2%) | 0.199 / 0.194 (-2.8%) |
-| **outside target** | 5 of 29 | 4 of 29 | 4 of 29 | 3 of 29 | 2 of 29 |
+| sat_mean | 0.154 / 0.182 (+18.3%) | 0.156 / 0.185 (+18.3%) | 0.160 / 0.196 (+22.6%) | 0.156 / 0.215 (+37.7%) **x** | 0.145 / 0.240 (+65.3%) **x** |
+| hue_shadows | 60.967 / 50.844 (-10.1 deg) **x** | 59.821 / 50.383 (-9.4 deg) | 54.208 / 51.149 (-3.1 deg) | 50.777 / 50.758 (-0.0 deg) | 48.351 / 51.256 (+2.9 deg) |
+| hue_midtones | 28.769 / 40.738 (+12.0 deg) **x** | 27.917 / 41.148 (+13.2 deg) **x** | 29.675 / 41.171 (+11.5 deg) **x** | 28.939 / 40.870 (+11.9 deg) **x** | 26.632 / 40.411 (+13.8 deg) **x** |
+| hue_highlights | 30.125 / 29.166 (-1.0 deg) | 30.141 / 30.107 (-0.0 deg) | 29.969 / 30.971 (+1.0 deg) | 30.005 / 30.682 (+0.7 deg) | 28.587 / 29.406 (+0.8 deg) |
+| glow_peak | 0.868 / 0.763 (-12.1%) (skipped) | 0.870 / 0.803 (-7.7%) (skipped) | 0.878 / 0.824 (-6.2%) (skipped) | 0.885 / 0.855 (-3.4%) (skipped) | 0.890 / 0.847 (-4.8%) (skipped) |
+| glow_cx | 0.722 / 0.597 (-17.3%) (skipped) | 0.732 / 0.615 (-15.9%) (skipped) | 0.747 / 0.622 (-16.7%) (skipped) | 0.760 / 0.610 (-19.7%) (skipped) | 0.772 / 0.602 (-22.0%) (skipped) |
+| glow_cy | 0.522 / 0.538 (+3.0%) (skipped) | 0.522 / 0.509 (-2.4%) (skipped) | 0.525 / 0.481 (-8.4%) (skipped) | 0.522 / 0.585 (+12.1%) (skipped) | 0.525 / 0.655 (+24.7%) (skipped) |
+| glow_r50 | 2.667 / 3.333 (+25.0%) (skipped) | 2.667 / 4.000 (+50.0%) (skipped) | 3.000 / 4.333 (+44.4%) (skipped) | 3.000 / 4.667 (+55.6%) (skipped) | 3.000 / 2.667 (-11.1%) (skipped) |
+| glow_r25 | 16.333 / 23.667 (+44.9%) (skipped) | 23.667 / 25.667 (+8.5%) (skipped) | 24.000 / 28.333 (+18.1%) (skipped) | 19.667 / 33.667 (+71.2%) (skipped) | 6.333 / 38.667 (+510.5%) (skipped) |
+| glow_r10 | 77.333 / 66.333 (-14.2%) (skipped) | 78.333 / 67.333 (-14.0%) (skipped) | 79.667 / 68.000 (-14.6%) (skipped) | 81.000 / 68.667 (-15.2%) (skipped) | 82.000 / 69.667 (-15.0%) (skipped) |
+| contrast_top | 0.355 / 0.347 (-2.3%) (skipped) | 0.345 / 0.396 (+15.0%) (skipped) | 0.311 / 0.425 (+36.4%) (skipped) | 0.259 / 0.432 (+66.5%) (skipped) | 0.272 / 0.415 (+52.7%) (skipped) |
+| contrast_mid | 0.264 / 0.221 (-16.2%) (skipped) | 0.266 / 0.265 (-0.4%) (skipped) | 0.291 / 0.333 (+14.5%) (skipped) | 0.320 / 0.380 (+18.8%) (skipped) | 0.207 / 0.350 (+69.6%) (skipped) |
+| contrast_bottom | 0.216 / 0.114 (-47.2%) (skipped) | 0.233 / 0.171 (-26.5%) (skipped) | 0.266 / 0.393 (+47.5%) (skipped) | 0.305 / 0.488 (+60.1%) (skipped) | 0.167 / 0.406 (+143.2%) (skipped) |
+| contrast_far | 0.392 / 0.349 (-11.1%) (skipped) | 0.372 / 0.425 (+14.2%) (skipped) | 0.333 / 0.454 (+36.4%) (skipped) | 0.271 / 0.426 (+57.5%) (skipped) | 0.275 / 0.417 (+51.6%) (skipped) |
+| contrast_near | 0.207 / 0.119 (-42.2%) (skipped) | 0.215 / 0.164 (-23.6%) (skipped) | 0.243 / 0.404 (+66.3%) (skipped) | 0.282 / 0.510 (+81.2%) (skipped) | 0.158 / 0.430 (+172.9%) (skipped) |
+| mean_top | 0.227 / 0.220 (-3.1%) (skipped) | 0.227 / 0.233 (+2.6%) (skipped) | 0.225 / 0.256 (+13.4%) (skipped) | 0.212 / 0.269 (+26.8%) (skipped) | 0.211 / 0.304 (+44.1%) (skipped) |
+| mean_mid | 0.199 / 0.182 (-8.5%) (skipped) | 0.200 / 0.188 (-6.1%) (skipped) | 0.203 / 0.196 (-3.3%) (skipped) | 0.206 / 0.204 (-1.0%) (skipped) | 0.196 / 0.202 (+3.1%) (skipped) |
+| mean_bottom | 0.194 / 0.168 (-13.1%) (skipped) | 0.196 / 0.175 (-10.8%) (skipped) | 0.200 / 0.195 (-2.4%) (skipped) | 0.204 / 0.220 (+7.9%) (skipped) | 0.191 / 0.212 (+10.6%) (skipped) |
+| grain | 0.000 / 0.000 (-49.9%) | 0.001 / 0.000 (-100.0%) | 0.001 / 0.001 (+36.0%) | 0.001 / 0.000 (-42.2%) | 0.001 / 0.001 (-20.6%) |
+| detail_lapvar | 67.514 / 27.740 (-58.9%) (skipped) | 67.642 / 30.881 (-54.3%) (skipped) | 69.544 / 32.158 (-53.8%) (skipped) | 67.062 / 35.853 (-46.5%) (skipped) | 71.704 / 35.140 (-51.0%) (skipped) |
+| vignette_ratio | 1.106 / 0.615 (-44.4%) (skipped) | 1.163 / 0.674 (-42.1%) (skipped) | 1.296 / 0.625 (-51.8%) (skipped) | 1.398 / 0.557 (-60.1%) (skipped) | 1.440 / 0.718 (-50.1%) (skipped) |
+| mean_lum | 0.206 / 0.190 (-8.0%) | 0.208 / 0.198 (-4.4%) | 0.210 / 0.216 (+2.9%) | 0.207 / 0.231 (+11.4%) **x** | 0.199 / 0.239 (+20.0%) **x** |
+| **outside target** | 3 of 29 | 2 of 29 | 3 of 29 | 5 of 29 | 4 of 29 |
 
 
 **Reading these tables honestly:** the +-10 % target is not met across the board. Out of 29
@@ -404,15 +404,14 @@ measures per frame, the number outside target is:
 |---|---|---|
 | 01 V1 chip | 9, 12, 7, 13, 13 | `mean_mid` (5/5), `detail_lapvar` (5/5), `glow_cx`, `contrast_bottom` (4/5), `lum_p50`, `pct_below_5`, `glow_r50`, `contrast_far`, `grain`, `mean_lum` (3/5) |
 | 02 V2 chip (hue, saturation skipped) | 13, 10, 9, 13, 14 | `lum_p50`, `glow_r10`, `mean_mid` (5/5), `glow_cx`, `contrast_far`, `mean_lum` (4/5), `lum_p95`, `glow_r50`, `contrast_top`, `contrast_near`, `detail_lapvar` (3/5) |
-| 03 V1 hourglass | 12, 9, 12, 13, 18 | `lum_p50`, `lum_p99`, `hue_midtones`, `contrast_mid`, `detail_lapvar`, `vignette_ratio` (5/5), `glow_r25`, `contrast_far` (4/5), `lum_p95`, `glow_cy`, `contrast_bottom`, `contrast_near`, `mean_bottom` (3/5) |
-| 04 V2 hourglass (framing-dependent measures skipped) | 5, 4, 4, 3, 2 | `hue_midtones` (5/5), `lum_p50`, `lum_p95` (3/5) |
+| 03 V1 hourglass | 13, 12, 11, 9, 10 | `lum_p95`, `hue_midtones`, `contrast_top`, `contrast_far`, `detail_lapvar`, `vignette_ratio` (5/5), `lum_p99`, `glow_r25` (4/5), `lum_p50`, `contrast_bottom`, `contrast_near` (3/5) |
+| 04 V2 hourglass (framing-dependent measures skipped) | 3, 2, 3, 5, 4 | `hue_midtones` (5/5), `lum_p95` (3/5) |
 
 - *A:* the middle of the frame is darker than the reference (less blue haze pooled around the
   chip), the median is a little low, and fine detail and grain are below the reference's gritty texture.
-- *B:* the reference's neck and lower bulb carry many more bright reflections (`contrast_mid`), the
-  real sand's glitter is far denser (`detail_lapvar`), my brightest highlights are hotter
-  (`lum_p99`), and the backdrop midtones sit 10-12 degrees more olive. The last frame (16.0 s, empty
-  upper bulb) is the worst match.
+- *B:* the real sand's glitter is far denser (`detail_lapvar`), my upper bulb and highlights are
+  brighter than the reference's (`lum_p95`, `lum_p99`, `contrast_top`), the corners differ
+  (`vignette_ratio`), and the backdrop midtones sit about 10 degrees more olive.
 - *Stable over time:* the misses are the same kind from frame to frame, and the frame scan (4.A.4)
   found no flicker or jumps in light, haze or grain.
 
@@ -433,7 +432,7 @@ measures per frame, the number outside target is:
 | 3 | Full decode `ffmpeg -v error ... -f null -` | 0 errors | 0 errors | 0 errors | 0 errors | PASS |
 | 4 | Black frames (mean < 0.01) | 0 | 0 | 0 | 0 | PASS |
 | 4 | Frozen / duplicated frame pairs | 0 | 0 | 0 | 0 | PASS |
-| 4 | Brightness jumps (> 0.04 between frames) | 0 (max step 0.0095) | 0 (max 0.0107) | 0 (max 0.0012) | 0 (max 0.0016) | PASS |
+| 4 | Brightness jumps (> 0.04 between frames) | 0 (max step 0.0095) | 0 (max 0.0107) | 0 (max 0.0013) | 0 (max 0.0013) | PASS |
 | 4 | Flicker (alternating brightness steps) | 0 | 0 | 0 | 0 | PASS |
 | 4 | Contact sheet, one frame per second, viewed | ok | ok | ok | ok | PASS |
 | 5 | Loop | n/a | n/a | n/a | n/a | references do not loop |
@@ -441,7 +440,7 @@ measures per frame, the number outside target is:
 | 7 | Look over time | see 3.2 | see 3.2 | see 3.2 | see 3.2 | **PARTIAL**: stable, but not all measures within target |
 | 8 | Banding / artefacts at levels x4 | none | none | none (faint H.264 block texture in the flat backdrop at x4) | same | PASS |
 | 9 | ZIP test | see section 6 | | see section 6 | | PASS |
-| - | File size | 77.3 MB | 75.5 MB | 11.2 MB | 13.5 MB | |
+| - | File size | 77.3 MB | 75.5 MB | 13.3 MB | 15.5 MB | |
 
 Notes on method:
 
@@ -493,6 +492,17 @@ and how blue the board should be; where they conflicted I went by the measured n
 
 So for both Version 2s the first answer is yes and the second is **not** a clean yes: the reviewers
 accept the concept and the change, but hold V2 to the same finish gaps as V1.
+
+**After delivery: shape feedback.** You pointed out that the hourglass did not look like the
+reference's. Enlarged crops showed why: the reference is thick glass with a wide dark waist and
+collar, a flat gold shoulder where the lower bulb begins and rounded flanks, while mine was one thin
+surface pinching to an "X". The glass was rebuilt as an outer shell (`OUTER_PROFILE`) around an inner
+cavity and the two stand-in collar blobs were removed. A fresh reviewer then judged shape only and
+measured the first rebuild against the reference: waist about twice too tall (110 px against 55 px),
+no hard break under the collar, lower bulb bell-curved instead of a straight cone (33-37 degrees
+from vertical), upper bulb about 95 px too wide. The outline was set to those measurements and both
+hourglass videos were re-rendered and re-checked. The 03 / 04 numbers in this report are from the re-rendered files; the Version 1 and
+Version 2 reviewer rounds above were run on the earlier shape.
 
 **Step 8.11 distinctness.** `qc/v1-v2-circuit-chip-beam.png` and `qc/v1-v2-golden-hourglass.png`
 show V1 over V2 at three moments. The chip pair differs in colour at a glance with identical
@@ -550,8 +560,8 @@ Machine: 4 CPU cores, no GPU (WebGL through ANGLE on software rendering).
 |---|---|---|
 | 01 V1 chip | 829 s for 440 frames (1.9 s/frame) | another render was running at the same time |
 | 02 V2 chip | 520 s for 440 frames (**1.2 s/frame**) | rendered alone |
-| 03 V1 hourglass | 965 s for 509 frames (1.9 s/frame) | another render was running at the same time |
-| 04 V2 hourglass | 992 s for 509 frames (1.9 s/frame) | another render was running at the same time |
+| 03 V1 hourglass | about 1.9-2.0 s/frame | rendered together with 04 |
+| 04 V2 hourglass | about 1.9-2.0 s/frame | rendered together with 03 |
 
 | Project | 4K, estimated | Basis |
 |---|---|---|
@@ -583,14 +593,16 @@ concurrency should be somewhat faster, and a GPU much faster.
 
 **Reference B (hourglass)**
 
-- **Real glass.** The reference is live-action macro footage. Refraction, the thick dark neck with its
-  internal reflections, the collar and the layered caustic streaks are approximated with highlights
-  laid on a single lathe surface, with no ray-traced refraction. It reads as a stylised CG
-  hourglass. This is the largest remaining gap in the whole job.
+- **Real glass.** The reference is live-action macro footage. After your note that the shape did not
+  look like the reference, the glass was rebuilt as a thick-walled outer shell (short collared waist,
+  hard break under the collar, near-straight cones, set from measurements of the reference) around an inner cavity that pinches to a pinhole, replacing
+  the single thin surface that pinched to an "X". The outline now follows the reference; what is
+  still missing is true refraction through the thick glass and its layered internal reflections, so
+  it remains a stylised CG hourglass rather than a photoreal one.
 - **Sand.** Real glitter sand has far denser fine sparkle than my three-scale procedural texture
   (`detail_lapvar` is 55-67 % below target), and the stream is too uniform and hard-edged.
-- **Collar.** The two dark pieces beside the neck stand in for the reference's neck hardware and are
-  the weakest element, more so in Version 2 where the camera looks down on them.
+- **Collar.** The dark waist now belongs to the glass itself, with a glint and a small red reflection,
+  but it lacks the reference's dense internal reflections.
 - **Glints** are placed by hand to match the reference's positions and twinkle on a seeded curve; they
   do not come from real reflections.
 - **Framing.** 16:9 against the reference's 1.90:1: the width matches and there is a little more

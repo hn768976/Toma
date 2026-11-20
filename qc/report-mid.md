@@ -59,15 +59,14 @@ measures per frame, the number outside target is:
 |---|---|---|
 | 01 V1 chip | 9, 12, 7, 13, 13 | `mean_mid` (5/5), `detail_lapvar` (5/5), `glow_cx`, `contrast_bottom` (4/5), `lum_p50`, `pct_below_5`, `glow_r50`, `contrast_far`, `grain`, `mean_lum` (3/5) |
 | 02 V2 chip (hue, saturation skipped) | 13, 10, 9, 13, 14 | `lum_p50`, `glow_r10`, `mean_mid` (5/5), `glow_cx`, `contrast_far`, `mean_lum` (4/5), `lum_p95`, `glow_r50`, `contrast_top`, `contrast_near`, `detail_lapvar` (3/5) |
-| 03 V1 hourglass | 12, 9, 12, 13, 18 | `lum_p50`, `lum_p99`, `hue_midtones`, `contrast_mid`, `detail_lapvar`, `vignette_ratio` (5/5), `glow_r25`, `contrast_far` (4/5), `lum_p95`, `glow_cy`, `contrast_bottom`, `contrast_near`, `mean_bottom` (3/5) |
-| 04 V2 hourglass (framing-dependent measures skipped) | 5, 4, 4, 3, 2 | `hue_midtones` (5/5), `lum_p50`, `lum_p95` (3/5) |
+| 03 V1 hourglass | 13, 12, 11, 9, 10 | `lum_p95`, `hue_midtones`, `contrast_top`, `contrast_far`, `detail_lapvar`, `vignette_ratio` (5/5), `lum_p99`, `glow_r25` (4/5), `lum_p50`, `contrast_bottom`, `contrast_near` (3/5) |
+| 04 V2 hourglass (framing-dependent measures skipped) | 3, 2, 3, 5, 4 | `hue_midtones` (5/5), `lum_p95` (3/5) |
 
 - *A:* the middle of the frame is darker than the reference (less blue haze pooled around the
   chip), the median is a little low, and fine detail and grain are below the reference's gritty texture.
-- *B:* the reference's neck and lower bulb carry many more bright reflections (`contrast_mid`), the
-  real sand's glitter is far denser (`detail_lapvar`), my brightest highlights are hotter
-  (`lum_p99`), and the backdrop midtones sit 10-12 degrees more olive. The last frame (16.0 s, empty
-  upper bulb) is the worst match.
+- *B:* the real sand's glitter is far denser (`detail_lapvar`), my upper bulb and highlights are
+  brighter than the reference's (`lum_p95`, `lum_p99`, `contrast_top`), the corners differ
+  (`vignette_ratio`), and the backdrop midtones sit about 10 degrees more olive.
 - *Stable over time:* the misses are the same kind from frame to frame, and the frame scan (4.A.4)
   found no flicker or jumps in light, haze or grain.
 
@@ -88,7 +87,7 @@ measures per frame, the number outside target is:
 | 3 | Full decode `ffmpeg -v error ... -f null -` | 0 errors | 0 errors | 0 errors | 0 errors | PASS |
 | 4 | Black frames (mean < 0.01) | 0 | 0 | 0 | 0 | PASS |
 | 4 | Frozen / duplicated frame pairs | 0 | 0 | 0 | 0 | PASS |
-| 4 | Brightness jumps (> 0.04 between frames) | 0 (max step 0.0095) | 0 (max 0.0107) | 0 (max 0.0012) | 0 (max 0.0016) | PASS |
+| 4 | Brightness jumps (> 0.04 between frames) | 0 (max step 0.0095) | 0 (max 0.0107) | 0 (max 0.0013) | 0 (max 0.0013) | PASS |
 | 4 | Flicker (alternating brightness steps) | 0 | 0 | 0 | 0 | PASS |
 | 4 | Contact sheet, one frame per second, viewed | ok | ok | ok | ok | PASS |
 | 5 | Loop | n/a | n/a | n/a | n/a | references do not loop |
@@ -96,7 +95,7 @@ measures per frame, the number outside target is:
 | 7 | Look over time | see 3.2 | see 3.2 | see 3.2 | see 3.2 | **PARTIAL**: stable, but not all measures within target |
 | 8 | Banding / artefacts at levels x4 | none | none | none (faint H.264 block texture in the flat backdrop at x4) | same | PASS |
 | 9 | ZIP test | see section 6 | | see section 6 | | PASS |
-| - | File size | 77.3 MB | 75.5 MB | 11.2 MB | 13.5 MB | |
+| - | File size | 77.3 MB | 75.5 MB | 13.3 MB | 15.5 MB | |
 
 Notes on method:
 
@@ -148,6 +147,17 @@ and how blue the board should be; where they conflicted I went by the measured n
 
 So for both Version 2s the first answer is yes and the second is **not** a clean yes: the reviewers
 accept the concept and the change, but hold V2 to the same finish gaps as V1.
+
+**After delivery: shape feedback.** You pointed out that the hourglass did not look like the
+reference's. Enlarged crops showed why: the reference is thick glass with a wide dark waist and
+collar, a flat gold shoulder where the lower bulb begins and rounded flanks, while mine was one thin
+surface pinching to an "X". The glass was rebuilt as an outer shell (`OUTER_PROFILE`) around an inner
+cavity and the two stand-in collar blobs were removed. A fresh reviewer then judged shape only and
+measured the first rebuild against the reference: waist about twice too tall (110 px against 55 px),
+no hard break under the collar, lower bulb bell-curved instead of a straight cone (33-37 degrees
+from vertical), upper bulb about 95 px too wide. The outline was set to those measurements and both
+hourglass videos were re-rendered and re-checked. The 03 / 04 numbers in this report are from the re-rendered files; the Version 1 and
+Version 2 reviewer rounds above were run on the earlier shape.
 
 **Step 8.11 distinctness.** `qc/v1-v2-circuit-chip-beam.png` and `qc/v1-v2-golden-hourglass.png`
 show V1 over V2 at three moments. The chip pair differs in colour at a glance with identical
@@ -205,8 +215,8 @@ Machine: 4 CPU cores, no GPU (WebGL through ANGLE on software rendering).
 |---|---|---|
 | 01 V1 chip | 829 s for 440 frames (1.9 s/frame) | another render was running at the same time |
 | 02 V2 chip | 520 s for 440 frames (**1.2 s/frame**) | rendered alone |
-| 03 V1 hourglass | 965 s for 509 frames (1.9 s/frame) | another render was running at the same time |
-| 04 V2 hourglass | 992 s for 509 frames (1.9 s/frame) | another render was running at the same time |
+| 03 V1 hourglass | about 1.9-2.0 s/frame | rendered together with 04 |
+| 04 V2 hourglass | about 1.9-2.0 s/frame | rendered together with 03 |
 
 | Project | 4K, estimated | Basis |
 |---|---|---|
@@ -238,14 +248,16 @@ concurrency should be somewhat faster, and a GPU much faster.
 
 **Reference B (hourglass)**
 
-- **Real glass.** The reference is live-action macro footage. Refraction, the thick dark neck with its
-  internal reflections, the collar and the layered caustic streaks are approximated with highlights
-  laid on a single lathe surface, with no ray-traced refraction. It reads as a stylised CG
-  hourglass. This is the largest remaining gap in the whole job.
+- **Real glass.** The reference is live-action macro footage. After your note that the shape did not
+  look like the reference, the glass was rebuilt as a thick-walled outer shell (short collared waist,
+  hard break under the collar, near-straight cones, set from measurements of the reference) around an inner cavity that pinches to a pinhole, replacing
+  the single thin surface that pinched to an "X". The outline now follows the reference; what is
+  still missing is true refraction through the thick glass and its layered internal reflections, so
+  it remains a stylised CG hourglass rather than a photoreal one.
 - **Sand.** Real glitter sand has far denser fine sparkle than my three-scale procedural texture
   (`detail_lapvar` is 55-67 % below target), and the stream is too uniform and hard-edged.
-- **Collar.** The two dark pieces beside the neck stand in for the reference's neck hardware and are
-  the weakest element, more so in Version 2 where the camera looks down on them.
+- **Collar.** The dark waist now belongs to the glass itself, with a glint and a small red reflection,
+  but it lacks the reference's dense internal reflections.
 - **Glints** are placed by hand to match the reference's positions and twinkle on a seeded curve; they
   do not come from real reflections.
 - **Framing.** 16:9 against the reference's 1.90:1: the width matches and there is a little more

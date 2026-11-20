@@ -135,7 +135,7 @@ void main(){
   // dust film: gold on the upper glass, faint on the lower
   float upper = smoothstep(-0.05, 0.08, vP.y);
   float cover = mix(uFilmLo, uFilmUp, upper) * (0.55 + 0.6 * fbm(vec2(phi * 2.2, vP.y * 2.4) + 3.0));
-  cover *= mix(0.02, 1.5, pow(fr, 0.55));
+  cover *= mix(0.03, 1.5, smoothstep(0.2, 0.46, 1.0 - abs(facing))); // amber bands either side with a clean inner edge
   cover += (1.0 - upper) * 0.85 * exp(vP.y / 0.26) * smoothstep(0.35, -0.9, phi) * smoothstep(-2.4, -1.2, phi);
   float ndl = clamp(dot(Nf, normalize(uKeyDir)) * 0.6 + 0.4, 0.0, 1.0);
   vec3 film = uFilm * uKeyCol * (0.25 + 1.1 * ndl + 2.2 * fr * upper) * (0.8 + 0.4 * dust);
@@ -144,19 +144,36 @@ void main(){
   gl_FragColor = vec4(c, a);
 }`;
 
-// ---------- dark collar at the neck
-export const COLLAR_FRAG = /* glsl */ `
-uniform vec3 uBase; uniform vec3 uAccent; uniform vec3 uKeyDir; uniform vec3 uKeyCol; uniform vec3 uCam;
+// ---------- outside of the thick glass: silhouette lines, collar reflections, the gold shoulder
+export const SHELL_FRAG = /* glsl */ `
+uniform vec3 uCam; uniform float uTime; uniform vec3 uRim; uniform vec3 uGold; uniform vec3 uAccent; uniform vec3 uKeyCol; uniform vec3 uKeyDir;
+uniform float uEdge; uniform float uShelf; uniform float uBody;
 varying vec3 vW; varying vec3 vN; varying vec3 vP;
 ${NOISE}
 void main(){
   vec3 N = normalize(vN); vec3 V = normalize(uCam - vW);
-  vec3 H = normalize(normalize(uKeyDir) + V);
-  float sp = pow(max(dot(N, H), 0.0), 60.0);
-  float sp2 = pow(max(dot(N, normalize(vec3(0.75, 0.25, 0.6))), 0.0), 26.0);
-  float ndl = clamp(dot(N, normalize(uKeyDir)), 0.0, 1.0);
-  float gold = pow(max(dot(N, normalize(vec3(-0.2, -0.75, 0.6))), 0.0), 3.0); // sand-coloured bounce from below
-  vec3 c = uBase * (0.3 + ndl) + uKeyCol * sp * 0.2 + uAccent * sp2 * 0.16 + uKeyCol * vec3(0.55, 0.36, 0.16) * gold * 0.05;
+  float facing = clamp(dot(N, V), 0.0, 1.0);
+  float phi = atan(vP.x, vP.z);
+  float waist = exp(-pow(vP.y / 0.16, 2.0)); // 1 at the collar
+  // silhouette: a thin bright line with a softer band inside it, uneven along its length
+  float e = 1.0 - facing;
+  float brk = 0.35 + 1.1 * vnoise(vec2(vP.y * 2.6 + 4.0, step(0.0, vP.x) * 7.0));
+  vec3 c = uRim * uEdge * (pow(e, 16.0) * 1.3 + pow(e, 5.0) * 0.05) * brk * mix(1.0, 0.55, waist) * mix(1.0, 0.3, smoothstep(0.22, 0.5, vP.y));
+  // the flat shoulder of the lower bulb picks up the gold of the sand above it
+  float up = smoothstep(-0.27, -0.17, vP.y) * (1.0 - smoothstep(-0.135, -0.11, vP.y)); // the ledge just under the collar
+  float side = 0.06 + 0.94 * smoothstep(0.15, 0.95, -sin(phi - 0.2));
+  c += uGold * uKeyCol * uShelf * up * side * (0.55 + 0.6 * fbm(vec2(phi * 3.0, vP.y * 14.0)));
+  // rippled rings under the shoulder edge
+  c += uGold * uShelf * 0.18 * up * side * pow(vnoise(vec2(phi * 1.5, vP.y * 60.0)), 3.0);
+  // collar: dark glass with a few sharp reflections
+  vec3 R = reflect(-V, N);
+  float sp = pow(max(dot(R, normalize(vec3(-0.5, 0.45, 0.74))), 0.0), 40.0);
+  float sp2 = pow(max(dot(R, normalize(vec3(0.6, 0.2, 0.77))), 0.0), 26.0);
+  c += uKeyCol * sp * 0.5 * waist + uAccent * sp2 * 0.55 * waist;
+  c += uRim * 0.1 * waist * pow(vnoise(vec2(phi * 5.0, vP.y * 22.0 + 2.0)), 2.0);
+  // broad soft reflections across the body so the glass has some presence
+  float sheet = pow(vnoise(vec2(phi * 2.2 + 1.3, vP.y * 0.9)), 2.5) + 0.6 * pow(vnoise(vec2(phi * 6.0, vP.y * 0.5 + 8.0)), 4.0);
+  c += uRim * uBody * sheet * (0.25 + e) * (1.0 - 0.6 * waist) * mix(1.0, 0.4, smoothstep(-0.2, -0.8, vP.y));
   gl_FragColor = vec4(c, 1.0);
 }`;
 
