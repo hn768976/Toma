@@ -59,8 +59,8 @@ measures per frame, the number outside target is:
 |---|---|---|
 | 01 V1 chip | 9, 12, 7, 13, 13 | `mean_mid` (5/5), `detail_lapvar` (5/5), `glow_cx`, `contrast_bottom` (4/5), `lum_p50`, `pct_below_5`, `glow_r50`, `contrast_far`, `grain`, `mean_lum` (3/5) |
 | 02 V2 chip (hue, saturation skipped) | 13, 10, 9, 13, 14 | `lum_p50`, `glow_r10`, `mean_mid` (5/5), `glow_cx`, `contrast_far`, `mean_lum` (4/5), `lum_p95`, `glow_r50`, `contrast_top`, `contrast_near`, `detail_lapvar` (3/5) |
-| 03 V1 hourglass | 13, 12, 11, 9, 10 | `lum_p95`, `hue_midtones`, `contrast_top`, `contrast_far`, `detail_lapvar`, `vignette_ratio` (5/5), `lum_p99`, `glow_r25` (4/5), `lum_p50`, `contrast_bottom`, `contrast_near` (3/5) |
-| 04 V2 hourglass (framing-dependent measures skipped) | 3, 2, 3, 5, 4 | `hue_midtones` (5/5), `lum_p95` (3/5) |
+| 03 V1 hourglass | 11, 11, 10, 11, 13 | `lum_p95`, `contrast_mid`, `detail_lapvar`, `vignette_ratio` (5/5), `lum_p99`, `hue_midtones`, `contrast_top`, `contrast_bottom` (4/5), `lum_p50`, `glow_cy`, `glow_r25`, `contrast_far`, `contrast_near` (3/5) |
+| 04 V2 hourglass (framing-dependent measures skipped) | 3, 3, 3, 5, 4 | `hue_midtones` (5/5), `lum_p95` (4/5) |
 
 - *A:* the middle of the frame is darker than the reference (less blue haze pooled around the
   chip), the median is a little low, and fine detail and grain are below the reference's gritty texture.
@@ -87,7 +87,7 @@ measures per frame, the number outside target is:
 | 3 | Full decode `ffmpeg -v error ... -f null -` | 0 errors | 0 errors | 0 errors | 0 errors | PASS |
 | 4 | Black frames (mean < 0.01) | 0 | 0 | 0 | 0 | PASS |
 | 4 | Frozen / duplicated frame pairs | 0 | 0 | 0 | 0 | PASS |
-| 4 | Brightness jumps (> 0.04 between frames) | 0 (max step 0.0095) | 0 (max 0.0107) | 0 (max 0.0013) | 0 (max 0.0013) | PASS |
+| 4 | Brightness jumps (> 0.04 between frames) | 0 (max step 0.0095) | 0 (max 0.0107) | 0 (max 0.0017) | 0 (max 0.0016) | PASS |
 | 4 | Flicker (alternating brightness steps) | 0 | 0 | 0 | 0 | PASS |
 | 4 | Contact sheet, one frame per second, viewed | ok | ok | ok | ok | PASS |
 | 5 | Loop | n/a | n/a | n/a | n/a | references do not loop |
@@ -95,7 +95,7 @@ measures per frame, the number outside target is:
 | 7 | Look over time | see 3.2 | see 3.2 | see 3.2 | see 3.2 | **PARTIAL**: stable, but not all measures within target |
 | 8 | Banding / artefacts at levels x4 | none | none | none (faint H.264 block texture in the flat backdrop at x4) | same | PASS |
 | 9 | ZIP test | see section 6 | | see section 6 | | PASS |
-| - | File size | 77.3 MB | 75.5 MB | 13.3 MB | 15.5 MB | |
+| - | File size | 77.3 MB | 75.5 MB | 12.6 MB | 15.4 MB | |
 
 Notes on method:
 
@@ -155,8 +155,14 @@ surface pinching to an "X". The glass was rebuilt as an outer shell (`OUTER_PROF
 cavity and the two stand-in collar blobs were removed. A fresh reviewer then judged shape only and
 measured the first rebuild against the reference: waist about twice too tall (110 px against 55 px),
 no hard break under the collar, lower bulb bell-curved instead of a straight cone (33-37 degrees
-from vertical), upper bulb about 95 px too wide. The outline was set to those measurements and both
-hourglass videos were re-rendered and re-checked. The 03 / 04 numbers in this report are from the re-rendered files; the Version 1 and
+from vertical), upper bulb about 95 px too wide. The outline was set to those measurements. A
+second shape-only reviewer then found proportions, angles, neck size and bottom width within a few
+percent of the reference and the drift matching, but the outline too ruler-straight and
+hard-cornered ("a geometric construction rather than softly curved blown glass") and the waist
+20-25 px low. Final pass: the profile became a smooth curve (upper bulb flowing into the waist with
+no corner, a soft shoulder under the collar), a slight unevenness and lean were added to the shell
+(`SHELL_WOBBLE`), and the framing was raised. Both hourglass videos were then re-rendered and
+re-checked; that final outline has not had its own reviewer round. The 03 / 04 numbers in this report are from the re-rendered files; the Version 1 and
 Version 2 reviewer rounds above were run on the earlier shape.
 
 **Step 8.11 distinctness.** `qc/v1-v2-circuit-chip-beam.png` and `qc/v1-v2-golden-hourglass.png`
@@ -250,7 +256,7 @@ concurrency should be somewhat faster, and a GPU much faster.
 
 - **Real glass.** The reference is live-action macro footage. After your note that the shape did not
   look like the reference, the glass was rebuilt as a thick-walled outer shell (short collared waist,
-  hard break under the collar, near-straight cones, set from measurements of the reference) around an inner cavity that pinches to a pinhole, replacing
+  soft shoulder under the collar, near-straight flanks, set from measurements of the reference) around an inner cavity that pinches to a pinhole, replacing
   the single thin surface that pinched to an "X". The outline now follows the reference; what is
   still missing is true refraction through the thick glass and its layered internal reflections, so
   it remains a stylised CG hourglass rather than a photoreal one.

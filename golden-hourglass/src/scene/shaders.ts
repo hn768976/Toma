@@ -160,7 +160,7 @@ void main(){
   float brk = 0.35 + 1.1 * vnoise(vec2(vP.y * 2.6 + 4.0, step(0.0, vP.x) * 7.0));
   vec3 c = uRim * uEdge * (pow(e, 16.0) * 1.3 + pow(e, 5.0) * 0.05) * brk * mix(1.0, 0.55, waist) * mix(1.0, 0.3, smoothstep(0.22, 0.5, vP.y));
   // the flat shoulder of the lower bulb picks up the gold of the sand above it
-  float up = smoothstep(-0.27, -0.17, vP.y) * (1.0 - smoothstep(-0.135, -0.11, vP.y)); // the ledge just under the collar
+  float up = smoothstep(-0.3, -0.19, vP.y) * (1.0 - smoothstep(-0.15, -0.1, vP.y)); // the rim just under the collar
   float side = 0.06 + 0.94 * smoothstep(0.15, 0.95, -sin(phi - 0.2));
   c += uGold * uKeyCol * uShelf * up * side * (0.55 + 0.6 * fbm(vec2(phi * 3.0, vP.y * 14.0)));
   // rippled rings under the shoulder edge

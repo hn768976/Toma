@@ -2,17 +2,7 @@ import { OUTER_PROFILE, SAND_KEYS, SHAPE } from "../config";
 import { keyframes } from "../lib/rng";
 
 /** radius of the outside of the glass at height y (neck at y = 0) */
-export const outerRadius = (y: number) => {
-  const p = OUTER_PROFILE;
-  if (y <= p[0][0]) return p[0][1];
-  for (let i = 1; i < p.length; i++) {
-    if (y <= p[i][0]) {
-      const u = (y - p[i - 1][0]) / (p[i][0] - p[i - 1][0]);
-      return p[i - 1][1] + (p[i][1] - p[i - 1][1]) * u;
-    }
-  }
-  return p[p.length - 1][1];
-};
+export const outerRadius = (y: number) => keyframes(OUTER_PROFILE, y);
 
 /** radius of the cavity inside the glass at height y: this is the wall the sand touches */
 export const glassRadius = (y: number) => {

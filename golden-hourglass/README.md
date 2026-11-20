@@ -65,7 +65,7 @@ setting are identical to Version 1.
 | Colours | `src/config.ts` -> `PALETTE` |
 | Counts (grains on the glass, mesh detail) | `src/config.ts` -> `COUNTS` |
 | Timings (when the sand runs out, stream tail) | `src/config.ts` -> `TIMING` |
-| Outline of the glass (waist, collar, shoulder, flanks) | `src/config.ts` -> `OUTER_PROFILE` |
+| Outline of the glass (waist, collar, shoulder, flanks) | `src/config.ts` -> `OUTER_PROFILE`, `SHELL_WOBBLE` |
 | Cavity inside the glass, stream width | `src/config.ts` -> `SHAPE` |
 | Sand level over time | `src/config.ts` -> `SAND_KEYS` |
 | Star glints (position, size) | `src/config.ts` -> `GLINTS` |
@@ -83,7 +83,8 @@ setting are identical to Version 1.
 - `src/lib/post.ts`: half-float MSAA scene target -> bloom mip chain -> ACES tone map, grade,
   fixed film grain (hash of pixel + frame), +-1/255 dither.
 - `src/scene/profile.ts`: the glass and the sand level. The glass is thick-walled: an outer shell
-  (`OUTER_PROFILE`: a short collared waist, a hard break where the lower bulb begins, near-straight cones) around an inner cavity
+  (`OUTER_PROFILE`: a short collared waist flowing into a soft shoulder and near-straight flanks, with a
+  little hand-blown unevenness from `SHELL_WOBBLE`) around an inner cavity
   that pinches to a pinhole. The sand level follows `SAND_KEYS`: the middle sinks first, the rim
   collapses near the end.
 - `src/scene/createScene.ts`, `src/scene/shaders.ts`: lathe meshes for glass and sand, the stream,

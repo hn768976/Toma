@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import {
-  CAMERA_FOV, CAMERA_V1, CamKey, COUNTS, FPS, GLINTS, PALETTE, SEED, SHAPE, TIMING,
+  CAMERA_FOV, CAMERA_V1, CamKey, COUNTS, FPS, GLINTS, PALETTE, SEED, SHAPE, SHELL_WOBBLE, TIMING,
 } from "../config";
 import { PostChain } from "../lib/post";
 import { keyframes, mulberry32, smoothstep } from "../lib/rng";
@@ -170,6 +170,18 @@ export const createHourglassScene =
     for (let i = 0; i <= 120; i++) shellPts.push(new THREE.Vector2(outerRadius(-0.6 + i / 100), -0.6 + i / 100));
     shellPts.sort((a, b) => a.y - b.y);
     const shellGeo = new THREE.LatheGeometry(shellPts, COUNTS.latheSegments);
+    {
+      // blown glass is never a perfect solid of revolution: a little unevenness and a slight lean
+      const pos = shellGeo.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+        const phi = Math.atan2(x, z);
+        const k = 1 + SHELL_WOBBLE.amount * (0.6 * Math.sin(phi * 2 + 1.3 + y * 0.9) + 0.4 * Math.sin(phi * 3 - y * 2.1 + 0.4));
+        pos.setXYZ(i, x * k + SHELL_WOBBLE.lean * Math.max(-y, 0), y, z * k);
+      }
+      pos.needsUpdate = true;
+      shellGeo.computeVertexNormals();
+    }
     const shellMat = new THREE.ShaderMaterial({
       vertexShader: S.SAND_VERT, fragmentShader: S.SHELL_FRAG, side: THREE.FrontSide, transparent: true,
       depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,

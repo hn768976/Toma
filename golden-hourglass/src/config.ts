@@ -30,25 +30,30 @@ export const SHAPE = {
 };
 
 /**
- * Outside of the glass, as [height, radius] points (neck at height 0), joined by straight lines.
+ * Outside of the glass, as [height, radius] points (neck at height 0), joined by a smooth curve.
  * Thick glass: the outside
  * stays wide at the waist (a collar) while the cavity inside pinches to a pinhole, and the lower
  * bulb starts with a flat shoulder before its flanks run out.
  */
 export const OUTER_PROFILE: [number, number][] = [
   [-4.2, 3.24],
-  [-1.56, 1.39], // lower bulb: an almost straight cone
-  [-0.6, 0.72],
-  [-0.2, 0.445],
-  [-0.125, 0.395], // hard break where the lower bulb begins
-  [-0.1, 0.372],
+  [-1.56, 1.39], // lower bulb: nearly straight once past the shoulder
+  [-0.6, 0.765],
+  [-0.32, 0.575], // soft shoulder
+  [-0.2, 0.475],
+  [-0.13, 0.405], // rim where the lower bulb begins
+  [-0.07, 0.372],
   [0.0, 0.365], // short, tight waist
-  [0.1, 0.372],
-  [0.14, 0.39],
-  [0.3, 0.51], // upper bulb runs almost straight into the waist
-  [0.97, 1.04],
-  [1.9, 1.77],
+  [0.09, 0.376],
+  [0.19, 0.415], // upper bulb flows into the waist without a corner
+  [0.35, 0.515],
+  [0.6, 0.7],
+  [0.97, 1.01],
+  [1.9, 1.8],
 ];
+
+/** Hand-blown irregularity of the outside of the glass: fraction of the radius, and a slight lean of the lower bulb */
+export const SHELL_WOBBLE = { amount: 0.016, lean: 0.014 };
 
 /**
  * Sand level in the upper bulb. Rows: time (s), height where the sand meets the glass, height of the
@@ -133,8 +138,8 @@ export const PALETTE: Palette = {
 export const CAMERA_FOV = 20;
 export type CamKey = { t: number; az: number; el: number; dist: number; tx: number; ty: number };
 export const CAMERA_V1: CamKey[] = [
-  { t: 0, az: 0, el: 13, dist: 7.65, tx: -0.84, ty: -0.27 },
-  { t: 17, az: 0, el: 13, dist: 7.45, tx: -1.03, ty: -0.36 }, // the reference drifts very slightly
+  { t: 0, az: 0, el: 13, dist: 7.65, tx: -0.84, ty: -0.35 },
+  { t: 17, az: 0, el: 13, dist: 7.45, tx: -1.03, ty: -0.42 }, // the reference drifts very slightly
 ];
 export const CAMERA_V2: CamKey[] = [
   { t: 0, az: -30, el: 6, dist: 9.6, tx: -0.55, ty: -0.1 },
