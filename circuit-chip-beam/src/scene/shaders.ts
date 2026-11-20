@@ -34,7 +34,8 @@ void main(){
   vec3 V = normalize(uCam - vW);
   // large / medium / fine variation so the surface is never uniformly smooth
   float n1 = vnoise(vW.xz * 0.9), n2 = vnoise(vW.xz * 7.0 + 3.1), n3 = hash21(floor(vW.xz * 160.0));
-  vec3 alb = uBase * vCol * (0.6 + 0.5 * n1 + 0.25 * n2 + 0.12 * n3);
+  float n4 = vnoise(vW.xz * 31.0 + 9.0);
+  vec3 alb = uBase * vCol * (0.35 + 0.6 * n1 + 0.45 * n2 * n4 + 0.3 * n3 * n3);
   if (uPlane > 0.5) {
     // panel seams on the bare board
     vec2 gq = abs(fract(vW.xz * 2.0) - 0.5);
@@ -95,9 +96,9 @@ void main(){
   // short bright packets of data that keep running along the lit traces
   float pk = fract(vD * 0.11 - uTime * 0.42 + vSeed);
   float packet = smoothstep(0.93, 0.985, pk) * (1.0 - smoothstep(0.985, 1.0, pk)) * step(0.5, vBright) * behind;
-  float steady = vBright * vBright * behind * mix(1.0, 0.55 + 1.6 * near, 1.0) * uSettle;
+  float steady = vBright * vBright * behind * uSettle;
   vec3 c = uDim * uDimE * (0.55 + 0.45 * vBright) * (1.0 + 1.0 * near * behind)
-         + uLit * uLitE * (steady * (0.9 + near * 0.5) + flare * (0.6 + 0.8 * vBright) * 1.6 + packet * 1.5);
+         + uLit * uLitE * (steady * (0.9 + near * 0.1) + flare * (0.6 + 0.8 * vBright) * 1.6 + packet * 1.5);
   float vd = length(uCam - vW);
   c *= exp(-uFogD * vd);
   c *= 0.5 + 0.95 * vnoise1(vD * 1.7 + vSeed * 40.0); // uneven brightness along each trace
@@ -137,7 +138,7 @@ export const DIE_VERT = /* glsl */ `
 varying vec3 vP; varying vec3 vN; varying vec3 vW;
 void main(){ vP = position; vN = normal; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
 export const DIE_FRAG = /* glsl */ `
-uniform vec3 uGlow; uniform vec3 uBeam; uniform vec3 uKey; uniform float uReveal; uniform float uBeamOn; uniform float uE; uniform float uTime; uniform float uHeight;
+uniform vec3 uGlow; uniform vec3 uBeam; uniform vec3 uKey; uniform float uReveal; uniform float uBeamOn; uniform float uE; uniform float uTime; uniform float uHeight; uniform float uTopGlow;
 varying vec3 vP; varying vec3 vN; varying vec3 vW;
 ${NOISE}
 void main(){
@@ -151,14 +152,14 @@ void main(){
     float scan = 0.6 + 0.4 * vnoise1(uv.y * 9.0 - uTime * 1.3);
     float pat = max(dots, rows * 0.8) * scan + border * 0.9;
     c = vec3(0.012, 0.02, 0.035) + uGlow * uE * pat * uReveal * (1.0 - 0.88 * uBeamOn)
-      + uBeam * uBeamOn * (0.02 + 0.025 * vnoise(uv * 30.0 + vec2(0.0, uTime * 3.0)));
+      + mix(uBeam, vec3(0.75, 0.95, 1.0), 0.2) * uTopGlow * 0.2 + uBeam * uBeamOn * (0.02 + 0.025 * vnoise(uv * 30.0 + vec2(0.0, uTime * 3.0)));
   } else {
     // sides: fine vertical contacts catching the frame light
     float u = abs(vN.x) > 0.5 ? vP.z : vP.x;
     float stripe = step(0.45, fract(u * 34.0));
     float h = vP.y + 0.5;
     float lit = stripe * (0.25 + 0.75 * smoothstep(0.75, 0.0, h));
-    c = vec3(0.006, 0.009, 0.014) + uKey * lit * 0.16 * uReveal + uBeam * uBeamOn * 0.02;
+    c = vec3(0.006, 0.009, 0.014) + uKey * lit * 0.34 * uReveal + uBeam * uBeamOn * 0.02;
   }
   gl_FragColor = vec4(c, 1.0);
 }`;
@@ -173,8 +174,10 @@ void main(){
   grow = 1.0 - pow(1.0 - grow, 2.2);
   float len = uH * grow;
   vec3 base = vec3(aBase.x, uBaseY, aBase.y);
+  float fan = 1.0 + 0.16 * position.y * len; // the beam opens out as it rises
+  base.xz *= fan;
   vec3 toCam = uCam - base; vec3 right = normalize(vec3(toCam.z, 0.0, -toCam.x));
-  vec3 mid = base + vec3(0.0, position.y * len, 0.0);
+  vec3 mid = vec3(base.x, uBaseY + position.y * len, base.z);
   vec4 cc = projectionMatrix * viewMatrix * vec4(mid, 1.0);
   float px = cc.w * 2.0 / (projectionMatrix[1][1] * uResY);
   float hw = aInfo.x * 0.5; float hw2 = max(hw, 0.8 * px);
@@ -195,7 +198,7 @@ void main(){
   float run = vnoise1(y * (1.2 + seed * 2.5) - uTime * (2.5 + seed * 5.0) + seed * 40.0);
   float dash = mix(0.35, 1.0, smoothstep(0.25, 0.8, run));
   float tip = 1.0 - smoothstep(0.55, 1.0, vUv.y) * step(vLen, uH * 0.995); // soft leading end while it grows
-  float root = 1.0 + 0.3 * exp(-y / 0.35);
+  float root = 1.0 + 0.15 * exp(-y / 0.35);
   float fadeUp = mix(1.0, 0.4, smoothstep(0.0, 5.0, y));
   vec3 col = mix(uCore, uTop, smoothstep(0.0, 1.6, y));
   col = mix(col, uHot, smoothstep(0.82, 1.0, vInfo.z) * 0.8);

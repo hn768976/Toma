@@ -5,29 +5,31 @@ import type { PostLook } from "./lib/post";
 
 export const LOOK = {
   // key light on the sand: warm, soft, from the front and slightly above
-  keyDir: [0.34, -0.12, 0.93] as [number, number, number],
-  keyColor: "#ffe2b8",
-  keyIntensity: 0.5,
+  keyDir: [0.42, 0.05, 0.9] as [number, number, number],
+  keyColor: "#ffdcae",
+  keyIntensity: 0.85,
   fillColor: "#5a4636", // faint warm bounce so shadows stay brown, not black
   fillIntensity: 0.2,
-  topLight: 1.1, // light from above that catches the sand surface
+  topLight: 0.85, // light from above that catches the sand surface
   sheen: 0.5, // satin highlight on the packed sand
-  sparkle: 1.6, // brightness of glitter grains
-  grainContrast: 0.42, // fine sand texture
+  sparkle: 2.0, // brightness of glitter grains
+  grainContrast: 0.5, // fine sand texture
   // glass
-  streakIntensity: 0.8,
-  streakWidth: 0.04, // angular width of the strip light
+  streakIntensity: 0.75,
+  streakWidth: 0.024, // angular width of the strip light
   sideLineIntensity: 0.1,
   rimIntensity: 1.8,
-  fresnel: 0.07,
-  filmUpper: 0.38, // opacity of gold dust coating on the upper glass
-  filmLower: 0.02,
+  fresnel: 0.008,
+  edgeLine: 0.9, // thin amber line along the silhouette of the glass
+  caustics: 0.0, // hair-fine lines of light running down the lower glass
+  filmUpper: 0.6, // opacity of gold dust coating on the upper glass
+  filmLower: 0.012,
   // glints
-  glintIntensity: 3.2,
-  glintSize: 0.36, // world units for size = 1
-  speckIntensity: 2.4,
+  glintIntensity: 4.2,
+  glintSize: 0.25, // world units for size = 1
+  speckIntensity: 3.2,
   // background glow
-  bgGlowCentre: [0.2, 0.6] as [number, number], // uv (0,0 = bottom-left)
+  bgGlowCentre: [0.17, 0.68] as [number, number], // uv (0,0 = bottom-left)
   bgGlowRadius: 0.36,
 };
 
@@ -36,21 +38,21 @@ export const POST: PostLook = {
   toneMapping: "aces",
   bloomThreshold: 0.8,
   bloomKnee: 0.5,
-  bloomStrength: 0.35,
+  bloomStrength: 0.45,
   bloomWeights: [1.0, 0.9, 0.7, 0.6, 0.5, 0.5, 0.5],
-  bloomTint: [1.0, 0.88, 0.7],
+  bloomTint: [1.0, 0.8, 0.5],
   dofRange: 4.0,
   dofDeadZone: 0.1,
   dofStrength: 0.0,
   // matte, lifted blacks like the reference (#242422)
   lift: [0.139, 0.139, 0.129],
-  gain: [1.0, 0.975, 0.95],
+  gain: [1.0, 0.96, 0.9],
   gamma: 1.0,
-  saturation: 0.82,
-  vignette: 0.0,
-  vignetteStart: 0.4,
+  saturation: 0.74,
+  vignette: 0.15,
+  vignetteStart: 0.55,
   vignetteEnd: 1.2,
   chromaticAberration: 0.0015,
-  grain: 0.006,
-  softness: 0.0,
+  grain: 0.007,
+  softness: 0.35,
 };

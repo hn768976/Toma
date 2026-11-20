@@ -38,7 +38,7 @@ export const createChipScene =
     const boardUniforms = () => ({
       uBase: { value: v3(lin(pal.boardBase)) },
       uAmbient: { value: v3(lin(pal.boardAmbient), LOOK.ambient) },
-      uKeyCol: { value: v3(lin(pal.keyLight).lerp(new THREE.Color(0.22, 0.3, 0.42), LOOK.keyBoardNeutral)) },
+      uKeyCol: { value: v3(lin(pal.keyLight).lerp(new THREE.Color(...pal.keyNeutral), LOOK.keyBoardNeutral)) },
       uKeyI: { value: LOOK.keyLightIntensity },
       uKeyR: { value: LOOK.keyLightRadius },
       uKeyPos: { value: new THREE.Vector3(0, LOOK.keyLightHeight, 0) },
@@ -153,7 +153,6 @@ export const createChipScene =
       );
     };
     addFrame(fh, fw, frameMat, 0.008);
-    addFrame(fh - 0.075, fw * 0.3, frameInnerMat, 0.007);
     disposables.push(frameMat, frameInnerMat);
 
     const pinMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
@@ -181,7 +180,7 @@ export const createChipScene =
       uniforms: {
         uGlow: { value: v3(lin(pal.dieGlow)) }, uBeam: { value: v3(lin(pal.beamTop)) },
         uKey: { value: v3(lin(pal.keyLight)) }, uReveal: { value: 0 }, uBeamOn: { value: 0 },
-        uE: { value: LOOK.dieEmissive }, uTime, uHeight: { value: 0 },
+        uE: { value: LOOK.dieEmissive }, uTime, uHeight: { value: 0 }, uTopGlow: { value: 0 },
       },
     });
     const dieGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -220,7 +219,7 @@ export const createChipScene =
       for (let i = 0; i < count; i++) {
         const bh = SIZES.beamHalf * (body ? 0.8 : 1);
         aBase.set([(r() * 2 - 1) * bh, (r() * 2 - 1) * bh], i * 2);
-        const w = body ? 0.05 + r() * 0.11 : 0.004 + Math.pow(r(), 3) * 0.022;
+        const w = body ? 0.05 + r() * 0.11 : 0.003 + Math.pow(r(), 3) * 0.012;
         const bright = body ? 0.25 + r() * 0.3 : 0.25 + Math.pow(r(), 1.6) * 0.75;
         aInf.set([w, r(), bright, TIMING.beamStart + r() * TIMING.beamSpread * (body ? 1.3 : 1) + (body ? 0.35 : 0)], i * 4);
       }
@@ -233,7 +232,7 @@ export const createChipScene =
           uCam, uT: { value: 0 }, uRise: { value: TIMING.beamRiseTime }, uH: { value: SIZES.beamHeight },
           uBaseY: { value: 0 }, uResY, uCore: { value: v3(lin(pal.beamCore)) },
           uTop: { value: v3(lin(pal.beamTop)) }, uHot: { value: v3(lin(pal.beamHot)) },
-          uE: { value: LOOK.beamEmissive * (body ? 0.1 : 1.2) }, uTime, uBody: { value: body ? 1 : 0 },
+          uE: { value: LOOK.beamEmissive * (body ? 0.14 : 0.95) }, uTime, uBody: { value: body ? 1 : 0 },
         },
       });
       const mesh = new THREE.Mesh(geo, mat);
@@ -305,7 +304,7 @@ export const createChipScene =
       const on = 1.0;
       const flash = smoothstep(TIMING.traceWaveStart, TIMING.flashPeak, t) * (1 - smoothstep(TIMING.flashPeak, TIMING.flashPeak + 1.2, t));
       const pulse = 1 + 0.05 * Math.sin(t * 2.3) + 0.03 * Math.sin(t * 5.1 + 1.0);
-      const keyI = LOOK.keyLightIntensity * (on + LOOK.flashBoost * flash + 0.9 * smoothstep(5, 12, t)) * pulse;
+      const keyI = LOOK.keyLightIntensity * (on + LOOK.flashBoost * flash + 1.1 * smoothstep(5, 12, t)) * pulse;
       const beamOn = smoothstep(TIMING.beamStart + 0.2, TIMING.beamStart + 1.6, t);
       for (const m of [planeMat, boxMat]) {
         m.uniforms.uKeyI.value = keyI;
@@ -314,7 +313,8 @@ export const createChipScene =
       frameMat.color.copy(frameCol).multiplyScalar(LOOK.frameEmissive * (on + 0.4 * flash - 0.3 * beamOn) * pulse);
       frameInnerMat.color.copy(frameCol).multiplyScalar(LOOK.frameEmissive * 0.35 * (on + flash));
       const reveal = smoothstep(TIMING.dieRevealStart, TIMING.dieRevealStart + 0.4, t);
-      pinMat.color.copy(pinCol).multiplyScalar(0.1 + 0.9 * reveal * (1 + flash));
+      dieMat.uniforms.uTopGlow.value = smoothstep(7, 14, t);
+      pinMat.color.copy(pinCol).multiplyScalar(0.7 + 0.5 * reveal * (1 + flash));
       traceMat.uniforms.uWaveT.value = t - TIMING.traceWaveStart;
       traceMat.uniforms.uSettle.value = 1 + 1.4 * flash + 2.5 * smoothstep(4, 10, t);
       hazeMat.uniforms.uI.value = LOOK.hazeIntensity * (on + 1.3 * flash - 0.25 * beamOn + 1.0 * smoothstep(5, 12, t)) * pulse;

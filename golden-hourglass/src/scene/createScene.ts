@@ -6,7 +6,7 @@ import { PostChain } from "../lib/post";
 import { keyframes, mulberry32, smoothstep } from "../lib/rng";
 import type { StageContext, StageScene } from "../lib/ThreeStage";
 import { LOOK, POST } from "../look";
-import { glassNormal, glassPoint, glassRadius, sandApex, sandRimRadius, sandSurface } from "./profile";
+import { glassNormal, glassPoint, glassRadius, sandState, sandSurface } from "./profile";
 import * as S from "./shaders";
 
 const lin = (hex: string) => new THREE.Color(hex);
@@ -86,7 +86,8 @@ export const createHourglassScene =
     const bgMat = new THREE.ShaderMaterial({
       vertexShader: S.BG_VERT, fragmentShader: S.BG_FRAG, depthTest: false, depthWrite: false,
       uniforms: {
-        uGlow: { value: v3(lin(pal.bgGlow)).sub(v3(lin(pal.bgBase))).multiplyScalar(1.2) },
+        uGlow: { value: v3(lin(pal.bgGlow)).sub(v3(lin(pal.bgBase))).multiplyScalar(0.75) },
+        uWarm: { value: v3(lin(pal.bgWarm)).sub(v3(lin(pal.bgBase))).multiplyScalar(0.45) },
         uCentre: { value: new THREE.Vector2(...LOOK.bgGlowCentre) }, uRadius: { value: LOOK.bgGlowRadius },
         uAspect: { value: width / height }, uShift: { value: 0 },
       },
@@ -121,7 +122,7 @@ export const createHourglassScene =
           uRim: { value: v3(lin(pal.rimWarm)) }, uBack: { value: back ? 1 : 0 }, uTime, uRimY,
           uLSide: { value: [-1, -1, 1, 1] },
           uSP: { value: laid.map((l) => l.p) }, uSN: { value: laid.map((l) => l.n) }, uSW: { value: laid.map((l) => l.w) },
-          uStreakCol: { value: v3(lin(pal.streak)) },
+          uStreakCol: { value: v3(lin(pal.streak)) }, uEdgeLine: { value: LOOK.edgeLine }, uCaustics: { value: LOOK.caustics },
         },
       });
       disposables.push(m);
@@ -143,7 +144,7 @@ export const createHourglassScene =
           uSpark: { value: v3(lin(pal.sparkle)) }, uKeyDir: { value: keyDir }, uKeyCol: { value: keyCol },
           uKeyI: { value: LOOK.keyIntensity }, uFillCol: { value: v3(lin(LOOK.fillColor)) },
           uFillI: { value: LOOK.fillIntensity }, uSheen: { value: LOOK.sheen },
-          uSparkle: { value: LOOK.sparkle * (mode === 1 ? 1 : mode === 2 ? 0.55 : 0.35) },
+          uSparkle: { value: LOOK.sparkle * (mode === 1 ? 1 : mode === 2 ? 0.6 : 0.7) },
           uGrain: { value: LOOK.grainContrast * (mode === 0 ? 0.6 : 1) }, uCam, uTime,
           uMode: { value: mode }, uFlow: { value: 0 }, uAlpha: { value: 1 }, uTop: { value: mode === 1 ? LOOK.topLight : 0 },
         },
@@ -169,7 +170,7 @@ export const createHourglassScene =
     const collarGeo = new THREE.SphereGeometry(1, 40, 24);
     const collars = [-1, 1].map((sgn) => {
       const m = new THREE.Mesh(collarGeo, collarMat);
-      m.scale.set(0.13, 0.085, 0.12);
+      m.scale.set(0.17, 0.1, 0.13);
       m.renderOrder = 2;
       scene.add(m);
       return { m, sgn };
@@ -189,13 +190,14 @@ export const createHourglassScene =
       if (upper) {
         if (left <= 0) { cy = 0.25 + rs() * 1.35; cphi = rs() * Math.PI * 2; left = 6 + Math.floor(rs() * 34); }
         left--;
-        y = cy + gauss() * 0.07; phi = cphi + (gauss() * 0.16) / Math.max(glassRadius(cy), 0.2);
+        y = cy + gauss() * 0.045; phi = cphi + (gauss() * 0.1) / Math.max(glassRadius(cy), 0.2);
       } else {
         y = -0.12 - Math.pow(rs(), 0.8) * 2.6; phi = rs() * Math.PI * 2;
+        if (i % 3 === 0) { y = -1.15 - rs() * 0.5; phi = Math.PI + (rs() - 0.5) * 2.4; } // glitter lying low on the far side
       }
       const p = glassPoint(y, phi);
       sp.set([p[0] * 0.985, p[1], p[2] * 0.985], i * 3);
-      si.set([rs(), upper ? 0.012 + rs() * 0.02 : 0.004 + rs() * rs() * 0.012, upper ? 1 : 0, upper ? 0.35 + rs() * 0.65 : 0.25 + rs() * rs() * 1.2], i * 4);
+      si.set([rs(), upper ? 0.016 + rs() * 0.03 : 0.004 + rs() * rs() * 0.012, upper ? 1 : 0, upper ? 0.35 + rs() * 0.65 : 0.1 + rs() * rs() * 0.8], i * 4);
     }
     const speckGeo = new THREE.BufferGeometry();
     speckGeo.setAttribute("position", new THREE.BufferAttribute(sp, 3));
@@ -215,15 +217,20 @@ export const createHourglassScene =
     const glintGeo = new THREE.InstancedBufferGeometry();
     glintGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0]), 3));
     glintGeo.setIndex([0, 1, 2, 0, 2, 3]);
-    const gp = new Float32Array(GLINTS.length * 3);
-    const gi = new Float32Array(GLINTS.length * 3);
-    GLINTS.forEach((g, i) => {
+    const rg = mulberry32(SEED + 9);
+    const allGlints = [...GLINTS];
+    for (let i = 0; i < COUNTS.tinyGlints; i++) {
+      allGlints.push({ y: -0.2 - rg() * 1.25, phi: -4 - rg() * 34, size: 0.06 + rg() * 0.1, seed: rg() });
+    }
+    const gp = new Float32Array(allGlints.length * 3);
+    const gi = new Float32Array(allGlints.length * 3);
+    allGlints.forEach((g, i) => {
       gp.set(g.fixed ?? glassPoint(g.y, rad(g.phi)), i * 3);
       gi.set([g.size, g.seed, g.seed * 2.7], i * 3);
     });
     glintGeo.setAttribute("aPos", new THREE.InstancedBufferAttribute(gp, 3));
     glintGeo.setAttribute("aInfo", new THREE.InstancedBufferAttribute(gi, 3));
-    glintGeo.instanceCount = GLINTS.length;
+    glintGeo.instanceCount = allGlints.length;
     const glintMat = new THREE.ShaderMaterial({
       vertexShader: S.GLINT_VERT, fragmentShader: S.GLINT_FRAG, transparent: true, depthWrite: false, depthTest: false,
       blending: THREE.AdditiveBlending,
@@ -238,7 +245,7 @@ export const createHourglassScene =
     scene.add(glints);
     disposables.push(glintGeo, glintMat);
 
-    const apex0 = sandApex(0);
+    const rim0 = sandState(0).rimY;
     const swap = (mesh: THREE.Mesh, geo: THREE.BufferGeometry) => {
       mesh.geometry.dispose();
       mesh.geometry = geo;
@@ -252,9 +259,8 @@ export const createHourglassScene =
       bgMat.uniforms.uShift.value = az * 0.12;
 
       // sand level
-      const apex = sandApex(t);
-      const rimR = sandRimRadius(apex);
-      const rimY = apex + SHAPE.sandSlope * rimR;
+      const sand = sandState(t);
+      const { apex, rimR, rimY } = sand;
       const has = t < TIMING.sandEmpty && rimR > 0.02;
       uRimY.value = has ? rimY : -0.2;
       body.visible = top.visible = has;
@@ -270,11 +276,11 @@ export const createHourglassScene =
         const rr = rimR * 0.982;
         for (let i = 0; i <= 40; i++) {
           const r = Math.max((rr * i) / 40, 1e-4);
-          const y = i === 40 ? rimY : Math.min(Math.max(sandSurface(apex, r), -0.04), rimY);
+          const y = i === 40 ? rimY : Math.min(Math.max(sandSurface(sand, r / 0.982), -0.04), rimY);
           tp.push(new THREE.Vector2(r, y));
         }
         swap(top, new THREE.LatheGeometry(tp, 120));
-        bodyMat.uniforms.uFlow.value = apex0 - apex;
+        bodyMat.uniforms.uFlow.value = rim0 - rimY;
         topMat.uniforms.uFlow.value = t * 0.06;
       }
 
@@ -294,7 +300,7 @@ export const createHourglassScene =
 
       // collar pieces stay left and right of the neck as seen from the camera
       for (const c of collars) {
-        c.m.position.set(Math.cos(az) * 0.265 * c.sgn, 0.045, -Math.sin(az) * 0.265 * c.sgn);
+        c.m.position.set(Math.cos(az) * 0.25 * c.sgn, 0.0, -Math.sin(az) * 0.25 * c.sgn);
       }
 
       renderer.setRenderTarget(post.sceneRT);

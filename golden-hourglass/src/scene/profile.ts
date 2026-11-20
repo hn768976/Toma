@@ -1,9 +1,11 @@
-import { SHAPE, TIMING } from "../config";
-import { clamp } from "../lib/rng";
+import { SAND_KEYS, SHAPE } from "../config";
+import { keyframes } from "../lib/rng";
 
 /** radius of the glass at height y (neck at y = 0) */
 export const glassRadius = (y: number) => {
-  if (y >= 0) return Math.sqrt(SHAPE.neckRadius ** 2 + (SHAPE.upperSlope * y) ** 2);
+  const h = SHAPE.neckHalfHeight;
+  if (y >= 0) return Math.sqrt(SHAPE.neckRadius ** 2 + (SHAPE.upperSlope * Math.max(y - h, 0)) ** 2);
+  y = Math.min(y + h, 0);
   return (
     Math.sqrt(SHAPE.neckRadius ** 2 + (SHAPE.lowerSlope * y) ** 2) +
     SHAPE.lowerShoulder * (1 - Math.exp(y / SHAPE.lowerShoulderFall))
@@ -23,30 +25,13 @@ export const glassPoint = (y: number, phi: number): [number, number, number] => 
   return [Math.sin(phi) * r, y, Math.cos(phi) * r];
 };
 
-/**
- * Sand in the upper bulb: the surface is a shallow crater, y = apex + slope * r.
- * Volume leaves at a constant rate, and a cone's volume goes with height cubed,
- * so the apex height follows a cube-root curve and the level drops faster and faster.
- */
-export const sandApex = (t: number) => {
-  const k = clamp(1 - t / TIMING.sandEmpty, 0, 1);
-  const off = SHAPE.neckRadius / SHAPE.upperSlope;
-  return (SHAPE.sandStartApex + off) * Math.cbrt(k) - off;
+/** Sand in the upper bulb at time t: where it meets the glass, and the bottom of its crater. */
+export const sandState = (t: number) => {
+  const rimY = keyframes(SAND_KEYS.map((k) => [k.t, k.rim] as [number, number]), t);
+  const apex = Math.min(keyframes(SAND_KEYS.map((k) => [k.t, k.apex] as [number, number]), t), rimY - 0.02);
+  return { rimY, apex, rimR: glassRadius(rimY) };
 };
 
-/** radius where the sand surface meets the glass */
-export const sandRimRadius = (apex: number) => {
-  // solve apex + slope * r = y_wall(r), with the wall r = sqrt(n^2 + (a y)^2)
-  let lo = 0, hi = 3;
-  for (let i = 0; i < 40; i++) {
-    const r = (lo + hi) / 2;
-    const y = apex + SHAPE.sandSlope * r;
-    const wall = y > 0 ? glassRadius(y) : SHAPE.neckRadius * 0.999;
-    if (wall > r) lo = r; else hi = r;
-  }
-  return (lo + hi) / 2;
-};
-
-/** sand surface height at radius r (rounded at the bottom of the crater) */
-export const sandSurface = (apex: number, r: number) =>
-  apex + SHAPE.sandSlope * (Math.sqrt(r * r + 0.004) - 0.063);
+/** sand surface height at radius r: a dish that deepens into a funnel */
+export const sandSurface = (s: { rimY: number; apex: number; rimR: number }, r: number) =>
+  s.apex + (s.rimY - s.apex) * Math.pow(Math.min(r / s.rimR, 1), 1.35);

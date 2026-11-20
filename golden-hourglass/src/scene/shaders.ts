@@ -12,7 +12,7 @@ float fbm(vec2 p){ return 0.5 * vnoise(p) + 0.3 * vnoise(p * 2.13 + 7.1) + 0.2 *
 export const BG_VERT = /* glsl */ `
 varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 1.0, 1.0); }`;
 export const BG_FRAG = /* glsl */ `
-uniform vec3 uGlow; uniform vec2 uCentre; uniform float uRadius; uniform float uAspect; uniform float uShift;
+uniform vec3 uGlow; uniform vec3 uWarm; uniform vec2 uCentre; uniform float uRadius; uniform float uAspect; uniform float uShift;
 varying vec2 vUv;
 ${NOISE}
 void main(){
@@ -21,9 +21,9 @@ void main(){
   float g = exp(-d * d * 1.4);
   // a second, wider and fainter wash plus slow mottling so it is not a perfect gradient
   vec2 q = vUv - vec2(0.05 + uShift, 0.2); q.x *= uAspect * 0.5;
-  g += 0.45 * exp(-dot(q, q) / 0.16);
-  g *= 0.82 + 0.36 * fbm(vUv * vec2(3.0, 2.0) + 11.0 + vec2(uShift * 2.0, 0.0));
-  gl_FragColor = vec4(uGlow * g, 1.0);
+  float w = exp(-dot(q, q) / 0.2) + 0.7 * exp(-pow(length((vUv - vec2(0.62 + uShift, 0.3)) * vec2(uAspect * 0.6, 1.0)) / 0.5, 2.0));
+  float m = 0.82 + 0.36 * fbm(vUv * vec2(3.0, 2.0) + 11.0 + vec2(uShift * 2.0, 0.0));
+  gl_FragColor = vec4((uGlow * g + uWarm * w) * m, 1.0);
 }`;
 
 // ---------- sand (upper bulb body, its top surface, and the falling stream)
@@ -53,16 +53,16 @@ void main(){
   // three scales: soft clumps, grains, single glitter flakes
   float clump = fbm(gc * 9.0);
   float grains = hash21(floor(gc * 520.0)) * 0.6 + vnoise(gc * 260.0) * 0.4;
-  vec2 fc = floor(gc * (uMode > 1.5 ? 330.0 : uMode > 0.5 ? 150.0 : 210.0));
+  vec2 fc = floor(gc * (uMode > 1.5 ? 330.0 : uMode > 0.5 ? 80.0 : 130.0));
   float fl = hash21(fc);
   float tw = 0.5 + 0.5 * sin(uTime * (3.0 + 9.0 * hash21(fc + 9.0)) + fl * 60.0);
-  float density = uMode < 0.5 ? 0.985 : uMode < 1.5 ? 0.9 : 0.97;
-  float cellN = uMode > 1.5 ? 330.0 : uMode > 0.5 ? 150.0 : 210.0;
+  float density = uMode < 0.5 ? 0.965 : uMode < 1.5 ? 0.88 : 0.95;
+  float cellN = uMode > 1.5 ? 330.0 : uMode > 0.5 ? 80.0 : 130.0;
   float roundF = 1.0 - smoothstep(0.2, 0.48, length(fract(gc * cellN) - 0.5));
   float flake = smoothstep(density, 1.0, fl) * (0.35 + 0.65 * tw) * roundF * 1.6;
   // light
   float ndl = dot(N, normalize(uKeyDir));
-  float wrap = clamp(ndl * 0.85 + 0.15, 0.0, 1.0); wrap *= wrap;
+  float wrap = clamp(ndl * 0.9 + 0.1, 0.0, 1.0); wrap *= wrap;
   wrap = max(wrap, min(uTop * clamp(dot(N, normalize(vec3(0.1, 1.0, 0.35))), 0.0, 1.0), 1.6));
   vec3 H = normalize(normalize(uKeyDir) + V);
   float sheen = pow(max(dot(N, H), 0.0), 9.0) * uSheen;
@@ -72,9 +72,12 @@ void main(){
   if (uMode > 1.5) {
     // the stream is a round column: darker towards its right edge, soft at the sides
     float side = dot(N, normalize(vec3(-0.55, 0.0, 0.83)));
-    c *= 0.34 + 0.5 * clamp(side, 0.0, 1.0);
-    c *= 0.82 + 0.36 * vnoise(vec2(phi * 3.0, (vP.y + uFlow) * 7.0));
+    c *= 0.5 + 0.62 * clamp(side, 0.0, 1.0);
+    c *= 0.7 + 0.6 * vnoise(vec2(phi * 5.0, (vP.y + uFlow) * 9.0));
+    c *= 0.92 + 0.16 * hash21(floor(vec2(phi * 14.0, (vP.y + uFlow) * 160.0)));
+    c *= 1.25;
   }
+  if (uMode < 0.5) c *= 0.45 + 0.55 * pow(clamp(dot(N, V), 0.0, 1.0), 0.7); // falls off towards the glass edges
   c += uSpark * flake * uSparkle * (0.3 + 0.9 * wrap);
   gl_FragColor = vec4(c, uAlpha);
 }`;
@@ -86,7 +89,7 @@ export const GLASS_FRAG = /* glsl */ `
 uniform vec3 uCam; uniform vec3 uLN[NL]; uniform vec3 uLC[NL]; uniform vec3 uLCol[NL]; uniform vec3 uLP[NL]; // plane normal, centre dir, colour, (width, length, intensity)
 uniform vec3 uFilm; uniform float uFilmUp; uniform float uFilmLo; uniform vec3 uKeyDir; uniform vec3 uKeyCol; uniform float uFresnel; uniform vec3 uRim;
 uniform float uBack; uniform float uTime; uniform float uRimY; uniform float uLSide[NL];
-uniform vec3 uSP[2]; uniform vec3 uSN[2]; uniform vec3 uSW[2]; uniform vec3 uStreakCol; // highlight streaks laid along the lower glass: point, plane normal, (width, intensity, start y) // sand rim height: the film above it is what you see once the sand has gone
+uniform vec3 uSP[2]; uniform vec3 uSN[2]; uniform vec3 uSW[2]; uniform vec3 uStreakCol; uniform float uEdgeLine; uniform float uCaustics; // highlight streaks laid along the lower glass: point, plane normal, (width, intensity, start y) // sand rim height: the film above it is what you see once the sand has gone
 varying vec3 vW; varying vec3 vN; varying vec3 vP;
 ${NOISE}
 void main(){
@@ -101,6 +104,7 @@ void main(){
   streaks *= mix(1.0, 0.35, smoothstep(-0.2, -1.9, vP.y)) * (1.0 + 2.0 * exp(-pow((vP.y + 0.28) / 0.22, 2.0)));
   float dust = hash21(floor(vec2(phi * 300.0, vP.y * 300.0)));
   vec3 spec = vec3(0.0);
+  float upper0 = smoothstep(-0.05, 0.08, vP.y);
   for (int i = 0; i < NL; i++) {
     float off = dot(R, uLN[i]) / uLP[i].x;
     float along = dot(R, uLC[i]);
@@ -110,24 +114,32 @@ void main(){
   if (uBack < 0.5 && vP.y < 0.0) {
     for (int i = 0; i < 2; i++) {
       float d = dot(vW - uSP[i], uSN[i]) / (uSW[i].x * (0.55 + 0.9 * abs(vP.y)));
-      float taper = smoothstep(uSW[i].z + 0.12, uSW[i].z - 0.1, vP.y) * mix(1.0, 0.45, smoothstep(-0.4, -2.2, vP.y));
+      d += 0.7 * sin(vP.y * 3.1 + float(i) * 2.0) + 0.9 * (vnoise(vec2(vP.y * 2.3, 9.0 + float(i))) - 0.5); // not a ruler-straight line
+      float taper = smoothstep(uSW[i].z + 0.12, uSW[i].z - 0.1, vP.y) * mix(1.6, 0.5, smoothstep(-0.3, -1.6, vP.y));
       // a tight bright core plus hair-fine parallel lines either side of it
       float fibres = 0.15 + 1.7 * pow(vnoise(vec2(d * 11.0 + float(i) * 17.0, vP.y * 0.8)), 2.2);
-      float band = exp(-d * d * 5.0) * 0.45 * (0.5 + fibres) + exp(-d * d * 0.7) * 0.6 * fibres;
-      band *= 0.75 + 0.5 * vnoise(vec2(vP.y * 5.0, float(i) * 3.0));
+      float band = exp(-d * d * 14.0) * 0.9 + exp(-pow(d - 1.1, 2.0) * 60.0) * 0.55 + exp(-pow(d + 0.9, 2.0) * 80.0) * 0.4 + exp(-pow(d - 2.0, 2.0) * 90.0) * 0.3 + exp(-pow(d + 1.9, 2.0) * 90.0) * 0.22 + exp(-d * d * 0.3) * 0.18 * (0.4 + fibres);
+      band *= 0.25 + 1.3 * pow(vnoise(vec2(vP.y * 4.0, float(i) * 3.0)), 1.5); // broken along its length
       spec += uStreakCol * uSW[i].y * band * taper;
     }
   }
   float fr = pow(1.0 - abs(facing), 3.0);
   vec3 rim = uRim * fr * uFresnel * (0.5 + 0.8 * vnoise(vec2(phi * 9.0, vP.y * 3.0)));
+  // thin bright line right at the silhouette, broken up along its length
+  rim += uRim * uEdgeLine * mix(0.35, 1.0, upper0) * pow(1.0 - abs(facing), 14.0) * (0.25 + 1.2 * vnoise(vec2(vP.y * 3.0 + 2.0, step(0.0, vP.x) * 5.0)));
+  if (uBack < 0.5 && vP.y < -0.05) {
+    float hn = vnoise(vec2(phi * 70.0, 1.0));
+    float hair = smoothstep(0.9, 0.96, hn) * step(0.55, vnoise(vec2(phi * 5.0 + 3.0, 2.0)));
+    rim += uRim * uCaustics * min(hair, 1.5) * (0.2 + vnoise(vec2(phi * 3.0, vP.y * 2.2 + 5.0))) * smoothstep(-0.05, -0.3, vP.y) * mix(1.0, 0.3, smoothstep(-0.5, -2.0, vP.y));
+  }
   // dust film: gold on the upper glass, faint on the lower
   float upper = smoothstep(-0.05, 0.08, vP.y);
   float cover = mix(uFilmLo, uFilmUp, upper) * (0.55 + 0.6 * fbm(vec2(phi * 2.2, vP.y * 2.4) + 3.0));
-  cover *= mix(0.1, 1.3, pow(fr, 0.7));
-  cover += (1.0 - upper) * 0.95 * exp(vP.y / 0.3) * smoothstep(0.35, -0.9, phi) * smoothstep(-2.4, -1.2, phi);
+  cover *= mix(0.02, 1.5, pow(fr, 0.55));
+  cover += (1.0 - upper) * 0.85 * exp(vP.y / 0.26) * smoothstep(0.35, -0.9, phi) * smoothstep(-2.4, -1.2, phi);
   float ndl = clamp(dot(Nf, normalize(uKeyDir)) * 0.6 + 0.4, 0.0, 1.0);
-  vec3 film = uFilm * uKeyCol * (0.25 + 1.1 * ndl) * (0.8 + 0.4 * dust);
-  float a = clamp(cover, 0.0, 0.9) * (uBack > 0.5 ? upper : 0.55);
+  vec3 film = uFilm * uKeyCol * (0.25 + 1.1 * ndl + 2.2 * fr * upper) * (0.8 + 0.4 * dust);
+  float a = clamp(cover, 0.0, 0.9) * (uBack > 0.5 ? upper * 0.22 : 0.6);
   vec3 c = film * a + spec * (uBack > 0.5 ? 0.0 : 1.0) + rim * (uBack > 0.5 ? 0.4 : 1.0);
   gl_FragColor = vec4(c, a);
 }`;
@@ -144,7 +156,7 @@ void main(){
   float sp2 = pow(max(dot(N, normalize(vec3(0.75, 0.25, 0.6))), 0.0), 26.0);
   float ndl = clamp(dot(N, normalize(uKeyDir)), 0.0, 1.0);
   float gold = pow(max(dot(N, normalize(vec3(-0.2, -0.75, 0.6))), 0.0), 3.0); // sand-coloured bounce from below
-  vec3 c = uBase * (0.3 + ndl) + uKeyCol * sp * 0.25 + uAccent * sp2 * 0.35 + uKeyCol * vec3(0.55, 0.36, 0.16) * gold * 0.22;
+  vec3 c = uBase * (0.3 + ndl) + uKeyCol * sp * 0.2 + uAccent * sp2 * 0.16 + uKeyCol * vec3(0.55, 0.36, 0.16) * gold * 0.05;
   gl_FragColor = vec4(c, 1.0);
 }`;
 
@@ -182,7 +194,7 @@ void main(){
   vUv = position.xy;
   vec4 mv = viewMatrix * vec4(aPos, 1.0);
   // twinkle: slow seeded flicker, plus a sensitivity to the viewing direction so glints flare as the camera moves
-  float tw = 0.62 + 0.38 * vnoise1(uTime * (0.9 + aInfo.y * 1.6) + aInfo.y * 31.0);
+  float tw = 0.35 + 0.65 * vnoise1(uTime * (1.1 + aInfo.y * 1.8) + aInfo.y * 31.0);
   tw *= 0.9 + 0.1 * sin(uTime * (7.0 + aInfo.y * 9.0) + aInfo.y * 12.0);
   vec3 V = normalize(uCam - aPos);
   float glance = 0.72 + 0.28 * sin(dot(V, vec3(13.0, 7.0, 5.0)) * 9.0 + aInfo.y * 20.0);
@@ -198,10 +210,10 @@ varying vec2 vUv; varying float vI; varying float vRot;
 void main(){
   float r = length(vUv);
   float th = atan(vUv.y, vUv.x) + vRot;
-  float core = exp(-r * r * 260.0) * 2.4 + exp(-r * 16.0) * 0.5;
+  float core = exp(-r * r * 420.0) * 2.6 + exp(-r * 14.0) * 0.42;
   // 8 long thin rays and 8 shorter ones between them
   float c8 = abs(cos(th * 4.0));
-  float long8 = pow(c8, 90.0) * exp(-r * 6.5);
+  float long8 = pow(c8, 45.0) * exp(-r * 11.0);
   float c8b = abs(sin(th * 4.0));
   float short8 = pow(c8b, 60.0) * exp(-r * 9.0) * 0.6;
   float c4 = pow(abs(cos(th * 3.0 + 0.4)), 160.0) * exp(-r * 5.0) * 0.7;

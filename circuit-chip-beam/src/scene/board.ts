@@ -187,7 +187,7 @@ export const buildBoard = () => {
   };
   for (let n = 0; n < COUNTS.components; n++) {
     const [i0, j0] = randCell(0.7);
-    const big = rnd() < 0.06;
+    const big = rnd() < 0.3;
     const ni = big ? 2 + Math.floor(rnd() * 3) : 1 + Math.floor(rnd() * 2);
     const nj = big ? 2 + Math.floor(rnd() * 2) : 1;
     const flip = rnd() < 0.5;
@@ -199,6 +199,23 @@ export const buildBoard = () => {
       x: toWorld(i0) + (a * g) / 2 - g / 2, z: toWorld(j0) + (b * g) / 2 - g / 2,
       sx: a * g * 0.62, sz: b * g * 0.62, h: 0.004 + rnd() * 0.004, kind, seed: rnd(),
     });
+  }
+  // tight clusters of small bright parts (the "populated" patches of a board)
+  for (let n = 0; n < COUNTS.partClusters; n++) {
+    const [ci, cj] = randCell(0.7);
+    const count = 4 + Math.floor(rnd() * 9);
+    for (let k = 0; k < count; k++) {
+      const i0 = ci + Math.floor((rnd() - 0.5) * 9), j0 = cj + Math.floor((rnd() - 0.5) * 7);
+      const a = 1 + Math.floor(rnd() * 2), b = 1;
+      const flip = rnd() < 0.5;
+      const ni = flip ? b : a, nj = flip ? a : b;
+      if (!reserve(i0, j0, ni, nj, true)) continue;
+      reserve(i0, j0, ni, nj, false);
+      parts.push({
+        x: toWorld(i0) + (ni * g) / 2 - g / 2, z: toWorld(j0) + (nj * g) / 2 - g / 2,
+        sx: ni * g * 0.7, sz: nj * g * 0.7, h: 0.004 + rnd() * 0.004, kind: rnd() < 0.45 ? 1 : 0, seed: rnd(),
+      });
+    }
   }
   for (let n = 0; n < COUNTS.barClusters; n++) {
     const [i0, j0] = randCell(0.75);
@@ -236,7 +253,7 @@ export const buildBoard = () => {
     boxes.push({
       x: toWorld(i0) + (ni * g) / 2 - g / 2, z: toWorld(j0) + (nj * g) / 2 - g / 2,
       sx: ni * g - g * 0.22, sz: nj * g - g * 0.22,
-      h: 0.006 + rnd() * rnd() * 0.035, shade: 0.25 + rnd() * rnd() * 0.8,
+      h: 0.002 + rnd() * rnd() * 0.009, shade: 0.42 + rnd() * rnd() * 0.3,
     });
   }
 

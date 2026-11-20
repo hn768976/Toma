@@ -1,31 +1,31 @@
 measure             reference       ours        diff  verdict
-lum_p1                 0.1389     0.1367       -1.6%  ok
+lum_p1                 0.1389     0.1375       -1.0%  ok
 lum_p5                 0.1406     0.1403       -0.2%  ok
-lum_p50                0.1725     0.1756       +1.8%  ok
-lum_p95                0.4424     0.5289      +19.6%  FAIL
-lum_p99                0.6694     0.7295       +9.0%  ok
-pct_above_90           0.1593     0.0923      -42.1%  ok
+lum_p50                0.1725     0.1560       -9.6%  ok
+lum_p95                0.4424     0.4946      +11.8%  FAIL
+lum_p99                0.6694     0.7602      +13.6%  FAIL
+pct_above_90           0.1593     0.0211      -86.8%  ok
 pct_below_5            0.0000     0.0000       +0.0%  ok
-sat_mean               0.1540     0.1612       +4.7%  ok
-hue_shadows           60.9669    53.1027    -7.9 deg  ok
-hue_midtones          28.7686    49.4713   +20.7 deg  FAIL
-hue_highlights        30.1248    32.3512    +2.2 deg  ok
-glow_peak              0.8680     0.9085       +4.7%  ok
-glow_cx                0.7217     0.8967      +24.2%  FAIL
-glow_cy                0.5222     0.8766      +67.9%  FAIL
-glow_r50               2.6667     2.6667       +0.0%  ok
-glow_r25              16.3333     7.0000      -57.1%  FAIL
-glow_r10              77.3333   101.0000      +30.6%  FAIL
-contrast_top           0.3551     0.4264      +20.1%  FAIL
-contrast_mid           0.2644     0.2305      -12.8%  FAIL
-contrast_bottom        0.2162     0.3286      +52.0%  FAIL
-contrast_far           0.3921     0.4373      +11.5%  FAIL
-contrast_near          0.2069     0.3397      +64.2%  FAIL
-mean_top               0.2271     0.2381       +4.8%  ok
-mean_mid               0.1986     0.2088       +5.2%  ok
-mean_bottom            0.1936     0.2068       +6.8%  ok
-grain                  0.0003     0.0014     +326.7%  ok
-detail_lapvar         67.5139    41.1242      -39.1%  FAIL
-vignette_ratio         1.1061     1.1090       +0.3%  ok
-mean_lum               0.2064     0.2179       +5.6%  ok
-12 of 29 measures outside target
+sat_mean               0.1540     0.1485       -3.6%  ok
+hue_shadows           60.9669    48.8272   -12.1 deg  FAIL
+hue_midtones          28.7686    40.2287   +11.5 deg  FAIL
+hue_highlights        30.1248    32.2644    +2.1 deg  ok
+glow_peak              0.8680     0.8153       -6.1%  ok
+glow_cx                0.7217     0.6750       -6.5%  ok
+glow_cy                0.5222     0.8038      +53.9%  FAIL
+glow_r50               2.6667     2.0000      -25.0%  ok
+glow_r25              16.3333    10.3333      -36.7%  FAIL
+glow_r10              77.3333    80.0000       +3.4%  ok
+contrast_top           0.3551     0.3897       +9.7%  ok
+contrast_mid           0.2644     0.1582      -40.1%  FAIL
+contrast_bottom        0.2162     0.2632      +21.7%  FAIL
+contrast_far           0.3921     0.4667      +19.0%  FAIL
+contrast_near          0.2069     0.2326      +12.4%  ok
+mean_top               0.2271     0.2218       -2.3%  ok
+mean_mid               0.1986     0.1868       -5.9%  ok
+mean_bottom            0.1936     0.1848       -4.6%  ok
+grain                  0.0003     0.0015     +345.4%  ok
+detail_lapvar         67.5139    22.2871      -67.0%  FAIL
+vignette_ratio         1.1061     0.9681      -12.5%  FAIL
+mean_lum               0.2064     0.1978       -4.2%  ok
+11 of 29 measures outside target
