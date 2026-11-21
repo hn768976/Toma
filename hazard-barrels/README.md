@@ -49,7 +49,8 @@ Preview: `npx remotion studio`.
 
 Notes:
 
-- `remotion.config.ts` sets PNG intermediate frames and the ANGLE GL backend. It also
+- `remotion.config.ts` sets PNG intermediate frames, the ANGLE GL backend, BT.709 colour
+  (tagged in the stream) and a 10-minute per-frame timeout for slow machines. It also
   points Remotion at a pre-installed headless Chrome **only if** that file exists (a
   sandbox without download access); on a normal machine Remotion uses its own browser.
 - Blur sizes are defined at 1080p and scale with the render size, so 4K and 1080p
@@ -82,6 +83,7 @@ Notes:
 - `scripts/measure-look.py` – measures tone, colour, glow falloff, haze, grain, detail and vignette of a frame.
 - `scripts/compare-look.py` – compares two frames against the ±10% targets and writes a side-by-side image.
 - `scripts/lookdev.sh` – renders the three `LookDev` stills and compares them with reference frames.
+- `scripts/sample-grid.py` – prints mean colours on a coarse grid for a reference frame and an attempt.
 
 ## Render time
 
@@ -89,10 +91,11 @@ Measured on a 4-core machine with no GPU (software WebGL):
 
 | Size | Per frame | Whole video (250 frames) |
 |---|---|---|
-| 1920×1080 (`--scale=0.5`) | RENDER_1080_PER_FRAME | RENDER_1080_TOTAL |
-| 3840×2160 (`--scale=1`) | RENDER_4K_PER_FRAME (measured on single frames) | RENDER_4K_TOTAL (estimate) |
+| 1920×1080 (`--scale=0.5`) | about 7.5 s | 32–37 min (measured on three full renders) |
+| 3840×2160 (`--scale=1`) | about 23.5 s (measured on consecutive frames) | about 1 h 40 min (estimate) |
 
-A machine with a GPU will be many times faster.
+The first frame of a render takes longer (bundling, texture generation, shader compilation):
+about 20 s at 1080p and up to a minute at 4K. A machine with a GPU will be many times faster.
 
 ## Assets
 

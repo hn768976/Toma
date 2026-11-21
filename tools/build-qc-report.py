@@ -43,7 +43,7 @@ w(read(os.path.join(notes, "lookdev-intro.md")))
 w("")
 for tag, name, final in (("A", "hazard-barrels", "lookA-final.txt"), ("B", "memory-chips", "lookB-final.txt")):
     w(f"### {name}: look-dev stills against the reference\n")
-    w(f"Side-by-side images (reference | ours | difference ×2): `{name}/lookdev/compare-start.png`, `compare-middle.png`, `compare-end.png` (also copied to `deliverables/qc/lookdev/{name}-compare-*.png`).\n")
+    w(f"Side-by-side images (reference | ours | difference ×2): `{name}/lookdev/compare-start.png`, `compare-middle.png`, `compare-end.png` (copied to `qc/lookdev/{name}-compare-*.png` next to this report).\n")
     txt = read(os.path.join(notes, final))
     moment = None
     rows = {}
@@ -80,7 +80,7 @@ for tag, name, final in (("A", "hazard-barrels", "lookA-final.txt"), ("B", "memo
                 cells += [r[0], r[1], r[2] + mark]
         w(f"| {k} | " + " | ".join(cells) + " |")
     sc = rows.get("__score__", {})
-    w("\nWithin target: " + "; ".join(f"{m} {sc.get(m, '?')}" for m in moments) + ". ✗ marks a value outside ±10% (hue ±10°).\n")
+    w("\nWithin target: " + "; ".join(f"{m} {sc.get(m, '?')}" for m in moments) + ". ✗ marks a value outside target: ±10% (hue ±10°), or, for quantities close to zero, a small absolute floor (0.015 for luminance levels, 1 percentage point for the pixel shares), which is why a few large percentages on tiny values carry no mark.\n")
     w(read(os.path.join(notes, f"look{tag}-rounds.md")))
     w("")
 
