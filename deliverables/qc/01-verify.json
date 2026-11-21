@@ -1,0 +1,46 @@
+{
+ "file": "deliverables/01-V1-hazard-barrels.mp4",
+ "checks": {
+  "1920x1080": true,
+  "h264": true,
+  "yuv420p": true,
+  "30/1 fps": true,
+  "frame count": true,
+  "no audio": true,
+  "duration within one frame": true,
+  "decodes cleanly": true,
+  "no black frames": true,
+  "no frozen frames": true,
+  "no brightness jumps": true
+ },
+ "spec": {
+  "width": 1920,
+  "height": 1080,
+  "codec": "h264",
+  "pix_fmt": "yuv420p",
+  "r_frame_rate": "30/1",
+  "avg_frame_rate": "30/1",
+  "nb_read_frames": 250,
+  "audio_streams": 0,
+  "duration": 8.333333,
+  "size_bytes": 3871230
+ },
+ "duration_diff_s": -0.0083,
+ "decode_errors": "",
+ "scan": {
+  "frames_scanned": 250,
+  "mean_min": 72.42172241210938,
+  "mean_max": 74.15567779541016,
+  "black_frames": [],
+  "frame_diff_min": 2.9708855152130127,
+  "frame_diff_median": 3.3058853149414062,
+  "frame_diff_max": 3.661250114440918,
+  "frozen_pairs": [],
+  "max_brightness_step": 0.14672088623046875,
+  "max_brightness_step_at": 104,
+  "flicker_frames": [],
+  "diff_spikes": []
+ },
+ "sheet": "deliverables/qc/01-V1-hazard-barrels-sheet.png",
+ "pass": true
+}

@@ -37,7 +37,7 @@ export const PALETTES: Record<Variant, Palette> = {
     paint: "#d8cc14",
     ink: "#0c1624",
     grime: "#3a2c10",
-    skyZenith: "#0b7888",
+    skyZenith: "#066a7c",
     fillSky: "#3a7c74",
     fillHorizon: "#5f8a72",
     ground: "#30381c",
@@ -69,17 +69,21 @@ export const BARREL = {
 export const MARKINGS = {
   line1: "RADIOACTIVE",
   line2: "WASTE",
-  textWidth: 0.29,
-  textLine1Y: 0.118,
-  textLine2Y: 0.164,
-  stripeBandFromEnd: [0.03, 0.062],
-  stripeLength: 0.046,
-  stripePitch: 0.088,
+  textWidth: 0.315,
+  /** extra space between letters, in ems */
+  letterSpacingEm: 0.035,
+  textLine1Y: 0.125,
+  textLine2Y: 0.182,
+  stripeBandFromEnd: [0.03, 0.061],
+  stripeLength: 0.05,
+  stripePitch: 0.092,
   stripeSlant: 0.03,
-  signTopY: 0.292,
-  signSide: 0.245,
+  signTopY: 0.3,
+  signSide: 0.24,
+  /** line width of the sign's outline */
+  signStroke: 0.008,
   /** markings repeat this many times around the drum */
-  repeats: 2,
+  repeats: 3,
 } as const;
 
 /** Stack layout: a hex-packed block seen from its corner. */
@@ -88,17 +92,36 @@ export const LAYOUT = {
   levels: 5,
   /** stacks along the lit face (to the left of the hero stack) */
   rowLeft: 3,
+  /** gap from the hero stack to the row behind it on the left (wider than `spacing`, so a third stack shows in the wedge between them) */
+  leftSpacing: 1.19,
+  /** extra stacks as [x, z, drop]: one seen through the wedge between the hero stack and the
+   *  leaning row, one closing the left edge of the frame (lower, so sky shows above it at the end) */
+  extraStacks: [
+    [-0.66, -1.75, 0],
+    [-1.16, -1.05, 0.55],
+  ] as [number, number, number][],
+  /** stacks further apart than this do not shade or light each other */
+  neighbourReach: 1.4,
   /** the outermost left row is one drum lower, so sky shows above it at the end */
   outerLeftLevels: 4,
   /** stacks along the shadowed face (receding to the right) */
   rowRight: 9,
   /** direction of each face in the ground plane, degrees (0 = +x, 90 = away from camera) */
-  leftAngleDeg: 152,
+  leftAngleDeg: 130.2,
   rightAngleDeg: 44.3,
   /** how far a drum's markings may turn away from the camera, degrees */
   /** shade and warmth of the paint on the rows behind the hero row (1 = same as hero) */
   backRowShade: 0.84,
-  backRowWarmth: 0.8,
+  backRowWarmth: 0.87,
+  /** the rows behind lean a little towards the hero stack (degrees), pivoting at this height */
+  backRowLeanDeg: 2.6,
+  leanPivotY: 2.4,
+  /** far stacks of the hero row stand this much lower (uneven ground), so their tops show at the end */
+  farRowDrop: 0.3,
+  /** rolling hoop and rim bead sizes */
+  hoopHeight: 0.007,
+  hoopHalfWidth: 0.014,
+  rimBead: 0.006,
   facingJitterDeg: 34,
   /** hero stack: marking rotation per level (bottom to top), degrees */
   heroFacingDeg: [12, -33, 5, 21, -14],

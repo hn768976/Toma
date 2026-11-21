@@ -16,15 +16,17 @@ export type Variant = "v1" | "v2";
 
 export const PALETTE = {
   table: "#9aa3a2",
-  pcb: "#0a4a48",
+  pcb: "#094443",
   pcbEdge: "#083b39",
-  trace: "#27857b",
-  pad: "#8aa0a4",
+  trace: "#1f7a70",
+  pad: "#b4c0c2",
   chipBody: "#384347",
   chipMark: "#6f7f8a",
   lead: "#b4bcc0",
-  gold: "#a8957a",
-  smd: "#4f5d66",
+  pin: "#e6eaec",
+  smdPad: "#5f7578",
+  gold: "#c8a97c",
+  smd: "#2c383f",
 } as const;
 
 /** The memory module. */
@@ -38,10 +40,10 @@ export const MODULE = {
   /** chips sit left of centre; the right edge carries the SMD column and the gold fingers */
   chipX: -3.4,
   chipSize: [22.2, 14.2, 1.25],
-  pinsPerSide: 40,
-  pinPitch: 0.5,
-  fingerPitch: 1.27,
-  fingerLength: 2.9,
+  pinsPerSide: 54,
+  pinPitch: 0.38,
+  fingerPitch: 1.0,
+  fingerLength: 2.6,
   /** keying slot in the finger edge, between chips 3 and 4 */
   keySlotY: 57.6,
   keySlotSize: [3.2, 1.9],
@@ -60,10 +62,10 @@ export const PACKAGES: {
   size: [number, number, number];
   leadsPerSide: number;
 }[] = [
-  { kind: "dip", x: -55, y: 22, rotDeg: 8.5, size: [15, 46, 5], leadsPerSide: 9 },
-  { kind: "soic", x: -31, y: 26, rotDeg: 8, size: [13.5, 19, 5.5], leadsPerSide: 4 },
-  { kind: "dip", x: 36, y: 22.5, rotDeg: 18.5, size: [13, 52, 5.5], leadsPerSide: 10 },
-  { kind: "qfp", x: -54.7, y: 85.2, rotDeg: 19, size: [52, 49.5, 6], leadsPerSide: 14 },
+  { kind: "dip", x: -57, y: 21, rotDeg: 8.5, size: [15, 42, 5], leadsPerSide: 8 },
+  { kind: "soic", x: -29, y: 26, rotDeg: 8, size: [13.5, 19, 7.5], leadsPerSide: 4 },
+  { kind: "dip", x: 34.3, y: 27.2, rotDeg: 18.5, size: [13, 42, 5.5], leadsPerSide: 8 },
+  { kind: "qfp", x: -54.7, y: 88, rotDeg: 19, size: [52, 49.5, 6], leadsPerSide: 14 },
   { kind: "plcc", x: 37, y: 93.5, rotDeg: -9, size: [24, 21, 7], leadsPerSide: 7 },
 ];
 

@@ -10,7 +10,7 @@ export const LIGHT = {
   /** low warm sun from camera-left: the key light */
   key: {
     color: "#ffe9c4",
-    intensity: 2.05,
+    intensity: 1.8,
     /** horizontal angle from the camera axis towards camera-left, degrees */
     azimuthDeg: 52,
     elevationDeg: 22,
@@ -22,15 +22,15 @@ export const LIGHT = {
     shadowMapSize: 2048,
   },
   /** image-based sky light (procedural gradient sky, PMREM filtered) */
-  env: { intensity: 0.5, sunGlow: 1.6, stripWidthDeg: 7, stripHeightDeg: 16 },
+  env: { intensity: 0.58, sunGlow: 2.4, stripWidthDeg: 6.5, stripHeightDeg: 16 },
   /** how strongly neighbouring drums block the sky light (analytic occlusion) */
   occlusion: { strength: 0.96, power: 1.2 },
   /** paint-coloured light bounced between drums inside the stack */
   bounce: 0.03,
   /** strength of sunlit paint reflecting onto the drum next to it */
-  sunBounce: 0.9,
+  sunBounce: 1.1,
   /** brightness of the sky backdrop itself */
-  skyBackdrop: 1.0,
+  skyBackdrop: 0.85,
 } as const;
 
 export const SURFACE = {
@@ -38,8 +38,8 @@ export const SURFACE = {
   /** glossy enamel: a higher index of refraction gives the strong vertical highlight */
   ior: 1.8,
   /** clear lacquer layer: a tight bright core on top of the wider base highlight */
-  clearcoat: 0.5,
-  clearcoatRoughness: 0.1,
+  clearcoat: 0.8,
+  clearcoatRoughness: 0.14,
   roughnessVariation: 0.1,
   normalScale: 1.0,
   envMapIntensity: 0.42,
@@ -54,7 +54,7 @@ export const LENS: LensSettings = {
   near: 0.2,
   far: 60,
   msaa: 4,
-  dof: { enabled: true, focusRange: 1.9, bokehScale: 6.2, resolutionScale: 0.5 },
+  dof: { enabled: true, focusRange: 2.4, bokehScale: 4.2, resolutionScale: 0.5 },
   motionBlur: { enabled: true, shutter: 0.5, taps: 9 },
   bloom: { enabled: true, threshold: 0.72, smoothing: 0.25, intensity: 0.55, radius: 0.7, levels: 6 },
 };
@@ -69,7 +69,7 @@ export const GRADE: GradeSettings = {
   lift: [0.014, 0.024, 0.024],
   gamma: [1.0, 1.0, 1.0],
   gain: [1.0, 1.0, 1.0],
-  shadowTint: [-0.004, 0.004, 0.004],
+  shadowTint: [0.008, 0.002, 0.0],
   highlightTint: [0.0, 0.0, 0.0],
   vignette: 0.06,
   vignetteStart: 0.55,

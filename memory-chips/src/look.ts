@@ -11,9 +11,9 @@ export const LIGHT = {
   key: {
     color: "#e9f4ff",
     /** candela-like units; falls off with distance squared (scene is in millimetres) */
-    intensity: 2.05e6,
+    intensity: 2.95e6,
     /** position in module coordinates: [x across, y along, height] */
-    position: [220, 380, 700] as [number, number, number],
+    position: [280, 440, 520] as [number, number, number],
     aimAt: [120, 90, 0] as [number, number, number],
     /** half-width of the softbox: staggered lights across it give soft penumbrae */
     halfSize: 170,
@@ -22,17 +22,17 @@ export const LIGHT = {
     /** sideways drift of the aim point per millimetre along the strip (negative = far end aims further left) */
     aimSkew: -0.45,
     /** cone half-angle (radians): the soft cone edge is what darkens the left of the table */
-    coneAngle: 0.31,
+    coneAngle: 0.26,
     samples: 8,
     shadowMapSize: 2048,
   },
   /** darkness of the soft contact-shadow decals under the parts (0..1) */
-  contactShadow: 0.7,
+  contactShadow: 0.9,
   /** studio environment for reflections and a little fill */
   env: {
     intensity: 0.3,
     softbox: 7.5,
-    ambient: 0.03,
+    ambient: 0.22,
     /** where the softbox sits in reflections: [x across, y along, height] direction */
     softboxDir: [0.55, 0.8, 0.42] as [number, number, number],
   },
@@ -48,7 +48,7 @@ export const SURFACE = {
   packageIor: 1.5,
   packageRoughness: 0.5,
   leadRoughness: 0.28,
-  goldRoughness: 0.55,
+  goldRoughness: 0.5,
 } as const;
 
 export const LENS: LensSettings = {
@@ -66,13 +66,13 @@ export const GRADE: GradeSettings = {
   toneMapping: "aces",
   contrast: 1.12,
   pivot: 0.4,
-  saturation: 1.2,
+  saturation: 1.05,
   lift: [0.006, 0.007, 0.008],
   gamma: [1.0, 1.0, 1.0],
   gain: [1.0, 1.0, 1.0],
   shadowTint: [-0.025, 0.002, 0.018],
   highlightTint: [0.0, 0.0, 0.0],
-  vignette: 0.05,
+  vignette: 0.1,
   vignetteStart: 0.5,
   grain: 0.0015,
   dither: 1.0,

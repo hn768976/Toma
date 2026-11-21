@@ -53,14 +53,14 @@ const drawMarkings = (ctx: CanvasRenderingContext2D, w: number, h: number, ink: 
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     const probe = 200;
-    ctx.font = `700 ${probe}px ${MARKING_FONT}`;
-    (ctx as unknown as { letterSpacing: string }).letterSpacing = `${probe * 0.07}px`;
+    ctx.font = `800 ${probe}px ${MARKING_FONT}`;
+    (ctx as unknown as { letterSpacing: string }).letterSpacing = `${probe * MARKINGS.letterSpacingEm}px`;
     const fontPx = (probe * x(MARKINGS.textWidth)) / ctx.measureText(MARKINGS.line1).width;
-    ctx.font = `700 ${fontPx}px ${MARKING_FONT}`;
-    (ctx as unknown as { letterSpacing: string }).letterSpacing = `${fontPx * 0.07}px`;
+    ctx.font = `800 ${fontPx}px ${MARKING_FONT}`;
+    (ctx as unknown as { letterSpacing: string }).letterSpacing = `${fontPx * MARKINGS.letterSpacingEm}px`;
     // canvas text is not stretched: texture pixels are ~square in metres
-    ctx.fillText(MARKINGS.line1, cx + fontPx * 0.035, y(MARKINGS.textLine1Y));
-    ctx.fillText(MARKINGS.line2, cx + fontPx * 0.035, y(MARKINGS.textLine2Y));
+    ctx.fillText(MARKINGS.line1, cx + fontPx * MARKINGS.letterSpacingEm * 0.5, y(MARKINGS.textLine1Y));
+    ctx.fillText(MARKINGS.line2, cx + fontPx * MARKINGS.letterSpacingEm * 0.5, y(MARKINGS.textLine2Y));
     (ctx as unknown as { letterSpacing: string }).letterSpacing = "0px";
 
     // warning sign: rounded triangle outline with a trefoil
@@ -73,7 +73,7 @@ const drawMarkings = (ctx: CanvasRenderingContext2D, w: number, h: number, ink: 
     ctx.translate(cx, y(top));
     ctx.scale(sx, sy);
     const corner = 0.02;
-    ctx.lineWidth = 0.0062;
+    ctx.lineWidth = MARKINGS.signStroke;
     ctx.lineJoin = "round";
     ctx.beginPath();
     const pts: [number, number][] = [
@@ -96,7 +96,7 @@ const drawMarkings = (ctx: CanvasRenderingContext2D, w: number, h: number, ink: 
     ctx.stroke();
     // trefoil at the centroid: hub + three 60-degree blades (one pointing down)
     const cy = (triH * 2) / 3;
-    const u = side * 0.0465;
+    const u = side * 0.052;
     ctx.beginPath();
     ctx.arc(0, cy, u, 0, Math.PI * 2);
     ctx.fill();
@@ -159,14 +159,26 @@ export const buildBarrelTextures = (palette: Palette): BarrelTextures => {
     const g = c.createLinearGradient(0, y(startM, TEX_H), 0, y(startM + len, TEX_H));
     g.addColorStop(0, palette.grime);
     g.addColorStop(1, "rgba(0,0,0,0)");
-    c.globalAlpha = range(rnd, 0.01, 0.035);
+    c.globalAlpha = range(rnd, 0.02, 0.06);
     c.fillStyle = g;
     c.fillRect(sx, y(startM, TEX_H), wpx, y(len, TEX_H));
     if (sx + wpx > TEX_W) c.fillRect(sx - TEX_W, y(startM, TEX_H), wpx, y(len, TEX_H));
   }
-  c.globalAlpha = 0.15;
+  // smudges and dirty patches: soft dark blotches of different sizes
+  for (let i = 0; i < 70; i++) {
+    const bx = rnd() * TEX_W;
+    const by = rnd() * TEX_H;
+    const br = range(rnd, 60, 340);
+    const g = c.createRadialGradient(bx, by, 0, bx, by, br);
+    g.addColorStop(0, palette.grime);
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    c.globalAlpha = range(rnd, 0.04, 0.13);
+    c.fillStyle = g;
+    for (const ox of [0, -TEX_W, TEX_W]) c.fillRect(bx - br + ox, by - br, br * 2, br * 2);
+  }
+  c.globalAlpha = 0.2;
   c.drawImage(large, 0, 0, TEX_W, TEX_H);
-  c.globalAlpha = 0.04;
+  c.globalAlpha = 0.09;
   c.drawImage(medium, 0, 0, TEX_W, TEX_H);
   c.globalAlpha = 0.02;
   c.drawImage(fine, 0, 0, TEX_W, TEX_H);
@@ -191,7 +203,7 @@ export const buildBarrelTextures = (palette: Palette): BarrelTextures => {
     });
   }
   for (const s of scratches) {
-    c.globalAlpha = s.light ? 0.07 : 0.09;
+    c.globalAlpha = s.light ? 0.1 : 0.13;
     c.strokeStyle = s.light ? "#fff6c8" : palette.grime;
     c.lineWidth = s.w;
     c.beginPath();

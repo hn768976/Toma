@@ -10,8 +10,8 @@ export const loadFonts = (): Promise<void> => {
     pending = (async () => {
       const face = new FontFace(
         MARKING_FONT,
-        `url(${staticFile("fonts/Montserrat-Bold.woff2")}) format("woff2")`,
-        { weight: "700" },
+        `url(${staticFile("fonts/Montserrat-ExtraBold.woff2")}) format("woff2")`,
+        { weight: "800" },
       );
       await face.load();
       document.fonts.add(face);

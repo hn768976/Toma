@@ -84,7 +84,7 @@ export const buildPcbTexture = (): THREE.CanvasTexture => {
       if (rnd() < 0.5) via(pts[pts.length - 1][0], pts[pts.length - 1][1]);
     }
     // a few nested rectangles (matched-length meanders) per gap
-    const boxes = Math.floor(range(rnd, 2, 5));
+    const boxes = Math.floor(range(rnd, 4, 9));
     for (let b = 0; b < boxes; b++) {
       const bx = chipL + range(rnd, 1, cw - 5);
       const bw = range(rnd, 2.2, 4.2);
@@ -105,16 +105,16 @@ export const buildPcbTexture = (): THREE.CanvasTexture => {
       const y = chipCentreY(k) + side * (cd / 2 + 0.75);
       for (let p = 0; p < MODULE.pinsPerSide; p++) {
         const x = MODULE.chipX - pinSpan / 2 + p * MODULE.pinPitch;
-        c.fillRect(px(x - 0.15), py(y + 0.55), 0.3 * S, 1.1 * S);
+        c.fillRect(px(x - 0.11), py(y + 0.55), 0.22 * S, 1.1 * S);
       }
     }
   }
   // pads + short traces for the SMD column next to the fingers
   for (let y = 4; y < MODULE.length - 4; y += MODULE.smdPitch) {
     if (Math.abs(y - MODULE.keySlotY) < 3.2) continue;
-    c.fillStyle = PALETTE.pad;
-    c.fillRect(px(MODULE.smdX - 1.55), py(y + 0.7), 0.6 * S, 1.4 * S);
-    c.fillRect(px(MODULE.smdX + 0.95), py(y + 0.7), 0.6 * S, 1.4 * S);
+    c.fillStyle = PALETTE.smdPad;
+    c.fillRect(px(MODULE.smdX - 1.3), py(y + 0.55), 0.45 * S, 1.1 * S);
+    c.fillRect(px(MODULE.smdX + 0.85), py(y + 0.55), 0.45 * S, 1.1 * S);
     for (let j = -1; j <= 1; j++) {
       trace([[MODULE.smdX + 1.75, y + j * 0.5], [MODULE.width / 2 - MODULE.fingerLength - 0.2, y + j * 0.5]], 0.12);
       trace([[chipR + 0.4, y + j * 0.5], [MODULE.smdX - 1.75, y + j * 0.5]], 0.12);
@@ -160,8 +160,8 @@ export const buildChipTexture = (): THREE.CanvasTexture => {
   c.fillStyle = PALETTE.chipMark;
   const cell = W * 0.0052;
   const rows = [
-    { n: 9, y: H * 0.47, a: 0.55 },
-    { n: 6, y: H * 0.6, a: 0.3 },
+    { n: 9, y: H * 0.47, a: 0.28 },
+    { n: 6, y: H * 0.6, a: 0.15 },
   ];
   for (const row of rows) {
     const glyphW = cell * 7.2;
@@ -176,7 +176,7 @@ export const buildChipTexture = (): THREE.CanvasTexture => {
     }
   }
   // pin-1 dimple
-  c.globalAlpha = 0.35;
+  c.globalAlpha = 0.2;
   c.beginPath();
   c.arc(W * 0.045, H * 0.88, W * 0.012, 0, Math.PI * 2);
   c.fill();

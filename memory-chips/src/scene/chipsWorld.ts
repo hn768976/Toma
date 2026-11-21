@@ -120,10 +120,10 @@ const buildPackage = (
     geo = leadGeometry(
       [
         [-0.2, mid + 0.4],
-        [1.2, mid + 0.4],
-        [1.8, mid - 0.5],
-        [2.2, 0.28],
-        [2.7, 0.24],
+        [0.8, mid + 0.4],
+        [1.3, mid - 0.5],
+        [1.6, 0.28],
+        [2.0, 0.24],
       ],
       0.45,
       1.3,
@@ -256,7 +256,7 @@ export const buildChipsWorld = (): World => {
   const gold = keep(
     new THREE.MeshStandardMaterial({ color: PALETTE.gold, roughness: SURFACE.goldRoughness, metalness: 1 }),
   );
-  const smdMat = keep(new THREE.MeshStandardMaterial({ color: PALETTE.smd, roughness: 0.55, metalness: 0.2 }));
+  const smdMat = keep(new THREE.MeshStandardMaterial({ color: PALETTE.smd, roughness: 0.6, metalness: 0 }));
   const tableMat = keep(
     new THREE.MeshStandardMaterial({ color: PALETTE.table, roughness: SURFACE.tableRoughness, metalness: 0 }),
   );
@@ -286,8 +286,8 @@ export const buildChipsWorld = (): World => {
     mesh.renderOrder = 1;
     root.add(mesh);
   };
-  addContact(0, MODULE.length / 2, MODULE.width, MODULE.length, 0, 3);
-  for (const pk of PACKAGES) addContact(pk.x, pk.y, pk.size[0], pk.size[1], pk.rotDeg, pk.kind === "plcc" ? 5 : 6.5);
+  addContact(0, MODULE.length / 2, MODULE.width, MODULE.length, 0, 4.5);
+  for (const pk of PACKAGES) addContact(pk.x, pk.y, pk.size[0], pk.size[1], pk.rotDeg, pk.kind === "plcc" ? 7 : 9);
 
   // ---- circuit board: outline with end notches, keying slot and two holes ------------
   const W = MODULE.width;
@@ -347,8 +347,9 @@ export const buildChipsWorld = (): World => {
   chips.frustumCulled = false;
   root.add(chips);
 
-  const pinGeo = keep(new THREE.BoxGeometry(0.27, 0.3, 1.35));
-  const pins = new THREE.InstancedMesh(pinGeo, lead, MODULE.chips * MODULE.pinsPerSide * 2);
+  const pinGeo = keep(new THREE.BoxGeometry(0.2, 0.3, 1.35));
+  const pinMat = keep(new THREE.MeshStandardMaterial({ color: PALETTE.pin, roughness: 0.25, metalness: 1 }));
+  const pins = new THREE.InstancedMesh(pinGeo, pinMat, MODULE.chips * MODULE.pinsPerSide * 2);
   const pinSpan = (MODULE.pinsPerSide - 1) * MODULE.pinPitch;
   let pi = 0;
   for (let k = 0; k < MODULE.chips; k++) {
@@ -390,7 +391,7 @@ export const buildChipsWorld = (): World => {
     if (Math.abs(y - MODULE.keySlotY) < 3.2) continue;
     smdYs.push(y);
   }
-  const smdGeo = keep(chamferBox(2.1, 1.5, 0.55, 0.12));
+  const smdGeo = keep(chamferBox(1.7, 1.15, 0.5, 0.1));
   const smd = new THREE.InstancedMesh(smdGeo, smdMat, smdYs.length);
   smdYs.forEach((y, i) => {
     m.makeTranslation(MODULE.smdX, top, -y);

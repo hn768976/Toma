@@ -96,6 +96,6 @@ A machine with a GPU will be many times faster.
 
 ## Assets
 
-- `public/fonts/Montserrat-Bold.woff2` – SIL Open Font License (`public/fonts/Montserrat-OFL.txt`).
+- `public/fonts/Montserrat-ExtraBold.woff2` – SIL Open Font License (`public/fonts/Montserrat-OFL.txt`).
 - Everything else (geometry, textures, sky) is generated in code. The trefoil is the
   standard public hazard symbol; no logos or brand names are used.

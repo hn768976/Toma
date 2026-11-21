@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { BARREL, CAMERA, LAYOUT, type Palette } from "../config";
+import { BARREL, CAMERA, LAYOUT, MARKINGS, type Palette } from "../config";
 import { ATMOSPHERE, LIGHT, SURFACE } from "../look";
 import { mulberry32, range } from "../lib/random";
 import type { World } from "../three/Stage";
@@ -14,7 +14,7 @@ const barrelProfile = () => {
   const add = (r: number, y: number) => pts.push(new THREE.Vector2(r, y));
   const rim = (y0: number, dir: 1 | -1) => {
     // rolled chime: a small bead standing proud of the body
-    const beadR = 0.011;
+    const beadR = LAYOUT.rimBead;
     const cy = y0 + dir * beadR;
     const steps = 8;
     for (let i = 0; i <= steps; i++) {
@@ -24,11 +24,11 @@ const barrelProfile = () => {
     }
   };
   const hoop = (yc: number) => {
-    const half = 0.02;
+    const half = LAYOUT.hoopHalfWidth;
     const steps = 10;
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
-      add(R + 0.011 * 0.5 * (1 - Math.cos(t * Math.PI * 2)), yc - half + t * half * 2);
+      add(R + LAYOUT.hoopHeight * 0.5 * (1 - Math.cos(t * Math.PI * 2)), yc - half + t * half * 2);
     }
   };
   const body = (y0: number, y1: number) => {
@@ -39,11 +39,12 @@ const barrelProfile = () => {
   add(R - 0.02, 0.001);
   rim(0, 1);
   add(R, 0.03);
-  body(0.03, hoops[0] - 0.02);
+  const hh = LAYOUT.hoopHalfWidth;
+  body(0.03, hoops[0] - hh);
   hoop(hoops[0]);
-  body(hoops[0] + 0.02, hoops[1] - 0.02);
+  body(hoops[0] + hh, hoops[1] - hh);
   hoop(hoops[1]);
-  body(hoops[1] + 0.02, H - 0.03);
+  body(hoops[1] + hh, H - 0.03);
   add(R, H - 0.03);
   const top: THREE.Vector2[] = [];
   const mark = pts.length;
@@ -81,12 +82,13 @@ const buildBarrelGeometry = () => {
   return geo;
 };
 
-export type Stack = { x: number; z: number; hero: boolean; levels: number; row: number };
+export type Stack = { x: number; z: number; hero: boolean; levels: number; row: number; drop: number };
 
 /** Hex-packed block of stacks; the hero stack sits on the corner nearest the camera. */
 export const buildLayout = (): Stack[] => {
   const s = LAYOUT.spacing;
-  const aL = [Math.cos(deg(LAYOUT.leftAngleDeg)) * s, -Math.sin(deg(LAYOUT.leftAngleDeg)) * s];
+  const sl = LAYOUT.leftSpacing;
+  const aL = [Math.cos(deg(LAYOUT.leftAngleDeg)) * sl, -Math.sin(deg(LAYOUT.leftAngleDeg)) * sl];
   const aR = [Math.cos(deg(LAYOUT.rightAngleDeg)) * s, -Math.sin(deg(LAYOUT.rightAngleDeg)) * s];
   const stacks: Stack[] = [];
   for (let i = 0; i < LAYOUT.rowLeft; i++) {
@@ -96,9 +98,13 @@ export const buildLayout = (): Stack[] => {
         z: i * aL[1] + j * aR[1],
         hero: i === 0 && j === 0,
         row: i,
+        drop: i === 0 && j >= 2 ? LAYOUT.farRowDrop : 0,
         levels: i === LAYOUT.rowLeft - 1 && LAYOUT.rowLeft > 2 ? LAYOUT.outerLeftLevels : LAYOUT.levels,
       });
     }
+  }
+  for (const [x, z, drop] of LAYOUT.extraStacks) {
+    stacks.push({ x, z, hero: false, levels: LAYOUT.levels, row: 1, drop });
   }
   return stacks;
 };
@@ -175,6 +181,7 @@ export const buildBarrelWorld = (palette: Palette): World => {
     shader.uniforms.uOccStrength = { value: LIGHT.occlusion.strength };
     shader.uniforms.uOccPower = { value: LIGHT.occlusion.power };
     shader.uniforms.uBounce = { value: LIGHT.bounce };
+    shader.uniforms.uTopY = { value: LAYOUT.levels * BARREL.height };
     shader.uniforms.uSunBounce = {
       value: new THREE.Color(palette.paint)
         .multiply(new THREE.Color(LIGHT.key.color))
@@ -186,7 +193,7 @@ export const buildBarrelWorld = (palette: Palette): World => {
         `#include <common>
          attribute vec4 aNbrA; attribute vec4 aNbrB; attribute vec4 aNbrC;
          attribute vec3 aLitA; attribute vec3 aLitB;
-         uniform float uOccStrength; uniform float uOccPower;
+         uniform float uOccStrength; uniform float uOccPower; uniform float uTopY;
          varying float vSkyAO; varying float vSunBounce;`,
       )
       .replace(
@@ -202,6 +209,9 @@ export const buildBarrelWorld = (palette: Palette): World => {
            ao *= 1.0 - uOccStrength * pow(max(dot(nh, aNbrB.zw), 0.0), uOccPower);
            ao *= 1.0 - uOccStrength * pow(max(dot(nh, aNbrC.xy), 0.0), uOccPower);
            ao *= 1.0 - uOccStrength * pow(max(dot(nh, aNbrC.zw), 0.0), uOccPower);
+           // near the top of the stacks the sky opens up
+           float open = smoothstep(uTopY - 1.7, uTopY + 0.05, (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).y);
+           ao = mix(ao, max(ao, 0.8), open * open);
            vSkyAO = ao;
            float bn = 0.0;
            bn += aLitA.x * pow(max(dot(nh, aNbrA.xy), 0.0), 1.2);
@@ -246,6 +256,8 @@ export const buildBarrelWorld = (palette: Palette): World => {
   const litB = new Float32Array(count * 3);
   const m4 = new THREE.Matrix4();
   const q = new THREE.Quaternion();
+  const qLean = new THREE.Quaternion();
+  const zAxis = new THREE.Vector3(0, 0, 1);
   const e = new THREE.Euler();
   const tint = new THREE.Color();
   let idx = 0;
@@ -263,17 +275,23 @@ export const buildBarrelWorld = (palette: Palette): World => {
   const sunReach = (LAYOUT.levels * H * 0.5) / Math.tan(deg(LIGHT.key.elevationDeg));
   for (const st of ordered) {
     // unit directions to every touching neighbour (up to six in a hex pack)
+    // Each direction is scaled by a closeness weight (1 = touching, 0 = out of reach).
+    const near = stacks
+      .filter((o) => o !== st)
+      .map((o) => ({ o, d: Math.hypot(o.x - st.x, o.z - st.z) }))
+      .filter((n) => n.d < LAYOUT.neighbourReach)
+      .sort((p, r) => p.d - r.d)
+      .slice(0, 6);
     const dirs: number[] = [];
     // ...and, for each neighbour, how much sunlit paint faces this drum
     // (0 when that side of the neighbour is turned away from the sun or shadowed)
     const lit: number[] = [];
-    for (const o of stacks) {
-      if (o === st) continue;
+    for (const { o, d } of near) {
       const dx = o.x - st.x;
       const dz = o.z - st.z;
-      const d = Math.hypot(dx, dz);
-      if (d >= LAYOUT.spacing * 1.3) continue;
-      dirs.push(dx / d, dz / d);
+      const t = Math.min(1, Math.max(0, (LAYOUT.neighbourReach - d) / (LAYOUT.neighbourReach - LAYOUT.spacing)));
+      const w = t * t * (3 - 2 * t);
+      dirs.push((dx / d) * w, (dz / d) * w);
       const facing = Math.max(0, (-dx / d) * sunH.x + (-dz / d) * sunH.y);
       // point on the neighbour that faces us; walk towards the sun and look for blockers
       const px = o.x - (dx / d) * BARREL.radius;
@@ -281,12 +299,13 @@ export const buildBarrelWorld = (palette: Palette): World => {
       let blocked = false;
       for (const b of stacks) {
         if (b === o) continue;
-        const t = (b.x - px) * sunH.x + (b.z - pz) * sunH.y;
-        if (t <= 0 || t > sunReach) continue;
+        const tt = (b.x - px) * sunH.x + (b.z - pz) * sunH.y;
+        if (tt <= 0 || tt > sunReach) continue;
         const perp = Math.abs((b.x - px) * sunH.y - (b.z - pz) * sunH.x);
         if (perp < BARREL.radius * 0.9) blocked = true;
       }
-      lit.push(blocked ? 0 : facing);
+      // bounce reaches further than occlusion: undo part of the closeness weight
+      lit.push(blocked ? 0 : facing / Math.max(Math.sqrt(w), 0.2));
     }
     while (dirs.length < 12) dirs.push(0);
     while (lit.length < 6) lit.push(0);
@@ -297,12 +316,23 @@ export const buildBarrelWorld = (palette: Palette): World => {
       const jitterDeg = st.hero
         ? LAYOUT.heroFacingDeg[level % LAYOUT.heroFacingDeg.length]
         : range(rnd, -LAYOUT.facingJitterDeg, LAYOUT.facingJitterDeg);
-      // markings are centred at u = 0.25 (+x in drum space); see barrelTextures
-      const rotY = toCam - Math.PI / 2 + deg(jitterDeg) + (rnd() < 0.5 ? Math.PI : 0);
+      // markings repeat round the drum; the first is centred at u = 0.5 / repeats
+      // (see barrelTextures). Turn one of them towards the camera, give or take.
+      const step = (Math.PI * 2) / MARKINGS.repeats;
+      const rotY = toCam - step / 2 + deg(jitterDeg) + Math.floor(rnd() * MARKINGS.repeats) * step;
       e.set(range(rnd, -0.004, 0.004), rotY, range(rnd, -0.004, 0.004));
       q.setFromEuler(e);
+      // rows behind the hero lean sideways as a whole stack (pivot near eye height)
+      const lean = st.row > 0 ? deg(LAYOUT.backRowLeanDeg) : 0;
+      qLean.setFromAxisAngle(zAxis, -lean);
+      q.premultiply(qLean);
+      const yBase = level * H - st.drop;
       m4.compose(
-        new THREE.Vector3(st.x + range(rnd, -0.006, 0.006), level * H, st.z + range(rnd, -0.006, 0.006)),
+        new THREE.Vector3(
+          st.x + range(rnd, -0.006, 0.006) + (yBase - LAYOUT.leanPivotY) * Math.sin(lean),
+          LAYOUT.leanPivotY + (yBase - LAYOUT.leanPivotY) * Math.cos(lean),
+          st.z + range(rnd, -0.006, 0.006),
+        ),
         q,
         new THREE.Vector3(1, 1, 1),
       );

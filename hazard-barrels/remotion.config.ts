@@ -14,6 +14,8 @@ Config.setVideoImageFormat("png");
 Config.setStillImageFormat("png");
 Config.setOverwriteOutput(true);
 Config.setChromiumOpenGlRenderer("angle");
+// 4K frames on a machine without a GPU can take longer than the default 30 s.
+Config.setDelayRenderTimeoutInMilliseconds(600000);
 
 // Some sandboxed build machines cannot download Remotion's own Chrome Headless
 // Shell but ship one at this path. Reuse it there; on a normal machine the path
