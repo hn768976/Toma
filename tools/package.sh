@@ -7,6 +7,6 @@ mkdir -p deliverables
 for p in hazard-barrels memory-chips; do
   rm -f "deliverables/$p-project.zip"
   zip -q -r "deliverables/$p-project.zip" "$p" \
-    -x "$p/node_modules/*" "$p/out/*" "$p/.git/*" "$p/lookdev/tmp/*" "$p/*.mp4" "$p/**/.DS_Store"
+    -x "$p/node_modules/*" "$p/out/*" "$p/.git/*" "$p/lookdev/tmp/*" "$p/*.mp4" "$p/**/.DS_Store" "$p/scripts/__pycache__/*"
   echo "$p: $(du -h deliverables/$p-project.zip | cut -f1), $(unzip -l deliverables/$p-project.zip | tail -1)"
 done

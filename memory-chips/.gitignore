@@ -8,3 +8,4 @@ out
 
 # look-dev scratch renders
 lookdev/tmp
+__pycache__
