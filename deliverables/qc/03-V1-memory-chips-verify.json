@@ -1,0 +1,46 @@
+{
+ "file": "deliverables/03-V1-memory-chips.mp4",
+ "checks": {
+  "1920x1080": true,
+  "h264": true,
+  "yuv420p": true,
+  "30/1 fps": true,
+  "frame count": true,
+  "no audio": true,
+  "duration within one frame": true,
+  "decodes cleanly": true,
+  "no black frames": true,
+  "no frozen frames": true,
+  "no brightness jumps": true
+ },
+ "spec": {
+  "width": 1920,
+  "height": 1080,
+  "codec": "h264",
+  "pix_fmt": "yuv420p",
+  "r_frame_rate": "30/1",
+  "avg_frame_rate": "30/1",
+  "nb_read_frames": 450,
+  "audio_streams": 0,
+  "duration": 15.0,
+  "size_bytes": 10567398
+ },
+ "duration_diff_s": -0.015,
+ "decode_errors": "",
+ "scan": {
+  "frames_scanned": 450,
+  "mean_min": 88.00634002685547,
+  "mean_max": 106.77555847167969,
+  "black_frames": [],
+  "frame_diff_min": 2.104774236679077,
+  "frame_diff_median": 2.9389235973358154,
+  "frame_diff_max": 3.3429512977600098,
+  "frozen_pairs": [],
+  "max_brightness_step": 0.2429351806640625,
+  "max_brightness_step_at": 47,
+  "flicker_frames": [],
+  "diff_spikes": []
+ },
+ "sheet": "deliverables/qc/03-V1-memory-chips-sheet.png",
+ "pass": true
+}
