@@ -23,20 +23,20 @@
   "nb_read_frames": 450,
   "audio_streams": 0,
   "duration": 15.0,
-  "size_bytes": 10567398
+  "size_bytes": 9497855
  },
  "duration_diff_s": -0.015,
  "decode_errors": "",
  "scan": {
   "frames_scanned": 450,
-  "mean_min": 88.00634002685547,
-  "mean_max": 106.77555847167969,
+  "mean_min": 97.17100524902344,
+  "mean_max": 112.69585418701172,
   "black_frames": [],
-  "frame_diff_min": 2.104774236679077,
-  "frame_diff_median": 2.9389235973358154,
-  "frame_diff_max": 3.3429512977600098,
+  "frame_diff_min": 1.914635419845581,
+  "frame_diff_median": 2.529409646987915,
+  "frame_diff_max": 2.736875057220459,
   "frozen_pairs": [],
-  "max_brightness_step": 0.2429351806640625,
+  "max_brightness_step": 0.1969146728515625,
   "max_brightness_step_at": 47,
   "flicker_frames": [],
   "diff_spikes": []

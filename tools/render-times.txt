@@ -2,3 +2,4 @@
 04-V2-memory-chips.mp4 exit=143 seconds=151
 01-V1-hazard-barrels.mp4 exit=0 seconds=2213
 02-V2-hazard-barrels.mp4 exit=0 seconds=1966
+03-V1-memory-chips.mp4 FINAL exit=0 seconds=1708
