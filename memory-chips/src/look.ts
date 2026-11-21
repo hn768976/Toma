@@ -22,12 +22,12 @@ export const LIGHT = {
     /** sideways drift of the aim point per millimetre along the strip (negative = far end aims further left) */
     aimSkew: -0.45,
     /** cone half-angle (radians): the soft cone edge is what darkens the left of the table */
-    coneAngle: 0.26,
+    coneAngle: 0.245,
     samples: 8,
     shadowMapSize: 2048,
   },
   /** darkness of the soft contact-shadow decals under the parts (0..1) */
-  contactShadow: 0.9,
+  contactShadow: 0.7,
   /** studio environment for reflections and a little fill */
   env: {
     intensity: 0.3,
@@ -47,7 +47,7 @@ export const SURFACE = {
   /** the loose packages are a duller plastic than the memory chips */
   packageIor: 1.5,
   packageRoughness: 0.5,
-  leadRoughness: 0.28,
+  leadRoughness: 0.4,
   goldRoughness: 0.5,
 } as const;
 
@@ -55,7 +55,7 @@ export const LENS: LensSettings = {
   near: 20,
   far: 3000,
   msaa: 4,
-  dof: { enabled: true, focusRange: 46, bokehScale: 4.6, resolutionScale: 0.5 },
+  dof: { enabled: true, focusRange: 42, bokehScale: 5.0, resolutionScale: 0.5 },
   motionBlur: { enabled: true, shutter: 0.5, taps: 9 },
   bloom: { enabled: true, threshold: 0.7, smoothing: 0.25, intensity: 0.5, radius: 0.7, levels: 6 },
 };

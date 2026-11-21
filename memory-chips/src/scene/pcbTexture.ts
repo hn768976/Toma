@@ -59,8 +59,8 @@ export const buildPcbTexture = (): THREE.CanvasTexture => {
 
   // traces in the gaps before, between and after the chips
   for (let g = 0; g <= MODULE.chips; g++) {
-    const y0 = g === 0 ? 1.0 : chipCentreY(g - 1) + cd / 2 + 1.5;
-    const y1 = g === MODULE.chips ? MODULE.length - 1.0 : chipCentreY(g) - cd / 2 - 1.5;
+    const y0 = g === 0 ? 1.0 : chipCentreY(g - 1) + cd / 2 + 1.0;
+    const y1 = g === MODULE.chips ? MODULE.length - 1.0 : chipCentreY(g) - cd / 2 - 1.0;
     if (y1 - y0 < 0.6) continue;
     const lanes = Math.max(2, Math.floor((y1 - y0) / 0.42));
     // long buses with jogs
@@ -84,7 +84,7 @@ export const buildPcbTexture = (): THREE.CanvasTexture => {
       if (rnd() < 0.5) via(pts[pts.length - 1][0], pts[pts.length - 1][1]);
     }
     // a few nested rectangles (matched-length meanders) per gap
-    const boxes = Math.floor(range(rnd, 4, 9));
+    const boxes = Math.floor(range(rnd, 3, 6));
     for (let b = 0; b < boxes; b++) {
       const bx = chipL + range(rnd, 1, cw - 5);
       const bw = range(rnd, 2.2, 4.2);
@@ -102,23 +102,18 @@ export const buildPcbTexture = (): THREE.CanvasTexture => {
   const pinSpan = (MODULE.pinsPerSide - 1) * MODULE.pinPitch;
   for (let k = 0; k < MODULE.chips; k++) {
     for (const side of [-1, 1]) {
-      const y = chipCentreY(k) + side * (cd / 2 + 0.75);
+      const y = chipCentreY(k) + side * (cd / 2 + 0.45);
       for (let p = 0; p < MODULE.pinsPerSide; p++) {
         const x = MODULE.chipX - pinSpan / 2 + p * MODULE.pinPitch;
-        c.fillRect(px(x - 0.11), py(y + 0.55), 0.22 * S, 1.1 * S);
+        c.fillRect(px(x - 0.11), py(y + 0.38), 0.22 * S, 0.76 * S);
       }
     }
   }
-  // pads + short traces for the SMD column next to the fingers
-  for (let y = 4; y < MODULE.length - 4; y += MODULE.smdPitch) {
-    if (Math.abs(y - MODULE.keySlotY) < 3.2) continue;
-    c.fillStyle = PALETTE.smdPad;
-    c.fillRect(px(MODULE.smdX - 1.3), py(y + 0.55), 0.45 * S, 1.1 * S);
-    c.fillRect(px(MODULE.smdX + 0.85), py(y + 0.55), 0.45 * S, 1.1 * S);
-    for (let j = -1; j <= 1; j++) {
-      trace([[MODULE.smdX + 1.75, y + j * 0.5], [MODULE.width / 2 - MODULE.fingerLength - 0.2, y + j * 0.5]], 0.12);
-      trace([[chipR + 0.4, y + j * 0.5], [MODULE.smdX - 1.75, y + j * 0.5]], 0.12);
-    }
+  // short traces from the two columns of tiny parts to the fingers and to the chips
+  for (let y = 3.2; y < MODULE.length - 3.2; y += MODULE.smdPitch) {
+    if (Math.abs(y - MODULE.keySlotY) < 3.0) continue;
+    trace([[MODULE.smdX[1] + 0.6, y], [MODULE.width / 2 - MODULE.fingerLength - 0.2, y]], 0.1);
+    if (rnd() < 0.5) trace([[chipR + 0.4, y], [MODULE.smdX[0] - 0.6, y]], 0.1);
   }
   // ring around each mounting hole
   for (const hy of [3.4, MODULE.length - 3.4]) {

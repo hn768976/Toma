@@ -15,18 +15,18 @@ export const VIDEO = {
 export type Variant = "v1" | "v2";
 
 export const PALETTE = {
-  table: "#9aa3a2",
-  pcb: "#094443",
+  table: "#969ea2",
+  pcb: "#0b5350",
   pcbEdge: "#083b39",
-  trace: "#1f7a70",
+  trace: "#1f8076",
   pad: "#b4c0c2",
   chipBody: "#384347",
   chipMark: "#6f7f8a",
-  lead: "#b4bcc0",
-  pin: "#e6eaec",
+  lead: "#8f989d",
+  pin: "#d5dbde",
   smdPad: "#5f7578",
-  gold: "#c8a97c",
-  smd: "#2c383f",
+  gold: "#c49a68",
+  smd: "#5d6b72",
 } as const;
 
 /** The memory module. */
@@ -39,7 +39,7 @@ export const MODULE = {
   chipFirstY: 10.6,
   /** chips sit left of centre; the right edge carries the SMD column and the gold fingers */
   chipX: -3.4,
-  chipSize: [22.2, 14.2, 1.25],
+  chipSize: [22.2, 13.4, 1.25],
   pinsPerSide: 54,
   pinPitch: 0.38,
   fingerPitch: 1.0,
@@ -47,8 +47,10 @@ export const MODULE = {
   /** keying slot in the finger edge, between chips 3 and 4 */
   keySlotY: 57.6,
   keySlotSize: [3.2, 1.9],
-  smdX: 9.6,
-  smdPitch: 3.72,
+  /** two columns of tiny parts beside the fingers */
+  smdX: [9.0, 10.7] as [number, number],
+  smdPitch: 1.9,
+  smdSize: [1.15, 0.85, 0.45] as [number, number, number],
 } as const;
 
 export type PackageKind = "dip" | "soic" | "qfp" | "plcc";
@@ -63,9 +65,9 @@ export const PACKAGES: {
   leadsPerSide: number;
 }[] = [
   { kind: "dip", x: -57, y: 21, rotDeg: 8.5, size: [15, 42, 5], leadsPerSide: 8 },
-  { kind: "soic", x: -29, y: 26, rotDeg: 8, size: [13.5, 19, 7.5], leadsPerSide: 4 },
-  { kind: "dip", x: 34.3, y: 27.2, rotDeg: 18.5, size: [13, 42, 5.5], leadsPerSide: 8 },
-  { kind: "qfp", x: -54.7, y: 88, rotDeg: 19, size: [52, 49.5, 6], leadsPerSide: 14 },
+  { kind: "soic", x: -31, y: 25, rotDeg: 8, size: [13.5, 19, 6], leadsPerSide: 4 },
+  { kind: "dip", x: 33.4, y: 30, rotDeg: 18.5, size: [13, 36, 5.5], leadsPerSide: 7 },
+  { kind: "qfp", x: -54.7, y: 89.5, rotDeg: 19, size: [52, 49.5, 6], leadsPerSide: 14 },
   { kind: "plcc", x: 37, y: 93.5, rotDeg: -9, size: [24, 21, 7], leadsPerSide: 7 },
 ];
 
@@ -75,7 +77,7 @@ export type Key3 = [number, number, number];
 export type CameraRig = {
   fovDeg: number;
   /** camera-to-ground distance along the optical axis */
-  distance: number;
+  distance: Key3;
   /** look-down angle below the horizon, degrees */
   elevationDeg: Key3;
   /** heading relative to the module axis, degrees (positive = module leans right on screen) */
@@ -97,9 +99,9 @@ export type CameraRig = {
 export const CAMERAS: Record<Variant, CameraRig> = {
   v1: {
     fovDeg: 17.86,
-    distance: 178,
+    distance: [178, 187, 190],
     elevationDeg: [37, 46, 46],
-    yawDeg: [7, 9.2, 9.7],
+    yawDeg: [7, 7.6, 7.6],
     rollDeg: [0, 0, 0],
     lookX: [-8, -6.7, -5.2],
     lookY: [21.9, 63.1, 104.7],
@@ -107,7 +109,7 @@ export const CAMERAS: Record<Variant, CameraRig> = {
   },
   v2: {
     fovDeg: 17.86,
-    distance: 178,
+    distance: [178, 187, 190],
     elevationDeg: [80, 80, 80],
     yawDeg: [0, 0, 0],
     rollDeg: [0, 0, 0],

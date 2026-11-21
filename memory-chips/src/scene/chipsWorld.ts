@@ -286,8 +286,8 @@ export const buildChipsWorld = (): World => {
     mesh.renderOrder = 1;
     root.add(mesh);
   };
-  addContact(0, MODULE.length / 2, MODULE.width, MODULE.length, 0, 4.5);
-  for (const pk of PACKAGES) addContact(pk.x, pk.y, pk.size[0], pk.size[1], pk.rotDeg, pk.kind === "plcc" ? 7 : 9);
+  addContact(0, MODULE.length / 2, MODULE.width, MODULE.length, 0, 3);
+  for (const pk of PACKAGES) addContact(pk.x, pk.y, pk.size[0], pk.size[1], pk.rotDeg, pk.kind === "plcc" ? 5 : 6);
 
   // ---- circuit board: outline with end notches, keying slot and two holes ------------
   const W = MODULE.width;
@@ -347,7 +347,7 @@ export const buildChipsWorld = (): World => {
   chips.frustumCulled = false;
   root.add(chips);
 
-  const pinGeo = keep(new THREE.BoxGeometry(0.2, 0.3, 1.35));
+  const pinGeo = keep(new THREE.BoxGeometry(0.2, 0.3, 0.85));
   const pinMat = keep(new THREE.MeshStandardMaterial({ color: PALETTE.pin, roughness: 0.25, metalness: 1 }));
   const pins = new THREE.InstancedMesh(pinGeo, pinMat, MODULE.chips * MODULE.pinsPerSide * 2);
   const pinSpan = (MODULE.pinsPerSide - 1) * MODULE.pinPitch;
@@ -358,7 +358,7 @@ export const buildChipsWorld = (): World => {
         m.makeTranslation(
           MODULE.chipX - pinSpan / 2 + p * MODULE.pinPitch,
           top + 0.17,
-          -(chipCentreY(k) + side * (cd / 2 + 0.55)),
+          -(chipCentreY(k) + side * (cd / 2 + 0.32)),
         );
         pins.setMatrixAt(pi++, m);
       }
@@ -386,15 +386,16 @@ export const buildChipsWorld = (): World => {
   root.add(fingers);
 
   // ---- column of small surface-mount parts beside the fingers ----------------------------
-  const smdYs: number[] = [];
-  for (let y = 4; y < L - 4; y += MODULE.smdPitch) {
-    if (Math.abs(y - MODULE.keySlotY) < 3.2) continue;
-    smdYs.push(y);
+  const smdSpots: [number, number][] = [];
+  for (let y = 3.2; y < L - 3.2; y += MODULE.smdPitch) {
+    if (Math.abs(y - MODULE.keySlotY) < 3.0) continue;
+    for (const x of MODULE.smdX) smdSpots.push([x, y]);
   }
-  const smdGeo = keep(chamferBox(1.7, 1.15, 0.5, 0.1));
-  const smd = new THREE.InstancedMesh(smdGeo, smdMat, smdYs.length);
-  smdYs.forEach((y, i) => {
-    m.makeTranslation(MODULE.smdX, top, -y);
+  const [sw, sd, sh] = MODULE.smdSize;
+  const smdGeo = keep(chamferBox(sw, sd, sh, 0.08));
+  const smd = new THREE.InstancedMesh(smdGeo, smdMat, smdSpots.length);
+  smdSpots.forEach(([x, y], i) => {
+    m.makeTranslation(x, top, -y);
     smd.setMatrixAt(i, m);
   });
   smd.castShadow = true;

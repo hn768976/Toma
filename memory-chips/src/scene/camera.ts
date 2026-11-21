@@ -22,17 +22,18 @@ const pathFor = (variant: Variant): CameraPath => {
     // heading on the ground, rotated left of the module axis by `yaw`
     const hx = -Math.sin(yaw);
     const hy = Math.cos(yaw);
-    const back = rig.distance * Math.cos(el);
+    const dist = mix(rig.distance, t);
+    const back = dist * Math.cos(el);
     const cx = gx - hx * back;
     const cy = gy - hy * back;
-    const ch = rig.distance * Math.sin(el);
+    const ch = dist * Math.sin(el);
     // module (x, y, height) -> world (x, height, -y)
     return {
       position: [cx, ch, -cy],
       target: [gx, 0, -gy],
       rollDeg: mix(rig.rollDeg, t),
       fovDeg: rig.fovDeg,
-      focusDistance: rig.distance * rig.focusBias,
+      focusDistance: dist * rig.focusBias,
     };
   };
 };
