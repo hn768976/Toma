@@ -13,6 +13,8 @@ Config.setRspack(true);
 Config.setVideoImageFormat("png");
 Config.setStillImageFormat("png");
 Config.setOverwriteOutput(true);
+// Standard HD/UHD colour: BT.709 matrix, tagged in the stream, so players and editors show the same colours as the frames.
+Config.setColorSpace("bt709");
 Config.setChromiumOpenGlRenderer("angle");
 // 4K frames on a machine without a GPU can take longer than the default 30 s.
 Config.setDelayRenderTimeoutInMilliseconds(600000);
