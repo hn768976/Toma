@@ -172,13 +172,13 @@ export const buildBarrelTextures = (palette: Palette): BarrelTextures => {
     const g = c.createRadialGradient(bx, by, 0, bx, by, br);
     g.addColorStop(0, palette.grime);
     g.addColorStop(1, "rgba(0,0,0,0)");
-    c.globalAlpha = range(rnd, 0.04, 0.13);
+    c.globalAlpha = range(rnd, 0.02, 0.07);
     c.fillStyle = g;
     for (const ox of [0, -TEX_W, TEX_W]) c.fillRect(bx - br + ox, by - br, br * 2, br * 2);
   }
-  c.globalAlpha = 0.2;
+  c.globalAlpha = 0.12;
   c.drawImage(large, 0, 0, TEX_W, TEX_H);
-  c.globalAlpha = 0.09;
+  c.globalAlpha = 0.05;
   c.drawImage(medium, 0, 0, TEX_W, TEX_H);
   c.globalAlpha = 0.02;
   c.drawImage(fine, 0, 0, TEX_W, TEX_H);

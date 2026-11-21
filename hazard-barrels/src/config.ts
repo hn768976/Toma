@@ -39,8 +39,8 @@ export const PALETTES: Record<Variant, Palette> = {
     grime: "#3a2c10",
     skyZenith: "#066a7c",
     fillSky: "#3a7c74",
-    fillHorizon: "#5f8a72",
-    ground: "#30381c",
+    fillHorizon: "#6a8a6c",
+    ground: "#35391b",
     haze: "#16242a",
   },
   // Version 2: the one change - the palette. Turquoise drums, cream markings, amber dusk sky.
@@ -74,7 +74,7 @@ export const MARKINGS = {
   letterSpacingEm: 0.035,
   textLine1Y: 0.125,
   textLine2Y: 0.182,
-  stripeBandFromEnd: [0.03, 0.061],
+  stripeBandFromEnd: [0.029, 0.064],
   stripeLength: 0.05,
   stripePitch: 0.092,
   stripeSlant: 0.03,
@@ -93,12 +93,12 @@ export const LAYOUT = {
   /** stacks along the lit face (to the left of the hero stack) */
   rowLeft: 3,
   /** gap from the hero stack to the row behind it on the left (wider than `spacing`, so a third stack shows in the wedge between them) */
-  leftSpacing: 1.19,
-  /** extra stacks as [x, z, drop]: one seen through the wedge between the hero stack and the
-   *  leaning row, one closing the left edge of the frame (lower, so sky shows above it at the end) */
+  leftSpacing: 1.245,
+  /** extra stacks as [x, z, drop]: one seen (sunlit) through the wedge between the hero stack and
+   *  the leaning row, and one far back that closes the left edge of the frame without shading it */
   extraStacks: [
     [-0.66, -1.75, 0],
-    [-1.16, -1.05, 0.55],
+    [-1.675, -2.05, 0],
   ] as [number, number, number][],
   /** stacks further apart than this do not shade or light each other */
   neighbourReach: 1.4,
@@ -107,19 +107,19 @@ export const LAYOUT = {
   /** stacks along the shadowed face (receding to the right) */
   rowRight: 9,
   /** direction of each face in the ground plane, degrees (0 = +x, 90 = away from camera) */
-  leftAngleDeg: 130.2,
+  leftAngleDeg: 133,
   rightAngleDeg: 44.3,
   /** how far a drum's markings may turn away from the camera, degrees */
   /** shade and warmth of the paint on the rows behind the hero row (1 = same as hero) */
-  backRowShade: 0.84,
-  backRowWarmth: 0.87,
+  backRowShade: 0.9,
+  backRowWarmth: 0.8,
   /** the rows behind lean a little towards the hero stack (degrees), pivoting at this height */
   backRowLeanDeg: 2.6,
   leanPivotY: 2.4,
   /** far stacks of the hero row stand this much lower (uneven ground), so their tops show at the end */
   farRowDrop: 0.3,
   /** rolling hoop and rim bead sizes */
-  hoopHeight: 0.007,
+  hoopHeight: 0.009,
   hoopHalfWidth: 0.014,
   rimBead: 0.006,
   facingJitterDeg: 34,

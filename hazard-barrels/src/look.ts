@@ -10,7 +10,7 @@ export const LIGHT = {
   /** low warm sun from camera-left: the key light */
   key: {
     color: "#ffe9c4",
-    intensity: 1.8,
+    intensity: 1.88,
     /** horizontal angle from the camera axis towards camera-left, degrees */
     azimuthDeg: 52,
     elevationDeg: 22,
@@ -22,7 +22,7 @@ export const LIGHT = {
     shadowMapSize: 2048,
   },
   /** image-based sky light (procedural gradient sky, PMREM filtered) */
-  env: { intensity: 0.58, sunGlow: 2.4, stripWidthDeg: 6.5, stripHeightDeg: 16 },
+  env: { intensity: 0.52, sunGlow: 2.4, stripWidthDeg: 6.5, stripHeightDeg: 16 },
   /** how strongly neighbouring drums block the sky light (analytic occlusion) */
   occlusion: { strength: 0.96, power: 1.2 },
   /** paint-coloured light bounced between drums inside the stack */
@@ -65,8 +65,8 @@ export const GRADE: GradeSettings = {
   toneMapping: "aces",
   contrast: 1.0,
   pivot: 0.4,
-  saturation: 0.8,
-  lift: [0.014, 0.024, 0.024],
+  saturation: 0.86,
+  lift: [0.008, 0.024, 0.038],
   gamma: [1.0, 1.0, 1.0],
   gain: [1.0, 1.0, 1.0],
   shadowTint: [0.008, 0.002, 0.0],
