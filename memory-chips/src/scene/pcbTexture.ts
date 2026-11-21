@@ -97,10 +97,6 @@ export const buildPcbTexture = (): THREE.CanvasTexture => {
       }
     }
   }
-  // left margin: two long rails with stubs
-  trace([[-MODULE.width / 2 + 0.7, 2.5], [-MODULE.width / 2 + 0.7, MODULE.length - 2.5]], 0.2);
-  trace([[-MODULE.width / 2 + 1.25, 4], [-MODULE.width / 2 + 1.25, MODULE.length - 4]], 0.14);
-
   // pads under every chip pin
   c.fillStyle = PALETTE.pad;
   const pinSpan = (MODULE.pinsPerSide - 1) * MODULE.pinPitch;
@@ -157,7 +153,7 @@ export const buildChipTexture = (): THREE.CanvasTexture => {
   c.globalCompositeOperation = "overlay";
   c.globalAlpha = 0.05;
   c.drawImage(noiseCanvas(256, 164, SEED + 5, 4, 3, 4, 0.55), 0, 0, W, H);
-  c.globalAlpha = 0.14;
+  c.globalAlpha = 0.2;
   c.drawImage(noiseCanvas(1024, 656, SEED + 6, 512, 328, 1), 0, 0, W, H);
   c.globalCompositeOperation = "source-over";
   // etched code: two rows of 5x7 dot-matrix glyphs with random dots (not real characters)

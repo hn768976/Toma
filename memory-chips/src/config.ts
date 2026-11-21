@@ -15,15 +15,15 @@ export const VIDEO = {
 export type Variant = "v1" | "v2";
 
 export const PALETTE = {
-  table: "#93a0a3",
-  pcb: "#083f42",
+  table: "#9aa3a2",
+  pcb: "#0a4a48",
   pcbEdge: "#083b39",
-  trace: "#1c6f69",
+  trace: "#27857b",
   pad: "#8aa0a4",
-  chipBody: "#36454e",
+  chipBody: "#384347",
   chipMark: "#6f7f8a",
-  lead: "#98a2a8",
-  gold: "#b89a6e",
+  lead: "#b4bcc0",
+  gold: "#a8957a",
   smd: "#4f5d66",
 } as const;
 

@@ -164,6 +164,33 @@ const buildPackage = (
   return group;
 };
 
+/**
+ * Contact shadow decal: fully dark under the part's footprint, fading to nothing
+ * over `margin` outside it. `inner` is the footprint as a fraction of the quad.
+ */
+const contactMaterial = (inner: THREE.Vector2, opacity: number) =>
+  new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    uniforms: { uInner: { value: inner }, uOpacity: { value: opacity } },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform vec2 uInner; uniform float uOpacity;
+      varying vec2 vUv;
+      void main() {
+        vec2 p = abs(vUv - 0.5) * 2.0;
+        vec2 d = max(p - uInner, 0.0) / max(1.0 - uInner, vec2(1e-4));
+        float t = clamp(length(d), 0.0, 1.0);
+        float a = pow(1.0 - t * t * (3.0 - 2.0 * t), 2.2);
+        gl_FragColor = vec4(0.0, 0.0, 0.0, a * uOpacity);
+      }`,
+  });
+
 /** Studio surroundings used only for image-based light: one big softbox, dark elsewhere. */
 const buildEnvScene = (boxDir: THREE.Vector3) => {
   const scene = new THREE.Scene();
@@ -207,11 +234,21 @@ export const buildChipsWorld = (): World => {
 
   // ---- materials ------------------------------------------------------------------
   const plastic = keep(
-    new THREE.MeshStandardMaterial({ color: PALETTE.chipBody, roughness: SURFACE.chipRoughness, metalness: 0 }),
+    new THREE.MeshPhysicalMaterial({
+      color: PALETTE.chipBody,
+      roughness: SURFACE.packageRoughness,
+      metalness: 0,
+      ior: SURFACE.packageIor,
+    }),
   );
   const chipTex = keep(buildChipTexture());
   const chipMat = keep(
-    new THREE.MeshStandardMaterial({ map: chipTex, roughness: SURFACE.chipRoughness, metalness: 0 }),
+    new THREE.MeshPhysicalMaterial({
+      map: chipTex,
+      roughness: SURFACE.chipRoughness,
+      metalness: 0,
+      ior: SURFACE.chipIor,
+    }),
   );
   const lead = keep(
     new THREE.MeshStandardMaterial({ color: PALETTE.lead, roughness: SURFACE.leadRoughness, metalness: 1 }),
@@ -233,6 +270,24 @@ export const buildChipsWorld = (): World => {
   table.position.set(0, 0, -MODULE.length / 2);
   table.receiveShadow = true;
   root.add(table);
+
+  // ---- contact shadows: the fill light is not shadowed, so the darkness right under
+  // each part is painted in as a soft decal lying on the table --------------------------
+  const contactGeo = keep(new THREE.PlaneGeometry(1, 1));
+  const addContact = (x: number, y: number, w: number, d: number, rotDeg: number, margin: number) => {
+    const mat = keep(
+      contactMaterial(new THREE.Vector2(w / (w + margin * 2), d / (d + margin * 2)), LIGHT.contactShadow),
+    );
+    const mesh = new THREE.Mesh(contactGeo, mat);
+    mesh.rotation.order = "YXZ";
+    mesh.rotation.set(-Math.PI / 2, deg(rotDeg), 0);
+    mesh.scale.set(w + margin * 2, d + margin * 2, 1);
+    mesh.position.copy(P(x, y, 0.03));
+    mesh.renderOrder = 1;
+    root.add(mesh);
+  };
+  addContact(0, MODULE.length / 2, MODULE.width, MODULE.length, 0, 3);
+  for (const pk of PACKAGES) addContact(pk.x, pk.y, pk.size[0], pk.size[1], pk.rotDeg, pk.kind === "plcc" ? 5 : 6.5);
 
   // ---- circuit board: outline with end notches, keying slot and two holes ------------
   const W = MODULE.width;
@@ -390,7 +445,7 @@ export const buildChipsWorld = (): World => {
     light.shadow.camera.far = dist * 1.7;
     light.shadow.bias = -0.0004;
     light.shadow.normalBias = 0.12;
-    light.shadow.radius = 2.5;
+    light.shadow.radius = 4;
     root.add(light);
     root.add(light.target);
   }
