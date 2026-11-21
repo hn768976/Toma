@@ -11,7 +11,7 @@ export const LIGHT = {
   key: {
     color: "#e9f4ff",
     /** candela-like units; falls off with distance squared (scene is in millimetres) */
-    intensity: 2.95e6,
+    intensity: 2.8e6,
     /** position in module coordinates: [x across, y along, height] */
     position: [280, 440, 520] as [number, number, number],
     aimAt: [120, 90, 0] as [number, number, number],
@@ -22,17 +22,17 @@ export const LIGHT = {
     /** sideways drift of the aim point per millimetre along the strip (negative = far end aims further left) */
     aimSkew: -0.45,
     /** cone half-angle (radians): the soft cone edge is what darkens the left of the table */
-    coneAngle: 0.245,
+    coneAngle: 0.27,
     samples: 8,
     shadowMapSize: 2048,
   },
   /** darkness of the soft contact-shadow decals under the parts (0..1) */
-  contactShadow: 0.7,
+  contactShadow: 0.8,
   /** studio environment for reflections and a little fill */
   env: {
     intensity: 0.3,
     softbox: 7.5,
-    ambient: 0.22,
+    ambient: 0.4,
     /** where the softbox sits in reflections: [x across, y along, height] direction */
     softboxDir: [0.55, 0.8, 0.42] as [number, number, number],
   },
@@ -47,7 +47,7 @@ export const SURFACE = {
   /** the loose packages are a duller plastic than the memory chips */
   packageIor: 1.5,
   packageRoughness: 0.5,
-  leadRoughness: 0.4,
+  leadRoughness: 0.34,
   goldRoughness: 0.5,
 } as const;
 

@@ -102,18 +102,19 @@ export const buildPcbTexture = (): THREE.CanvasTexture => {
   const pinSpan = (MODULE.pinsPerSide - 1) * MODULE.pinPitch;
   for (let k = 0; k < MODULE.chips; k++) {
     for (const side of [-1, 1]) {
-      const y = chipCentreY(k) + side * (cd / 2 + 0.45);
+      const y = chipCentreY(k) + side * (cd / 2 + 0.55);
       for (let p = 0; p < MODULE.pinsPerSide; p++) {
         const x = MODULE.chipX - pinSpan / 2 + p * MODULE.pinPitch;
-        c.fillRect(px(x - 0.11), py(y + 0.38), 0.22 * S, 0.76 * S);
+        c.fillRect(px(x - 0.11), py(y + 0.5), 0.22 * S, 1.0 * S);
       }
     }
   }
   // short traces from the two columns of tiny parts to the fingers and to the chips
   for (let y = 3.2; y < MODULE.length - 3.2; y += MODULE.smdPitch) {
     if (Math.abs(y - MODULE.keySlotY) < 3.0) continue;
-    trace([[MODULE.smdX[1] + 0.6, y], [MODULE.width / 2 - MODULE.fingerLength - 0.2, y]], 0.1);
-    if (rnd() < 0.5) trace([[chipR + 0.4, y], [MODULE.smdX[0] - 0.6, y]], 0.1);
+    const last = MODULE.smdX[MODULE.smdX.length - 1];
+    trace([[last + 0.8, y], [MODULE.width / 2 - MODULE.fingerLength - 0.2, y]], 0.1);
+    if (rnd() < 0.5) trace([[chipR + 0.4, y], [MODULE.smdX[0] - 0.8, y]], 0.1);
   }
   // ring around each mounting hole
   for (const hy of [3.4, MODULE.length - 3.4]) {
@@ -148,7 +149,7 @@ export const buildChipTexture = (): THREE.CanvasTexture => {
   c.globalCompositeOperation = "overlay";
   c.globalAlpha = 0.05;
   c.drawImage(noiseCanvas(256, 164, SEED + 5, 4, 3, 4, 0.55), 0, 0, W, H);
-  c.globalAlpha = 0.2;
+  c.globalAlpha = 0.11;
   c.drawImage(noiseCanvas(1024, 656, SEED + 6, 512, 328, 1), 0, 0, W, H);
   c.globalCompositeOperation = "source-over";
   // etched code: two rows of 5x7 dot-matrix glyphs with random dots (not real characters)

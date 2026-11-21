@@ -282,12 +282,13 @@ export const buildChipsWorld = (): World => {
     mesh.rotation.order = "YXZ";
     mesh.rotation.set(-Math.PI / 2, deg(rotDeg), 0);
     mesh.scale.set(w + margin * 2, d + margin * 2, 1);
-    mesh.position.copy(P(x, y, 0.03));
+    // the light comes from behind and the right: slide the patch towards the shadow side
+    mesh.position.copy(P(x - margin * 0.35, y - margin * 0.35, 0.03));
     mesh.renderOrder = 1;
     root.add(mesh);
   };
   addContact(0, MODULE.length / 2, MODULE.width, MODULE.length, 0, 3);
-  for (const pk of PACKAGES) addContact(pk.x, pk.y, pk.size[0], pk.size[1], pk.rotDeg, pk.kind === "plcc" ? 5 : 6);
+  for (const pk of PACKAGES) addContact(pk.x, pk.y, pk.size[0], pk.size[1], pk.rotDeg, pk.kind === "plcc" ? 4.5 : 5);
 
   // ---- circuit board: outline with end notches, keying slot and two holes ------------
   const W = MODULE.width;
@@ -347,7 +348,7 @@ export const buildChipsWorld = (): World => {
   chips.frustumCulled = false;
   root.add(chips);
 
-  const pinGeo = keep(new THREE.BoxGeometry(0.2, 0.3, 0.85));
+  const pinGeo = keep(new THREE.BoxGeometry(0.2, 0.3, 1.1));
   const pinMat = keep(new THREE.MeshStandardMaterial({ color: PALETTE.pin, roughness: 0.25, metalness: 1 }));
   const pins = new THREE.InstancedMesh(pinGeo, pinMat, MODULE.chips * MODULE.pinsPerSide * 2);
   const pinSpan = (MODULE.pinsPerSide - 1) * MODULE.pinPitch;
@@ -358,7 +359,7 @@ export const buildChipsWorld = (): World => {
         m.makeTranslation(
           MODULE.chipX - pinSpan / 2 + p * MODULE.pinPitch,
           top + 0.17,
-          -(chipCentreY(k) + side * (cd / 2 + 0.32)),
+          -(chipCentreY(k) + side * (cd / 2 + 0.42)),
         );
         pins.setMatrixAt(pi++, m);
       }
@@ -375,7 +376,7 @@ export const buildChipsWorld = (): World => {
     if (Math.abs(y - MODULE.keySlotY) < slotLen / 2 + 0.75) continue;
     fingerYs.push(y);
   }
-  const fingerGeo = keep(new THREE.BoxGeometry(MODULE.fingerLength, 0.07, MODULE.fingerPitch * 0.74));
+  const fingerGeo = keep(new THREE.BoxGeometry(MODULE.fingerLength, 0.07, MODULE.fingerPitch * 0.84));
   const fingers = new THREE.InstancedMesh(fingerGeo, gold, fingerYs.length);
   fingerYs.forEach((y, i) => {
     m.makeTranslation(hw - MODULE.fingerLength / 2 - 0.12, top + 0.035, -y);

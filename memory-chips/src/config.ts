@@ -15,18 +15,18 @@ export const VIDEO = {
 export type Variant = "v1" | "v2";
 
 export const PALETTE = {
-  table: "#969ea2",
+  table: "#8f9698",
   pcb: "#0b5350",
   pcbEdge: "#083b39",
-  trace: "#1f8076",
+  trace: "#1a6f67",
   pad: "#b4c0c2",
   chipBody: "#384347",
   chipMark: "#6f7f8a",
-  lead: "#8f989d",
-  pin: "#d5dbde",
+  lead: "#aab3b8",
+  pin: "#e8ecee",
   smdPad: "#5f7578",
-  gold: "#c49a68",
-  smd: "#5d6b72",
+  gold: "#c7ab86",
+  smd: "#7c8a90",
 } as const;
 
 /** The memory module. */
@@ -42,15 +42,15 @@ export const MODULE = {
   chipSize: [22.2, 13.4, 1.25],
   pinsPerSide: 54,
   pinPitch: 0.38,
-  fingerPitch: 1.0,
+  fingerPitch: 0.8,
   fingerLength: 2.6,
   /** keying slot in the finger edge, between chips 3 and 4 */
   keySlotY: 57.6,
   keySlotSize: [3.2, 1.9],
-  /** two columns of tiny parts beside the fingers */
-  smdX: [9.0, 10.7] as [number, number],
-  smdPitch: 1.9,
-  smdSize: [1.15, 0.85, 0.45] as [number, number, number],
+  /** column of small parts beside the fingers */
+  smdX: [9.7] as number[],
+  smdPitch: 2.4,
+  smdSize: [1.6, 1.05, 0.5] as [number, number, number],
 } as const;
 
 export type PackageKind = "dip" | "soic" | "qfp" | "plcc";
@@ -64,10 +64,10 @@ export const PACKAGES: {
   size: [number, number, number];
   leadsPerSide: number;
 }[] = [
-  { kind: "dip", x: -57, y: 21, rotDeg: 8.5, size: [15, 42, 5], leadsPerSide: 8 },
-  { kind: "soic", x: -31, y: 25, rotDeg: 8, size: [13.5, 19, 6], leadsPerSide: 4 },
-  { kind: "dip", x: 33.4, y: 30, rotDeg: 18.5, size: [13, 36, 5.5], leadsPerSide: 7 },
-  { kind: "qfp", x: -54.7, y: 89.5, rotDeg: 19, size: [52, 49.5, 6], leadsPerSide: 14 },
+  { kind: "dip", x: -59.5, y: 21, rotDeg: 8.5, size: [15, 42, 5], leadsPerSide: 8 },
+  { kind: "soic", x: -30, y: 26, rotDeg: 8, size: [13.5, 19, 7], leadsPerSide: 4 },
+  { kind: "dip", x: 36.5, y: 30, rotDeg: 18.5, size: [13, 36, 5.5], leadsPerSide: 7 },
+  { kind: "qfp", x: -57, y: 92, rotDeg: 19, size: [52, 49.5, 6], leadsPerSide: 14 },
   { kind: "plcc", x: 37, y: 93.5, rotDeg: -9, size: [24, 21, 7], leadsPerSide: 7 },
 ];
 
@@ -101,11 +101,11 @@ export const CAMERAS: Record<Variant, CameraRig> = {
     fovDeg: 17.86,
     distance: [178, 187, 190],
     elevationDeg: [37, 46, 46],
-    yawDeg: [7, 7.6, 7.6],
+    yawDeg: [7, 7.6, 6.4],
     rollDeg: [0, 0, 0],
-    lookX: [-8, -6.7, -5.2],
+    lookX: [-8, -6.7, -6.6],
     lookY: [21.9, 63.1, 104.7],
-    focusBias: 1.0,
+    focusBias: 0.95,
   },
   v2: {
     fovDeg: 17.86,
