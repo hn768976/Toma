@@ -1,0 +1,41 @@
+{
+  "name": "teal-waves",
+  "version": "1.0.0",
+  "description": "Dark teal rim-lit wave surface (Remotion + three.js). Compositions: V1-teal-waves, V2-teal-waves (3840x2160, 30 fps, 1126 frames).",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@react-three/fiber": "9.8.2",
+    "@remotion/cli": "4.0.547",
+    "@remotion/three": "4.0.547",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.547",
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.547",
+    "@types/react": "19.3.0",
+    "@types/three": "0.187.0",
+    "@types/web": "0.0.166",
+    "eslint": "10.15.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "render:v1": "remotion render V1-teal-waves out/01-V1-teal-waves-4k.mp4 --codec=h264 --scale=1 --gl=angle --crf=16 --pixel-format=yuv420p",
+    "render:v2": "remotion render V2-teal-waves out/02-V2-teal-waves-4k.mp4 --codec=h264 --scale=1 --gl=angle --crf=16 --pixel-format=yuv420p",
+    "lookdev": "sh scripts/ld.sh"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}
