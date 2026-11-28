@@ -110,7 +110,7 @@ void main() {
   vec2 ca = c * ${LOOK.chromaticAberration.toFixed(5)} * r * r * 2.0;
   vec3 col = vec3(texture2D(tScene, vUv + ca).r, texture2D(tScene, vUv).g, texture2D(tScene, vUv - ca).b);
   // lens softness: blend with a small blur whose size is fixed relative to the frame
-  vec2 so = vec2(1.0 / (1080.0 * uAspect), 1.0 / 1080.0) * 1.45;
+  vec2 so = vec2(1.0 / (1080.0 * uAspect), 1.0 / 1080.0) * 1.1;
   vec3 soft = (texture2D(tScene, vUv + so * vec2(1.0, 0.6)).rgb + texture2D(tScene, vUv + so * vec2(-0.6, 1.0)).rgb
              + texture2D(tScene, vUv + so * vec2(-1.0, -0.6)).rgb + texture2D(tScene, vUv + so * vec2(0.6, -1.0)).rgb) * 0.25;
   col = mix(col, soft, ${LOOK.softness.toFixed(4)});

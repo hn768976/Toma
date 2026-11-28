@@ -20,8 +20,8 @@ export const CONFIG = {
   landCentre: [3.5, 6.0] as [number, number], // the island is off-centre: the coast is close on one side
   coastWobble: 0.13, // large coastline variation (fraction of radius)
   gridHalfSize: 50, // street grid extent before the coast clips it
-  blockMin: 2.6, // street spacing range
-  blockMax: 3.8,
+  blockMin: 2.0, // street spacing range
+  blockMax: 2.9,
   gridRotation: 0.42, // radians
   warpLarge: 4.2, // how far the street grid is bent (large scale)
   warpSmall: 0.8, // (small scale)
@@ -35,7 +35,7 @@ export const CONFIG = {
   coreTowerChance: 0.95,
   coreMin: 6, // heights of the core towers
   coreMax: 11,
-  coreBirth: [1.35, 1.8] as [number, number], // seconds between which the core towers start to rise
+  coreBirth: [1.55, 2.0] as [number, number], // seconds between which the core towers start to rise
   /** Landmark glass towers: wished position, footprint and height. */
   heroTowers: [
     { x: 5.9, z: 1.5, w: 2.5, h: 12 },
@@ -88,13 +88,13 @@ export const CONFIG = {
   /** Path distance (along streets, from the centre) the road front has reached. */
   roadFront: [
     [0.3, -1],
-    [0.55, 5],
-    [1.0, 13],
-    [1.5, 22],
-    [2.0, 30],
-    [3.0, 42],
-    [4.0, 58],
-    [5.0, 78],
+    [0.55, 3],
+    [1.0, 7],
+    [1.5, 11],
+    [2.0, 17],
+    [3.0, 32],
+    [4.0, 52],
+    [5.0, 76],
     [5.6, 95],
     [6.8, 140],
   ] as Keys,
@@ -112,22 +112,24 @@ export const CONFIG = {
   ] as Keys,
   /** Radius the building front has reached. */
   buildFront: [
-    [1.5, 0],
-    [1.9, 4.7],
-    [2.4, 6.5],
-    [3.0, 9],
-    [4.0, 12.5],
-    [5.0, 16.5],
-    [6.0, 21],
-    [7.0, 26],
-    [8.0, 31.5],
-    [8.6, 37],
-    [9.1, 46],
+    [1.7, 0],
+    [2.1, 4.7],
+    [2.5, 6.5],
+    [3.0, 8.5],
+    [4.0, 12],
+    [5.0, 16],
+    [6.0, 20],
+    [7.0, 24],
+    [8.0, 28],
+    [9.0, 33],
+    [10.0, 39],
+    [10.6, 48],
   ] as Keys,
   roadAgeStart: 5, // a street starts to darken when the front is this far ahead
   roadAgeEnd: 22, // ... and is fully dark at this distance
+  waterReveal: [2.0, 4.2] as [number, number], // the water darkens between these times (s)
   buildJitter: 0.35, // random extra delay per building (s)
-  ghostLead: 0.45, // the construction-line ghost appears this long before the solid
+  ghostLead: 0.6, // the construction-line ghost appears this long before the solid
   riseTime: 0.7, // time a building takes to rise
   highwayStart: [2.3, 2.7], // start time of each elevated road (s)
   highwaySpeed: [14, 11], // draw-on speed (units / s)
@@ -138,14 +140,14 @@ export const CONFIG = {
   colors: {
     land: "#bebebe",
     tile: "#f3f3f3",
-    tileMature: "#5f9a8a", // ground tiles once the buildings have arrived,
+    tileMature: "#76948a", // ground tiles once the buildings have arrived,
     tileEdge: "#7a7a7a",
-    roadNew: "#8a7d76", // a street right after it is drawn ...
-    roadOld: "#3a3130", // ... and once the city has grown around it
-    pad: "#9a999b",
+    roadNew: "#6f625c", // a street right after it is drawn ...
+    roadOld: "#4a4140", // ... and once the city has grown around it
+    pad: "#7c8886",
     park: "#74b08a",
-    wallsLow: ["#a39b9a", "#b3abaa", "#938b8a", "#bdb5b3"], // low-rise walls
-    wallsTower: ["#c4bbb9", "#d0c7c5", "#c9c0be", "#d8d0ce"], // concrete towers
+    wallsLow: ["#9a9291", "#aaa2a1", "#8c8483", "#b4acab"], // low-rise walls
+    wallsTower: ["#d9d1cf", "#e0d8d6", "#dcd4d2", "#e6dedc"], // concrete towers
     roof: "#efe8e5",
     glassLow: "#12303d",
     glassHigh: "#2a5568",
@@ -177,28 +179,28 @@ export const CAMERAS: Record<"v1" | "v2", ReadonlyArray<CameraKey>> = {
   // Version 1: like the reference. Starts low and close over the first street,
   // rises and pulls back while orbiting, eases to a stop at 11.5 s and holds.
   v1: [
-    { t: 0.0, az: 30, el: 56, dist: 29.0, tx: 1.0, ty: 0.0, tz: 0.5 },
-    { t: 1.0, az: 33, el: 54, dist: 29.0, tx: 0.6, ty: 0.6, tz: 0.2 },
-    { t: 1.5, az: 35, el: 52, dist: 29.0, tx: 0.3, ty: 1.8, tz: 0.0 },
-    { t: 2.2, az: 39, el: 46, dist: 27.5, tx: 0.0, ty: 2.6, tz: 0.0 },
-    { t: 3.7, az: 48, el: 40, dist: 27.0, tx: 0.0, ty: 2.8, tz: -0.3 },
-    { t: 5.5, az: 56, el: 43, dist: 29.0, tx: -0.3, ty: 2.2, tz: -1.0 },
-    { t: 7.5, az: 64, el: 46, dist: 32.0, tx: -0.8, ty: 1.6, tz: -2.2 },
-    { t: 9.5, az: 74, el: 48.5, dist: 37.0, tx: -1.5, ty: 1.2, tz: -3.6 },
-    { t: 11.5, az: 82, el: 50, dist: 41.0, tx: -2.0, ty: 1.0, tz: -4.5 },
-    { t: 15.0, az: 82, el: 50, dist: 41.0, tx: -2.0, ty: 1.0, tz: -4.5 },
+    { t: 0.0, az: 30, el: 56, dist: 35, tx: 1.0, ty: 0.0, tz: 0.5 },
+    { t: 1.0, az: 33, el: 54, dist: 35, tx: 0.6, ty: 0.8, tz: 0.2 },
+    { t: 1.5, az: 35, el: 52, dist: 35, tx: 0.3, ty: 2.4, tz: 0.0 },
+    { t: 2.2, az: 39, el: 48, dist: 37, tx: 0.0, ty: 2.6, tz: 0.0 },
+    { t: 3.7, az: 48, el: 45, dist: 42, tx: 0.0, ty: 2.0, tz: -1.0 },
+    { t: 5.5, az: 58, el: 48, dist: 46, tx: -0.5, ty: 1.5, tz: -3.0 },
+    { t: 7.5, az: 68, el: 50, dist: 49, tx: -1.2, ty: 1.0, tz: -5.0 },
+    { t: 9.5, az: 74, el: 51, dist: 50, tx: -1.6, ty: 1.0, tz: -6.0 },
+    { t: 11.5, az: 77, el: 51.5, dist: 50.5, tx: -1.8, ty: 1.0, tz: -6.5 },
+    { t: 15.0, az: 77, el: 51.5, dist: 50.5, tx: -1.8, ty: 1.0, tz: -6.5 },
   ],
   // Version 2: a different camera move. Starts high and steep on the opposite
   // side of the city (close to a plan view) while the streets spread, then
   // cranes down and orbits the other way round into a low view across the
   // skyline, and is still moving on the last frame.
   v2: [
-    { t: 0.0, az: 200, el: 72, dist: 26, tx: 0.0, ty: 0.0, tz: 0.0 },
-    { t: 1.5, az: 190, el: 68, dist: 27, tx: 0.0, ty: 1.0, tz: 0.0 },
-    { t: 3.5, az: 168, el: 60, dist: 34, tx: 0.0, ty: 1.5, tz: 0.0 },
-    { t: 6.0, az: 135, el: 46, dist: 44, tx: 0.0, ty: 2.0, tz: 0.0 },
-    { t: 9.0, az: 95, el: 34, dist: 46, tx: 0.0, ty: 2.6, tz: 0.0 },
-    { t: 12.0, az: 58, el: 27, dist: 43, tx: 0.0, ty: 3.0, tz: 0.0 },
-    { t: 15.0, az: 30, el: 23, dist: 39, tx: 0.0, ty: 3.0, tz: 0.0 },
+    { t: 0.0, az: 200, el: 72, dist: 37, tx: 0.0, ty: 0.0, tz: 0.0 },
+    { t: 1.5, az: 192, el: 68, dist: 37, tx: 0.0, ty: 1.5, tz: 0.0 },
+    { t: 3.5, az: 176, el: 60, dist: 43, tx: 0.5, ty: 1.5, tz: 1.0 },
+    { t: 6.0, az: 152, el: 50, dist: 49, tx: 2.0, ty: 1.5, tz: 3.0 },
+    { t: 9.0, az: 122, el: 41, dist: 49, tx: 3.0, ty: 2.0, tz: 4.0 },
+    { t: 12.0, az: 95, el: 34, dist: 46, tx: 3.0, ty: 2.3, tz: 4.5 },
+    { t: 15.0, az: 74, el: 30, dist: 43, tx: 3.0, ty: 2.5, tz: 5.0 },
   ],
 };

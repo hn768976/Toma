@@ -469,16 +469,16 @@ blocks.forEach((blk, blockIndex) => {
     return;
   }
   // a block of low white buildings (a few mid-rise ones near the centre)
-  const nu = Math.max(1, Math.min(3, Math.round(lu / R(0.95, 1.5))));
-  const nv = Math.max(1, Math.min(3, Math.round(lv / R(0.95, 1.5))));
+  const nu = Math.max(1, Math.min(3, Math.round(lu / R(0.7, 1.1))));
+  const nv = Math.max(1, Math.min(3, Math.round(lv / R(0.7, 1.1))));
   for (let b = 0; b < nv; b++) {
     for (let a = 0; a < nu; a++) {
       if (rnd() < 0.04) continue;
       const lw = lu / nu;
       const ld = lv / nv;
-      const gap = R(0.03, 0.065);
+      const gap = R(0.025, 0.05);
       const mid = rnd() < 0.06 + 0.16 * central;
-      const h = mid ? R(1.4, 2.6) * (0.6 + 0.5 * central) : R(0.45, 1.25);
+      const h = mid ? R(1.6, 2.8) * (0.6 + 0.5 * central) : R(0.7, 1.7);
       const glass = rnd() < (mid ? 0.4 : CONFIG.glassChanceLow);
       addBuilding((a + 0.5) * lw - lu / 2, (b + 0.5) * ld - lv / 2, lw - gap * 2, ld - gap * 2, h, glass, "low", core ? R(CONFIG.coreBirth[0], CONFIG.coreBirth[1]) + 0.2 : undefined);
     }

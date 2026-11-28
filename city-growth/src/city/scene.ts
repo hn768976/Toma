@@ -116,7 +116,7 @@ float bAlpha = 1.0;
       col *= 1.0 - ${f(LOOK.windowLineStrength)} * (bands * 0.9 + mull * 0.45);
     } else {
       float rv = fract(vSeed * 7.31);
-      col = ${glslVec3(lin(C.roof))} * mix(0.42 + 0.58 * rv * rv, 0.92 + 0.08 * rv, step(0.5, vCol.g));
+      col = ${glslVec3(lin(C.roof))} * mix(0.66 + 0.34 * rv, 0.92 + 0.08 * rv, step(0.62, vCol.g));
       float parapet = smoothstep(0.05, 0.08, edgeD) * (1.0 - smoothstep(0.11, 0.14, edgeD));
       float panel = max(gridLine(vLocal.x * vDim.x / 0.34 + vSeed * 3.0, 0.1), gridLine(vLocal.z * vDim.z / 0.34 + vSeed * 5.0, 0.1));
       panel *= smoothstep(0.1, 0.16, edgeD);
@@ -138,7 +138,7 @@ float bAlpha = 1.0;
       float floors = gridLine(hW / ${f(CONFIG.floorHeight * 2.0)}, 0.1);
       float edge = smoothstep(0.5 * faceW - 0.07, 0.5 * faceW - 0.015, abs(uW));
       edge = max(edge, smoothstep(vDim.y - 0.2, vDim.y - 0.04, hW) * 0.9);
-      float pale = clamp(floors * 0.12 + edge * 0.6, 0.0, 1.0);
+      float pale = clamp(floors * 0.12 + edge * 0.75, 0.0, 1.0);
       g = mix(g, ${glslVec3(lin(C.glassEdge))}, pale);
       col = g;
       bEmis = mix(${glslVec3(rgb(LOOK.glassEmissiveLow))}, ${glslVec3(rgb(LOOK.glassEmissiveHigh))}, grad) * (0.75 + 0.5 * n2) * (1.0 + 1.2 * pale) * ${f(LOOK.glassGlow)};
@@ -146,7 +146,7 @@ float bAlpha = 1.0;
       bAlpha = clamp(${f(LOOK.glassAlpha)} + 0.3 * refl + 0.38 * pale, 0.0, 1.0);
       bRough = 0.32;
     } else {
-      col = mix(${glslVec3(lin(C.glassHigh))}, vec3(0.8), 0.8);
+      col = mix(${glslVec3(lin(C.glassHigh))}, vec3(0.8), 0.4);
       float parapet = smoothstep(0.05, 0.08, edgeD) * (1.0 - smoothstep(0.11, 0.14, edgeD));
       col *= 1.0 - 0.2 * parapet;
     }
@@ -399,6 +399,7 @@ export const createCity = (): City => {
   const uRoadFront = { value: 0 };
   const uTileFront = { value: 0 };
   const uBuildFront = { value: 0 };
+  const uWater = { value: 0 };
 
   scene.fog = new THREE.FogExp2(rgb(LOOK.fogColor), LOOK.fogDensity);
 
@@ -422,13 +423,15 @@ export const createCity = (): City => {
     new THREE.PlaneGeometry(6000, 6000).rotateX(-Math.PI / 2),
     new THREE.ShaderMaterial({
       fog: false,
-      uniforms: {},
+      uniforms: { uWater },
       vertexShader: `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
-      fragmentShader: `varying vec3 vW; void main(){
+      fragmentShader: `uniform float uWater; varying vec3 vW; void main(){
         float d = length(vW.xz);
         vec3 c = mix(${glslVec3(rgb(LOOK.waterColor))}, ${glslVec3(rgb(LOOK.waterFarColor))}, smoothstep(30.0, 120.0, d));
         float haze = 1.0 - exp(-pow(distance(cameraPosition, vW) * ${f(LOOK.waterHaze)}, 2.0));
         c = mix(c, ${glslVec3(rgb(LOOK.envHorizon))} * ${f(LOOK.skyBrightness)}, haze);
+        // the surroundings start as the same pale ground and darken into water
+        c = mix(${glslVec3(rgb(LOOK.openingGround))}, c, uWater);
         gl_FragColor = vec4(c, 1.0); }`,
     }),
   );
@@ -511,7 +514,9 @@ diffuseColor.rgb = mix(${glslVec3(lin(C.roadNew))}, ${glslVec3(lin(C.roadOld))},
   float across = 1.0 - smoothstep(0.022, 0.022 + fwidth(vLane.x), abs(vLane.x));
   float dash = smoothstep(0.5 - fwl, 0.5 + fwl, abs(fract(vLane.y / 0.5) - 0.5) * 2.0);
   float lane = across * dash * (1.0 - smoothstep(0.15, 0.4, fwl));
-  diffuseColor.rgb = mix(diffuseColor.rgb, ${glslVec3(lin(C.lane))}, lane * 0.6);
+  // the dashes belong to a freshly drawn street and fade as it ages
+  lane *= 1.0 - smoothstep(${f(CONFIG.roadAgeStart)}, ${f(CONFIG.roadAgeEnd)}, uRoadFront - vReveal);
+  diffuseColor.rgb = mix(diffuseColor.rgb, ${glslVec3(lin(C.lane))}, lane * 0.45);
 }`,
         );
     };
@@ -742,6 +747,10 @@ diffuseColor.rgb = mix(${glslVec3(lin(C.roadNew))}, ${glslVec3(lin(C.roadOld))},
     uRoadFront.value = valueAt(CONFIG.roadFront, t);
     uTileFront.value = valueAt(CONFIG.tileFront, t);
     uBuildFront.value = valueAt(CONFIG.buildFront, t);
+    {
+      const k = Math.min(1, Math.max(0, (t - CONFIG.waterReveal[0]) / (CONFIG.waterReveal[1] - CONFIG.waterReveal[0])));
+      uWater.value = k * k * (3 - 2 * k);
+    }
     const keys = CAMERAS[variant];
     const az = (smoothKeys(keys, t, (k) => k.az) * Math.PI) / 180;
     const el = (smoothKeys(keys, t, (k) => k.el) * Math.PI) / 180;

@@ -73,7 +73,7 @@ element that can change most visibly while the design stays the same.
 | -------------------------------------- | --------------- |
 | Colours (surface albedos)              | `src/config.ts` -> `CONFIG.colors` |
 | Counts and sizes (island radius, street spacing and widths, core cluster, landmark towers `heroTowers`, tower chance and heights, parks, elevated-road paths, pillars) | `src/config.ts` -> `CONFIG` |
-| Timings (street front, tile front, building front, ghost lead, rise time, elevated roads) | `src/config.ts` -> `roadFront`, `tileFront`, `buildFront`, `ghostLead`, `riseTime`, `highwayStart`, `highwaySpeed` |
+| Timings (street front, tile front, building front, ghost lead, rise time, elevated roads) | `src/config.ts` -> `roadFront`, `tileFront`, `buildFront`, `ghostLead`, `riseTime`, `coreBirth`, `waterReveal`, `highwayStart`, `highwaySpeed` |
 | Camera moves (both versions) and lens  | `src/config.ts` -> `CAMERAS`, `CAMERA_FOV` |
 | Duration, fps, size                    | `src/config.ts` -> `DURATION_IN_FRAMES`, `FPS`, `WIDTH`, `HEIGHT` |
 | A different city                       | `src/config.ts` -> `CONFIG.seed` |
