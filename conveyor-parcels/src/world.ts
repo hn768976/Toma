@@ -71,11 +71,11 @@ const valueNoise = (size: number, seed: number) => {
 const cardboardTexture = () => {
   const n = valueNoise(64, 11);
   return noiseTexture(512, 512, 12, (x, y, rng) => {
-    const large = n(x / 96, y / 96);
+    const large = n(x / 128, y / 128) * 0.6 + n(x / 37, y / 37) * 0.4;
     const fibre = n(x / 40, y / 3);
     const flute = 0.5 + 0.5 * Math.sin((y / 512) * Math.PI * 2 * 48);
     const fine = rng();
-    return 0.74 + large * 0.12 + fibre * 0.07 + flute * 0.02 + fine * 0.05;
+    return 0.8 + large * 0.09 + fibre * 0.035 + flute * 0.008 + fine * 0.05;
   });
 };
 
@@ -127,6 +127,28 @@ const markTexture = (ink: string) => {
 };
 
 // --------------------------------------------------------------------------- parcels
+/** Alpha texture for the contact shadow: opaque in the middle, feathered to nothing at the edge. */
+let contactTex: THREE.Texture | null = null;
+const contactTexture = () => {
+  if (contactTex) return contactTex;
+  const n = 128;
+  const data = new Uint8Array(n * n * 4);
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      const dx = Math.min(x, n - 1 - x) / (n * 0.12);
+      const dy = Math.min(y, n - 1 - y) / (n * 0.12);
+      const a = Math.min(1, dx) * Math.min(1, dy);
+      const s = a * a * (3 - 2 * a);
+      data.set([255, 255, 255, Math.round(s * 255)], (y * n + x) * 4);
+    }
+  }
+  contactTex = new THREE.DataTexture(data, n, n, THREE.RGBAFormat);
+  contactTex.minFilter = THREE.LinearFilter;
+  contactTex.magFilter = THREE.LinearFilter;
+  contactTex.needsUpdate = true;
+  return contactTex;
+};
+
 /** Raise the top of a centred geometry towards its far (-z) end: a lid that sits slightly proud at the back. */
 const raiseBack = <T extends THREE.BufferGeometry>(geo: T, h: number, d: number, rise: number): T => {
   if (rise === 0) return geo;
@@ -184,7 +206,7 @@ const buildParcel = (spec: ParcelSpec, index: number, pal: Palette, tex: { card:
   cardMap.offset.set(index * 0.37, index * 0.61);
   cardMap.needsUpdate = true;
   const card = new THREE.MeshStandardMaterial({
-    color: col(pal.cardboard),
+    color: col(pal.cardboard).multiplyScalar(spec.tone ?? 1),
     map: cardMap,
     bumpMap: cardMap,
     bumpScale: 0.04,
@@ -205,8 +227,8 @@ const buildParcel = (spec: ParcelSpec, index: number, pal: Palette, tex: { card:
   body.position.y = h / 2 + lift;
 
   // straps: thin dark bands wrapped around the carton
-  const strapMat = new THREE.MeshStandardMaterial({ color: col(pal.strap), roughness: 0.45, metalness: 0, shadowSide: THREE.FrontSide });
-  const sw = 0.11 * P;
+  const strapMat = new THREE.MeshStandardMaterial({ color: col(pal.strap), roughness: 0.32, metalness: 0, shadowSide: THREE.FrontSide });
+  const sw = 0.15 * P;
   const e = 0.012 * P;
   for (const s of spec.straps) {
     const geo =
@@ -251,18 +273,28 @@ const buildParcel = (spec: ParcelSpec, index: number, pal: Palette, tex: { card:
 
   if (spec.flaps) {
     // loose top flaps with a taped, slightly glossy surface - they catch the overhead light first
-    const flapMat = new THREE.MeshStandardMaterial({ color: col(pal.cardboardEdge), roughness: 0.3, metalness: 0 });
+    const flapMat = new THREE.MeshStandardMaterial({ color: col(pal.cardboard), roughness: 0.8, metalness: 0 });
     const rng = mulberry32(900 + index);
     for (const [fx, tilt] of [
       [0.06, 0.16],
       [0.34, -0.14],
     ] as const) {
-      const flap = add(new THREE.Mesh(new THREE.BoxGeometry(w * 0.2, 0.05 * P, d * range(rng, 0.5, 0.62)), flapMat));
-      flap.position.set(fx * w, h + lift + 0.12 * P, range(rng, -0.05, 0.1) * d);
+      const flap = add(new THREE.Mesh(new THREE.BoxGeometry(w * range(rng, 0.06, 0.09), 0.05 * P, 0.6 * P), flapMat));
+      flap.position.set(fx * w, h + lift + 0.2 * P, d * 0.5 - range(rng, 0.5, 0.8) * P);
       flap.rotation.z = tilt;
-      flap.rotation.x = range(rng, -0.12, 0.12);
+      flap.rotation.x = range(rng, 0.42, 0.6); // tipped towards the lens, so the lit side shows
     }
   }
+
+  // soft contact shadow where the carton sits on the rollers
+  const contact = new THREE.Mesh(
+    new THREE.PlaneGeometry(w + 1.0 * P, d + 1.0 * P),
+    new THREE.MeshBasicMaterial({ map: contactTexture(), color: 0x000000, transparent: true, opacity: LIGHTS.contactShadow, depthWrite: false }),
+  );
+  contact.rotation.x = -Math.PI / 2;
+  contact.position.y = 0.03 * P;
+  contact.renderOrder = 1;
+  group.add(contact);
 
   // place: `corner` is the near-left bottom corner of the body, in the camera's ground frame
   const yaw = deg(spec.yawDeg) + BELT_YAW;
@@ -299,8 +331,8 @@ const buildBackdrop = (pal: Palette) => {
   const rows = [
     { x: rc.left - 0.7, phase: 3, w: 0.9, y0: floorY, y1: -0.6 },
     { x: rc.right + 0.7, phase: 19, w: 0.9, y0: floorY, y1: -0.6 },
-    { x: -18.6, phase: 9, w: 1.5, y0: floorY, y1: 60 },
-    { x: 15.2, phase: 21, w: 1.5, y0: floorY, y1: 60 },
+    { x: -18.6, phase: 9, w: 2.4, y0: floorY, y1: 60 },
+    { x: 15.2, phase: 21, w: 2.4, y0: floorY, y1: 60 },
     { x: -35, phase: 25, w: 1.7, y0: floorY, y1: 60 },
     { x: 32, phase: 5, w: 1.7, y0: floorY, y1: 60 },
   ];
@@ -502,7 +534,8 @@ export const makeWorld = (variant: Variant): World => {
     shader.uniforms.uCrestColor = { value: crestColor };
     shader.uniforms.uCrest = { value: new THREE.Vector4(R.crestStart, R.crestEnd, R.streakScale / P, R.baseLift) };
     shader.uniforms.uGlare = { value: new THREE.Vector4(R.glareLeft, R.glareRight, R.glareFrom, R.glareTo) };
-    shader.uniforms.uCrestSide = { value: new THREE.Vector3(R.crestLeft, R.crestFrom, R.crestTo) };
+    shader.uniforms.uCrestSide = { value: new THREE.Vector4(R.crestLeft, R.crestFrom, R.crestTo, R.streakDepth) };
+    shader.uniforms.uNearFade = { value: new THREE.Vector3(R.nearFadeMin, R.nearFadeFrom, R.nearFadeTo) };
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
@@ -510,7 +543,8 @@ export const makeWorld = (variant: Variant): World => {
         uniform vec3 uCrestColor;
         uniform vec4 uCrest;
         uniform vec4 uGlare;
-        uniform vec3 uCrestSide;
+        uniform vec4 uCrestSide;
+        uniform vec3 uNearFade;
         float rollerHash(float n) {
           uint u = uint(int(n) + 1000000);
           u ^= u >> 16; u *= 0x7feb352dU; u ^= u >> 15; u *= 0x846ca68bU; u ^= u >> 16;
@@ -530,21 +564,22 @@ export const makeWorld = (variant: Variant): World => {
           vec3 wn = inverseTransformDirection(normal, viewMatrix);
           float crest = smoothstep(uCrest.x, uCrest.y, wn.y);
           float side = -vViewPosition.x / max(vViewPosition.z, 1e-3);
-          float lateral = mix(uGlare.x, uGlare.y, smoothstep(uGlare.z, uGlare.w, side));
+          float nearFade = mix(uNearFade.x, 1.0, smoothstep(uNearFade.y, uNearFade.z, vViewPosition.z));
+          float lateral = mix(uGlare.x, uGlare.y, smoothstep(uGlare.z, uGlare.w, side)) * nearFade;
           reflectedLight.directSpecular *= lateral;
-          reflectedLight.directDiffuse *= mix(1.0, lateral, 0.5);
+          reflectedLight.directDiffuse *= min(lateral, 1.0);
           // worn streaks: the highlight breaks up along each roller, differently on every roller
           float seed = floor(vColor.r * 4096.0);
           float xs = -vViewPosition.x * uCrest.z;
           float streak = rollerNoise(xs + seed * 13.0) * 0.65 + rollerNoise(xs * 3.1 + seed * 29.0) * 0.35;
           streak = smoothstep(0.3, 0.72, streak);
           float crestSide = mix(uCrestSide.x, 1.0, smoothstep(uCrestSide.y, uCrestSide.z, side));
-          totalEmissiveRadiance += uCrestColor * crest * crest * (0.25 + 0.75 * streak) * crestSide;
+          totalEmissiveRadiance += uCrestColor * crest * crest * mix(1.0, streak, uCrestSide.w) * crestSide * nearFade;
           totalEmissiveRadiance += diffuseColor.rgb * uCrest.w;
         }`,
       );
   };
-  rollerMat.customProgramCacheKey = () => "roller-v2";
+  rollerMat.customProgramCacheKey = () => "roller-v4";
   const rollers = new THREE.InstancedMesh(rollerGeo, rollerMat, rc.count);
   rollers.receiveShadow = true;
   rollers.frustumCulled = false;
@@ -625,8 +660,12 @@ export const makeWorld = (variant: Variant): World => {
   }
   root.add(key, key.target);
 
+  const top = new THREE.DirectionalLight(col(pal.skyFill), LIGHTS.top.intensity);
+  top.position.set(0, 1, 0);
+  root.add(top);
+
   const bounce = new THREE.DirectionalLight(col(pal.bounce), 0);
-  bounce.position.set(0.3, -0.2, 1); // from the camera side, slightly below
+  bounce.position.set(0.75, -0.1, 0.65); // from the camera's right, slightly below: fills the faces turned to the lens
   root.add(bounce);
 
   // --- gobo: invisible slabs high above the belt cast the dark gaps between lit zones
@@ -697,7 +736,7 @@ export const makeWorld = (variant: Variant): World => {
         const b = Math.min(lead + zone.length, probeFar);
         lit += Math.max(0, b - a);
       }
-      bounce.intensity = LIGHTS.bounce.intensity * Math.min(1, lit / (probeFar - probeNear));
+      bounce.intensity = LIGHTS.bounce.base + LIGHTS.bounce.intensity * Math.min(1, lit / (probeFar - probeNear));
       // far strip: v = (distance - lead) / period
       bandTex.offset.y = (farStart - zone.leadAtFrame0 + travel) / PERIOD;
 

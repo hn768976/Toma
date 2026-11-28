@@ -13,43 +13,53 @@ export const LIGHTS = {
   key: {
     intensity: 12,
     /** Degrees above the horizon. Low: the parcels throw long shadows towards the lens. */
-    elevationDeg: 40,
+    elevationDeg: 52,
     /** Sideways lean of the beam (negative = from behind-right). Sets where the glare sits on the rollers. */
     sideways: -0.24,
-    shadowRadius: 7,
+    shadowRadius: 10,
     shadowMapSize: 4096,
   },
   /** Soft ambient: sky colour from above, ground colour from below. */
-  hemisphere: { intensity: 0.22 },
+  hemisphere: { intensity: 0.7 },
+  /** Opacity of the soft dark patch under each parcel. */
+  contactShadow: 0.96,
   /** Image-based light from the procedural warehouse environment. */
-  environment: { intensity: 0.3, panelBrightness: 9, wallBrightness: 0.5, ceilingBrightness: 0.3, farGlowBrightness: 14, farGlowHeight: 3.2 },
+  environment: { intensity: 0.18, panelBrightness: 9, wallBrightness: 0.5, ceilingBrightness: 0.3, farGlowBrightness: 14, farGlowHeight: 3.2 },
   /** Warm bounce onto the faces turned to the camera while the zone is near. */
-  bounce: { intensity: 0.12 },
+  bounce: { base: 0.22, intensity: 0.3 },
+  /** Weak shadowless light from straight above: keeps the tops of the cartons readable between light zones. */
+  top: { intensity: 1.3 },
   /** Roller surface (see the shader additions in world.ts). */
   rollers: {
     roughness: 0.5,
     specular: 1,
     /** Highlight on the crest of each roller: brightness, and the range of upward tilt it fades in over (0-1). */
-    crestBrightness: 0.55,
-    crestStart: 0.9,
+    crestBrightness: 1.1,
+    crestStart: 0.93,
     crestEnd: 1.0,
     /** The crest highlight is weaker on the left of the frame: weight there, and the range it ramps over. */
-    crestLeft: 0.12,
-    crestFrom: -0.16,
-    crestTo: 0.1,
+    crestLeft: 0.2,
+    crestFrom: 0.03,
+    crestTo: 0.17,
     /** Streaks per roller pitch along each roller, and a flat ambient lift of the roller colour. */
     streakScale: 0.7,
-    baseLift: 0.42,
+    /** How much the streaks break the highlight up (0 = continuous line, 1 = fully broken). */
+    streakDepth: 0.4,
+    baseLift: 0.5,
+    /** The highlights fade towards the lens: weight at nearFadeFrom metres rising to 1 at nearFadeTo. */
+    nearFadeMin: 0.9,
+    nearFadeFrom: 0.85,
+    nearFadeTo: 1.5,
     /** Key-light glare weight at the left / right of the frame, and the range (x / distance) it ramps over. */
-    glareLeft: 0.12,
-    glareRight: 1.5,
-    glareFrom: -0.04,
-    glareTo: 0.17,
+    glareLeft: 0.06,
+    glareRight: 0.5,
+    glareFrom: 0.04,
+    glareTo: 0.19,
   },
   /** Brightness of the flat far strip of the belt relative to the roller colour. */
   farBelt: { brightness: 0.5 },
   /** Brightness of the unlit, out-of-focus warehouse behind the parcels. */
-  backdrop: { brightness: 0.26 },
+  backdrop: { brightness: 0.92 },
 };
 
 export const LOOK: Look = {
@@ -57,36 +67,36 @@ export const LOOK: Look = {
   toneMap: "aces",
   whiteBalance: [1, 1, 1],
   fog: {
-    color: [0.06, 0.045, 0.043],
-    sunColor: [0.06, 0.045, 0.043],
+    color: [0.082, 0.058, 0.053],
+    sunColor: [0.082, 0.058, 0.053],
     sunDir: [0, 1, 0],
     sunPower: 8,
-    density: 0.03,
+    density: 0.05,
     heightFalloff: 0,
     baseHeight: 0,
-    maxOpacity: 0.7,
+    maxOpacity: 0.6,
   },
   dof: {
     enabled: true,
     /** metres along the lens axis: the hero parcel */
     focus: 1.5,
-    cocInfinity: 0.075,
-    maxCoc: 0.08,
-    nearScale: 0.8,
+    cocInfinity: 0.11,
+    maxCoc: 0.12,
+    nearScale: 0.65,
   },
-  bloom: { threshold: 0.85, knee: 0.5, strength: 0.35, tilt: 0.2 },
+  bloom: { threshold: 0.9, knee: 0.6, strength: 0.3, tilt: 0.45 },
   grade: {
-    blackLevel: 0.05,
+    blackLevel: 0.0,
     whiteLevel: 1,
-    contrast: 1,
-    pivot: 0.4,
-    saturation: 1,
+    contrast: 1.1,
+    pivot: 0.3,
+    saturation: 0.72,
     gamma: [1, 1, 1],
-    shadowTint: [0, 0, 0],
-    highlightTint: [0, 0, 0],
+    shadowTint: [0.0, 0.002, 0.012],
+    highlightTint: [0.014, 0.004, -0.014],
   },
-  lens: { vignette: 0.15, vignetteStart: 0.35, chromaticAberration: 0.0012, softness: 0.0012 },
-  grain: { amount: 0.002, size: 1.6, chroma: 0.25 },
+  lens: { vignette: 0, vignetteStart: 0.35, chromaticAberration: 0.0012, softness: 0.0018 },
+  grain: { amount: 0.002, size: 2.4, chroma: 0.08 },
   dither: true,
 };
 

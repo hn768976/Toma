@@ -45,28 +45,28 @@ export interface Palette {
 export const PALETTES: Record<Variant, Palette> = {
   // Version 1: the reference's warm tungsten / kraft-brown look.
   v1: {
-    cardboard: "#886c4c",
-    cardboardEdge: "#b09672",
-    strap: "#0b1419",
+    cardboard: "#7f735f",
+    cardboardEdge: "#a79b82",
+    strap: "#141d22",
     label: "#8f857c",
     mark: "#1a1612",
-    roller: "#4f4741",
+    roller: "#58493f",
     rollerGap: "#1b1613",
     rail: "#b8aea4",
     floor: "#2a211d",
     backdrop: "#4d3d3a",
-    rackPost: "#2b2320",
+    rackPost: "#1c1614",
     rackBeam: "#6b5a3c",
-    rackGoods: ["#5b4a52", "#514a5c", "#6a5045", "#7a5e4d", "#48414f", "#5d4b40", "#54433d"],
+    rackGoods: ["#5b4a4c", "#56504f", "#6a5045", "#7a5e4d", "#4e4648", "#5d4b40", "#54433d", "#5a5350"],
     bokeh: [
-      { color: "#ff9a62", intensity: 9 },
-      { color: "#ffb27a", intensity: 6 },
-      { color: "#ffd9a8", intensity: 5 },
-      { color: "#e8785a", intensity: 7 },
+      { color: "#ff9a62", intensity: 3.6 },
+      { color: "#ffb27a", intensity: 2.6 },
+      { color: "#ffd9a8", intensity: 2.2 },
+      { color: "#e8785a", intensity: 3 },
     ],
-    keyLight: "#fff3e0",
+    keyLight: "#ffeed9",
     skyFill: "#d9b596",
-    groundFill: "#2a1f1b",
+    groundFill: "#0c0908",
     bounce: "#ffdcb0",
     envCeiling: "#ffe2b8",
     envWalls: "#6b5c52",
@@ -144,8 +144,8 @@ export const CONFIG = {
    */
   parcels: [
     { id: "hero", size: [5.07, 1.55, 6.23], topRise: 0.24, corner: [-0.17, 26.5], yawDeg: 35.3, straps: [0.31, 0.775], strapAxis: "depth", rim: true, label: false, flaps: false, mark: true },
-    { id: "mid", size: [8.7, 2.48, 5.5], corner: [-4.5, 42], yawDeg: 1.5, straps: [0.37, 0.77], strapAxis: "width", rim: false, label: false, flaps: false, mark: false },
-    { id: "far", size: [8, 5.1, 7], corner: [-4.26, 58], yawDeg: -2, straps: [], strapAxis: "width", rim: false, label: true, flaps: true, mark: false },
+    { id: "mid", tone: 1.35, size: [8.7, 2.48, 5.5], corner: [-4.5, 42], yawDeg: 1.5, straps: [0.37, 0.77], strapAxis: "width", rim: false, label: false, flaps: false, mark: false },
+    { id: "far", tone: 0.85, size: [8, 5.1, 7], corner: [-4.26, 58], yawDeg: -2, straps: [], strapAxis: "width", rim: false, label: true, flaps: false, mark: false },
     { id: "sideR", size: [6.2, 2.3, 6], corner: [4.4, 57.5], yawDeg: -4, straps: [], strapAxis: "width", rim: false, label: false, flaps: false, mark: false },
     { id: "sideL", size: [8.5, 2.1, 6], corner: [-14.6, 61], yawDeg: 5, straps: [0.6], strapAxis: "width", rim: false, label: false, flaps: false, mark: false },
     { id: "last", size: [6.6, 7.6, 6], corner: [-3.2, 74], yawDeg: 3, straps: [], strapAxis: "width", rim: false, label: false, flaps: false, mark: false },
@@ -170,6 +170,8 @@ export const CONFIG = {
 export interface ParcelSpec {
   id: string;
   size: [number, number, number];
+  /** Brightness multiplier for this parcel's board (haze makes the middle row read lighter). */
+  tone?: number;
   /** How much higher the lid sits at the back than at the front, in pitches. */
   topRise?: number;
   corner: [number, number];
