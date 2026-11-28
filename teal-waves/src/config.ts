@@ -87,7 +87,7 @@ const layer = (scale: number, stretch: number, amp: number, evolve: number, rota
 
 export const WAVES = {
   /** Overall size of the wave field (scales every wavelength and height). */
-  size: 1.45,
+  size: 1.28,
   /** Multiplies every layer's morph rate (1 = as listed below). */
   tempo: 1.3,
   /** Whole pattern drifts this way, world units per second (x = screen right, z = towards camera). */
@@ -95,9 +95,9 @@ export const WAVES = {
   /** Large, slow domain warp: bends everything so crests meander. */
   warp: { scale: 0.3, amount: 0.55, evolve: 0.06, offsetA: offset(), offsetB: offset() },
   /** Small, faster warp applied to the filament layers only (curls and kinks). */
-  curl: { scale: 1.5, amount: 0.11, evolve: 0.16, offsetA: offset(), offsetB: offset() },
+  curl: { scale: 1.5, amount: 0.17, evolve: 0.16, offsetA: offset(), offsetB: offset() },
   /** Fine warp on the filaments: breaks long ribbons into short, wiry crinkles. */
-  crinkle: { scale: 5.5, amount: 0.018, evolve: 0.3, offsetA: offset(), offsetB: offset() },
+  crinkle: { scale: 5.5, amount: 0.035, evolve: 0.3, offsetA: offset(), offsetB: offset() },
   /** Broad swells, then rounder chop that gives crests, kinks and dark faces. */
   swells: [
     layer(0.2, 0.8, 0.09, 0.07, 0),
@@ -108,8 +108,8 @@ export const WAVES = {
   ],
   /** Filaments: fine, stretched ripples that catch the rim light as wiry strands. */
   filaments: [
-    layer(4.4, 0.4, 0.02, 0.26, 22),
-    layer(9.0, 0.22, 0.0115, 0.32, -27),
-    layer(17.0, 0.2, 0.004, 0.4, 12),
+    layer(4.4, 0.4, 0.021, 0.26, 20),
+    layer(9.0, 0.34, 0.0115, 0.32, -24),
+    layer(17.0, 0.3, 0.0046, 0.4, 12),
   ],
 } as const;

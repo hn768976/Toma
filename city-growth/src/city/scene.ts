@@ -116,7 +116,7 @@ float bAlpha = 1.0;
       col *= 1.0 - ${f(LOOK.windowLineStrength)} * (bands * 0.9 + mull * 0.45);
     } else {
       float rv = fract(vSeed * 7.31);
-      col = ${glslVec3(lin(C.roof))} * mix(0.42 + 0.58 * rv * rv, 0.92 + 0.08 * rv, step(0.28, vCol.g));
+      col = ${glslVec3(lin(C.roof))} * mix(0.42 + 0.58 * rv * rv, 0.92 + 0.08 * rv, step(0.5, vCol.g));
       float parapet = smoothstep(0.05, 0.08, edgeD) * (1.0 - smoothstep(0.11, 0.14, edgeD));
       float panel = max(gridLine(vLocal.x * vDim.x / 0.34 + vSeed * 3.0, 0.1), gridLine(vLocal.z * vDim.z / 0.34 + vSeed * 5.0, 0.1));
       panel *= smoothstep(0.1, 0.16, edgeD);

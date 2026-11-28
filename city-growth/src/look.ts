@@ -7,7 +7,7 @@ export const LOOK = {
   toneMapping: "ACES" as "ACES" | "AgX",
   exposure: 1.0,
   contrast: 1.0, // pivoted around mid grey, applied after tone mapping
-  saturation: 1.0,
+  saturation: 1.1,
   lift: [0.06, 0.19, 0.25] as [number, number, number], // added in display space
   gain: [1.08, 1.08, 1.08] as [number, number, number], // multiplied in display space
 

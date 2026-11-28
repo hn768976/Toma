@@ -101,14 +101,17 @@ to the same frame inside a full render.
 
 1. **Height** – wave height for every texel of a screen-aligned "projected
    grid" (simplex noise layers: broad swells, chop, stretched filaments, three
-   domain warps).
-2. **Shade** – per texel: fresnel rim light (the surface is a dark mirror lit
-   edge-on from the far end), dimmed in the near field. Includes analytic
-   specular anti-aliasing so hairline crests don't bead.
-3. **Surface** – the displaced mesh (4× MSAA), sampling the shading along each
-   pixel's footprint. Outputs light + distance.
+   domain warps; fine layers fade out where they would be only a few texels
+   wide).
+2. **Shade** – per grid cell: fresnel rim light (the surface is a dark mirror
+   lit edge-on from the far end), dimmed in the near field, with analytic
+   specular anti-aliasing for hairline crests; plus a 4-row pre-averaged copy
+   for long footprints.
+3. **Surface** – the displaced mesh (4× MSAA). Each pixel averages the shading
+   over the cells it covers along the view direction, so crests seen edge-on
+   stay continuous. Outputs light + distance.
 4. **Anti-alias / depth of field** – small gaussian for the in-focus picture;
-   two-pass disc gather at half resolution for the blurred picture.
+   three-pass disc gather at half resolution for the blurred picture.
 5. **Glow** – quarter-resolution gaussian.
 6. **Final** – blend by circle of confusion, exposure, filmic shoulder, palette
    ramp, grain and ±1/255 dither (both fade to nothing on pure black).
@@ -124,8 +127,9 @@ python3 scripts/measure-look.py REF.png MINE.png --mask 285,170,480,260 --side-b
 ```
 
 `scripts/ld.sh` renders the three `LookDev` moments and compares each with the
-matching reference frame (`REF=<folder with f0.png f563.png f844.png>`; the
-reference clip itself is not part of this project). `lookdev/` holds the last
+matching reference frame (`REF=<folder with f0.png f563.png f844.png>`);
+`scripts/match.sh` does the same for frames 0, 563 and 1125 of a composition.
+The reference clip itself is not part of this project. `lookdev/` holds the last
 comparison images and numbers.
 
 ## Render time

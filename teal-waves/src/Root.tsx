@@ -1,4 +1,4 @@
-import { Composition, Still } from "remotion";
+import { Composition } from "remotion";
 import { DURATION_IN_FRAMES, FPS, HEIGHT, MOMENTS, Moment, WIDTH } from "./config";
 import { Waves, WavesProps } from "./Waves";
 
@@ -29,9 +29,11 @@ export const RemotionRoot: React.FC = () => (
       height={HEIGHT}
       defaultProps={{ palette: "ember" } satisfies WavesProps}
     />
-    <Still
+    <Composition
       id="LookDev"
       component={LookDev}
+      durationInFrames={1}
+      fps={FPS}
       width={WIDTH}
       height={HEIGHT}
       defaultProps={{ moment: "middle", palette: "teal" } satisfies LookDevProps}

@@ -170,24 +170,23 @@ float rimMean(float lo,float hi,float p){
   return (pow(1.0-lo,p+1.0)-pow(1.0-hi,p+1.0))/((p+1.0)*(hi-lo));
 }
 void main(){
+  // Each texel shades the cell between its row and the next one up, so a
+  // bright crest cell never bleeds down the (magnified) wave face below it.
   vec3 P=surf(vUv);
   vec3 Prt=surf(vUv+vec2(uTexel.x,0.0));
   vec3 Plt=surf(vUv-vec2(uTexel.x,0.0));
   vec3 Pup=surf(vUv+vec2(0.0,uTexel.y));
-  vec3 Pdn=surf(vUv-vec2(0.0,uTexel.y));
-  vec3 dV=Pup-Pdn;
   vec3 V=normalize(uCamPos-P);
   // Specular anti-aliasing: on a sharp crest the rim highlight is thinner than
-  // a texel, so instead of one normal use the four half-texel normals around
-  // the texel and average the rim term over the range they span.
+  // a cell, so average the rim term over the range spanned by the cell's two
+  // half-width normals instead of using one normal.
   vec3 n0=normalize(cross(Prt-P,Pup-P));
   vec3 n1=normalize(cross(P-Plt,Pup-P));
-  vec3 n2=normalize(cross(Prt-P,P-Pdn));
-  vec3 n3=normalize(cross(P-Plt,P-Pdn));
-  vec4 f=vec4(dot(n0,V)*sign(n0.y),dot(n1,V)*sign(n1.y),dot(n2,V)*sign(n2.y),dot(n3,V)*sign(n3.y));
-  float lo=min(min(f.x,f.y),min(f.z,f.w));
-  float hi=max(max(f.x,f.y),max(f.z,f.w));
-  // Fraction of the texel that faces the camera (hidden back slopes excluded).
+  float f0=dot(n0,V)*sign(n0.y);
+  float f1=dot(n1,V)*sign(n1.y);
+  float lo=min(f0,f1);
+  float hi=max(f0,f1);
+  // Fraction of the cell that faces the camera (hidden back slopes excluded).
   float facing=hi<=0.0?0.0:clamp((hi-max(lo,0.0))/max(hi-lo,1e-5),0.0,1.0);
   if(hi-lo<1e-5)facing=step(0.0,hi);
   float rim=rimMean(max(lo,0.0),max(hi,0.0),uFresnelPower);
@@ -198,9 +197,9 @@ void main(){
   // g = camera-facing fraction (hidden back slopes are skipped when the
   // surface pass averages a pixel's footprint); b = how many output pixels
   // one texel covers along v, which shrinks towards 0 on edge-on crests.
-  vec4 c0=uViewProj*vec4(P-dV*0.5,1.0);
-  vec4 c1=uViewProj*vec4(P+dV*0.5,1.0);
-  float pixelsPerTexel=(c1.y/c1.w-c0.y/c0.w)*0.25*uBufferHeight;
+  vec4 c0=uViewProj*vec4(P,1.0);
+  vec4 c1=uViewProj*vec4(Pup,1.0);
+  float pixelsPerTexel=(c1.y/c1.w-c0.y/c0.w)*0.5*uBufferHeight;
   outColor=vec4(light,facing,pixelsPerTexel,1.0);
 }`;
 
@@ -238,8 +237,10 @@ uniform vec2 uTexel;
 const int MAXN=FOOTPRINT_TAPS;
 const float REACH=float(MAXN)*4.0;
 void main(){
-  // Texels squeezed into this pixel along v (the view direction).
-  float ppt=texture(tShade,vUv).b;
+  // Snap to the shading cell this fragment lies in (no blending between rows).
+  vec2 cell=vec2(vUv.x,(floor(vUv.y/uTexel.y-0.5)+0.5)*uTexel.y);
+  // Cells squeezed into this pixel along v (the view direction).
+  float ppt=texture(tShade,cell).b;
   float extent=clamp(1.0/max(ppt,1.0/REACH),1.0,REACH);
   float centre=0.0;
   // A mesh quad that straddles a crest has one triangle facing away. On the
@@ -256,7 +257,7 @@ void main(){
     n=ceil(extent);
     for(int i=0;i<MAXN;i++){
       if(float(i)>=n)break;
-      vec2 t=texture(tShade,vUv+vec2(0.0,(float(i)+0.5-0.5*n+centre)*uTexel.y)).rg;
+      vec2 t=texture(tShade,cell+vec2(0.0,(float(i)-floor(0.5*n)+centre)*uTexel.y)).rg;
       acc+=vec2(t.r*t.g,t.g);
       all+=t.r;
     }

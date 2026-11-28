@@ -138,14 +138,14 @@ export const CONFIG = {
   colors: {
     land: "#bebebe",
     tile: "#f3f3f3",
-    tileMature: "#7ea896", // ground tiles once the buildings have arrived,
+    tileMature: "#5f9a8a", // ground tiles once the buildings have arrived,
     tileEdge: "#7a7a7a",
     roadNew: "#8a7d76", // a street right after it is drawn ...
     roadOld: "#3a3130", // ... and once the city has grown around it
-    pad: "#b4b3b5",
+    pad: "#9a999b",
     park: "#74b08a",
     wallsLow: ["#a39b9a", "#b3abaa", "#938b8a", "#bdb5b3"], // low-rise walls
-    wallsTower: ["#c4bbb9", "#d0c7c5", "#b3aaa9", "#d8d0ce"], // concrete towers
+    wallsTower: ["#c4bbb9", "#d0c7c5", "#c9c0be", "#d8d0ce"], // concrete towers
     roof: "#efe8e5",
     glassLow: "#12303d",
     glassHigh: "#2a5568",

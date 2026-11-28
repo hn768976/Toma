@@ -1,0 +1,2 @@
+V1-teal-waves frame 563: in-sequence render sha256 66eefa0c7074e8fe | cold-start still sha256 66eefa0c7074e8fe | files identical: True | max pixel diff 0 | pure-black pixels 28.0%
+V2-teal-waves frame 563: in-sequence render sha256 f4850bed9d181aea | cold-start still sha256 f4850bed9d181aea | files identical: True | max pixel diff 0 | pure-black pixels 28.0%

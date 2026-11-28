@@ -23,8 +23,8 @@ export const PALETTES = {
       { at: 0.03, color: "#02050a" },
       { at: 0.1, color: "#091e25" },
       { at: 0.32, color: "#235f6b" },
-      { at: 0.62, color: "#5fabbf" },
-      { at: 0.8, color: "#9cd2e2" },
+      { at: 0.62, color: "#4fa3b8" },
+      { at: 0.8, color: "#86c9da" },
       { at: 1.0, color: "#d3eef5" },
     ],
   },
@@ -46,21 +46,21 @@ export type PaletteName = keyof typeof PALETTES;
 
 export const LOOK = {
   /** 1. Exposure and tone mapping. */
-  exposure: 7.4,
+  exposure: 11.5,
   /** Filmic shoulder: displayed = 1 - exp(-exposure * light). */
   blackPoint: 0.02,
 
   /** 2. Light. The surface is a dark mirror lit edge-on (fresnel rim light). */
   light: {
     /** Higher = thinner, harder rim lines; lower = broader, softer sheen. */
-    fresnelPower: 9.0,
+    fresnelPower: 9.5,
     /** Light arrives from the far end: the near field is dimmed by this factor... */
-    nearLevel: 0.34,
+    nearLevel: 0.19,
     /** ...between these distances from the camera. */
     falloffStart: 2.3,
     falloffEnd: 7.0,
     /** ...and eases off again in the far distance, so the horizon band keeps colour and detail. */
-    farLevel: 0.8,
+    farLevel: 0.75,
     farStart: 8.0,
     farEnd: 22.0,
   },
@@ -73,10 +73,10 @@ export const LOOK = {
     focusDistance: 4.8,
     /** Blur radius (fraction of frame height) per unit of |1 - focus/dist|. */
     nearBlur: 0.028,
-    farBlur: 0.032,
+    farBlur: 0.028,
     maxBlur: 0.045,
     /** Gaussian sigma of the in-focus anti-aliasing blur (about 1.2 px at 1080p). */
-    minBlur: 0.0015,
+    minBlur: 0.0013,
     /** The half-resolution blurred picture fades in between these blur sizes. */
     blendStart: 0.002,
     blendEnd: 0.006,

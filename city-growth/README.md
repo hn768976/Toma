@@ -57,10 +57,11 @@ browser as usual.
 `CAMERAS.v2` in `src/config.ts` is the single difference.
 
 - Version 1 follows the reference: a three-quarter view that starts over the first street,
-  drifts sideways while it tilts down and pulls back, eases to a stop at 11.5 s and holds.
-- Version 2 starts as a straight-down plan view (the streets spread like a map), then cranes
-  down and orbits the opposite way into a low view across the skyline, and is still moving on
-  the last frame.
+  tilts down, then keeps drifting sideways and pulling back until it eases to a stop at 11.5 s
+  and holds.
+- Version 2 starts high and steep on the opposite side of the city (close to a plan view, the
+  streets spread like a map), then cranes down and orbits the other way round into a low view
+  across the skyline, and is still moving on the last frame.
 
 The camera was chosen because the reference is defined by its restrained cyan palette (a new
 palette would fight the look that was matched) and its framing changes little, so the move is the
@@ -71,12 +72,12 @@ element that can change most visibly while the design stays the same.
 | What                                   | File            |
 | -------------------------------------- | --------------- |
 | Colours (surface albedos)              | `src/config.ts` -> `CONFIG.colors` |
-| Counts and sizes (island radius, street spacing and widths, tower chance and heights, parks, pillars) | `src/config.ts` -> `CONFIG` |
+| Counts and sizes (island radius, street spacing and widths, core cluster, landmark towers `heroTowers`, tower chance and heights, parks, elevated-road paths, pillars) | `src/config.ts` -> `CONFIG` |
 | Timings (street front, tile front, building front, ghost lead, rise time, elevated roads) | `src/config.ts` -> `roadFront`, `tileFront`, `buildFront`, `ghostLead`, `riseTime`, `highwayStart`, `highwaySpeed` |
 | Camera moves (both versions) and lens  | `src/config.ts` -> `CAMERAS`, `CAMERA_FOV` |
 | Duration, fps, size                    | `src/config.ts` -> `DURATION_IN_FRAMES`, `FPS`, `WIDTH`, `HEIGHT` |
 | A different city                       | `src/config.ts` -> `CONFIG.seed` |
-| Exposure, tone mapping, lift/gain, sun and sky light, shadows, fog, bloom, glass glow, tile size, grain, vignette, softness | `src/look.ts` |
+| Exposure, tone mapping, lift/gain, saturation, sun and sky light, shadows, fog, bloom, glass glow / highlights / transparency, tile size, grain, vignette, softness | `src/look.ts` |
 
 Surface colours are deliberately near neutral: the cyan cast of the picture comes from the
 light and the grade in `src/look.ts`.
@@ -85,13 +86,14 @@ light and the grade in `src/look.ts`.
 
 - `src/city/layout.ts` builds the city once at module scope (seeded `mulberry32`): coast, bent
   street grid, street distances from the centre, blocks, buildings, elevated roads, pillars.
-- `src/city/scene.ts` turns that into a three.js scene: one instanced mesh for every box
-  (buildings, podiums, roof details, pillars), one for the construction-line ghosts, and
+- `src/city/scene.ts` turns that into a three.js scene: one instanced mesh for every opaque box
+  (buildings, podiums, roof details, pillars), one alpha-blended instanced mesh for the
+  translucent glass towers, one for the construction-line ghosts, and
   shader-driven draw-on for the streets, tiles and elevated roads. `update(t)` sets a handful of
   uniforms and the camera for time `t`; nothing keeps its own clock.
 - `src/render/post.ts` renders the scene into a half-float 4x MSAA target, builds a small bloom
   pyramid, and the final full-screen pass applies softness, chromatic aberration, bloom, the
-  tinted vignette, ACES tone mapping, sRGB, lift/gain, grain and a 1/255 dither.
+  tinted vignette, ACES tone mapping, sRGB, lift/gain, grain and a fixed-pattern 1/255 dither.
 - `src/CityGrowth.tsx` does all of that in a `useLayoutEffect` keyed on `useCurrentFrame()`.
   There is no `useFrame`, `requestAnimationFrame`, `Math.random()` or `Date.now()`, so any frame
   rendered on its own is identical to the same frame in a full render.
@@ -102,6 +104,8 @@ light and the grade in `src/look.ts`.
   grain, detail and vignette of a frame, or compares two frames.
 - `scripts/lookdev.sh <dir with reference frames f45.png f112.png f337.png>` renders the three
   LookDev stills and writes `lookdev/compare-<moment>.png` and `lookdev/measure-<moment>.json`.
+- `scripts/check-stills.sh [reference frame dir]` renders frames 45, 225 and 449 of both versions.
+- `scripts/scan-frames.py VIDEO` scans every frame for black, frozen or flickering frames.
 
 ## Render time
 
