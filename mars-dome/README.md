@@ -60,16 +60,16 @@ __RENDER_TIME__
 ## What Version 2 changes, and why
 
 Version 2 changes **only the camera movement**. Version 1 holds one position and drifts by a few
-tens of centimetres, as the reference does. Version 2 starts 30 degrees further round the
-tower to the left, swings 28 degrees towards the Version 1 position while pushing in 12 m and
-rising 3 m, and swings back. Mars's colour
-is the subject of the shot, so the palette is the wrong thing to change; a larger move instead
-shows off the parallax between the glass, the ribs, the buildings and the cliffs. The move is
-built from whole cycles of the loop, so it also closes seamlessly.
+tens of centimetres, as the reference does. Version 2 starts on exactly the same frame (its first
+frame is pixel-identical to Version 1's), then swings 30 degrees round the tower to the left while
+pushing in 12 m and rising 3 m, and swings back. Mars's colour is the subject of the shot, so the
+palette is the wrong thing to change; a larger move instead shows off the parallax between the
+glass, the ribs, the buildings and the cliffs. The move eases with one whole cycle of the loop, so
+it also closes seamlessly.
 
-One prop follows from that: the slim out-of-focus pole in front of the lens belongs to Version 1's
-fixed camera position, so it is left out of Version 2, where the travelling camera would flick
-past it in a few frames.
+Two things follow from the move and nothing else: the out-of-focus pole in front of the lens slides
+out of frame as the camera leaves it, and the broad sky reflection in the near glass fades with it
+(`hotspotFade`).
 
 Everything else (scene, light, haze, look) is shared. The two moves are `CONFIG.sway` and
 `CONFIG.orbit` in `src/config.ts`.

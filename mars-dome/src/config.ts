@@ -68,19 +68,19 @@ export const CONFIG = {
   },
   /**
    * Version 2 camera: a slow orbital sweep around the tower with a push-in over the dome.
-   * The camera starts 30 degrees to the left of the Version 1 position, swings round to 2 degrees
-   * left of it while pushing in and rising, and swings back. All terms are whole cycles of the
+   * The camera starts exactly on the Version 1 frame, swings `sweepDeg` degrees around the tower
+   * while pushing in and rising, and swings back. Everything eases with one whole cycle of the
    * loop, so the last frame flows into the first.
    */
   orbit: {
-    /** Middle of the sweep, degrees around the tower from the Version 1 position (negative = to the left). */
-    centreDeg: -16,
-    /** Half-width of the sweep in degrees. */
-    sweepDeg: 14,
+    /** How far round the tower the camera has swung by the middle of the loop, degrees (negative = to the left). */
+    sweepDeg: -30,
     /** How far the camera pushes in at the middle of the loop, metres. */
     pushIn: 12,
     /** How far it rises at the middle of the loop, metres. */
     rise: 3,
+    /** How much of the broad sky reflection in the glass fades away by the middle of the loop (0-1). */
+    hotspotFade: 0.75,
   },
   dome: {
     plazaRadius: 41,

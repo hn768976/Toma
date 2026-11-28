@@ -842,8 +842,8 @@ export const makeWorld = (variant: Variant): World => {
   const target = new THREE.Vector3(basePos.x, basePos.y - Math.tan(pitch) * basePos.z, 0);
   const baseDist = basePos.distanceTo(target);
 
-  // --- a slim pole just in front of the lens (Version 1 only: a locked-off prop of that camera position)
-  if (variant === "v1") {
+  // --- a slim pole just in front of the lens at the base camera position (Version 2's orbit swings away from it)
+  {
     const frame = new THREE.Object3D();
     frame.position.copy(basePos);
     frame.rotation.set(-pitch, 0, 0);
@@ -938,8 +938,8 @@ export const makeWorld = (variant: Variant): World => {
       } else {
         // orbital sweep with a push-in: whole cycles only
         const o = CONFIG.orbit;
-        const az = deg(o.centreDeg) - deg(o.sweepDeg) * Math.cos(TAU * t);
         const ease = Math.sin(Math.PI * t) ** 2;
+        const az = deg(o.sweepDeg) * ease;
         pos.copy(basePos).applyAxisAngle(yAxis, az);
         tgt.copy(target).applyAxisAngle(yAxis, az);
         const toTarget = tgt.clone().sub(pos).normalize();
@@ -948,6 +948,8 @@ export const makeWorld = (variant: Variant): World => {
         camera.position.copy(pos);
         camera.lookAt(tgt);
         look.dof.focus = LOOK.dof.focus * (pos.distanceTo(tgt) / baseDist);
+        // the broad sky reflection in the glass belongs to the base camera position: it fades as the camera leaves it
+        glassMat.uniforms.uParams.value.w = LIGHTS.glass.hotspot * (1 - o.hotspotFade * ease);
       }
     },
   };
