@@ -1,0 +1,727 @@
+{
+ "video": "deliverables/02-V2-ai-chip-reveal.mp4",
+ "within": 62,
+ "total": 90,
+ "rows": [
+  {
+   "t": 0.5,
+   "measure": "lum_p1",
+   "ref": 0.0,
+   "ours": 0.0,
+   "diff": 0.0,
+   "within": true
+  },
+  {
+   "t": 0.5,
+   "measure": "lum_p5",
+   "ref": 0.0078,
+   "ours": 0.0,
+   "diff": -0.0078,
+   "within": true
+  },
+  {
+   "t": 0.5,
+   "measure": "lum_p50",
+   "ref": 0.2311,
+   "ours": 0.2087,
+   "diff": -0.0224,
+   "within": true
+  },
+  {
+   "t": 0.5,
+   "measure": "lum_p95",
+   "ref": 0.9507,
+   "ours": 1.0,
+   "diff": 0.0493,
+   "within": true
+  },
+  {
+   "t": 0.5,
+   "measure": "lum_p99",
+   "ref": 0.9765,
+   "ours": 1.0,
+   "diff": 0.0235,
+   "within": true
+  },
+  {
+   "t": 0.5,
+   "measure": "pct_above_90",
+   "ref": 8.89,
+   "ours": 10.692,
+   "diff": 1.802,
+   "within": false
+  },
+  {
+   "t": 0.5,
+   "measure": "pct_below_5",
+   "ref": 12.952,
+   "ours": 11.397,
+   "diff": -1.555,
+   "within": true
+  },
+  {
+   "t": 0.5,
+   "measure": "glow_r50",
+   "ref": 0.3565,
+   "ours": 0.5046,
+   "diff": 0.1481,
+   "within": false
+  },
+  {
+   "t": 0.5,
+   "measure": "glow_r25",
+   "ref": null,
+   "ours": null,
+   "diff": null,
+   "within": true
+  },
+  {
+   "t": 0.5,
+   "measure": "glow_r10",
+   "ref": null,
+   "ours": null,
+   "diff": null,
+   "within": true
+  },
+  {
+   "t": 0.5,
+   "measure": "contrast_top",
+   "ref": 0.939,
+   "ours": 0.9961,
+   "diff": 0.0571,
+   "within": true
+  },
+  {
+   "t": 0.5,
+   "measure": "contrast_mid",
+   "ref": 0.9549,
+   "ours": 0.9944,
+   "diff": 0.0395,
+   "within": true
+  },
+  {
+   "t": 0.5,
+   "measure": "contrast_bottom",
+   "ref": 0.9222,
+   "ours": 1.0,
+   "diff": 0.0778,
+   "within": true
+  },
+  {
+   "t": 0.5,
+   "measure": "contrast_centre",
+   "ref": 0.5475,
+   "ours": 0.6707,
+   "diff": 0.1232,
+   "within": false
+  },
+  {
+   "t": 0.5,
+   "measure": "contrast_edge",
+   "ref": 0.948,
+   "ours": 1.0,
+   "diff": 0.052,
+   "within": true
+  },
+  {
+   "t": 0.5,
+   "measure": "grain_std_8bit",
+   "ref": 0.84,
+   "ours": 0.722,
+   "diff": -0.118,
+   "within": true
+  },
+  {
+   "t": 0.5,
+   "measure": "detail_lap_var",
+   "ref": 323.11,
+   "ours": 433.38,
+   "diff": 110.27,
+   "within": false
+  },
+  {
+   "t": 0.5,
+   "measure": "vignette_ratio",
+   "ref": 1.1513,
+   "ours": 1.5306,
+   "diff": 0.3793,
+   "within": false
+  },
+  {
+   "t": 1.5,
+   "measure": "lum_p1",
+   "ref": 0.0,
+   "ours": 0.0,
+   "diff": 0.0,
+   "within": true
+  },
+  {
+   "t": 1.5,
+   "measure": "lum_p5",
+   "ref": 0.0,
+   "ours": 0.0,
+   "diff": 0.0,
+   "within": true
+  },
+  {
+   "t": 1.5,
+   "measure": "lum_p50",
+   "ref": 0.0941,
+   "ours": 0.1763,
+   "diff": 0.0822,
+   "within": false
+  },
+  {
+   "t": 1.5,
+   "measure": "lum_p95",
+   "ref": 0.9004,
+   "ours": 0.981,
+   "diff": 0.0806,
+   "within": true
+  },
+  {
+   "t": 1.5,
+   "measure": "lum_p99",
+   "ref": 0.953,
+   "ours": 1.0,
+   "diff": 0.047,
+   "within": true
+  },
+  {
+   "t": 1.5,
+   "measure": "pct_above_90",
+   "ref": 5.017,
+   "ours": 6.739,
+   "diff": 1.722,
+   "within": false
+  },
+  {
+   "t": 1.5,
+   "measure": "pct_below_5",
+   "ref": 34.821,
+   "ours": 21.93,
+   "diff": -12.891,
+   "within": false
+  },
+  {
+   "t": 1.5,
+   "measure": "glow_r50",
+   "ref": 0.3218,
+   "ours": 0.2639,
+   "diff": -0.0579,
+   "within": false
+  },
+  {
+   "t": 1.5,
+   "measure": "glow_r25",
+   "ref": 0.5532,
+   "ours": null,
+   "diff": null,
+   "within": false
+  },
+  {
+   "t": 1.5,
+   "measure": "glow_r10",
+   "ref": null,
+   "ours": null,
+   "diff": null,
+   "within": true
+  },
+  {
+   "t": 1.5,
+   "measure": "contrast_top",
+   "ref": 0.902,
+   "ours": 0.9664,
+   "diff": 0.0644,
+   "within": true
+  },
+  {
+   "t": 1.5,
+   "measure": "contrast_mid",
+   "ref": 0.9272,
+   "ours": 0.9961,
+   "diff": 0.0689,
+   "within": true
+  },
+  {
+   "t": 1.5,
+   "measure": "contrast_bottom",
+   "ref": 0.8345,
+   "ours": 0.9782,
+   "diff": 0.1437,
+   "within": false
+  },
+  {
+   "t": 1.5,
+   "measure": "contrast_centre",
+   "ref": 0.3083,
+   "ours": 0.6323,
+   "diff": 0.324,
+   "within": false
+  },
+  {
+   "t": 1.5,
+   "measure": "contrast_edge",
+   "ref": 0.9272,
+   "ours": 0.9961,
+   "diff": 0.0689,
+   "within": true
+  },
+  {
+   "t": 1.5,
+   "measure": "grain_std_8bit",
+   "ref": 1.139,
+   "ours": 6.292,
+   "diff": 5.153,
+   "within": false
+  },
+  {
+   "t": 1.5,
+   "measure": "detail_lap_var",
+   "ref": 489.75,
+   "ours": 990.78,
+   "diff": 501.03,
+   "within": false
+  },
+  {
+   "t": 1.5,
+   "measure": "vignette_ratio",
+   "ref": 1.202,
+   "ours": 1.2417,
+   "diff": 0.0397,
+   "within": true
+  },
+  {
+   "t": 3.5,
+   "measure": "lum_p1",
+   "ref": 0.0078,
+   "ours": 0.0,
+   "diff": -0.0078,
+   "within": true
+  },
+  {
+   "t": 3.5,
+   "measure": "lum_p5",
+   "ref": 0.0118,
+   "ours": 0.0118,
+   "diff": 0.0,
+   "within": true
+  },
+  {
+   "t": 3.5,
+   "measure": "lum_p50",
+   "ref": 0.0588,
+   "ours": 0.051,
+   "diff": -0.0078,
+   "within": true
+  },
+  {
+   "t": 3.5,
+   "measure": "lum_p95",
+   "ref": 0.3095,
+   "ours": 0.2524,
+   "diff": -0.0571,
+   "within": false
+  },
+  {
+   "t": 3.5,
+   "measure": "lum_p99",
+   "ref": 0.7121,
+   "ours": 0.7365,
+   "diff": 0.0244,
+   "within": true
+  },
+  {
+   "t": 3.5,
+   "measure": "pct_above_90",
+   "ref": 0.493,
+   "ours": 0.442,
+   "diff": -0.051,
+   "within": true
+  },
+  {
+   "t": 3.5,
+   "measure": "pct_below_5",
+   "ref": 42.845,
+   "ours": 47.83,
+   "diff": 4.985,
+   "within": true
+  },
+  {
+   "t": 3.5,
+   "measure": "glow_r50",
+   "ref": 0.0231,
+   "ours": 0.0463,
+   "diff": 0.0232,
+   "within": true
+  },
+  {
+   "t": 3.5,
+   "measure": "glow_r25",
+   "ref": 0.0833,
+   "ours": 0.1181,
+   "diff": 0.0348,
+   "within": true
+  },
+  {
+   "t": 3.5,
+   "measure": "glow_r10",
+   "ref": 0.5741,
+   "ours": 0.4884,
+   "diff": -0.0857,
+   "within": false
+  },
+  {
+   "t": 3.5,
+   "measure": "contrast_top",
+   "ref": 0.3281,
+   "ours": 0.2841,
+   "diff": -0.044,
+   "within": false
+  },
+  {
+   "t": 3.5,
+   "measure": "contrast_mid",
+   "ref": 0.3724,
+   "ours": 0.2726,
+   "diff": -0.0998,
+   "within": false
+  },
+  {
+   "t": 3.5,
+   "measure": "contrast_bottom",
+   "ref": 0.1647,
+   "ours": 0.168,
+   "diff": 0.0033,
+   "within": true
+  },
+  {
+   "t": 3.5,
+   "measure": "contrast_centre",
+   "ref": 0.586,
+   "ours": 0.6193,
+   "diff": 0.0333,
+   "within": true
+  },
+  {
+   "t": 3.5,
+   "measure": "contrast_edge",
+   "ref": 0.1216,
+   "ours": 0.1157,
+   "diff": -0.0059,
+   "within": true
+  },
+  {
+   "t": 3.5,
+   "measure": "grain_std_8bit",
+   "ref": 0.026,
+   "ours": 0.292,
+   "diff": 0.266,
+   "within": true
+  },
+  {
+   "t": 3.5,
+   "measure": "detail_lap_var",
+   "ref": 434.78,
+   "ours": 420.16,
+   "diff": -14.62,
+   "within": true
+  },
+  {
+   "t": 3.5,
+   "measure": "vignette_ratio",
+   "ref": 0.1929,
+   "ours": 0.1753,
+   "diff": -0.0176,
+   "within": true
+  },
+  {
+   "t": 6.0,
+   "measure": "lum_p1",
+   "ref": 0.0118,
+   "ours": 0.0,
+   "diff": -0.0118,
+   "within": true
+  },
+  {
+   "t": 6.0,
+   "measure": "lum_p5",
+   "ref": 0.0196,
+   "ours": 0.0118,
+   "diff": -0.0078,
+   "within": true
+  },
+  {
+   "t": 6.0,
+   "measure": "lum_p50",
+   "ref": 0.051,
+   "ours": 0.0487,
+   "diff": -0.0023,
+   "within": true
+  },
+  {
+   "t": 6.0,
+   "measure": "lum_p95",
+   "ref": 0.1714,
+   "ours": 0.1352,
+   "diff": -0.0362,
+   "within": false
+  },
+  {
+   "t": 6.0,
+   "measure": "lum_p99",
+   "ref": 0.5445,
+   "ours": 0.6181,
+   "diff": 0.0736,
+   "within": false
+  },
+  {
+   "t": 6.0,
+   "measure": "pct_above_90",
+   "ref": 0.198,
+   "ours": 0.091,
+   "diff": -0.107,
+   "within": true
+  },
+  {
+   "t": 6.0,
+   "measure": "pct_below_5",
+   "ref": 46.805,
+   "ours": 50.103,
+   "diff": 3.298,
+   "within": true
+  },
+  {
+   "t": 6.0,
+   "measure": "glow_r50",
+   "ref": 0.0463,
+   "ours": 0.0324,
+   "diff": -0.0139,
+   "within": true
+  },
+  {
+   "t": 6.0,
+   "measure": "glow_r25",
+   "ref": 0.0995,
+   "ours": 0.1065,
+   "diff": 0.007,
+   "within": true
+  },
+  {
+   "t": 6.0,
+   "measure": "glow_r10",
+   "ref": 0.4005,
+   "ours": 0.4444,
+   "diff": 0.0439,
+   "within": true
+  },
+  {
+   "t": 6.0,
+   "measure": "contrast_top",
+   "ref": 0.1788,
+   "ours": 0.1906,
+   "diff": 0.0118,
+   "within": true
+  },
+  {
+   "t": 6.0,
+   "measure": "contrast_mid",
+   "ref": 0.1695,
+   "ours": 0.1533,
+   "diff": -0.0162,
+   "within": true
+  },
+  {
+   "t": 6.0,
+   "measure": "contrast_bottom",
+   "ref": 0.0929,
+   "ours": 0.109,
+   "diff": 0.0161,
+   "within": false
+  },
+  {
+   "t": 6.0,
+   "measure": "contrast_centre",
+   "ref": 0.4226,
+   "ours": 0.511,
+   "diff": 0.0884,
+   "within": false
+  },
+  {
+   "t": 6.0,
+   "measure": "contrast_edge",
+   "ref": 0.098,
+   "ours": 0.0902,
+   "diff": -0.0078,
+   "within": true
+  },
+  {
+   "t": 6.0,
+   "measure": "grain_std_8bit",
+   "ref": 0.06,
+   "ours": 0.238,
+   "diff": 0.178,
+   "within": true
+  },
+  {
+   "t": 6.0,
+   "measure": "detail_lap_var",
+   "ref": 488.47,
+   "ours": 449.86,
+   "diff": -38.61,
+   "within": true
+  },
+  {
+   "t": 6.0,
+   "measure": "vignette_ratio",
+   "ref": 0.1937,
+   "ours": 0.2077,
+   "diff": 0.014,
+   "within": true
+  },
+  {
+   "t": 9.5,
+   "measure": "lum_p1",
+   "ref": 0.0118,
+   "ours": 0.0,
+   "diff": -0.0118,
+   "within": true
+  },
+  {
+   "t": 9.5,
+   "measure": "lum_p5",
+   "ref": 0.0196,
+   "ours": 0.0157,
+   "diff": -0.0039,
+   "within": true
+  },
+  {
+   "t": 9.5,
+   "measure": "lum_p50",
+   "ref": 0.051,
+   "ours": 0.0471,
+   "diff": -0.0039,
+   "within": true
+  },
+  {
+   "t": 9.5,
+   "measure": "lum_p95",
+   "ref": 0.1014,
+   "ours": 0.1098,
+   "diff": 0.0084,
+   "within": true
+  },
+  {
+   "t": 9.5,
+   "measure": "lum_p99",
+   "ref": 0.4353,
+   "ours": 0.4955,
+   "diff": 0.0602,
+   "within": false
+  },
+  {
+   "t": 9.5,
+   "measure": "pct_above_90",
+   "ref": 0.128,
+   "ours": 0.045,
+   "diff": -0.083,
+   "within": true
+  },
+  {
+   "t": 9.5,
+   "measure": "pct_below_5",
+   "ref": 49.053,
+   "ours": 51.202,
+   "diff": 2.149,
+   "within": true
+  },
+  {
+   "t": 9.5,
+   "measure": "glow_r50",
+   "ref": 0.044,
+   "ours": 0.0602,
+   "diff": 0.0162,
+   "within": true
+  },
+  {
+   "t": 9.5,
+   "measure": "glow_r25",
+   "ref": 0.0787,
+   "ours": 0.1042,
+   "diff": 0.0255,
+   "within": true
+  },
+  {
+   "t": 9.5,
+   "measure": "glow_r10",
+   "ref": 0.3403,
+   "ours": 0.3796,
+   "diff": 0.0393,
+   "within": true
+  },
+  {
+   "t": 9.5,
+   "measure": "contrast_top",
+   "ref": 0.0915,
+   "ours": 0.0902,
+   "diff": -0.0013,
+   "within": true
+  },
+  {
+   "t": 9.5,
+   "measure": "contrast_mid",
+   "ref": 0.0891,
+   "ours": 0.1205,
+   "diff": 0.0314,
+   "within": false
+  },
+  {
+   "t": 9.5,
+   "measure": "contrast_bottom",
+   "ref": 0.0687,
+   "ours": 0.1013,
+   "diff": 0.0326,
+   "within": false
+  },
+  {
+   "t": 9.5,
+   "measure": "contrast_centre",
+   "ref": 0.3494,
+   "ours": 0.3994,
+   "diff": 0.05,
+   "within": false
+  },
+  {
+   "t": 9.5,
+   "measure": "contrast_edge",
+   "ref": 0.0745,
+   "ours": 0.0863,
+   "diff": 0.0118,
+   "within": false
+  },
+  {
+   "t": 9.5,
+   "measure": "grain_std_8bit",
+   "ref": 0.013,
+   "ours": 0.336,
+   "diff": 0.323,
+   "within": true
+  },
+  {
+   "t": 9.5,
+   "measure": "detail_lap_var",
+   "ref": 335.98,
+   "ours": 386.56,
+   "diff": 50.58,
+   "within": false
+  },
+  {
+   "t": 9.5,
+   "measure": "vignette_ratio",
+   "ref": 0.1978,
+   "ours": 0.1934,
+   "diff": -0.0044,
+   "within": true
+  }
+ ]
+}

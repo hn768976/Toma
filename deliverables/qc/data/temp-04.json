@@ -1,0 +1,29 @@
+{
+ "file": "deliverables/04-V2-chip-ignite.mp4",
+ "frames": 408,
+ "skipped": null,
+ "median_luminance": {
+  "min": 0.0902,
+  "max": 0.1686,
+  "max_step": 0.0078,
+  "at_frame": 201
+ },
+ "p95_luminance": {
+  "min": 0.6667,
+  "max": 0.8745,
+  "max_step": 0.0118,
+  "at_frame": 200
+ },
+ "edge_contrast_haze": {
+  "min": 0.6863,
+  "max": 0.7529,
+  "max_step": 0.0039,
+  "at_frame": 1
+ },
+ "grain_level_8bit": {
+  "min": 0.8516,
+  "max": 1.2725,
+  "max_step": 0.0585,
+  "at_frame": 1
+ }
+}

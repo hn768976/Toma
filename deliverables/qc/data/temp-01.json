@@ -1,0 +1,29 @@
+{
+ "file": "deliverables/01-V1-ai-chip-reveal.mp4",
+ "frames": 301,
+ "skipped": "60-112",
+ "median_luminance": {
+  "min": 0.0275,
+  "max": 0.902,
+  "max_step": 0.0196,
+  "at_frame": 10
+ },
+ "p95_luminance": {
+  "min": 0.098,
+  "max": 1.0,
+  "max_step": 0.0039,
+  "at_frame": 22
+ },
+ "edge_contrast_haze": {
+  "min": 0.0863,
+  "max": 1.0,
+  "max_step": 0.0039,
+  "at_frame": 1
+ },
+ "grain_level_8bit": {
+  "min": 0.0966,
+  "max": 2.11,
+  "max_step": 0.1258,
+  "at_frame": 42
+ }
+}

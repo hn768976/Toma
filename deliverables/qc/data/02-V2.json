@@ -1,0 +1,41 @@
+{
+ "file": "deliverables/02-V2-ai-chip-reveal.mp4",
+ "width": 1920,
+ "height": 1080,
+ "codec": "h264",
+ "pix_fmt": "yuv420p",
+ "r_frame_rate": "30/1",
+ "avg_frame_rate": "30/1",
+ "nb_read_frames": 301,
+ "duration": 10.033333,
+ "audio_streams": 0,
+ "ref_duration": 10.041667,
+ "duration_diff": -0.00833,
+ "decode_errors": "",
+ "mean_brightness_min": 0.033,
+ "mean_brightness_max": 0.8045,
+ "black_frames": [],
+ "frozen_frames": [],
+ "min_frame_diff": 0.000925,
+ "flash_peaks_in_intended_window": [
+  70,
+  87
+ ],
+ "flicker_frames": [],
+ "max_brightness_step": 0.2512,
+ "max_brightness_step_at": 86,
+ "checks": {
+  "1920x1080": true,
+  "h264": true,
+  "yuv420p": true,
+  "fps_30/1": true,
+  "frame_count": true,
+  "no_audio": true,
+  "duration_within_1_frame": true,
+  "decodes_clean": true,
+  "no_black_frames": true,
+  "no_frozen_frames": true,
+  "no_flicker": true
+ },
+ "all_pass": true
+}

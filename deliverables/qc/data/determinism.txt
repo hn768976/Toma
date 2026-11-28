@@ -1,0 +1,25 @@
+== V1-ai-chip-reveal frame 150
+cold vs warm: max 0 pixels differing 0
+cold 2c7a6c29ecbb17eef7d7a7224a244aadfc67e41840e1ea11af4a6d41b846af1f
+warm 2c7a6c29ecbb17eef7d7a7224a244aadfc67e41840e1ea11af4a6d41b846af1f
+IDENTICAL
+== V2-ai-chip-reveal frame 150
+cold vs warm: max 0 pixels differing 0
+cold 37e14d983bdcfc3e7d468726f8dc26ab29aa507ad125775fa9281be37146650f
+warm 37e14d983bdcfc3e7d468726f8dc26ab29aa507ad125775fa9281be37146650f
+IDENTICAL
+== V1-ai-chip-reveal frame 80
+cold vs warm: max 0 pixels differing 0
+cold 664271ee52256d56ae41df4cb0ec5a278fcd3d87b1b2f85547cfffb046a80987
+warm 664271ee52256d56ae41df4cb0ec5a278fcd3d87b1b2f85547cfffb046a80987
+IDENTICAL
+== V1-chip-ignite frame 204
+cold vs warm: max 0 pixels differing 0
+cold ecabb1c2dc9dd70684f5a815f6f8cc1140617393ec45615fc1c52e691b6797b5
+warm ecabb1c2dc9dd70684f5a815f6f8cc1140617393ec45615fc1c52e691b6797b5
+IDENTICAL
+== V2-chip-ignite frame 204
+cold vs warm: max 0 pixels differing 0
+cold dc62aac4c1fb68f3522e6e6fa1e220bdf9a50e69d3b3c9c5ec935d096e16dcea
+warm dc62aac4c1fb68f3522e6e6fa1e220bdf9a50e69d3b3c9c5ec935d096e16dcea
+IDENTICAL

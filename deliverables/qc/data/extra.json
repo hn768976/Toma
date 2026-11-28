@@ -1,0 +1,75 @@
+{
+ "look_summary": "Inside the target: `01-V1-ai-chip-reveal` 76 of 110 values, `02-V2-ai-chip-reveal` 62 of 90 (hue and saturation skipped), `03-V1-chip-ignite` 61 of 110, `04-V2-chip-ignite` 66 of 110 (for information). So the step 4A target of every measure within +-10% is **not fully met**. For ai-chip-reveal V1 the measures inside the target at all five moments are lum_p1, lum_p5, lum_p99, hue_midtones, hue_highlights; the ones outside at most moments are glow_r50, contrast_mid, contrast_bottom, contrast_centre, detail_lap_var. For chip-ignite V1 the ones inside at all five moments are lum_p1, lum_p5, pct_above_90, glow_r10, contrast_mid; the ones outside at most moments are pct_below_5, sat_mean, hue_shadows, hue_midtones, glow_r50, glow_r25, contrast_top, grain_std_8bit, detail_lap_var, vignette_ratio. The causes are described in section 9. Two measures need care when reading the tables: `glow_r50` follows the brightest element of the frame, which is a different object in the two clips before the flare ignites, and `vignette_ratio` compares corner and centre brightness, which depends on what happens to sit in the corners.",
+ "checks": [
+  [
+   "1",
+   "Specs: 1920x1080, h264, yuv420p, 30/1 fps, frame count, no audio",
+   "**Pass** (4 of 4)",
+   "see table above; 301 frames for ai-chip-reveal, 408 for chip-ignite"
+  ],
+  [
+   "2",
+   "Duration within one frame of the reference",
+   "**Pass**",
+   "ai-chip-reveal 10.0333 s against 10.0417 s (-0.0083 s); chip-ignite 13.6000 s against 13.6000 s"
+  ],
+  [
+   "3",
+   "Integrity: full decode with `ffmpeg -v error ... -f null -`",
+   "**Pass**",
+   "no errors or warnings on any file"
+  ],
+  [
+   "4",
+   "Frame scan: black frames, frozen runs, flicker (every frame, `qc/verify.py`)",
+   "**Pass**",
+   "no black frames (lowest frame mean 0.033 / 0.033 / 0.167 / 0.216 on a 0-1 scale), no repeated frames, no flicker. ai-chip-reveal has two intended brightness peaks, the white-out flash (frame 70, 2.33 s) and the glint of the board's back during the spin (frame 87, 2.9 s); the reference has the same two peaks at 2.4 s and 3.0 s. Largest frame-to-frame brightness step in chip-ignite: 0.0056"
+  ],
+  [
+   "5",
+   "Loop",
+   "**Not applicable**",
+   "neither reference loops (A ends on a different shot, B ends lit), so neither composition loops"
+  ],
+  [
+   "6",
+   "Determinism: cold-start frame equals the same frame from a running render, byte for byte (PNG, 1920x1080)",
+   "**Pass** (5 of 5)",
+   "`V1-ai-chip-reveal` frame 150: `2c7a6c29ecbb17ee...` = `2c7a6c29ecbb17ee...`; `V2-ai-chip-reveal` frame 150: `37e14d983bdcfc3e...` = `37e14d983bdcfc3e...`; `V1-ai-chip-reveal` frame 80: `664271ee52256d56...` = `664271ee52256d56...`; `V1-chip-ignite` frame 204: `ecabb1c2dc9dd706...` = `ecabb1c2dc9dd706...`; `V2-chip-ignite` frame 204: `dc62aac4c1fb68f3...` = `dc62aac4c1fb68f3...`. The motion-blurred frame 80 is included. This check found two real defects during the work (listed under this table), both fixed"
+  ],
+  [
+   "7",
+   "Look over time against the step 4A targets",
+   "**Not fully met**",
+   "76 of 110 / 62 of 90 / 61 of 110 / 66 of 110 values inside +-10% (section 3). Light, haze and grain are steady: largest frame-to-frame step 0.02 of full scale"
+  ],
+  [
+   "8",
+   "Banding and artefacts (levels x4)",
+   "**Pass**",
+   "no visible steps in the dark gradients of either film, no texture seams (one board plane, no tiling), fine lines anti-aliased with 4x MSAA. The first encode did band: x264 smoothed the dither away (mean pixel-to-pixel step in the backdrop 0.04 levels against 0.31 in the PNG frames). `remotion.config.ts` now adds x264 settings that keep it (0.26 levels in the delivered file)"
+  ],
+  [
+   "9",
+   "ZIP test",
+   "**Pass**",
+   "section 7"
+  ],
+  [
+   "10",
+   "Visual match by fresh sub-agents",
+   "Done",
+   "Version 1: three rounds each (the maximum). Version 2: see section 6"
+  ],
+  [
+   "11",
+   "Version 2 distinct from Version 1 at a glance, same design",
+   "**Pass**",
+   "section 5"
+  ]
+ ],
+ "v2_text": "**ai-chip-reveal**: the two versions are the same film frame for frame; only the glow hue differs (amber against cyan), and the overall brightness is the same (mean level of frame 45: 69.7 against 69.5). **chip-ignite**: the same scene, light and timings; Version 1 rises from a low three-quarter view to nearly top-down, Version 2 starts high and comes down around the package to a lower, closer view. Both differences read at a glance, and each pair is obviously the same design.",
+ "zip_text": "Both final ZIPs were extracted into an empty folder, installed with `npm ci` (0 vulnerabilities reported, no missing files) and one 4K frame of each composition was rendered with the README's `npx remotion still ... --scale=1 --gl=angle` commands:\n\n| Frame | Size | Mean level (0-255) |\n|---|---|---|\n| `ai-chip-reveal/out/V1-frame-150.png` | 3840x2160 | 20.3 |\n| `ai-chip-reveal/out/V2-frame-150.png` | 3840x2160 | 20.6 |\n| `chip-ignite/out/V1-frame-252.png` | 3840x2160 | 78.6 |\n| `chip-ignite/out/V2-frame-252.png` | 3840x2160 | 72.3 |\n\n**Pass.** The ZIPs contain the source with both 4K compositions, `package.json` and `package-lock.json` (all versions pinned exactly), the Remotion config, the installed skills, the two Python tools and the README. They leave out `node_modules`, `.git`, `out/` and anything holding reference footage (the look-dev comparison sheets are shipped next to this report instead). There are no fonts, models or texture files: everything is generated in code.\n\n![4K frames rendered from the extracted ZIPs](qc/zip-test-4k-frames.png)\n\nThe delivered MP4s were also compared with frames rendered from the packaged source: 41 dB PSNR for ai-chip-reveal, and for chip-ignite 31 dB at full size rising to 45 dB at quarter size, which is H.264 noise on its very dense detail and not a difference in content.",
+ "render_text": "Measured on the build machine: 4 CPU cores, no GPU (software WebGL through ANGLE/SwiftShader), default concurrency. Some renders shared the CPU with QC jobs, so treat the totals as upper bounds; a machine with a GPU will be many times faster.\n\n| Video | Frames | 1080p total (measured) | 1080p per frame | 4K per frame (measured on stills) | 4K total (estimate) |\n|---|---|---|---|---|---|\n| `01-V1-ai-chip-reveal.mp4` | 301 | 1134 s (18.9 min) | 3.8 s average: 1.6 s wide shot, about 4 s close-up, about 16 s in the motion-blur window | 4.6 s wide shot, 13 s close-up, 28 s motion blur | about 50 min |\n| `02-V2-ai-chip-reveal.mp4` | 301 | 1160 s (19.3 min) | 3.9 s average | same | about 50 min |\n| `03-V1-chip-ignite.mp4` | 408 | 1994 s (33.2 min) | 4.9 s | 13.7 s | about 95 min |\n| `04-V2-chip-ignite.mp4` | 408 | 2045 s (34.1 min) | 5.0 s | about 14 s | about 95 min |\n\nThe 4K per-frame figures are marginal costs measured by rendering short 4K frame ranges of each shot type (start-up time subtracted).",
+ "defects_text": "**Defects the checks caught (all fixed before the final renders):**\n\n- *Stale shadow maps* (determinism check): React Three Fiber switched the renderer's shadow maps off again after the first frame, so shadows froze at whatever frame a browser tab started on, and a frame's pixels depended on render history. Shadows are now enabled through the canvas itself.\n- *First frame at the wrong internal size* (determinism check): the pipeline read the pixel ratio back from the renderer before it had been applied. It now takes its size from the composition and the render scale.\n- *Half-resolution internals* (4K against 1080p comparison): the post-processing composer applied the pixel ratio twice, so `--scale=0.5` renders were computed at 960x540 and upscaled. Buffers are now sized in device pixels and depth of field scales with the frame.\n- *Inside-out lathe geometry* (look review): capacitor cans and pin rings shaded black.\n- *Banding in the encode* (x4 check): see check 8."
+}

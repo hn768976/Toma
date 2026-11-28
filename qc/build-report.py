@@ -98,6 +98,8 @@ w("|---|---|---|---|")
 for row in extra["checks"]:
     w("| " + " | ".join(row) + " |")
 w()
+w(extra["defects_text"])
+w()
 for k, name in VIDS:
     stem = name[:-4]
     w(f"Contact sheet, one frame per second - `{name}`:")

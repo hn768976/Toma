@@ -1,0 +1,4 @@
+ai-chip-reveal/out/V1-frame-150.png (3840, 2160) mean level 20.3
+ai-chip-reveal/out/V2-frame-150.png (3840, 2160) mean level 20.6
+chip-ignite/out/V1-frame-252.png (3840, 2160) mean level 78.6
+chip-ignite/out/V2-frame-252.png (3840, 2160) mean level 72.3

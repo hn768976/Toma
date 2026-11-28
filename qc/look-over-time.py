@@ -72,8 +72,14 @@ def main():
             r = ml.measure(fr, (768, 432), mask)
             o = ml.measure(fo, (768, 432), mask)
             for k in keys:
+                if r[k] is None or o[k] is None:
+                    diff = None
+                elif k.startswith("hue_"):  # shortest way round the colour wheel
+                    diff = round((o[k] - r[k] + 180) % 360 - 180, 1)
+                else:
+                    diff = round(o[k] - r[k], 4)
                 rows.append({"t": t, "measure": k, "ref": r[k], "ours": o[k],
-                             "diff": None if r[k] is None or o[k] is None else round(o[k] - r[k], 4),
+                             "diff": diff,
                              "within": within(k, r[k], o[k])})
     n_ok = sum(1 for x in rows if x["within"])
     print(f"{n_ok}/{len(rows)} measures within target")
