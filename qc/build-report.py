@@ -89,8 +89,14 @@ row("4. duplicated frames", lambda n: f"{V[n]['duplicate_frames']} — {pf(V[n][
 row("4. mean brightness range (0–255)", lambda n: f"{V[n]['mean_min']:.1f}–{V[n]['mean_max']:.1f}" if V[n] else "–")
 row("4. frame-to-frame difference (min / median / max)", lambda n: f"{V[n]['frame_diff_min']:.2f} / {V[n]['frame_diff_median']:.2f} / {V[n]['frame_diff_max']:.2f}" if V[n] else "–")
 row("4. largest single-frame brightness pop", lambda n: f"{V[n]['brightness_pop_max']:.2f} — {pf(V[n]['checks']['4_no_flicker'])}" if V[n] else "–")
-row("5. loop: frame N vs frame 0 (lossless PNG)", lambda n: (f"{C[n]['loop_differing_pixels']} differing pixels — {pf(C[n]['pass_loop'])}") if C[n] else "–")
-row("5. loop: last→first step in the MP4 vs largest normal step", lambda n: f"{V[n]['last_to_first_diff']:.2f} vs {V[n]['frame_diff_max']:.2f} — {pf(V[n]['checks']['5_loop_step_normal'])}" if V[n] else "–")
+LOOPS = {n: p == "mars-dome" for n, p, *_ in VIDEOS}  # reference A does not loop (its background drifts), reference B does
+row("5. loop: frame N vs frame 0 (lossless PNG)", lambda n: ((f"{C[n]['loop_differing_pixels']} differing pixels — {pf(C[n]['pass_loop'])}") if LOOPS[n]
+    else "n/a — the reference does not loop") if C[n] else "–")
+row("5. loop: last→first step in the MP4 vs largest normal step", lambda n: (f"{V[n]['last_to_first_diff']:.2f} vs {V[n]['frame_diff_max']:.2f}"
+    + (f" — {pf(V[n]['checks']['5_loop_step_normal'])}" if LOOPS[n] else " (n/a)")) if V[n] else "–")
+ST = load(os.path.join(R, "stability.json")) or {}
+row("7. steadiness: largest single-frame pop in contrast / far-band brightness / fine detail", lambda n: (
+    f"{ST[n]['contrast_pop_max']:.2f} / {ST[n]['far_band_pop_max']:.2f} / {ST[n]['detail_pop_max_pct']:.1f}%") if n in ST else "–")
 row("6. determinism: cold middle frame vs sequential render", lambda n: (("byte-identical" if C[n]["determinism_bytes_identical"] else f"max diff {C[n]['determinism_max_abs_diff']}") + f" — {pf(C[n]['pass_determinism'])}") if C[n] else "–")
 row("7. look over time", lambda n: (lambda d: f"{d['summary']['within']} / {d['summary']['within'] + d['summary']['outside']} within target" if d else "–")(load(os.path.join(R, f"look-{n}.json"))))
 w(open(os.path.join(ROOT, "qc", "report-static-tail.md")).read())
