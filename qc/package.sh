@@ -9,6 +9,6 @@ mkdir -p deliverables
 for p in ai-chip-reveal chip-ignite; do
   rm -f deliverables/$p-project.zip
   zip -q -r -y deliverables/$p-project.zip $p \
-    -x "$p/node_modules/*" "$p/out/*" "$p/.git/*" "$p/lookdev/*" "$p/dist/*" "*.DS_Store"
+    -x "$p/node_modules/*" "$p/out/*" "$p/.git/*" "$p/lookdev/*" "$p/dist/*" "*.DS_Store" "*/__pycache__/*" "*.pyc"
   echo "$p-project.zip: $(du -h deliverables/$p-project.zip | cut -f1), $(unzip -l deliverables/$p-project.zip | tail -1)"
 done
