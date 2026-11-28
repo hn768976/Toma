@@ -14,19 +14,19 @@ export type Variant = "v1" | "v2";
 
 export const PALETTE = {
   /** Surfaces (sRGB hex). */
-  hull: "#b3b1ac",
+  hull: "#a8a6a1",
   hullDark: "#8e8278",
   hullAccent: "#8f8a84",
   roofInset: "#6b4f40",
-  beam: "#bdb5a8",
+  beam: "#a9a296",
   tower: "#cdcbc6",
   towerGlass: "#39404c",
   plaza: "#867d7b",
   plazaSeam: "#6c6462",
   wall: "#a8a29c",
   curb: "#93867b",
-  grass: "#4c4635",
-  foliage: "#1a2414",
+  grass: "#343a22",
+  foliage: "#22331a",
   trunk: "#3a2c22",
   mast: "#cfc8bf",
   cable: "#d9cfc4",
@@ -37,7 +37,7 @@ export const PALETTE = {
   /** Lights (sRGB hex). */
   sun: "#fff0df",
   skyFill: "#b9c0b4",
-  groundFill: "#7a5a48",
+  groundFill: "#4a3a30",
   lamp: "#fff4ea",
   beacon: "#e0200e",
   haze: "#c1673f",

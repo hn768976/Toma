@@ -291,6 +291,8 @@ const buildTerrain = () => {
     c.lerp(pale, smooth(0.55, 0.95, crest) * 0.6);
     c.lerp(dark, Math.min(1, crag * 0.55 + steep * 0.5));
     c.multiplyScalar(1 - 0.7 * crag);
+    // the far wall falls into shade towards the camera's right
+    c.multiplyScalar(1 - 0.42 * smooth(0, 1, (-pos.getZ(i) - (380 + 0.45 * pos.getX(i))) / 520) * smooth(-150, 350, pos.getX(i)));
     c.lerp(sand, tones[i * 3 + 2]);
     c.multiplyScalar(0.86 + 0.28 * n.fbm(pos.getX(i) / 14, pos.getZ(i) / 14, 2));
     colors[i * 3] = c.r;
@@ -305,7 +307,7 @@ const buildTerrain = () => {
     for (let y = 0; y < 512; y++) {
       for (let x = 0; x < 512; x++) {
         // tileable: sample the noise on a 128-cell torus
-        const v = 0.6 + 0.5 * dn.ridged((x / 512) * 8, (y / 512) * 8, 5) + 0.14 * (dn.value(x / 3, y / 3) - 0.5) + 0.1 * dn.ridged((x / 512) * 40, (y / 512) * 40, 2);
+        const v = 0.5 + 0.64 * dn.ridged((x / 512) * 8, (y / 512) * 8, 5) + 0.16 * (dn.value(x / 3, y / 3) - 0.5) + 0.12 * dn.ridged((x / 512) * 40, (y / 512) * 40, 2);
         const cc = Math.round(255 * Math.max(0, Math.min(1, v)));
         const i = (y * 512 + x) * 4;
         img.data[i] = cc;

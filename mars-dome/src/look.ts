@@ -10,27 +10,27 @@ import { Look } from "./engine/pipeline";
 /** Light levels and directions (colours come from the palette in config.ts). */
 export const LIGHTS = {
   /** Soft sun from the camera's upper left. */
-  sun: { intensity: 3.1, elevationDeg: 60, azimuthDeg: 84, shadowRadius: 26, shadowMapSize: 4096 },
+  sun: { intensity: 2.7, elevationDeg: 60, azimuthDeg: 84, shadowRadius: 26, shadowMapSize: 4096 },
   /** Sky / ground ambient: the orange bounce that fills every shadow. */
-  hemisphere: { intensity: 0.74 },
+  hemisphere: { intensity: 0.8 },
   /** Image-based light from the procedural dusty sky. */
   environment: { intensity: 0.2 },
   /** Path lamps and beacons: emissive brightness (they bloom). */
   lampBrightness: 10,
   /** Brightness of the soft halo sprite around each lamp. */
-  lampHalo: 0.55,
+  lampHalo: 1.0,
   beaconBrightness: 1.6,
   /**
    * Dome glass. transmit = how much of the scene behind shows through face-on (it dims, it does not veil);
    * grazing = mirror strength at glancing angles; hotspot = a broad bright patch of sky reflected in the
    * near side of the dome; veil = a faint even sheen of sky over everything behind the glass; placed at hotspotAt (fractions of the base frame, from the top left).
    */
-  glass: { transmit: 0.82, grazing: 0.5, veil: 0.02, sunGlint: 0, hotspot: 1.3, hotspotPower: 110, hotspotAt: [0.9, 0.915] as [number, number] },
+  glass: { transmit: 0.82, grazing: 0.4, veil: 0.02, sunGlint: 0, hotspot: 1.8, hotspotPower: 110, hotspotAt: [0.9, 0.915] as [number, number] },
 };
 
 export const LOOK: Look = {
   msaaSamples: 4,
-  exposure: 0.92,
+  exposure: 0.97,
   toneMap: "agx",
   whiteBalance: [1, 1, 1],
   fog: {
@@ -47,19 +47,19 @@ export const LOOK: Look = {
     enabled: true,
     /** metres along the lens axis: the tower and the buildings around it */
     focus: 56,
-    cocInfinity: 0.024,
+    cocInfinity: 0.012,
     maxCoc: 0.04,
     nearScale: 0.6,
-    tiltShift: { amount: 0.011, centre: 0.47, width: 0.2 },
+    tiltShift: { amount: 0.007, centre: 0.47, width: 0.2 },
   },
   bloom: { threshold: 0.85, knee: 0.5, strength: 0.5, tilt: 0.1 },
   grade: {
-    blackLevel: 0.07,
+    blackLevel: 0.085,
     whiteLevel: 1,
     contrast: 1.16,
     pivot: 0.44,
-    saturation: 1.08,
-    gamma: [1.12, 1.12, 1.12],
+    saturation: 1.2,
+    gamma: [1.28, 1.28, 1.28],
     shadowTint: [0, 0, 0],
     highlightTint: [0, 0, 0],
   },
