@@ -2,8 +2,8 @@
 
 A 10-second 3D motion graphic built with [Remotion](https://www.remotion.dev)
 and three.js: a close-up of a glowing "AI" processor in its socket, a whip
-pull-back with a full spin of the board, and the whole motherboard left
-floating in a dark grey void.
+pull-back with a full spin of the board, and the whole motherboard floating
+in a dark grey void while its parts drift back into place.
 
 Everything is procedural (geometry, textures, environment light) - there are
 no models, images, fonts or footage to load.
@@ -65,7 +65,8 @@ difference is which palette object `src/Root.tsx` passes in.
 | What | Where |
 |------|-------|
 | Colours (both palettes) | `src/config.ts` -> `PALETTE_V1`, `PALETTE_V2` |
-| Timings (whip start, flash, motion-blur window) | `src/config.ts` -> `TIMING` |
+| Timings (whip start, flash, motion-blur window, end fade) | `src/config.ts` -> `TIMING` |
+| Assembly: how far each group of parts floats out and when it settles | `src/config.ts` -> `ASSEMBLY` |
 | Camera and board motion keyframes (distance, azimuth, spin, lens) | `src/config.ts` -> `MOTION` |
 | Counts and sizes (pins, traces, small parts, slots...) | `src/config.ts` -> `COUNTS`, `BOARD`, `SOCKET`, `SEED` |
 | Exposure, tone mapping, bloom, depth of field, grain, grade | `src/look.ts` -> `LOOK`, `DOF` |
@@ -84,8 +85,8 @@ difference is which palette object `src/Root.tsx` passes in.
   synchronously in a layout effect: scene (MSAA, half-float HDR) -> depth of
   field -> bloom (pmndrs `postprocessing`) -> a final lens/film pass (ACES
   tone mapping, grade, hash-based grain, +-1/255 dither).
-- The whip uses real motion blur: 8 sub-frame renders are averaged for the
-  frames between 2.0 s and 3.7 s.
+- The whip uses real motion blur: 6 sub-frame renders are averaged for the
+  frames between 2.1 s and 3.55 s (`MATERIAL_LOOK.motionSamples`, `TIMING`).
 - Bloom and depth of field work at a fixed internal size, so 1080p and 4K
   renders of a frame have the same glow and blur.
 
@@ -99,7 +100,7 @@ concurrency:
 | 1080p (`--scale=0.5`), measured | __T1080__ | __TOTAL1080__ |
 | 4K (`--scale=1`), estimated from measured 4K stills | __T4K__ | __TOTAL4K__ |
 
-Frames inside the motion-blur window cost about 8x a normal frame. A machine
+Frames inside the motion-blur window cost about 6x a normal frame. A machine
 with a GPU will be many times faster.
 
 ## Tools
