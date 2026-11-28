@@ -6,20 +6,20 @@ Archive:  /home/user/Toma/deliverables/city-growth-project.zip
        79  2026-11-24 17:19   city-growth/eslint.config.mjs
         0  2026-11-27 16:00   city-growth/src/
         0  2026-11-27 17:41   city-growth/src/city/
-    32082  2026-11-28 08:07   city-growth/src/city/scene.ts
-    19003  2026-11-27 18:55   city-growth/src/city/layout.ts
+    32633  2026-11-28 09:10   city-growth/src/city/scene.ts
+    18999  2026-11-28 09:14   city-growth/src/city/layout.ts
       109  2026-11-24 17:19   city-growth/src/index.ts
       351  2026-11-27 15:55   city-growth/src/rng.ts
         0  2026-11-27 17:34   city-growth/src/render/
-     9278  2026-11-27 18:53   city-growth/src/render/post.ts
-     7333  2026-11-28 08:07   city-growth/src/config.ts
+     9277  2026-11-28 09:10   city-growth/src/render/post.ts
+     7423  2026-11-28 09:14   city-growth/src/config.ts
       536  2026-11-27 16:00   city-growth/src/LookDev.tsx
      2189  2026-11-27 16:00   city-growth/src/CityGrowth.tsx
-     3507  2026-11-28 08:07   city-growth/src/look.ts
+     3665  2026-11-28 09:12   city-growth/src/look.ts
       997  2026-11-27 16:00   city-growth/src/Root.tsx
         0  2026-11-27 15:45   city-growth/public/
      7596  2026-11-27 15:45   city-growth/skills-lock.json
-     6810  2026-11-28 09:03   city-growth/README.md
+     6838  2026-11-28 10:11   city-growth/README.md
        66  2026-11-24 17:19   city-growth/.prettierrc
         0  2026-11-27 18:53   city-growth/scripts/
     11251  2026-11-27 15:49   city-growth/scripts/measure-look.py
@@ -30,21 +30,21 @@ Archive:  /home/user/Toma/deliverables/city-growth-project.zip
    197841  2026-11-27 16:35   city-growth/package-lock.json
       913  2026-11-27 16:35   city-growth/package.json
         0  2026-11-27 16:21   city-growth/lookdev/
-     8740  2026-11-28 08:13   city-growth/lookdev/measure-peak.json
-     7841  2026-11-28 08:13   city-growth/lookdev/measure-tables.txt
-     8783  2026-11-28 08:13   city-growth/lookdev/measure-settled.json
-     8727  2026-11-28 08:13   city-growth/lookdev/measure-start.json
+     8752  2026-11-28 09:15   city-growth/lookdev/measure-peak.json
+     7948  2026-11-28 09:15   city-growth/lookdev/measure-tables.txt
+     8755  2026-11-28 09:15   city-growth/lookdev/measure-settled.json
+     8666  2026-11-28 09:15   city-growth/lookdev/measure-start.json
       368  2026-11-24 17:19   city-growth/tsconfig.json
 ---------                     -------
-  1561609                     464 files
--rw-r--r-- 1 root root 682397 Nov 28 09:05 /home/user/Toma/deliverables/city-growth-project.zip
+  1562461                     464 files
+-rw-r--r-- 1 root root 682679 Nov 28 10:12 /home/user/Toma/deliverables/city-growth-project.zip
   run `npm fund` for details
 
 found 0 vulnerabilities
-npm ci: 11 s
+npm ci: 9 s
 Rendered 1/1
 +                    out/V1-frame.png
-V1 4K still (3840, 2160) mean 167.0 time 25.3 s
+V1 4K still (3840, 2160) mean 161.8 time 19.9 s
 Rendered 1/1
 +                    out/V2-frame.png
-V2 4K still (3840, 2160) mean 160.0 time 21.7 s
+V2 4K still (3840, 2160) mean 180.1 time 21.8 s

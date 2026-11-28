@@ -113,7 +113,7 @@ Measured on a 4-core cloud machine with no GPU (software GL / SwiftShader), `--c
 
 | Output | Per frame | Whole video (450 frames) |
 | ------ | --------- | ------------------------ |
-| 1080p (`--scale=0.5`), the delivered files, rendered while another project's renders shared the 4 cores | 3.4 s (V1), 3.3 s (V2) | 25 min 41 s (V1), 24 min 46 s (V2) |
+| 1080p (`--scale=0.5`), the delivered files, rendered while another project's renders shared the 4 cores | 3.1 s (V1), 3.2 s (V2) | 23 min 03 s (V1), 24 min 03 s (V2) |
 | 1080p (`--scale=0.5`), machine otherwise lightly loaded (40-frame test of an earlier build) | about 1.7 s | about 13 min |
 | 4K (`--scale=1`), estimated: 4x the pixels of the 1080p figures | about 7 s (idle machine) to 14 s (shared) | about 50 min to 1 h 45 min |
 

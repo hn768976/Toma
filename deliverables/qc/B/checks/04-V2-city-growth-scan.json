@@ -1,12 +1,12 @@
 {
  "frames": 450,
- "mean_min": 138.41146850585938,
- "mean_max": 227.7879638671875,
+ "mean_min": 152.2050018310547,
+ "mean_max": 229.2509307861328,
  "near_black_frames": [],
  "frozen_runs_first_last_frame": [],
- "max_brightness_jump": 1.5630035400390625,
- "max_brightness_jump_at": 33,
- "max_frame_diff": 13.928506851196289,
- "max_frame_diff_at": 146,
- "median_frame_diff": 7.64968729019165
+ "max_brightness_jump": 0.7129364013671875,
+ "max_brightness_jump_at": 112,
+ "max_frame_diff": 10.934704780578613,
+ "max_frame_diff_at": 148,
+ "median_frame_diff": 5.869409561157227
 }
