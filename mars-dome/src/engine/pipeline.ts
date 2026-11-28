@@ -18,6 +18,8 @@ import * as THREE from "three";
 export type Vec3 = [number, number, number];
 
 export interface Look {
+  /** Multisample count for the scene pass (0, 2 or 4). */
+  msaaSamples: number;
   /** Scene-linear gain applied before tone mapping. */
   exposure: number;
   toneMap: "aces" | "agx";
@@ -594,7 +596,7 @@ export class PostPipeline {
     depth.type = THREE.UnsignedIntType;
     depth.minFilter = THREE.NearestFilter;
     depth.magFilter = THREE.NearestFilter;
-    this.sceneRT = hdr(w, h, { samples: 4, depthBuffer: true, depthTexture: depth });
+    this.sceneRT = hdr(w, h, { samples: this.look.msaaSamples, depthBuffer: true, depthTexture: depth });
     this.prepRT = hdr(w, h);
     this.dofRT = hdr(w, h);
     const hw = Math.ceil(w / 2);

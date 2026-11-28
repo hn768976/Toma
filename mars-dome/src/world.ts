@@ -83,8 +83,8 @@ const panelTexture = (seed: number, cols: number, rows: number) =>
         const v = (y / 512) * rows;
         const fu = u - Math.floor(u);
         const fv = v - Math.floor(v);
-        const seam = Math.min(fu, 1 - fu) * (512 / cols) < 1.6 || Math.min(fv, 1 - fv) * (512 / rows) < 1.6 ? 0.62 : 1;
-        const grime = 0.86 + 0.14 * n.fbm(x / 70, y / 22, 3);
+        const seam = Math.min(fu, 1 - fu) * (512 / cols) < 2.2 || Math.min(fv, 1 - fv) * (512 / rows) < 2.2 ? 0.45 : 1;
+        const grime = 0.74 + 0.26 * n.fbm(x / 70, y / 22, 3);
         const streak = 0.94 + 0.06 * n.value(x / 5, y / 90);
         const fine = 0.97 + 0.03 * rng();
         const t = tint[(Math.floor(v) % rows) * cols + (Math.floor(u) % cols)];
@@ -305,7 +305,7 @@ const buildTerrain = () => {
     for (let y = 0; y < 512; y++) {
       for (let x = 0; x < 512; x++) {
         // tileable: sample the noise on a 128-cell torus
-        const v = 0.82 + 0.3 * dn.ridged((x / 512) * 8, (y / 512) * 8, 5) + 0.1 * (dn.value(x / 2, y / 2) - 0.5);
+        const v = 0.58 + 0.5 * dn.ridged((x / 512) * 8, (y / 512) * 8, 5) + 0.16 * (dn.value(x / 3, y / 3) - 0.5) + 0.1 * dn.ridged((x / 512) * 40, (y / 512) * 40, 2);
         const cc = Math.round(255 * Math.max(0, Math.min(1, v)));
         const i = (y * 512 + x) * 4;
         img.data[i] = cc;
@@ -317,7 +317,7 @@ const buildTerrain = () => {
     ctx.putImageData(img, 0, 0);
   });
   const uv = geo.attributes.uv;
-  for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / 230, pos.getZ(i) / 230);
+  for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / 150, pos.getZ(i) / 150);
   const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, map: detail, roughness: 1, metalness: 0 }));
   mesh.frustumCulled = false;
   return mesh;
@@ -454,7 +454,7 @@ export const makeWorld = (variant: Variant): World => {
     roof: std(PAL.roofInset, { roughness: 0.9 }),
     glassDark: std(PAL.towerGlass, { roughness: 0.25, metalness: 0.3 }),
   };
-  const beamMat = std(PAL.beam, { roughness: 0.6, map: hullLongTex, side: THREE.DoubleSide });
+  const beamMat = std(PAL.beam, { roughness: 0.45, map: hullLongTex, side: THREE.DoubleSide });
   const towerMat = std(PAL.tower, { map: towerTex });
 
   // --- terrain around the base
@@ -652,7 +652,7 @@ export const makeWorld = (variant: Variant): World => {
         float hot = pow(max(dot(R, uHotDir), 0.0), uHotPower) * uParams.w;
         float refl = mix(0.02, uParams.y, F) + hot;
         float transmit = mix(uParams.x, 0.35, F) * (1.0 - 0.5 * hot);
-        gl_FragColor = vec4(sky * 1.2 * mix(0.02, uParams.y, F) + mix(sky, vec3(1.0, 0.93, 0.85), 0.6) * hot + vec3(glint), clamp(transmit, 0.0, 1.0));
+        gl_FragColor = vec4(sky * 1.2 * mix(0.02, uParams.y, F) + mix(sky, vec3(1.0, 0.86, 0.66), 0.5) * hot + vec3(glint), clamp(transmit, 0.0, 1.0));
       }`,
   });
   const glass = new THREE.Mesh(new THREE.LatheGeometry(glassPts, 128), glassMat);
@@ -682,7 +682,7 @@ export const makeWorld = (variant: Variant): World => {
       root.add(strut(top, anchor, 0.035, 0.035, cableMat, 5));
     }
     const beacon = new THREE.Mesh(beaconGeo, beaconMat);
-    beacon.scale.setScalar(0.22);
+    beacon.scale.setScalar(0.15);
     beacon.position.copy(top).add(new THREE.Vector3(0, 0.75, 0));
     root.add(beacon);
   }
@@ -768,9 +768,9 @@ export const makeWorld = (variant: Variant): World => {
   }
   const spots = lampSpots.slice(0, CONFIG.lamps.count);
   const poleMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.045, 0.06, 2.4, 6), std(PAL.hullDark), spots.length);
-  const bulbMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.2, 12, 8), new THREE.MeshBasicMaterial({ color: col(PAL.lamp).multiplyScalar(LIGHTS.lampBrightness) }), spots.length);
-  const poolMat = new THREE.MeshBasicMaterial({ map: glowTexture(), color: col(PAL.lamp).multiplyScalar(0.22), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
-  const poolGeo = new THREE.PlaneGeometry(5.2, 5.2);
+  const bulbMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.13, 12, 8), new THREE.MeshBasicMaterial({ color: col(PAL.lamp).multiplyScalar(LIGHTS.lampBrightness) }), spots.length);
+  const poolMat = new THREE.MeshBasicMaterial({ map: glowTexture(), color: col(PAL.lamp).multiplyScalar(0.1), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  const poolGeo = new THREE.PlaneGeometry(3.4, 3.4);
   poolGeo.rotateX(-Math.PI / 2);
   const poolMesh = new THREE.InstancedMesh(poolGeo, poolMat, spots.length);
   spots.forEach(([x, z], i) => {
@@ -815,7 +815,7 @@ export const makeWorld = (variant: Variant): World => {
     root.add(head);
     for (const t of [0.04, 0.22]) {
       const beacon = new THREE.Mesh(beaconGeo, beaconMat);
-      beacon.scale.setScalar(0.07);
+      beacon.scale.setScalar(0.05);
       beacon.position.copy(a).lerp(b, t).add(new THREE.Vector3(-0.22, 0, 0.1));
       root.add(beacon);
     }

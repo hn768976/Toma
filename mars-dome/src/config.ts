@@ -14,34 +14,34 @@ export type Variant = "v1" | "v2";
 
 export const PALETTE = {
   /** Surfaces (sRGB hex). */
-  hull: "#a39587",
+  hull: "#aaa49d",
   hullDark: "#8e8278",
   hullAccent: "#7f8aa0",
   roofInset: "#6b4f40",
   beam: "#b3a591",
-  tower: "#c9bcae",
+  tower: "#c2b9ab",
   towerGlass: "#39404c",
-  plaza: "#7f6f64",
+  plaza: "#7d746e",
   plazaSeam: "#5f544c",
   wall: "#a39489",
   curb: "#93867b",
-  grass: "#2b2818",
-  foliage: "#1f1f13",
+  grass: "#2f3a1d",
+  foliage: "#1d2b13",
   trunk: "#3a2c22",
   mast: "#b9ada0",
   cable: "#d9cfc4",
-  terrainLit: "#d9743c",
-  terrainDark: "#7a3a18",
-  terrainPale: "#e0a57e",
+  terrainLit: "#e2702c",
+  terrainDark: "#6e2f10",
+  terrainPale: "#f0a25c",
   sand: "#b9683e",
   /** Lights (sRGB hex). */
-  sun: "#ffe6cf",
-  skyFill: "#f0a67a",
+  sun: "#ffe0b8",
+  skyFill: "#cfc6c2",
   groundFill: "#8a5236",
   lamp: "#fff4ea",
-  beacon: "#ff3a22",
+  beacon: "#e0200e",
   haze: "#c1673f",
-  hazeSun: "#e6a179",
+  hazeSun: "#eaa55f",
 };
 
 export const CONFIG = {
@@ -121,7 +121,7 @@ export const CONFIG = {
     { r0: 30, r1: 39, a0: -72, a1: -44 },
   ],
   trees: { perPlot: 4, extra: 6, seed: 4117 },
-  lamps: { count: 30, seed: 9203 },
+  lamps: { count: 20, seed: 9203 },
   terrain: { seed: 77, size: [3000, 2100] as [number, number], segments: 400 },
   /** A slim pole right in front of the lens, far out of focus, with two beacons. Camera-space metres. */
   foregroundPole: {

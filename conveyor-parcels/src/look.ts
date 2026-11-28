@@ -63,6 +63,7 @@ export const LIGHTS = {
 };
 
 export const LOOK: Look = {
+  msaaSamples: 2,
   exposure: 1.25,
   toneMap: "aces",
   whiteBalance: [1, 1, 1],

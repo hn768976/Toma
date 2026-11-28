@@ -10,32 +10,33 @@ import { Look } from "./engine/pipeline";
 /** Light levels and directions (colours come from the palette in config.ts). */
 export const LIGHTS = {
   /** Soft sun from the camera's upper left. */
-  sun: { intensity: 4.6, elevationDeg: 45, azimuthDeg: 100, shadowRadius: 6, shadowMapSize: 4096 },
+  sun: { intensity: 4.6, elevationDeg: 60, azimuthDeg: 84, shadowRadius: 7, shadowMapSize: 4096 },
   /** Sky / ground ambient: the orange bounce that fills every shadow. */
-  hemisphere: { intensity: 0.22 },
+  hemisphere: { intensity: 0.42 },
   /** Image-based light from the procedural dusty sky. */
   environment: { intensity: 0.2 },
   /** Path lamps and beacons: emissive brightness (they bloom). */
-  lampBrightness: 8,
-  beaconBrightness: 2.5,
+  lampBrightness: 7,
+  beaconBrightness: 1.6,
   /**
    * Dome glass. transmit = how much of the scene behind shows through face-on (it dims, it does not veil);
    * grazing = mirror strength at glancing angles; hotspot = a broad bright patch of sky reflected in the
    * near side of the dome, placed at hotspotAt (fractions of the base frame, from the top left).
    */
-  glass: { transmit: 0.82, grazing: 0.3, sunGlint: 0.5, hotspot: 0.55, hotspotPower: 110, hotspotAt: [0.93, 0.93] as [number, number] },
+  glass: { transmit: 0.84, grazing: 0.26, sunGlint: 0, hotspot: 3.0, hotspotPower: 900, hotspotAt: [0.93, 0.93] as [number, number] },
 };
 
 export const LOOK: Look = {
-  exposure: 0.92,
+  msaaSamples: 4,
+  exposure: 0.8,
   toneMap: "agx",
   whiteBalance: [1, 1, 1],
   fog: {
-    color: [0.34, 0.085, 0.03],
-    sunColor: [0.5, 0.16, 0.065],
-    sunDir: [0.9, 0.3, -0.3],
-    sunPower: 2,
-    density: 0.0003,
+    color: [0.4, 0.1, 0.028],
+    sunColor: [0.95, 0.42, 0.14],
+    sunDir: [0.22, 0.07, -1],
+    sunPower: 5,
+    density: 0.00055,
     heightFalloff: 0.0,
     baseHeight: 0,
     maxOpacity: 0.93,
@@ -44,22 +45,22 @@ export const LOOK: Look = {
     enabled: true,
     /** metres along the lens axis: the tower and the buildings around it */
     focus: 56,
-    cocInfinity: 0.014,
-    maxCoc: 0.045,
+    cocInfinity: 0.02,
+    maxCoc: 0.016,
     nearScale: 0.45,
   },
-  bloom: { threshold: 0.9, knee: 0.5, strength: 0.6, tilt: 0.25 },
+  bloom: { threshold: 0.9, knee: 0.5, strength: 0.35, tilt: 0.0 },
   grade: {
-    blackLevel: 0.085,
+    blackLevel: 0.1,
     whiteLevel: 1,
-    contrast: 1.12,
-    pivot: 0.42,
+    contrast: 1.24,
+    pivot: 0.44,
     saturation: 1,
     gamma: [1, 1, 1],
     shadowTint: [0, 0, 0],
     highlightTint: [0, 0, 0],
   },
-  lens: { vignette: 0, vignetteStart: 0.4, chromaticAberration: 0.0015, softness: 0.0006 },
-  grain: { amount: 0.0016, size: 2, chroma: 0.3 },
+  lens: { vignette: 0, vignetteStart: 0.4, chromaticAberration: 0.0015, softness: 0 },
+  grain: { amount: 0.0026, size: 2, chroma: 0.3 },
   dither: true,
 };

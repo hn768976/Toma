@@ -514,7 +514,7 @@ export const makeWorld = (variant: Variant): World => {
   const beltCentre = ((rc.right + rc.left) / 2) * P;
 
   // --- rollers
-  const rollerGeo = new THREE.CylinderGeometry(rc.radius * P, rc.radius * P, beltWidth, 32, 1, false);
+  const rollerGeo = new THREE.CylinderGeometry(rc.radius * P, rc.radius * P, beltWidth, 24, 1, true);
   rollerGeo.rotateZ(Math.PI / 2);
   rollTex.repeat.set(2, 1);
   const rollerMat = new THREE.MeshPhysicalMaterial({
@@ -580,10 +580,17 @@ export const makeWorld = (variant: Variant): World => {
       );
   };
   rollerMat.customProgramCacheKey = () => "roller-v4";
-  const rollers = new THREE.InstancedMesh(rollerGeo, rollerMat, rc.count);
-  rollers.receiveShadow = true;
-  rollers.frustumCulled = false;
-  root.add(rollers);
+  // near rollers get a round profile; distant ones a coarser one (they are a few pixels tall and out of focus)
+  const rollerGeoFar = new THREE.CylinderGeometry(rc.radius * P, rc.radius * P, beltWidth, 10, 1, true);
+  rollerGeoFar.rotateZ(Math.PI / 2);
+  const nearCount = Math.min(rc.nearCount, rc.count);
+  const rollersNear = new THREE.InstancedMesh(rollerGeo, rollerMat, nearCount);
+  const rollersFar = new THREE.InstancedMesh(rollerGeoFar, rollerMat, rc.count - nearCount);
+  for (const r of [rollersNear, rollersFar]) {
+    r.receiveShadow = true;
+    r.frustumCulled = false;
+    root.add(r);
+  }
   // each roller keeps its own tint as it travels; the tint table repeats once per loop
   const tintRng = mulberry32(31337);
   const tints: THREE.Color[] = [];
@@ -713,12 +720,16 @@ export const makeWorld = (variant: Variant): World => {
         dummy.rotation.set(0, 0, 0);
         dummy.scale.set(1, 1, 1);
         dummy.updateMatrix();
-        rollers.setMatrixAt(i, dummy.matrix);
+        const mesh = i < nearCount ? rollersNear : rollersFar;
+        const k = i < nearCount ? i : i - nearCount;
+        mesh.setMatrixAt(k, dummy.matrix);
         const id = (((i + whole) % tints.length) + tints.length) % tints.length;
-        rollers.setColorAt(i, tint.copy(tints[id]));
+        mesh.setColorAt(k, tint.copy(tints[id]));
       }
-      rollers.instanceMatrix.needsUpdate = true;
-      if (rollers.instanceColor) rollers.instanceColor.needsUpdate = true;
+      for (const r of [rollersNear, rollersFar]) {
+        r.instanceMatrix.needsUpdate = true;
+        if (r.instanceColor) r.instanceColor.needsUpdate = true;
+      }
 
       // warehouse slides past
       backdrop.position.z = travel * P;

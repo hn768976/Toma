@@ -79,8 +79,8 @@ export const PALETTES: Record<Variant, Palette> = {
     strap: "#d2571a",
     label: "#e4ecf2",
     mark: "#18222c",
-    roller: "#7f8a94",
-    rollerGap: "#0f1418",
+    roller: "#465058",
+    rollerGap: "#12181c",
     rail: "#a9b6c2",
     floor: "#141c24",
     backdrop: "#273847",
@@ -119,8 +119,10 @@ export const CONFIG = {
     pitchesPerLoop: 64,
   },
   rollers: {
-    /** Real cylinders out to this distance; a flat strip continues beyond. */
-    count: 150,
+    /** Real cylinders for the first `count` rollers; a flat strip with the same light bands continues beyond. */
+    count: 66,
+    /** How many of them (nearest the lens) use the fine round profile. */
+    nearCount: 30,
     firstAt: 9,
     /** Roller radius in pitches (0.5 would make neighbours touch). */
     radius: 0.46,
