@@ -231,7 +231,7 @@ const buildParcel = (spec: ParcelSpec, index: number, pal: Palette, tex: { card:
 
   // straps: thin dark bands wrapped around the carton
   const strapMat = new THREE.MeshStandardMaterial({ color: col(pal.strap), roughness: 0.32, metalness: 0, shadowSide: THREE.FrontSide });
-  const sw = 0.2 * P;
+  const sw = 0.15 * P;
   const e = 0.012 * P;
   for (const s of spec.straps) {
     const geo =
@@ -283,7 +283,7 @@ const buildParcel = (spec: ParcelSpec, index: number, pal: Palette, tex: { card:
       [0.34, -0.14],
     ] as const) {
       const flap = add(new THREE.Mesh(new THREE.BoxGeometry(w * range(rng, 0.06, 0.09), 0.05 * P, 0.4 * P), flapMat));
-      flap.position.set(fx * w, h + lift - 0.08 * P, d * 0.5 - range(rng, 0.15, 0.3) * P);
+      flap.position.set(fx * w, h + lift - 0.2 * P, d * 0.5 - range(rng, 0.02, 0.08) * P);
       flap.rotation.z = tilt;
       flap.rotation.x = range(rng, 0.42, 0.6); // tipped towards the lens, so the lit side shows
     }
@@ -431,6 +431,12 @@ const buildBackdrop = (pal: Palette) => {
       c: col(b.color).multiplyScalar(b.intensity * range(lampRng, 0.7, 1.15)),
     });
   }
+  // the one lamp in view is placed by hand (config.ts) so it sits where the reference's does
+  if (cfg.lamp && lamps.length > 0) {
+    lamps[0].x = cfg.lamp.x;
+    lamps[0].y = cfg.lamp.y;
+    lamps[0].z = ((cfg.lamp.distanceAtStart % PERIOD) + PERIOD) % PERIOD;
+  }
   const lampMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }), lamps.length * copies);
   n = 0;
   for (let k = 0; k < copies; k++) {
@@ -545,10 +551,12 @@ export const makeWorld = (variant: Variant): World => {
   rollerMat.onBeforeCompile = (shader) => {
     shader.uniforms.uCrestColor = { value: crestColor };
     shader.uniforms.uCrest = { value: new THREE.Vector4(R.crestStart, R.crestEnd, R.streakScale / P, R.baseLift) };
-    shader.uniforms.uGlare = { value: new THREE.Vector4(R.glareLeft, R.glareRight, R.glareCentre, 0) };
+    shader.uniforms.uGlare = { value: new THREE.Vector4(R.glareLeft, R.glareRight, R.glareCentre, R.glareDiffuse) };
+    shader.uniforms.uGroove = { value: new THREE.Vector3(R.grooveStart, R.grooveEnd, R.grooveDepth) };
     shader.uniforms.uGlareWidth = { value: new THREE.Vector2(R.glareWidthLeft, R.glareWidthRight) };
     shader.uniforms.uCrestSide = { value: new THREE.Vector4(R.crestLeft, R.crestFrom, R.crestTo, R.streakDepth) };
     shader.uniforms.uNearFade = { value: new THREE.Vector3(R.nearFadeMin, R.nearFadeFrom, R.nearFadeTo) };
+    shader.uniforms.uLeft = { value: new THREE.Vector2(R.leftFlatten, R.leftLevel) };
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
@@ -559,6 +567,9 @@ export const makeWorld = (variant: Variant): World => {
         uniform vec2 uGlareWidth;
         uniform vec4 uCrestSide;
         uniform vec3 uNearFade;
+        uniform vec2 uLeft;
+        uniform vec3 uGroove;
+        vec3 rollerRoundNormal;
         float rollerHash(float n) {
           uint u = uint(int(n) + 1000000);
           u ^= u >> 16; u *= 0x7feb352dU; u ^= u >> 15; u *= 0x846ca68bU; u ^= u >> 16;
@@ -572,10 +583,22 @@ export const makeWorld = (variant: Variant): World => {
         }`,
       )
       .replace(
+        "#include <normal_fragment_maps>",
+        `#include <normal_fragment_maps>
+        {
+          // away from the glare the rollers read as a smooth satin sheet: shade them as if nearly flat
+          rollerRoundNormal = normal;
+          float side0 = -vViewPosition.x / max(vViewPosition.z, 1e-3);
+          float k = uLeft.x * (1.0 - smoothstep(uCrestSide.y, uCrestSide.z, side0));
+          vec3 upV = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+          normal = normalize(mix(normal, upV, k));
+        }`,
+      )
+      .replace(
         "#include <lights_fragment_end>",
         `#include <lights_fragment_end>
         {
-          vec3 wn = inverseTransformDirection(normal, viewMatrix);
+          vec3 wn = inverseTransformDirection(rollerRoundNormal, viewMatrix);
           float crest = smoothstep(uCrest.x, uCrest.y, wn.y);
           float side = -vViewPosition.x / max(vViewPosition.z, 1e-3);
           float nearFade = mix(uNearFade.x, 1.0, smoothstep(uNearFade.y, uNearFade.z, vViewPosition.z));
@@ -583,7 +606,7 @@ export const makeWorld = (variant: Variant): World => {
           float lobe = exp(-pow((side - uGlare.z) / gw, 2.0));
           float lateral = mix(uGlare.x, uGlare.y, lobe) * nearFade;
           reflectedLight.directSpecular *= lateral;
-          reflectedLight.directDiffuse *= min(lateral, 1.0);
+          reflectedLight.directDiffuse *= mix(uGlare.x, uGlare.w, lobe) * nearFade;
           // worn streaks: the highlight breaks up along each roller, differently on every roller
           float seed = floor(vColor.r * 4096.0);
           float xs = -vViewPosition.x * uCrest.z;
@@ -591,11 +614,17 @@ export const makeWorld = (variant: Variant): World => {
           streak = smoothstep(0.3, 0.72, streak);
           float crestSide = mix(uCrestSide.x, 1.0, smoothstep(uCrestSide.y, uCrestSide.z, side));
           totalEmissiveRadiance += uCrestColor * crest * crest * mix(1.0, streak, uCrestSide.w) * crestSide * nearFade;
-          totalEmissiveRadiance += diffuseColor.rgb * uCrest.w;
+          float leftLevel = mix(uLeft.y, 1.0, smoothstep(uCrestSide.y, uCrestSide.z, side));
+          // the groove between two rollers: the lowest visible part of each one, turned towards the lens, stays dark
+          float groove = 1.0 - uGroove.z * smoothstep(uGroove.x, uGroove.y, wn.z) * smoothstep(uCrestSide.y, uCrestSide.z, side);
+          reflectedLight.directDiffuse *= groove;
+          reflectedLight.directSpecular *= groove;
+          reflectedLight.indirectDiffuse *= leftLevel * groove;
+          totalEmissiveRadiance += diffuseColor.rgb * uCrest.w * leftLevel * groove;
         }`,
       );
   };
-  rollerMat.customProgramCacheKey = () => "roller-v5";
+  rollerMat.customProgramCacheKey = () => "roller-v7";
   // near rollers get a round profile; distant ones a coarser one (they are a few pixels tall and out of focus)
   const rollerGeoFar = new THREE.CylinderGeometry(rc.radius * P, rc.radius * P, beltWidth, 14, 1, true);
   rollerGeoFar.rotateZ(Math.PI / 2);
@@ -610,7 +639,7 @@ export const makeWorld = (variant: Variant): World => {
   // each roller keeps its own tint as it travels; the tint table repeats once per loop
   const tintRng = mulberry32(31337);
   const tints: THREE.Color[] = [];
-  for (let i = 0; i < CONFIG.travel.pitchesPerLoop; i++) tints.push(new THREE.Color().setScalar(range(tintRng, 0.84, 1.06)));
+  for (let i = 0; i < CONFIG.travel.pitchesPerLoop; i++) tints.push(new THREE.Color().setScalar(range(tintRng, 0.92, 1.04)));
 
   const gap = new THREE.Mesh(new THREE.PlaneGeometry(beltWidth, 200 * P), new THREE.MeshBasicMaterial({ color: col(pal.rollerGap) }));
   gap.rotation.x = -Math.PI / 2;
@@ -747,16 +776,18 @@ export const makeWorld = (variant: Variant): World => {
         if (r.instanceColor) r.instanceColor.needsUpdate = true;
       }
 
-      // warehouse slides past
-      backdrop.position.z = travel * P;
+      // warehouse slides past. It is built close to the belt but stands in for a hall `parallax` times larger and
+      // further away, so it drifts that many times slower (and, like the reference, does not return to its start).
+      const drift = (frame * PITCHES_PER_FRAME) / CONFIG.backdrop.parallax;
+      backdrop.position.z = drift * P;
       // each lamp only shows while it passes through a band of distances, so one or two discs drift by at a time
       {
         const L = backdrop.userData.lamps as { mesh: THREE.InstancedMesh; lamps: { z: number; c: THREE.Color }[]; copies: number; first: number };
         let n = 0;
         for (let k = 0; k < L.copies; k++) {
           for (const l of L.lamps) {
-            const dist = (k + L.first) * PERIOD + l.z - travel;
-            const w = THREE.MathUtils.smoothstep(dist, 95, 125) * (1 - THREE.MathUtils.smoothstep(dist, 175, 215));
+            const dist = (k + L.first) * PERIOD + l.z - drift;
+            const w = THREE.MathUtils.smoothstep(dist, 95, 125) * (1 - THREE.MathUtils.smoothstep(dist, 165, 180));
             L.mesh.setColorAt(n++, tint.copy(l.c).multiplyScalar(w));
           }
         }

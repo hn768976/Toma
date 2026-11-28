@@ -1,7 +1,7 @@
 # conveyor-parcels
 
 Strapped cardboard parcels riding a roller conveyor through a warehouse: a long lens travelling
-with the parcels, shallow depth of field, and a hard light zone that sweeps over them once per loop.
+with the parcels, shallow depth of field, and a hard light zone that sweeps over them once per clip.
 
 Built with Remotion, `@remotion/three` and React Three Fiber on WebGL 2. Everything is procedural:
 there are no image, model or font assets to load.
@@ -12,7 +12,9 @@ there are no image, model or font assets to load.
 | `V2-conveyor-parcels` | 3840x2160, 30 fps | 313 frames (10.43 s) | Same scene, cold "night shift" colour palette. |
 | `LookDev` | 3840x2160 | 3 frames | The three look-development stills (start, light arriving, fully lit). |
 
-Both versions loop seamlessly: the frame after the last equals frame 0.
+The belt, the parcels and the light are periodic (one light zone per clip), but the warehouse behind
+drifts slowly and does not return to its start, as in the reference. The clip is therefore not a
+seamless loop. See "Motion and looping" below for the one-line switch that makes it one.
 
 ## Install
 
@@ -76,7 +78,7 @@ tint in the shadows (`GRADE_V2` in `src/look.ts`).
 | Length and timing of the light zone | `CONFIG.lightZone` |
 | Parcels: sizes, positions, straps, label | `CONFIG.parcels` |
 | Parcel vibration | `CONFIG.vibration` |
-| Backdrop density, number of distant lamps, random seed | `CONFIG.backdrop` |
+| Backdrop density, drift speed (`parallax`), position of the distant lamp, random seed | `CONFIG.backdrop` |
 | Duration, frame rate, composition size | top of `src/config.ts` |
 | Exposure, tone mapping, light levels and directions | `LIGHTS` and `LOOK` in `src/look.ts` |
 | Haze, depth of field, bloom, grade, lens softness, grain | `LOOK` in `src/look.ts` |
@@ -95,8 +97,14 @@ tint in the shadows (`GRADE_V2` in `src/look.ts`).
 - `scripts/measure-look.py` (numpy + Pillow) measures a frame's look and compares it with a
   reference frame; `lookdev/` holds the side-by-side comparisons.
 
-## Loop
+## Motion and looping
 
-The camera and parcels travel exactly 64 roller pitches in 313 frames, the backdrop repeats every
-64 pitches, the light zone repeats every 64 pitches, and the vibration noise is sampled on a
-circle. Frame 313 would therefore be identical to frame 0.
+The camera and parcels travel exactly 64 roller pitches in 313 frames, the light zone repeats every
+64 pitches, and the vibration noise is sampled on a circle, so the belt, the parcels and the light
+end exactly where they started.
+
+The warehouse behind them is built close to the belt but stands in for a hall three times larger
+and further away, so it drifts three times slower (`CONFIG.backdrop.parallax` in `src/config.ts`).
+That matches the reference, whose background slides about 6% of the frame width over the clip and
+does not return. Set `parallax` to `1` and the hall repeats once per clip: frame 313 is then
+identical to frame 0 and the video loops seamlessly, at the cost of a faster-moving background.

@@ -40,9 +40,9 @@ export const LIGHTS = {
     crestStart: 0.9,
     crestEnd: 1.0,
     /** The crest highlight is weaker on the left of the frame: weight there, and the range it ramps over. */
-    crestLeft: 0.16,
-    crestFrom: 0.03,
-    crestTo: 0.17,
+    crestLeft: 0.04,
+    crestFrom: -0.02,
+    crestTo: 0.15,
     /** Streaks per roller pitch along each roller, and a flat ambient lift of the roller colour. */
     streakScale: 0.7,
     /** How much the streaks break the highlight up (0 = continuous line, 1 = fully broken). */
@@ -54,10 +54,19 @@ export const LIGHTS = {
     nearFadeTo: 1.5,
     /** Key-light glare across the frame: floor level, peak level, where the peak sits (x / distance) and its width to the left / right. */
     glareLeft: 0.06,
-    glareRight: 0.3,
+    glareRight: 0.75,
     glareCentre: 0.15,
     glareWidthLeft: 0.05,
     glareWidthRight: 0.1,
+    /** Matte (diffuse) share of the key light at the glare's peak. */
+    glareDiffuse: 0.9,
+    /** Dark groove between rollers: range of the surface's turn towards the lens it fades in over (0-1), and its depth. */
+    grooveStart: 0.26,
+    grooveEnd: 0.52,
+    grooveDepth: 0.85,
+    /** Left of the glare the ribs flatten into a satin sheet: how flat (0-1), and the brightness there. */
+    leftFlatten: 0.75,
+    leftLevel: 0.78,
   },
   /** Brightness of the flat far strip of the belt relative to the roller colour. */
   farBelt: { brightness: 0.22 },

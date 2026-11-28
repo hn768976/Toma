@@ -148,7 +148,7 @@ export const CONFIG = {
   parcels: [
     { id: "hero", size: [5.05, 1.6, 6.6], topRise: 0.18, corner: [-0.17, 26.3], yawDeg: 35, straps: [0.25, 0.69], strapAxis: "depth", rim: true, label: false, flaps: false, mark: true },
     { id: "mid", tone: 1.3, size: [10.7, 2.42, 6], corner: [-5.5, 52], yawDeg: 1.5, straps: [0.37, 0.77], strapAxis: "width", rim: false, label: false, flaps: false, mark: false },
-    { id: "far", tone: 0.85, size: [8.6, 5.35, 7], corner: [-4.55, 62.5], yawDeg: -2, straps: [], strapAxis: "width", rim: false, label: true, flaps: true, mark: false },
+    { id: "far", tone: 1.25, size: [8.6, 5.35, 7], corner: [-4.55, 62.5], yawDeg: -2, straps: [], strapAxis: "width", rim: false, label: true, flaps: true, mark: false },
     { id: "last", size: [7, 8.2, 6], corner: [-3.4, 80], yawDeg: 3, straps: [], strapAxis: "width", rim: false, label: false, flaps: false, mark: false },
   ] as ParcelSpec[],
   vibration: {
@@ -164,6 +164,13 @@ export const CONFIG = {
     floorY: -15,
     goodsPerSide: 26,
     bokehPerPeriod: 1,
+    /** The lamp in view: pitches left of the lens axis, height above the roller tops, distance at frame 0. */
+    lamp: { x: -23.4, y: 3.3, distanceAtStart: 155 },
+    /**
+     * How many times further away (and larger) the hall is than it is built. It drifts past that many
+     * times slower. At 1 it would return to its start every loop; the reference's hall does not.
+     */
+    parallax: 3,
     seed: 20240613,
   },
 };
