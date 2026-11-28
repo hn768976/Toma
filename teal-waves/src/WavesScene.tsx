@@ -12,13 +12,16 @@ import {
   FINAL_FRAG,
   FULLSCREEN_VERT,
   HEIGHT_FRAG,
+  SHADE_DOWN_FRAG,
   SHADE_FRAG,
   SURFACE_FRAG,
   SURFACE_VERT,
 } from "./shaders";
 
-const DOF_MAIN_TAPS = 24;
-const DOF_FILL_TAPS = 12;
+// Depth-of-field gather: three passes of shrinking radius. Each pass fills the
+// gaps between the previous pass's taps, so bright hairlines blur into smooth
+// discs instead of strings of dots.
+const DOF_TAPS = [24, 12, 8] as const;
 
 const fullscreenGeometry = () => {
   // One oversized triangle covering the viewport.
@@ -69,7 +72,7 @@ const cameraUniforms = (aspect: number) => {
   const ndcTop = Math.min(GRID.ndcTop, horizonNdc - 0.04);
   // Row spacing: slope inside the frame, normalised so rowMap(1) = 1.
   const inside = 1 / (GRID.sparse + (1 - GRID.sparse) * (1 - GRID.blendStart - GRID.blendWidth / 2));
-  const cam = new THREE.PerspectiveCamera(CAMERA.fovDeg, aspect, 0.05, 400);
+  const cam = new THREE.PerspectiveCamera(CAMERA.fovDeg, aspect, 0.6, 120);
   cam.position.copy(pos);
   cam.lookAt(pos.clone().add(fwd));
   cam.updateMatrixWorld(true);
@@ -109,6 +112,7 @@ const createPipeline = (bufW: number, bufH: number, paletteName: PaletteName) =>
     });
   const heightRT = rt(hW, hH);
   const shadeRT = rt(hW, hH);
+  const shadeQRT = rt(hW, Math.ceil(hH / 4));
   const sceneRT = rt(bufW, bufH, { depthBuffer: true, samples: GRID.samples });
   const aaA = rt(bufW, bufH);
   const aaB = rt(bufW, bufH);
@@ -154,16 +158,19 @@ const createPipeline = (bufW: number, bufH: number, paletteName: PaletteName) =>
       ...cam,
       tHeight: { value: heightRT.texture },
       tShade: { value: shadeRT.texture },
+      tShadeQ: { value: shadeQRT.texture },
       uTexel: { value: heightTexel },
     },
     SURFACE_VERT,
   );
   surfaceMat.depthTest = true;
   surfaceMat.depthWrite = true;
-  // Slopes facing away from the camera are never visible on a height field;
-  // culling them stops edge-on slivers leaking through at crest silhouettes.
-  surfaceMat.side = THREE.FrontSide;
+  // Double-sided: triangles that face away at a crest silhouette are shaded as
+  // the crest's rim (see SURFACE_FRAG) rather than culled, which would leave a
+  // sawtooth of gaps along every edge-on crest.
+  surfaceMat.side = THREE.DoubleSide;
 
+  const shadeDownMat = mat(SHADE_DOWN_FRAG, { tColor: { value: shadeRT.texture }, uTexel: { value: heightTexel } });
   const copyMat = mat(COPY_FRAG, { tColor: { value: null } });
   const aaSigma = Math.max(LOOK.dof.minBlur * bufH, 0.3);
   const aaMat = mat(AA_FRAG.replace("AA_RADIUS", String(Math.ceil(aaSigma * 2.5))), {
@@ -178,10 +185,15 @@ const createPipeline = (bufW: number, bufH: number, paletteName: PaletteName) =>
     uRadiusScale: { value: radiusScale },
     uRotate: { value: rotate },
   });
-  const dofMain = mat(DOF_FRAG.replace("TAP_COUNT", String(DOF_MAIN_TAPS)), dofUniforms(halfA.texture, 1, 0));
+  const gap = (taps: number) => Math.sqrt(Math.PI / taps) * 0.9;
+  const dofMain = mat(DOF_FRAG.replace("TAP_COUNT", String(DOF_TAPS[0])), dofUniforms(halfA.texture, 1, 0));
   const dofFill = mat(
-    DOF_FRAG.replace("TAP_COUNT", String(DOF_FILL_TAPS)),
-    dofUniforms(halfB.texture, Math.sqrt(Math.PI / DOF_MAIN_TAPS) * 0.9, 1.1),
+    DOF_FRAG.replace("TAP_COUNT", String(DOF_TAPS[1])),
+    dofUniforms(halfB.texture, gap(DOF_TAPS[0]), 1.1),
+  );
+  const dofFine = mat(
+    DOF_FRAG.replace("TAP_COUNT", String(DOF_TAPS[2])),
+    dofUniforms(halfA.texture, gap(DOF_TAPS[0]) * gap(DOF_TAPS[1]), 2.3),
   );
   const blurMat = mat(BLUR_FRAG, { tColor: { value: null }, uStep: { value: new THREE.Vector2() } });
   const finalMat = mat(FINAL_FRAG.replace(/RAMP_STOPS/g, String(palette.ramp.length)), {
@@ -190,7 +202,7 @@ const createPipeline = (bufW: number, bufH: number, paletteName: PaletteName) =>
     uExposure: { value: LOOK.exposure },
     uBlackPoint: { value: LOOK.blackPoint },
     tScene: { value: aaB.texture },
-    tDof: { value: halfA.texture },
+    tDof: { value: halfB.texture },
     tGlow: { value: glowA.texture },
     uDof: { value: dof },
     uBlend: { value: new THREE.Vector2(LOOK.dof.blendStart, LOOK.dof.blendEnd) },
@@ -236,6 +248,7 @@ const createPipeline = (bufW: number, bufH: number, paletteName: PaletteName) =>
     heightMat.uniforms.uTime.value = time;
     pass(gl, heightMat, heightRT);
     pass(gl, shadeMat, shadeRT);
+    pass(gl, shadeDownMat, shadeQRT);
 
     // 3. the displaced surface. Empty pixels: black, and far (takes far blur).
     gl.setRenderTarget(sceneRT);
@@ -249,13 +262,14 @@ const createPipeline = (bufW: number, bufH: number, paletteName: PaletteName) =>
     aaMat.uniforms.uStep.value.set(0, 1 / bufH);
     pass(gl, aaMat, aaB, aaA.texture);
 
-    // 4b. depth of field at half resolution: halfA -> halfB -> halfA
+    // 4b. depth of field at half resolution: halfA -> halfB -> halfA -> halfB
     pass(gl, copyMat, halfA, sceneRT.texture);
     pass(gl, dofMain, halfB);
     pass(gl, dofFill, halfA);
+    pass(gl, dofFine, halfB);
 
     // 5. glow: quarter size, three widening gaussian rounds.
-    pass(gl, copyMat, glowA, halfA.texture);
+    pass(gl, copyMat, glowA, halfB.texture);
     const sigmaTexels = (LOOK.glow.radius * bufH) / 4;
     const unit = sigmaTexels / (1.8 * Math.sqrt(1 + 4 + 9));
     for (let i = 1; i <= 3; i++) {
@@ -271,8 +285,8 @@ const createPipeline = (bufW: number, bufH: number, paletteName: PaletteName) =>
   };
 
   const dispose = () => {
-    [heightRT, shadeRT, sceneRT, aaA, aaB, halfA, halfB, glowA, glowB].forEach((t) => t.dispose());
-    [heightMat, shadeMat, surfaceMat, copyMat, aaMat, dofMain, dofFill, blurMat, finalMat].forEach((m) => m.dispose());
+    [heightRT, shadeRT, shadeQRT, sceneRT, aaA, aaB, halfA, halfB, glowA, glowB].forEach((t) => t.dispose());
+    [heightMat, shadeMat, shadeDownMat, surfaceMat, copyMat, aaMat, dofMain, dofFill, dofFine, blurMat, finalMat].forEach((m) => m.dispose());
     tri.dispose();
     surface.geometry.dispose();
   };

@@ -110,7 +110,7 @@ void main() {
   vec2 ca = c * ${LOOK.chromaticAberration.toFixed(5)} * r * r * 2.0;
   vec3 col = vec3(texture2D(tScene, vUv + ca).r, texture2D(tScene, vUv).g, texture2D(tScene, vUv - ca).b);
   // lens softness: blend with a small blur whose size is fixed relative to the frame
-  vec2 so = vec2(1.0 / (1080.0 * uAspect), 1.0 / 1080.0) * 1.1;
+  vec2 so = vec2(1.0 / (1080.0 * uAspect), 1.0 / 1080.0) * 1.45;
   vec3 soft = (texture2D(tScene, vUv + so * vec2(1.0, 0.6)).rgb + texture2D(tScene, vUv + so * vec2(-0.6, 1.0)).rgb
              + texture2D(tScene, vUv + so * vec2(-1.0, -0.6)).rgb + texture2D(tScene, vUv + so * vec2(0.6, -1.0)).rgb) * 0.25;
   col = mix(col, soft, ${LOOK.softness.toFixed(4)});
@@ -138,7 +138,8 @@ void main() {
   float g = hash13(vec3(gp, uFrame)) + hash13(vec3(gp + 17.0, uFrame + 3.0)) - 1.0;
   col += g * ${LOOK.grain.toFixed(5)} * smoothstep(0.0, 0.08, l);
   // +-1/255 dither against banding in the soft gradients
-  float d = hash13(vec3(px, uFrame + 11.0)) - 0.5;
+  // (a fixed pattern: unlike a per-frame one it survives H.264 on flat areas)
+  float d = hash13(vec3(px, 11.0)) - 0.5;
   col += d * (2.0 / 255.0);
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }`,

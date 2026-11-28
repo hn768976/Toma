@@ -29,7 +29,9 @@ float growAt(float birth) {
 const GROW_VERTEX = /* glsl */ `
 float grow = growAt(aBirth);
 transformed.y = transformed.y * grow + (grow - 1.0) * aYB;
-if (grow <= 0.0) transformed = vec3(0.0);
+// Hidden until it has a real height: a paper-thin box would put several
+// differently coloured faces at the same depth (flickering depth ties).
+if (grow < 0.03) transformed = vec3(0.0);
 `;
 const LINE_FN = /* glsl */ `
 // anti-aliased repeating line: x in cells, w = line width as a cell fraction.
@@ -43,8 +45,10 @@ float gridLine(float x, float w) {
 `;
 
 // --------------------------------------------------------------- buildings
-const makeBuildingMaterials = (uTime: { value: number }) => {
-  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.82, metalness: 0.0 });
+const makeBuildingMaterials = (uTime: { value: number }, glass: boolean) => {
+  // The glass towers are a second, alpha-blended mesh drawn after everything
+  // opaque, so the city shows through them.
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.82, metalness: 0.0, transparent: glass });
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uTime = uTime;
     shader.vertexShader = shader.vertexShader
@@ -95,6 +99,7 @@ float bNoise(vec2 p) {
         `#include <color_fragment>
 vec3 bEmis = vec3(0.0);
 float bRough = 0.82;
+float bAlpha = 1.0;
 {
   vec3 an = abs(vObjN);
   bool top = an.y > 0.5;
@@ -120,23 +125,25 @@ float bRough = 0.82;
   } else if (vKind < 1.5) {
     // glass: blue gradient, pale mullions, bright edges, a little self-glow
     if (!top) {
-      // glass: dark teal body, tall reflected-sky streaks, pale mullions, bright edges and cap
-      float grad = pow(vLocal.y, 0.85);
+      // glass: translucent pale cyan-to-azure body, soft vertical highlights,
+      // faint floor lines, light edges and cap
+      float grad = pow(vLocal.y, 0.8);
       float faceId = an.x > 0.5 ? 3.7 : 0.0;
-      float n1 = bNoise(vec2(uW * 1.6 + vSeed * 37.0 + faceId, hW * 0.3 + vSeed * 11.0));
-      float n2 = bNoise(vec2(uW * 0.7 + vSeed * 5.0 + faceId * 2.0, hW * 0.9 + vSeed * 3.0));
-      float streak = smoothstep(0.5, 0.78, n1) * (0.55 + 0.45 * grad);
-      float sheen = smoothstep(0.55, 0.9, bNoise(vec2(uW * 0.5 + hW * 0.22 + vSeed * 20.0 + faceId, vSeed * 9.0)));
-      float refl = clamp(streak + 0.6 * sheen, 0.0, 1.0) * ${f(LOOK.glassStreakAmount)};
-      vec3 g = mix(${glslVec3(lin(C.glassLow))}, ${glslVec3(lin(C.glassHigh))}, grad) * (0.6 + 0.6 * n2);
-      float mull = max(gridLine(hW / ${f(CONFIG.floorHeight)}, 0.14), gridLine(uW / 0.22 + vSeed, 0.12) * 0.8);
+      float band = bNoise(vec2(uW * 2.6 + vSeed * 37.0 + faceId, vSeed * 5.0));
+      float along = 0.55 + 0.45 * bNoise(vec2(vSeed * 9.0 + faceId, hW * 0.22));
+      float streak = smoothstep(0.52, 0.8, band) * along;
+      float n2 = bNoise(vec2(uW * 0.7 + vSeed * 5.0 + faceId * 2.0, hW * 0.5 + vSeed * 3.0));
+      float refl = streak * ${f(LOOK.glassStreakAmount)};
+      vec3 g = mix(${glslVec3(lin(C.glassLow))}, ${glslVec3(lin(C.glassHigh))}, grad) * (0.7 + 0.5 * n2);
+      float floors = gridLine(hW / ${f(CONFIG.floorHeight * 2.0)}, 0.1);
       float edge = smoothstep(0.5 * faceW - 0.07, 0.5 * faceW - 0.015, abs(uW));
-      edge = max(edge, smoothstep(vDim.y - 0.22, vDim.y - 0.04, hW) * 0.9);
-      float pale = clamp(mull * 0.2 + edge * 0.5, 0.0, 1.0);
+      edge = max(edge, smoothstep(vDim.y - 0.2, vDim.y - 0.04, hW) * 0.9);
+      float pale = clamp(floors * 0.12 + edge * 0.6, 0.0, 1.0);
       g = mix(g, ${glslVec3(lin(C.glassEdge))}, pale);
       col = g;
-      bEmis = mix(${glslVec3(rgb(LOOK.glassEmissiveLow))}, ${glslVec3(rgb(LOOK.glassEmissiveHigh))}, grad) * (0.6 + 0.7 * n2) * (1.0 + 1.6 * pale) * ${f(LOOK.glassGlow)};
-      bEmis += ${glslVec3(rgb(LOOK.glassStreak))} * refl * (1.0 - 0.5 * pale);
+      bEmis = mix(${glslVec3(rgb(LOOK.glassEmissiveLow))}, ${glslVec3(rgb(LOOK.glassEmissiveHigh))}, grad) * (0.75 + 0.5 * n2) * (1.0 + 1.2 * pale) * ${f(LOOK.glassGlow)};
+      bEmis += ${glslVec3(rgb(LOOK.glassStreak))} * refl;
+      bAlpha = clamp(${f(LOOK.glassAlpha)} + 0.3 * refl + 0.38 * pale, 0.0, 1.0);
       bRough = 0.32;
     } else {
       col = mix(${glslVec3(lin(C.glassHigh))}, vec3(0.8), 0.8);
@@ -149,6 +156,9 @@ float bRough = 0.82;
     col = mix(${glslVec3(lin(C.tile))}, col, smoothstep(0.8, 2.6, vAge));
     float kerb = 1.0 - smoothstep(0.03, 0.07, edgeD);
     col *= 1.0 - 0.1 * kerb * float(top);
+  } else if (vKind > 5.5) {
+    // the core seen through a glass tower
+    col = ${glslVec3(lin(C.glassCore))} * (0.8 + 0.2 * gridLine(hW / ${f(CONFIG.floorHeight * 2.0)}, 0.3));
   } else if (vKind > 4.5) {
     // park: pale green with a dotted pattern
     vec2 q = vLocal.xz * vDim.xz / 0.3;
@@ -165,6 +175,7 @@ float bRough = 0.82;
     bEmis *= mix(ao, 1.0, 0.5);
   }
   diffuseColor.rgb = col;
+  diffuseColor.a = bAlpha;
 }`,
       )
       .replace(
@@ -178,7 +189,7 @@ roughnessFactor = bRough;`,
 totalEmissiveRadiance += bEmis;`,
       );
   };
-  mat.customProgramCacheKey = () => "city-building";
+  mat.customProgramCacheKey = () => (glass ? "city-building-glass" : "city-building");
 
   const depth = new THREE.MeshDepthMaterial();
   depth.onBeforeCompile = (shader) => {
@@ -238,9 +249,9 @@ void main() {
   if (vY > topY) discard;
   float hW = vLocal.y * vDim.y;
   float uW = an.x > 0.5 ? vLocal.z * vDim.z : vLocal.x * vDim.x;
-  float vert = gridLine(uW / 0.06 + vSeed, 0.6);
+  float vert = gridLine(uW / 0.085 + vSeed, 0.45);
   float dash = 0.3 + 0.7 * step(0.45, fract(vY * 9.0 + vSeed * 7.0));
-  float horiz = gridLine(hW / ${f(CONFIG.floorHeight * 2.0)}, 0.14);
+  float horiz = gridLine(hW / ${f(CONFIG.floorHeight * 3.0)}, 0.1);
   float a = max(vert * dash, horiz * 0.7);
   float tip = 1.0;
   float fade = 1.0 - smoothstep(0.5, 1.0, vPhase);
@@ -299,15 +310,19 @@ float vnoise(vec2 p) {
     vec2 cw = cid * ${f(LOOK.tileSize)};         // cell centre, world units
     float arrive = length(cw) + ${f(LOOK.tilePatch)} * (vnoise(cw * 0.085) - 0.5) + 2.2 * (hash2(cid).x - 0.5);
     float rev = clamp((uTileFront - arrive) / ${f(LOOK.tileBand)}, 0.0, 1.0);
-    float thresh = mix(0.42, ${f(LOOK.tileJoint)}, pow(rev, 0.55));
-    float fw = fwidth(edge) + 0.002;
+    float thresh = mix(0.5, ${f(LOOK.tileJoint)}, pow(rev, 0.8));
+    // Pixel footprint from the interpolated position, not fwidth(edge): the
+    // derivative of a value built in a data-dependent loop is not reproducible
+    // from run to run on every GPU, the derivative of a varying is.
+    vec2 fp2 = fwidth(p);
+    float fw = max(fp2.x, fp2.y) * 1.4 + 0.002;
     float m = smoothstep(thresh, thresh + fw * 1.5, edge) * step(0.001, rev);
     // thin grey outline on young tiles
     float outline = (1.0 - smoothstep(0.0, fw * 2.0 + 0.025, abs(edge - thresh))) * step(0.001, rev) * (1.0 - 0.6 * rev);
     float mature = smoothstep(4.0, 13.0, uBuildFront - length(cw));
     vec3 tile = mix(${glslVec3(lin(C.tile))}, ${glslVec3(lin(C.tileMature))}, mature) * (0.97 + 0.06 * hash2(cid + 3.1).y);
     col = mix(land, tile, m);
-    col = mix(col, ${glslVec3(lin(C.tileEdge))}, outline * 0.5);
+    col = mix(col, ${glslVec3(lin(C.tileEdge))}, outline * 0.22);
     // tiles are slightly raised: a highlight on the edge facing the sun, a small shadow behind
     float side = dot(normalize(rNear + vec2(1e-5)), SUN_XZ);
     float rimIn = m * (1.0 - smoothstep(0.0, 0.1, edge - thresh));
@@ -436,6 +451,7 @@ export const createCity = (): City => {
     const pos = new Float32Array(n * 18);
     const nor = new Float32Array(n * 18);
     const aD = new Float32Array(n * 6);
+    const aLane = new Float32Array(n * 12); // (distance across from the centre line, distance along)
     roads.forEach((r, k) => {
       let dx = r.bx - r.ax;
       let dz = r.bz - r.az;
@@ -449,12 +465,13 @@ export const createCity = (): City => {
       const az = r.az - dz * e;
       const bx = r.bx + dx * e;
       const bz = r.bz + dz * e;
-      const y = 0.03;
+      const y = r.y;
+      const major = r.w > 0.5 ? 1 : 0;
       const v = [
-        [ax + hx, az + hz, r.da - e],
-        [ax - hx, az - hz, r.da - e],
-        [bx + hx, bz + hz, r.db + (r.db >= r.da ? e : -e)],
-        [bx - hx, bz - hz, r.db + (r.db >= r.da ? e : -e)],
+        [ax + hx, az + hz, r.da - e, (r.w / 2) * major + (1 - major) * 9, 0],
+        [ax - hx, az - hz, r.da - e, (-r.w / 2) * major + (1 - major) * 9, 0],
+        [bx + hx, bz + hz, r.db + (r.db >= r.da ? e : -e), (r.w / 2) * major + (1 - major) * 9, len + 2 * e],
+        [bx - hx, bz - hz, r.db + (r.db >= r.da ? e : -e), (-r.w / 2) * major + (1 - major) * 9, len + 2 * e],
       ];
       // a road drawn "backwards" (b reached first) still wipes along its length
       if (r.db < r.da) {
@@ -466,26 +483,36 @@ export const createCity = (): City => {
         pos.set([v[vi][0], y, v[vi][1]], k * 18 + q * 3);
         nor.set([0, 1, 0], k * 18 + q * 3);
         aD[k * 6 + q] = v[vi][2];
+        aLane.set([v[vi][3], v[vi][4]], k * 12 + q * 2);
       });
     });
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
     geo.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
     geo.setAttribute("aD", new THREE.BufferAttribute(aD, 1));
+    geo.setAttribute("aLane", new THREE.BufferAttribute(aLane, 2));
     // a street is pale when it is drawn and darkens once the front has moved on
     const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, side: THREE.DoubleSide });
     mat.onBeforeCompile = (shader) => {
       shader.uniforms.uRoadFront = uRoadFront;
       shader.vertexShader = shader.vertexShader
-        .replace("#include <common>", "#include <common>\nattribute float aD;\nvarying float vReveal;")
-        .replace("#include <begin_vertex>", "#include <begin_vertex>\nvReveal = aD;");
+        .replace("#include <common>", "#include <common>\nattribute float aD;\nattribute vec2 aLane;\nvarying float vReveal;\nvarying vec2 vLane;")
+        .replace("#include <begin_vertex>", "#include <begin_vertex>\nvReveal = aD; vLane = aLane;");
       shader.fragmentShader = shader.fragmentShader
-        .replace("#include <common>", "#include <common>\nuniform float uRoadFront;\nvarying float vReveal;")
+        .replace("#include <common>", "#include <common>\nuniform float uRoadFront;\nvarying float vReveal;\nvarying vec2 vLane;")
         .replace("#include <clipping_planes_fragment>", "#include <clipping_planes_fragment>\nif (vReveal > uRoadFront) discard;")
         .replace(
           "#include <color_fragment>",
           `#include <color_fragment>
-diffuseColor.rgb = mix(${glslVec3(lin(C.roadNew))}, ${glslVec3(lin(C.roadOld))}, smoothstep(${f(CONFIG.roadAgeStart)}, ${f(CONFIG.roadAgeEnd)}, uRoadFront - vReveal));`,
+diffuseColor.rgb = mix(${glslVec3(lin(C.roadNew))}, ${glslVec3(lin(C.roadOld))}, smoothstep(${f(CONFIG.roadAgeStart)}, ${f(CONFIG.roadAgeEnd)}, uRoadFront - vReveal));
+{
+  // dashed centre line on the avenues (side streets carry vLane.x = 9: no line)
+  float fwl = fwidth(vLane.y);
+  float across = 1.0 - smoothstep(0.022, 0.022 + fwidth(vLane.x), abs(vLane.x));
+  float dash = smoothstep(0.5 - fwl, 0.5 + fwl, abs(fract(vLane.y / 0.5) - 0.5) * 2.0);
+  float lane = across * dash * (1.0 - smoothstep(0.15, 0.4, fwl));
+  diffuseColor.rgb = mix(diffuseColor.rgb, ${glslVec3(lin(C.lane))}, lane * 0.6);
+}`,
         );
     };
     mat.customProgramCacheKey = () => "city-road";
@@ -532,8 +559,8 @@ diffuseColor.rgb = mix(${glslVec3(lin(C.roadNew))}, ${glslVec3(lin(C.roadOld))},
       for (let i = 0; i < P.length - 1; i++) {
         const f0 = frame(i);
         const f1 = frame(i + 1);
-        const t0 = h.start + P[i].s / h.speed;
-        const t1 = h.start + P[i + 1].s / h.speed;
+        const t0 = h.start + P[i].d / h.speed;
+        const t1 = h.start + P[i + 1].d / h.speed;
         for (let k = 0; k < prof.length; k++) {
           const a = prof[k];
           const b = prof[(k + 1) % prof.length];
@@ -615,6 +642,7 @@ diffuseColor.rgb = mix(${glslVec3(lin(C.roadNew))}, ${glslVec3(lin(C.roadOld))},
         if (b.kind === KIND.park) c = lin(C.park);
         if (b.kind === KIND.pillar) c = lin(C.deckSide);
         if (b.kind === KIND.detail) c = lin(C.roof);
+        if (b.kind === KIND.core) c = lin(C.glassCore);
         aColor.set([c.r, c.g, c.b], i * 3);
       });
       geo.setAttribute("aBirth", new THREE.InstancedBufferAttribute(aBirth, 1));
@@ -630,16 +658,23 @@ diffuseColor.rgb = mix(${glslVec3(lin(C.roadNew))}, ${glslVec3(lin(C.roadOld))},
       return { geo, matrices, n };
     };
 
-    const solid = build(boxes, true);
-    const { mat, depth } = makeBuildingMaterials(uTime);
-    const mesh = new THREE.InstancedMesh(solid.geo, mat, solid.n);
-    mesh.instanceMatrix.array.set(solid.matrices);
-    mesh.instanceMatrix.needsUpdate = true;
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    mesh.frustumCulled = false;
-    mesh.customDepthMaterial = depth;
-    scene.add(mesh);
+    const isGlass = (b: (typeof boxes)[number]) => b.kind === KIND.glass;
+    for (const glass of [false, true]) {
+      const part = build(
+        boxes.filter((b) => isGlass(b) === glass),
+        true,
+      );
+      const { mat, depth } = makeBuildingMaterials(uTime, glass);
+      const mesh = new THREE.InstancedMesh(part.geo, mat, part.n);
+      mesh.instanceMatrix.array.set(part.matrices);
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.frustumCulled = false;
+      mesh.customDepthMaterial = depth;
+      mesh.renderOrder = glass ? 2 : 0;
+      scene.add(mesh);
+    }
 
     const ghosts = build(
       boxes.filter((b) => b.ghost),
@@ -678,7 +713,7 @@ diffuseColor.rgb = mix(${glslVec3(lin(C.roadNew))}, ${glslVec3(lin(C.roadOld))},
   }
   scene.add(new THREE.HemisphereLight(lin(LOOK.skyColor), lin(LOOK.groundColor), LOOK.hemiIntensity));
 
-  const camera = new THREE.PerspectiveCamera(CAMERA_FOV, 16 / 9, 0.4, 6000);
+  const camera = new THREE.PerspectiveCamera(CAMERA_FOV, 16 / 9, 2.0, 5000);
 
   let envReady = false;
   const prepare = (gl: THREE.WebGLRenderer) => {

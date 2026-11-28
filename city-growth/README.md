@@ -105,12 +105,13 @@ light and the grade in `src/look.ts`.
 
 ## Render time
 
-Measured on a 4-core machine with software GL (SwiftShader), two render tabs, while another
-render shared the CPU:
+Measured on a 4-core cloud machine with no GPU (software GL / SwiftShader), `--concurrency=2`:
 
 | Output | Per frame | Whole video (450 frames) |
 | ------ | --------- | ------------------------ |
-| 1080p (`--scale=0.5`) | RENDER_1080_PER_FRAME | RENDER_1080_TOTAL |
-| 4K (`--scale=1`), estimated from single 4K frames | RENDER_4K_PER_FRAME | RENDER_4K_TOTAL |
+| 1080p (`--scale=0.5`), machine otherwise lightly loaded (40-frame test) | about 1.7 s | about 13 min |
+| 1080p (`--scale=0.5`), the delivered files, rendered while three other renders shared the 4 cores | 3.4 - 3.7 s | 25 min 08 s (V2) and 27 min 37 s (V1) |
+| 4K (`--scale=1`), estimated: 4x the pixels of the lightly loaded 1080p figure | about 7 s | about 50 min |
+| 4K (`--scale=1`), measured on single frames under the same heavy load (one tab) | 18.7 s | (about 2 h 20 min if the load stayed that high) |
 
 A machine with a real GPU will be many times faster.

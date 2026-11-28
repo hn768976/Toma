@@ -1,0 +1,36 @@
+{
+ "file": "01-V1-teal-waves.mp4",
+ "specs": {
+  "width": 1920,
+  "height": 1080,
+  "codec": "h264",
+  "pix_fmt": "yuv420p",
+  "r_frame_rate": "30/1",
+  "avg_frame_rate": "30/1",
+  "frames": 1126,
+  "audio_streams": 0,
+  "duration": 37.533333,
+  "reference_duration": 37.533333,
+  "duration_diff": 0.0
+ },
+ "specs_pass": true,
+ "duration_pass": true,
+ "decode_errors": "",
+ "integrity_pass": true,
+ "scan": {
+  "frames_scanned": 1126,
+  "mean_brightness_min": 50.62723922729492,
+  "mean_brightness_max": 58.82817840576172,
+  "blank_frames": [],
+  "frozen_frames": [],
+  "n_frozen": 0,
+  "max_brightness_step": 0.36328125,
+  "max_brightness_step_at": 77,
+  "flicker_frames": [],
+  "frame_diff_min": 4.530920028686523,
+  "frame_diff_median": 5.470538139343262,
+  "frame_diff_max": 6.644774436950684
+ },
+ "scan_pass": true,
+ "contact_sheet": "deliverables/qc/A/checks/01-V1-teal-waves.contact.png"
+}

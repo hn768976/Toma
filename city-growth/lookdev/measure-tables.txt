@@ -1,114 +1,114 @@
 measure                          ref      mine       diff  status
-lum_p1                        40.276    46.075     +14.4%  FAIL
+lum_p1                        40.276    45.994     +14.2%  FAIL
 lum_p5                        62.262    64.623      +3.8%  PASS
-lum_p50                       88.511    88.120      -0.4%  PASS
+lum_p50                       88.511    87.978      -0.6%  PASS
 lum_p95                       97.647    97.825      +0.2%  PASS
 lum_p99                       98.386    98.272      -0.1%  PASS
-lum_mean                      85.909    86.364      +0.5%  PASS
-pct_above_90                  31.154    24.841     -20.3%  FAIL
+lum_mean                      85.909    86.324      +0.5%  PASS
+pct_above_90                  31.154    24.447     -21.5%  FAIL
 pct_below_5                    0.000     0.000      +0.0%  PASS
-sat_mean                      16.263    16.922      +4.1%  PASS
-chroma_mean                   14.410    15.152      +5.2%  PASS
-hue_shadows                  194.137   195.010   +0.9 deg  PASS
-hue_midtones                 191.333   194.374   +3.0 deg  PASS
-hue_highlights               193.869   194.734   +0.9 deg  PASS
+sat_mean                      16.263    16.956      +4.3%  PASS
+chroma_mean                   14.410    15.180      +5.3%  PASS
+hue_shadows                  194.137   195.013   +0.9 deg  PASS
+hue_midtones                 191.333   194.340   +3.0 deg  PASS
+hue_highlights               193.869   194.777   +0.9 deg  PASS
 glow_peak                     98.139    98.157      +0.0%  PASS
 glow_peak_x                   23.568    44.792        n/a  info
 glow_peak_y                   77.778    78.009        n/a  info
 glow_r50                      11.328    22.786    +101.1%  FAIL
 glow_r25                      86.068    69.531     -19.2%  FAIL
 glow_r10                      87.500    69.661     -20.4%  FAIL
-contrast_top                   9.701    25.254    +160.3%  FAIL
-black_top                     80.850    65.378     -19.1%  FAIL
-mean_top                      87.351    85.719      -1.9%  PASS
-contrast_mid                  32.667    38.864     +19.0%  FAIL
-black_mid                     64.951    59.044      -9.1%  PASS
-mean_mid                      86.258    84.883      -1.6%  PASS
-contrast_bot                  46.590    31.804     -31.7%  FAIL
-black_bot                     51.449    66.188     +28.6%  FAIL
-mean_bot                      84.174    88.256      +4.8%  PASS
-haze_far_near_contrast         0.208     0.794    +281.4%  FAIL
+contrast_top                   9.701    25.227    +160.0%  FAIL
+black_top                     80.850    65.406     -19.1%  FAIL
+mean_top                      87.351    85.709      -1.9%  PASS
+contrast_mid                  32.667    38.943     +19.2%  FAIL
+black_mid                     64.951    58.965      -9.2%  PASS
+mean_mid                      86.258    84.840      -1.6%  PASS
+contrast_bot                  46.590    31.887     -31.6%  FAIL
+black_bot                     51.449    66.104     +28.5%  FAIL
+mean_bot                      84.174    88.188      +4.8%  PASS
+haze_far_near_contrast         0.208     0.791    +280.0%  FAIL
 grain_flat_std                 0.381     1.284    +237.4%  PASS
-grain_global_std              22.439    23.728      +5.7%  PASS
-detail_laplacian_var          37.477    54.830     +46.3%  FAIL
-detail_fine                   16.984    19.206     +13.1%  FAIL
-detail_medium                 25.505    24.171      -5.2%  PASS
-detail_coarse                 41.721    42.111      +0.9%  PASS
-vignette_corner_centre         1.040     1.028      -1.1%  PASS
+grain_global_std              22.439    23.609      +5.2%  PASS
+detail_laplacian_var          37.477    54.136     +44.5%  FAIL
+detail_fine                   16.984    19.097     +12.4%  FAIL
+detail_medium                 25.505    24.173      -5.2%  PASS
+detail_coarse                 41.721    42.182      +1.1%  PASS
+vignette_corner_centre         1.040     1.029      -1.0%  PASS
 -- 23 ok/info, 13 FAIL: lum_p1, pct_above_90, glow_r50, glow_r25, glow_r10, contrast_top, black_top, contrast_mid, contrast_bot, black_bot, haze_far_near_contrast, detail_laplacian_var, detail_fine
 measure                          ref      mine       diff  status
 lum_p1                        26.246    25.715      -2.0%  PASS
 lum_p5                        33.013    33.656      +1.9%  PASS
-lum_p50                       70.494    68.432      -2.9%  PASS
-lum_p95                       95.294    95.198      -0.1%  PASS
-lum_p99                       98.499    97.180      -1.3%  PASS
-lum_mean                      67.035    67.366      +0.5%  PASS
-pct_above_90                  10.488    17.850     +70.2%  FAIL
+lum_p50                       70.494    68.295      -3.1%  PASS
+lum_p95                       95.294    95.115      -0.2%  PASS
+lum_p99                       98.499    97.074      -1.4%  PASS
+lum_mean                      67.035    67.284      +0.4%  PASS
+pct_above_90                  10.488    17.448     +66.4%  FAIL
 pct_below_5                    0.000     0.000      +0.0%  PASS
-sat_mean                      30.708    35.522     +15.7%  FAIL
-chroma_mean                   20.835    24.404     +17.1%  FAIL
+sat_mean                      30.708    35.597     +15.9%  FAIL
+chroma_mean                   20.835    24.458     +17.4%  FAIL
 hue_shadows                  200.274   198.484   -1.8 deg  PASS
-hue_midtones                 196.448   197.314   +0.9 deg  PASS
-hue_highlights               191.890   193.914   +2.0 deg  PASS
-glow_peak                     99.995    97.476      -2.5%  PASS
+hue_midtones                 196.448   197.319   +0.9 deg  PASS
+hue_highlights               191.890   193.903   +2.0 deg  PASS
+glow_peak                     99.995    97.475      -2.5%  PASS
 glow_peak_x                    3.385    66.276        n/a  info
 glow_peak_y                   65.278    25.926        n/a  info
 glow_r50                      22.005     3.906     -82.2%  FAIL
 glow_r25                     101.432    78.125     -23.0%  FAIL
 glow_r10                     101.953    78.125     -23.4%  FAIL
-contrast_top                  53.189    60.838     +14.4%  FAIL
+contrast_top                  53.189    60.529     +13.8%  FAIL
 black_top                     37.061    33.740      -9.0%  PASS
-mean_top                      76.010    67.580     -11.1%  FAIL
-contrast_mid                  63.413    58.975      -7.0%  PASS
-black_mid                     34.336    36.699      +6.9%  PASS
-mean_mid                      67.196    68.715      +2.3%  PASS
-contrast_bot                  65.663    67.663      +3.0%  PASS
-black_bot                     28.490    27.369      -3.9%  PASS
-mean_bot                      57.925    66.018     +14.0%  FAIL
-haze_far_near_contrast         0.810     0.899     +11.0%  PASS
+mean_top                      76.010    67.489     -11.2%  FAIL
+contrast_mid                  63.413    58.999      -7.0%  PASS
+black_mid                     34.336    36.616      +6.6%  PASS
+mean_mid                      67.196    68.578      +2.1%  PASS
+contrast_bot                  65.663    67.609      +3.0%  PASS
+black_bot                     28.490    27.367      -3.9%  PASS
+mean_bot                      57.925    65.989     +13.9%  FAIL
+haze_far_near_contrast         0.810     0.895     +10.5%  PASS
 grain_flat_std                 1.187     1.159      -2.3%  PASS
-grain_global_std              49.298    50.055      +1.5%  PASS
-detail_laplacian_var         166.732   152.091      -8.8%  PASS
-detail_fine                   36.348    35.905      -1.2%  PASS
-detail_medium                 60.243    65.644      +9.0%  PASS
-detail_coarse                 84.776    90.736      +7.0%  PASS
+grain_global_std              49.298    49.935      +1.3%  PASS
+detail_laplacian_var         166.732   150.750      -9.6%  PASS
+detail_fine                   36.348    35.784      -1.6%  PASS
+detail_medium                 60.243    65.640      +9.0%  PASS
+detail_coarse                 84.776    90.659      +6.9%  PASS
 vignette_corner_centre         0.997     0.912      -8.6%  PASS
 -- 27 ok/info, 9 FAIL: pct_above_90, sat_mean, chroma_mean, glow_r50, glow_r25, glow_r10, contrast_top, mean_top, mean_bot
 measure                          ref      mine       diff  status
-lum_p1                        26.472    27.093      +2.3%  PASS
-lum_p5                        31.491    32.052      +1.8%  PASS
-lum_p50                       50.846    56.686     +11.5%  FAIL
+lum_p1                        26.472    27.094      +2.3%  PASS
+lum_p5                        31.491    32.056      +1.8%  PASS
+lum_p50                       50.846    56.696     +11.5%  FAIL
 lum_p95                       91.230    91.614      +0.4%  PASS
 lum_p99                       96.227    93.963      -2.4%  PASS
-lum_mean                      56.140    57.803      +3.0%  PASS
+lum_mean                      56.140    57.807      +3.0%  PASS
 pct_above_90                   6.426     7.321     +13.9%  PASS
 pct_below_5                    0.000     0.000      +0.0%  PASS
-sat_mean                      42.908    42.639      -0.6%  PASS
-chroma_mean                   26.676    27.435      +2.8%  PASS
-hue_shadows                  199.401   198.795   -0.6 deg  PASS
+sat_mean                      42.908    42.633      -0.6%  PASS
+chroma_mean                   26.676    27.429      +2.8%  PASS
+hue_shadows                  199.401   198.793   -0.6 deg  PASS
 hue_midtones                 199.134   198.365   -0.8 deg  PASS
-hue_highlights               197.027   195.561   -1.5 deg  PASS
+hue_highlights               197.027   195.556   -1.5 deg  PASS
 glow_peak                     97.943    94.008      -4.0%  PASS
 glow_peak_x                    0.000    31.510        n/a  info
 glow_peak_y                   91.435    57.870        n/a  info
 glow_r50                       4.688     2.344     -50.0%  FAIL
-glow_r25                     102.604    69.661     -32.1%  FAIL
+glow_r25                     102.604    69.792     -32.0%  FAIL
 glow_r10                     106.771    71.745     -32.8%  FAIL
 contrast_top                  56.033    56.996      +1.7%  PASS
 black_top                     33.060    33.711      +2.0%  PASS
-mean_top                      50.862    56.570     +11.2%  FAIL
-contrast_mid                  60.165    60.373      +0.3%  PASS
-black_mid                     31.605    31.549      -0.2%  PASS
-mean_mid                      59.050    59.124      +0.1%  PASS
-contrast_bot                  64.661    62.540      -3.3%  PASS
-black_bot                     28.410    29.245      +2.9%  PASS
-mean_bot                      58.971    57.925      -1.8%  PASS
+mean_top                      50.862    56.591     +11.3%  FAIL
+contrast_mid                  60.165    60.352      +0.3%  PASS
+black_mid                     31.605    31.571      -0.1%  PASS
+mean_mid                      59.050    59.131      +0.1%  PASS
+contrast_bot                  64.661    62.538      -3.3%  PASS
+black_bot                     28.410    29.246      +2.9%  PASS
+mean_bot                      58.971    57.908      -1.8%  PASS
 haze_far_near_contrast         0.867     0.911      +5.2%  PASS
 grain_flat_std                 0.811     1.172     +44.6%  PASS
-grain_global_std              58.458    59.132      +1.2%  PASS
-detail_laplacian_var         215.298   241.185     +12.0%  FAIL
-detail_fine                   41.816    42.719      +2.2%  PASS
-detail_medium                 75.357    73.189      -2.9%  PASS
-detail_coarse                 90.733    91.616      +1.0%  PASS
+grain_global_std              58.458    59.040      +1.0%  PASS
+detail_laplacian_var         215.298   240.428     +11.7%  FAIL
+detail_fine                   41.816    42.629      +1.9%  PASS
+detail_medium                 75.357    73.257      -2.8%  PASS
+detail_coarse                 90.733    91.662      +1.0%  PASS
 vignette_corner_centre         0.768     0.713      -7.1%  PASS
 -- 30 ok/info, 6 FAIL: lum_p50, glow_r50, glow_r25, glow_r10, mean_top, detail_laplacian_var

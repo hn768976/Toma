@@ -1,0 +1,12 @@
+{
+ "frames": 450,
+ "mean_min": 133.47349548339844,
+ "mean_max": 224.4043426513672,
+ "near_black_frames": [],
+ "frozen_runs_first_last_frame": [],
+ "max_brightness_jump": 0.8764495849609375,
+ "max_brightness_jump_at": 140,
+ "max_frame_diff": 13.385833740234375,
+ "max_frame_diff_at": 160,
+ "median_frame_diff": 8.168732643127441
+}

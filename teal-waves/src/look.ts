@@ -23,9 +23,9 @@ export const PALETTES = {
       { at: 0.03, color: "#02050a" },
       { at: 0.1, color: "#091e25" },
       { at: 0.32, color: "#235f6b" },
-      { at: 0.62, color: "#60afbc" },
-      { at: 0.8, color: "#9bd5df" },
-      { at: 1.0, color: "#b9e6ee" },
+      { at: 0.62, color: "#5fabbf" },
+      { at: 0.8, color: "#9cd2e2" },
+      { at: 1.0, color: "#d3eef5" },
     ],
   },
   /** Version 2: same brightness steps, warm ember hues (black -> oxblood -> amber -> pale gold). */
@@ -55,12 +55,12 @@ export const LOOK = {
     /** Higher = thinner, harder rim lines; lower = broader, softer sheen. */
     fresnelPower: 9.0,
     /** Light arrives from the far end: the near field is dimmed by this factor... */
-    nearLevel: 0.18,
+    nearLevel: 0.34,
     /** ...between these distances from the camera. */
     falloffStart: 2.3,
     falloffEnd: 7.0,
     /** ...and eases off again in the far distance, so the horizon band keeps colour and detail. */
-    farLevel: 0.6,
+    farLevel: 0.8,
     farStart: 8.0,
     farEnd: 22.0,
   },
@@ -73,17 +73,17 @@ export const LOOK = {
     focusDistance: 4.8,
     /** Blur radius (fraction of frame height) per unit of |1 - focus/dist|. */
     nearBlur: 0.028,
-    farBlur: 0.02,
+    farBlur: 0.032,
     maxBlur: 0.045,
     /** Gaussian sigma of the in-focus anti-aliasing blur (about 1.2 px at 1080p). */
-    minBlur: 0.0016,
+    minBlur: 0.0015,
     /** The half-resolution blurred picture fades in between these blur sizes. */
     blendStart: 0.002,
     blendEnd: 0.006,
   },
 
   /** 4. Glow: wide soft halo added on top of the focused picture. */
-  glow: { strength: 0.12, radius: 0.008 },
+  glow: { strength: 0.16, radius: 0.012 },
 
   /** 5. Texture: fixed film grain (hash of pixel + frame), faded out in black. */
   grain: 0.014,

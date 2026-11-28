@@ -78,8 +78,9 @@ const layerGlsl = (l: WaveLayer, coord: string, fade: boolean) => {
   // Rotate, then scale (x along the flow is stretched).
   const m = `mat2(${f(c * l.scale * l.stretch)},${f(-s * l.scale)},${f(s * l.scale * l.stretch)},${f(c * l.scale)})`;
   const n = `snoise(vec3(${m}*${coord}+${v2(l.offset)},uTime*${f(l.evolve * WAVES.tempo)}+${f(l.offset[2])}))`;
-  // Fade layers whose wavelength approaches the texel footprint (no shimmer).
-  return fade ? `h+=${f(l.amp)}*${n}*smoothstep(1.5,4.0,${f(1 / l.scale)}/fp);` : `h+=${f(l.amp)}*${n};`;
+  // Fade layers in only where their wavelength spans several texels: ripples
+  // 2-4 texels wide read as dotted lines and shimmer.
+  return fade ? `h+=${f(l.amp)}*${n}*smoothstep(3.0,8.0,${f(1 / l.scale)}/fp);` : `h+=${f(l.amp)}*${n};`;
 };
 
 const warpGlsl = (w: { scale: number; amount: number; evolve: number; offsetA: number[]; offsetB: number[] }, coord: string) =>
@@ -170,22 +171,22 @@ float rimMean(float lo,float hi,float p){
 }
 void main(){
   vec3 P=surf(vUv);
-  vec3 dU=surf(vUv+vec2(uTexel.x,0.0))-surf(vUv-vec2(uTexel.x,0.0));
+  vec3 Prt=surf(vUv+vec2(uTexel.x,0.0));
+  vec3 Plt=surf(vUv-vec2(uTexel.x,0.0));
   vec3 Pup=surf(vUv+vec2(0.0,uTexel.y));
   vec3 Pdn=surf(vUv-vec2(0.0,uTexel.y));
   vec3 dV=Pup-Pdn;
   vec3 V=normalize(uCamPos-P);
   // Specular anti-aliasing: on a sharp crest the rim highlight is thinner than
-  // a texel, so instead of one normal use the two half-texel normals (towards
-  // and away from the camera) and average the rim term between them.
-  vec3 nUp=normalize(cross(dU,Pup-P));
-  vec3 nDn=normalize(cross(dU,P-Pdn));
-  if(nUp.y<0.0)nUp=-nUp;
-  if(nDn.y<0.0)nDn=-nDn;
-  float a=dot(nUp,V);
-  float b=dot(nDn,V);
-  float lo=min(a,b);
-  float hi=max(a,b);
+  // a texel, so instead of one normal use the four half-texel normals around
+  // the texel and average the rim term over the range they span.
+  vec3 n0=normalize(cross(Prt-P,Pup-P));
+  vec3 n1=normalize(cross(P-Plt,Pup-P));
+  vec3 n2=normalize(cross(Prt-P,P-Pdn));
+  vec3 n3=normalize(cross(P-Plt,P-Pdn));
+  vec4 f=vec4(dot(n0,V)*sign(n0.y),dot(n1,V)*sign(n1.y),dot(n2,V)*sign(n2.y),dot(n3,V)*sign(n3.y));
+  float lo=min(min(f.x,f.y),min(f.z,f.w));
+  float hi=max(max(f.x,f.y),max(f.z,f.w));
   // Fraction of the texel that faces the camera (hidden back slopes excluded).
   float facing=hi<=0.0?0.0:clamp((hi-max(lo,0.0))/max(hi-lo,1e-5),0.0,1.0);
   if(hi-lo<1e-5)facing=step(0.0,hi);
@@ -231,24 +232,63 @@ precision highp float;
 in vec2 vUv;
 in float vDist;
 out vec4 outColor;
-uniform sampler2D tShade;
+uniform sampler2D tShade;   // r = light, g = camera-facing fraction, b = pixels per texel along v
+uniform sampler2D tShadeQ;  // the same, pre-averaged over 4 texels along v: r = light*facing, g = facing
 uniform vec2 uTexel;
 const int MAXN=FOOTPRINT_TAPS;
+const float REACH=float(MAXN)*4.0;
 void main(){
   // Texels squeezed into this pixel along v (the view direction).
   float ppt=texture(tShade,vUv).b;
-  float n=clamp(ceil(1.0/max(ppt,1.0/float(MAXN))),1.0,float(MAXN));
+  float extent=clamp(1.0/max(ppt,1.0/REACH),1.0,REACH);
+  float centre=0.0;
+  // A mesh quad that straddles a crest has one triangle facing away. On the
+  // real surface that sliver is the edge-on rim, so shade it from the texels
+  // just in front of the crest (towards the camera).
+  if(!gl_FrontFacing){
+    extent=float(MAXN)*2.0;
+    centre=-0.5*extent;
+  }
   vec2 acc=vec2(0.0);
   float all=0.0;
-  for(int i=0;i<MAXN;i++){
-    if(float(i)>=n)break;
-    vec2 t=texture(tShade,vUv+vec2(0.0,(float(i)+0.5-0.5*n)*uTexel.y)).rg;
-    acc+=vec2(t.r*t.g,t.g);
-    all+=t.r;
+  float n;
+  if(extent<=float(MAXN)){
+    n=ceil(extent);
+    for(int i=0;i<MAXN;i++){
+      if(float(i)>=n)break;
+      vec2 t=texture(tShade,vUv+vec2(0.0,(float(i)+0.5-0.5*n+centre)*uTexel.y)).rg;
+      acc+=vec2(t.r*t.g,t.g);
+      all+=t.r;
+    }
+  }else{
+    // Long footprints: step through the 4x pre-averaged copy instead.
+    n=ceil(extent*0.25);
+    for(int i=0;i<MAXN;i++){
+      if(float(i)>=n)break;
+      vec2 t=texture(tShadeQ,vUv+vec2(0.0,((float(i)+0.5-0.5*n)*4.0+centre)*uTexel.y)).rg;
+      acc+=t;
+      all+=t.r;
+    }
   }
   // Mean light over the camera-facing part of the footprint.
   float light=mix(all/n,acc.x/max(acc.y,1e-3),smoothstep(0.0,1.0,acc.y));
   outColor=vec4(light,0.0,0.0,vDist);
+}`;
+
+/** Averages the shading over 4 texels along v (facing-weighted), for long footprints. */
+export const SHADE_DOWN_FRAG = /* glsl */ `
+precision highp float;
+in vec2 vUv;
+out vec4 outColor;
+uniform sampler2D tColor;
+uniform vec2 uTexel;
+void main(){
+  vec2 acc=vec2(0.0);
+  for(int i=0;i<4;i++){
+    vec2 t=texture(tColor,vUv+vec2(0.0,(float(i)-1.5)*uTexel.y)).rg;
+    acc+=vec2(t.r*t.g,t.g);
+  }
+  outColor=vec4(acc*0.25,0.0,1.0);
 }`;
 
 /** 2x2 box downsample (one bilinear tap at the shared corner). */
@@ -268,7 +308,8 @@ float coc(float d){
 
 /**
  * Depth of field (half resolution): disc gather sized by each pixel's circle
- * of confusion. Run twice; the second, smaller gather fills the first's gaps.
+ * of confusion. Run three times with shrinking radius; each gather fills the
+ * gaps left by the one before.
  */
 export const DOF_FRAG = /* glsl */ `
 precision highp float;

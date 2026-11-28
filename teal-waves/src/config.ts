@@ -95,22 +95,21 @@ export const WAVES = {
   /** Large, slow domain warp: bends everything so crests meander. */
   warp: { scale: 0.3, amount: 0.55, evolve: 0.06, offsetA: offset(), offsetB: offset() },
   /** Small, faster warp applied to the filament layers only (curls and kinks). */
-  curl: { scale: 1.5, amount: 0.17, evolve: 0.16, offsetA: offset(), offsetB: offset() },
+  curl: { scale: 1.5, amount: 0.11, evolve: 0.16, offsetA: offset(), offsetB: offset() },
   /** Fine warp on the filaments: breaks long ribbons into short, wiry crinkles. */
-  crinkle: { scale: 5.5, amount: 0.03, evolve: 0.3, offsetA: offset(), offsetB: offset() },
+  crinkle: { scale: 5.5, amount: 0.018, evolve: 0.3, offsetA: offset(), offsetB: offset() },
   /** Broad swells, then rounder chop that gives crests, kinks and dark faces. */
   swells: [
-    layer(0.2, 0.8, 0.07, 0.07, 0),
-    layer(0.47, 0.7, 0.085, 0.11, 24),
-    layer(1.0, 0.7, 0.055, 0.16, -17),
-    layer(2.1, 0.65, 0.034, 0.22, 31),
-    layer(4.1, 0.7, 0.017, 0.3, -38),
+    layer(0.2, 0.8, 0.09, 0.07, 0),
+    layer(0.47, 0.7, 0.095, 0.11, 24),
+    layer(1.0, 0.7, 0.06, 0.16, -17),
+    layer(2.1, 0.7, 0.045, 0.22, 31),
+    layer(4.1, 0.75, 0.022, 0.3, -38),
   ],
-  /** Filaments: fine, stretched ripples that catch the rim light. */
+  /** Filaments: fine, stretched ripples that catch the rim light as wiry strands. */
   filaments: [
-    layer(4.4, 0.4, 0.021, 0.26, 14),
-    layer(9.0, 0.3, 0.0115, 0.32, -13),
-    layer(19.0, 0.22, 0.004, 0.4, 8),
-    layer(40.0, 0.18, 0.0012, 0.48, -5),
+    layer(4.4, 0.4, 0.02, 0.26, 22),
+    layer(9.0, 0.22, 0.0115, 0.32, -27),
+    layer(17.0, 0.2, 0.004, 0.4, 12),
   ],
 } as const;
