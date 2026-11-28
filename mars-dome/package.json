@@ -1,7 +1,7 @@
 {
   "name": "mars-dome",
   "version": "1.0.0",
-  "description": "A React Three Fiber Project",
+  "description": "A domed Mars base with a slow camera drift (Remotion + three.js)",
   "repository": {},
   "license": "UNLICENSED",
   "engines": {
@@ -34,7 +34,9 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:v1": "remotion render V1-mars-dome out/V1-mars-dome-4k.mp4 --codec=h264 --scale=1 --gl=angle --crf=16 --pixel-format=yuv420p",
+    "render:v2": "remotion render V2-mars-dome out/V2-mars-dome-4k.mp4 --codec=h264 --scale=1 --gl=angle --crf=16 --pixel-format=yuv420p"
   },
   "allowScripts": {
     "esbuild": false

@@ -99,13 +99,13 @@ const markTexture = (ink: string) => {
   ctx.clearRect(0, 0, s, s);
   ctx.strokeStyle = ink;
   ctx.fillStyle = ink;
-  ctx.lineWidth = 26;
+  ctx.lineWidth = 34;
   ctx.lineCap = "butt";
   const c = s / 2;
   const r = 78;
   for (let i = 0; i < 3; i++) {
     const a0 = (i / 3) * Math.PI * 2 - Math.PI / 2;
-    const a1 = a0 + (Math.PI * 2) / 3 - 0.62;
+    const a1 = a0 + (Math.PI * 2) / 3 - 0.78;
     ctx.beginPath();
     ctx.arc(c, c, r, a0, a1);
     ctx.stroke();
@@ -114,9 +114,9 @@ const markTexture = (ink: string) => {
     const hy = c + Math.sin(a1) * r;
     const t = a1 + Math.PI / 2;
     ctx.beginPath();
-    ctx.moveTo(hx + Math.cos(t) * 40, hy + Math.sin(t) * 40);
-    ctx.lineTo(hx + Math.cos(a1) * 30, hy + Math.sin(a1) * 30);
-    ctx.lineTo(hx - Math.cos(a1) * 30, hy - Math.sin(a1) * 30);
+    ctx.moveTo(hx + Math.cos(t) * 52, hy + Math.sin(t) * 52);
+    ctx.lineTo(hx + Math.cos(a1) * 40, hy + Math.sin(a1) * 40);
+    ctx.lineTo(hx - Math.cos(a1) * 40, hy - Math.sin(a1) * 40);
     ctx.closePath();
     ctx.fill();
   }
@@ -135,10 +135,10 @@ const contactTexture = () => {
   const data = new Uint8Array(n * n * 4);
   for (let y = 0; y < n; y++) {
     for (let x = 0; x < n; x++) {
-      const dx = Math.min(x, n - 1 - x) / (n * 0.12);
-      const dy = Math.min(y, n - 1 - y) / (n * 0.12);
+      const dx = Math.min(x, n - 1 - x) / (n * 0.26);
+      const dy = Math.min(y, n - 1 - y) / (n * 0.26);
       const a = Math.min(1, dx) * Math.min(1, dy);
-      const s = a * a * (3 - 2 * a);
+      const s = Math.pow(a, 1.6);
       data.set([255, 255, 255, Math.round(s * 255)], (y * n + x) * 4);
     }
   }
@@ -223,12 +223,12 @@ const buildParcel = (spec: ParcelSpec, index: number, pal: Palette, tex: { card:
   };
   const lift = 0.012 * P;
   const rise = (spec.topRise ?? 0) * P;
-  const body = add(new THREE.Mesh(raiseBack(roundedBox(w, h, d, 0.05 * P), h, d, rise), card));
+  const body = add(new THREE.Mesh(raiseBack(roundedBox(w, h, d, 0.065 * P), h, d, rise), card));
   body.position.y = h / 2 + lift;
 
   // straps: thin dark bands wrapped around the carton
   const strapMat = new THREE.MeshStandardMaterial({ color: col(pal.strap), roughness: 0.32, metalness: 0, shadowSide: THREE.FrontSide });
-  const sw = 0.15 * P;
+  const sw = 0.2 * P;
   const e = 0.012 * P;
   for (const s of spec.straps) {
     const geo =
@@ -244,7 +244,7 @@ const buildParcel = (spec: ParcelSpec, index: number, pal: Palette, tex: { card:
     // tray rim around the face turned to the camera: a ledge below, a post at the right end, a thin lip on top
     const ledge = add(new THREE.Mesh(roundedBox(w + 0.12 * P, 0.11 * P, 0.16 * P, 0.025 * P), edge));
     ledge.position.set(0.03 * P, 0.055 * P + lift, d / 2 + 0.03 * P);
-    const post = add(new THREE.Mesh(roundedBox(0.11 * P, h + 0.07 * P, 0.2 * P, 0.025 * P), edge));
+    const post = add(new THREE.Mesh(roundedBox(0.07 * P, h + 0.05 * P, 0.16 * P, 0.02 * P), card));
     post.position.set(w / 2 + 0.03 * P, h / 2 + lift + 0.01 * P, d / 2 + 0.01 * P);
     const lip = add(new THREE.Mesh(roundedBox(w + 0.12 * P, 0.05 * P, 0.12 * P, 0.015 * P), edge));
     lip.position.set(0.03 * P, h + lift, d / 2 + 0.01 * P);
@@ -252,7 +252,7 @@ const buildParcel = (spec: ParcelSpec, index: number, pal: Palette, tex: { card:
 
   if (spec.mark) {
     const mark = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.42 * P, 0.42 * P),
+      new THREE.PlaneGeometry(0.68 * P, 0.68 * P),
       new THREE.MeshStandardMaterial({ map: markTexture(pal.mark), transparent: true, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -2 }),
     );
     mark.rotation.y = -Math.PI / 2;
@@ -273,14 +273,14 @@ const buildParcel = (spec: ParcelSpec, index: number, pal: Palette, tex: { card:
 
   if (spec.flaps) {
     // loose top flaps with a taped, slightly glossy surface - they catch the overhead light first
-    const flapMat = new THREE.MeshStandardMaterial({ color: col(pal.cardboard), roughness: 0.8, metalness: 0 });
+    const flapMat = new THREE.MeshStandardMaterial({ color: col(pal.cardboardEdge), roughness: 0.5, metalness: 0 });
     const rng = mulberry32(900 + index);
     for (const [fx, tilt] of [
       [0.06, 0.16],
       [0.34, -0.14],
     ] as const) {
       const flap = add(new THREE.Mesh(new THREE.BoxGeometry(w * range(rng, 0.06, 0.09), 0.05 * P, 0.6 * P), flapMat));
-      flap.position.set(fx * w, h + lift + 0.2 * P, d * 0.5 - range(rng, 0.5, 0.8) * P);
+      flap.position.set(fx * w, h + lift + 0.05 * P, d * 0.5 - range(rng, 0.3, 0.5) * P);
       flap.rotation.z = tilt;
       flap.rotation.x = range(rng, 0.42, 0.6); // tipped towards the lens, so the lit side shows
     }
@@ -288,13 +288,21 @@ const buildParcel = (spec: ParcelSpec, index: number, pal: Palette, tex: { card:
 
   // soft contact shadow where the carton sits on the rollers
   const contact = new THREE.Mesh(
-    new THREE.PlaneGeometry(w + 1.0 * P, d + 1.0 * P),
+    new THREE.PlaneGeometry(w + 3.6 * P, d + 3.6 * P),
     new THREE.MeshBasicMaterial({ map: contactTexture(), color: 0x000000, transparent: true, opacity: LIGHTS.contactShadow, depthWrite: false }),
   );
   contact.rotation.x = -Math.PI / 2;
   contact.position.y = 0.03 * P;
   contact.renderOrder = 1;
   group.add(contact);
+  const tight = new THREE.Mesh(
+    new THREE.PlaneGeometry(w + 0.9 * P, d + 0.9 * P),
+    new THREE.MeshBasicMaterial({ map: contactTexture(), color: 0x000000, transparent: true, opacity: LIGHTS.contactShadowTight, depthWrite: false }),
+  );
+  tight.rotation.x = -Math.PI / 2;
+  tight.position.y = 0.035 * P;
+  tight.renderOrder = 2;
+  group.add(tight);
 
   // place: `corner` is the near-left bottom corner of the body, in the camera's ground frame
   const yaw = deg(spec.yawDeg) + BELT_YAW;
@@ -380,7 +388,7 @@ const buildBackdrop = (pal: Palette) => {
       const level = Math.floor(rng() * 4); // floor, and three shelf levels
       const depth = range(rng, 5, 11);
       const c = col(pal.rackGoods[Math.floor(rng() * pal.rackGoods.length)]);
-      c.multiplyScalar(range(rng, 0.7, 1.35));
+      c.multiplyScalar(range(rng, 0.85, 1.15));
       layout.push({
         x: side < 0 ? -20.2 - depth / 2 - range(rng, 0, 3) : 16.8 + depth / 2 + range(rng, 0, 3),
         z: rng() * PERIOD,
@@ -413,7 +421,7 @@ const buildBackdrop = (pal: Palette) => {
     const b = pal.bokeh[Math.floor(lampRng() * pal.bokeh.length)];
     const left = i % 3 !== 2;
     lamps.push({
-      x: left ? rc.left - range(lampRng, 1.8, 5) : rc.right + range(lampRng, 2, 5.5),
+      x: left ? rc.left - range(lampRng, 7, 10) : rc.right + range(lampRng, 8, 12),
       y: range(lampRng, 2.4, 6.5),
       z: ((i + lampRng() * 0.6) / cfg.bokehPerPeriod) * PERIOD,
       r: range(lampRng, 0.2, 0.32),
@@ -433,6 +441,7 @@ const buildBackdrop = (pal: Palette) => {
     }
   }
   all.push(lampMesh);
+  group.userData.lamps = { mesh: lampMesh, lamps, copies, first };
 
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(260 * P, copies * PERIOD * P), basic(pal.floor));
   floor.rotation.x = -Math.PI / 2;
@@ -533,7 +542,8 @@ export const makeWorld = (variant: Variant): World => {
   rollerMat.onBeforeCompile = (shader) => {
     shader.uniforms.uCrestColor = { value: crestColor };
     shader.uniforms.uCrest = { value: new THREE.Vector4(R.crestStart, R.crestEnd, R.streakScale / P, R.baseLift) };
-    shader.uniforms.uGlare = { value: new THREE.Vector4(R.glareLeft, R.glareRight, R.glareFrom, R.glareTo) };
+    shader.uniforms.uGlare = { value: new THREE.Vector4(R.glareLeft, R.glareRight, R.glareCentre, 0) };
+    shader.uniforms.uGlareWidth = { value: new THREE.Vector2(R.glareWidthLeft, R.glareWidthRight) };
     shader.uniforms.uCrestSide = { value: new THREE.Vector4(R.crestLeft, R.crestFrom, R.crestTo, R.streakDepth) };
     shader.uniforms.uNearFade = { value: new THREE.Vector3(R.nearFadeMin, R.nearFadeFrom, R.nearFadeTo) };
     shader.fragmentShader = shader.fragmentShader
@@ -543,6 +553,7 @@ export const makeWorld = (variant: Variant): World => {
         uniform vec3 uCrestColor;
         uniform vec4 uCrest;
         uniform vec4 uGlare;
+        uniform vec2 uGlareWidth;
         uniform vec4 uCrestSide;
         uniform vec3 uNearFade;
         float rollerHash(float n) {
@@ -565,7 +576,9 @@ export const makeWorld = (variant: Variant): World => {
           float crest = smoothstep(uCrest.x, uCrest.y, wn.y);
           float side = -vViewPosition.x / max(vViewPosition.z, 1e-3);
           float nearFade = mix(uNearFade.x, 1.0, smoothstep(uNearFade.y, uNearFade.z, vViewPosition.z));
-          float lateral = mix(uGlare.x, uGlare.y, smoothstep(uGlare.z, uGlare.w, side)) * nearFade;
+          float gw = side < uGlare.z ? uGlareWidth.x : uGlareWidth.y;
+          float lobe = exp(-pow((side - uGlare.z) / gw, 2.0));
+          float lateral = mix(uGlare.x, uGlare.y, lobe) * nearFade;
           reflectedLight.directSpecular *= lateral;
           reflectedLight.directDiffuse *= min(lateral, 1.0);
           // worn streaks: the highlight breaks up along each roller, differently on every roller
@@ -579,9 +592,9 @@ export const makeWorld = (variant: Variant): World => {
         }`,
       );
   };
-  rollerMat.customProgramCacheKey = () => "roller-v4";
+  rollerMat.customProgramCacheKey = () => "roller-v5";
   // near rollers get a round profile; distant ones a coarser one (they are a few pixels tall and out of focus)
-  const rollerGeoFar = new THREE.CylinderGeometry(rc.radius * P, rc.radius * P, beltWidth, 10, 1, true);
+  const rollerGeoFar = new THREE.CylinderGeometry(rc.radius * P, rc.radius * P, beltWidth, 14, 1, true);
   rollerGeoFar.rotateZ(Math.PI / 2);
   const nearCount = Math.min(rc.nearCount, rc.count);
   const rollersNear = new THREE.InstancedMesh(rollerGeo, rollerMat, nearCount);
@@ -613,7 +626,7 @@ export const makeWorld = (variant: Variant): World => {
   root.add(farBelt);
 
   // --- side rails
-  const railMat = new THREE.MeshStandardMaterial({ color: col(pal.rail), roughness: 0.45, metalness: 0.4 });
+  const railMat = new THREE.MeshStandardMaterial({ color: col(pal.rail), roughness: 0.7, metalness: 0.1 });
   for (const x of [rc.left - 0.65, rc.right + 0.65]) {
     const rail = new THREE.Mesh(new THREE.BoxGeometry(1.3 * P, 1.9 * P, 1100 * P), railMat);
     rail.position.set(x * P, -0.6 * P, -520 * P);
@@ -672,7 +685,7 @@ export const makeWorld = (variant: Variant): World => {
   root.add(top);
 
   const bounce = new THREE.DirectionalLight(col(pal.bounce), 0);
-  bounce.position.set(0.75, -0.1, 0.65); // from the camera's right, slightly below: fills the faces turned to the lens
+  bounce.position.set(0.9, -0.1, 0.45); // from the camera's right, slightly below: fills the faces turned to the lens
   root.add(bounce);
 
   // --- gobo: invisible slabs high above the belt cast the dark gaps between lit zones
@@ -733,6 +746,19 @@ export const makeWorld = (variant: Variant): World => {
 
       // warehouse slides past
       backdrop.position.z = travel * P;
+      // each lamp only shows while it passes through a band of distances, so one or two discs drift by at a time
+      {
+        const L = backdrop.userData.lamps as { mesh: THREE.InstancedMesh; lamps: { z: number; c: THREE.Color }[]; copies: number; first: number };
+        let n = 0;
+        for (let k = 0; k < L.copies; k++) {
+          for (const l of L.lamps) {
+            const dist = (k + L.first) * PERIOD + l.z - travel;
+            const w = THREE.MathUtils.smoothstep(dist, 95, 125) * (1 - THREE.MathUtils.smoothstep(dist, 175, 215));
+            L.mesh.setColorAt(n++, tint.copy(l.c).multiplyScalar(w));
+          }
+        }
+        if (L.mesh.instanceColor) L.mesh.instanceColor.needsUpdate = true;
+      }
 
       // lit zone k covers distances [lead, lead + length]; the dark gap sits in front of it
       let lit = 0;

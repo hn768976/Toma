@@ -63,8 +63,10 @@ const makeRenderer = (look: Look) => (props: { canvas: unknown }) => {
   return renderer;
 };
 
-const WorldDriver: React.FC<{ world: World; look: Look }> = ({ world, look }) => {
-  const frame = useCurrentFrame();
+const WorldDriver: React.FC<{ world: World; look: Look; loopFrames?: number; atFrame?: number }> = ({ world, look, loopFrames, atFrame }) => {
+  const timelineFrame = useCurrentFrame();
+  // `atFrame` pins the scene to one frame (used by the look-dev and loop-check stills)
+  const frame = atFrame ?? timelineFrame;
   const gl = useThree((s) => s.gl) as THREE.WebGLRenderer;
   const scene = useThree((s) => s.scene);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
@@ -83,13 +85,19 @@ const WorldDriver: React.FC<{ world: World; look: Look }> = ({ world, look }) =>
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld(true);
     engine.pipeline.look = look;
-    engine.pipeline.frame = frame;
-  }, [frame, world, look, gl, camera, width, height]);
+    // grain and dither are seeded by the frame; on a loop, frame N is frame 0 again
+    engine.pipeline.frame = loopFrames ? ((frame % loopFrames) + loopFrames) % loopFrames : frame;
+  }, [frame, world, look, gl, camera, width, height, loopFrames]);
 
   return <primitive object={world.root} />;
 };
 
-export const Stage: React.FC<{ makeWorld: () => World; look: Look }> = ({ makeWorld, look }) => {
+export const Stage: React.FC<{ makeWorld: () => World; look: Look; loopFrames?: number; atFrame?: number }> = ({
+  makeWorld,
+  look,
+  loopFrames,
+  atFrame,
+}) => {
   const { width, height } = useVideoConfig();
   const { isRendering } = useRemotionEnvironment();
   // The drawing buffer follows the render scale: --scale=0.5 renders 1920x1080
@@ -110,7 +118,7 @@ export const Stage: React.FC<{ makeWorld: () => World; look: Look }> = ({ makeWo
         shadows="soft"
         camera={{ fov: 30, near: 0.1, far: 1000, position: [0, 1, 5] }}
       >
-        <WorldDriver world={world} look={liveLook} />
+        <WorldDriver world={world} look={liveLook} loopFrames={loopFrames} atFrame={atFrame} />
       </ThreeCanvas>
     </AbsoluteFill>
   );

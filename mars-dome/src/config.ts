@@ -14,29 +14,29 @@ export type Variant = "v1" | "v2";
 
 export const PALETTE = {
   /** Surfaces (sRGB hex). */
-  hull: "#aaa49d",
+  hull: "#9c968f",
   hullDark: "#8e8278",
-  hullAccent: "#7f8aa0",
-  roofInset: "#6b4f40",
-  beam: "#b3a591",
-  tower: "#c2b9ab",
+  hullAccent: "#8f8a84",
+  roofInset: "#7a6a5e",
+  beam: "#b9b0a2",
+  tower: "#c4c0b8",
   towerGlass: "#39404c",
-  plaza: "#7d746e",
+  plaza: "#6f6661",
   plazaSeam: "#5f544c",
   wall: "#a39489",
   curb: "#93867b",
-  grass: "#2f3a1d",
-  foliage: "#1d2b13",
+  grass: "#4a4d2a",
+  foliage: "#3b4630",
   trunk: "#3a2c22",
   mast: "#b9ada0",
   cable: "#d9cfc4",
-  terrainLit: "#e2702c",
-  terrainDark: "#6e2f10",
+  terrainLit: "#e08a55",
+  terrainDark: "#8a4a26",
   terrainPale: "#f0a25c",
   sand: "#b9683e",
   /** Lights (sRGB hex). */
   sun: "#ffe0b8",
-  skyFill: "#cfc6c2",
+  skyFill: "#b9c0b4",
   groundFill: "#8a5236",
   lamp: "#fff4ea",
   beacon: "#e0200e",
@@ -84,7 +84,7 @@ export const CONFIG = {
     hubRadius: 8.4,
     hubHeight: 18.2,
     /** Compass directions of the arch ribs, degrees clockwise from "towards the camera". */
-    archAzimuthsDeg: [40, 130, 220, 275],
+    archAzimuthsDeg: [33, 130, 220, 275],
     /** Outer masts: azimuth, distance from the tower, height, inward lean in degrees. */
     masts: [
       { azimuthDeg: -146, radius: 49, height: 21.4, leanDeg: 6 },
@@ -95,8 +95,8 @@ export const CONFIG = {
   },
   /** Buildings: kind, centre [x, z], heading in degrees (0 = long axis along x). */
   buildings: [
-    { kind: "capsules", at: [-16.3, -3.4], headingDeg: -15, length: 9.5, levels: 3 },
-    { kind: "capsules", at: [16.6, 6.5], headingDeg: 159, length: 9, levels: 3 },
+    { kind: "capsules", at: [-14.8, 0.2], headingDeg: -15, length: 9.5, levels: 3 },
+    { kind: "hall", at: [16.6, 6.5], headingDeg: 20, length: 10, levels: 1 },
     { kind: "rings", at: [-6.5, 14.4], headingDeg: 0, length: 0, levels: 2 },
     { kind: "rings", at: [0.6, 14.9], headingDeg: 0, length: 0, levels: 2 },
     { kind: "block", at: [-3.1, 11.4], headingDeg: 8, length: 3.4, levels: 1 },
@@ -120,19 +120,19 @@ export const CONFIG = {
     { r0: 30, r1: 39, a0: 106, a1: 168 },
     { r0: 30, r1: 39, a0: -72, a1: -44 },
   ],
-  trees: { perPlot: 4, extra: 6, seed: 4117 },
-  lamps: { count: 20, seed: 9203 },
+  trees: { perPlot: 2, extra: 3, height: 3.1, seed: 4117 },
+  lamps: { count: 32, seed: 9203 },
   terrain: { seed: 77, size: [3000, 2100] as [number, number], segments: 400 },
   /** A slim pole right in front of the lens, far out of focus, with two beacons. Camera-space metres. */
   foregroundPole: {
-    top: [3.9, 0.84, -7.5] as [number, number, number],
+    top: [3.9, 1.8, -7.5] as [number, number, number],
     bottom: [2.28, -2.03, -6.5] as [number, number, number],
-    radius: 0.1,
+    radius: 0.13,
   },
 };
 
 export interface BuildingSpec {
-  kind: "capsules" | "rings" | "block" | "tent";
+  kind: "capsules" | "rings" | "block" | "tent" | "hall";
   at: [number, number];
   headingDeg: number;
   length: number;

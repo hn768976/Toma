@@ -1,7 +1,7 @@
 import React from "react";
 import { Composition } from "remotion";
 import { DURATION_IN_FRAMES, FPS, HEIGHT, WIDTH } from "./config";
-import { LookDev, LOOKDEV_MOMENTS } from "./LookDev";
+import { LookDev, LOOKDEV_MOMENTS, LoopCheck } from "./LookDev";
 import { MarsDome } from "./MarsDome";
 
 export const RemotionRoot: React.FC = () => {
@@ -33,6 +33,15 @@ export const RemotionRoot: React.FC = () => {
         width={WIDTH}
         height={HEIGHT}
         defaultProps={{ variant: "v1" as const }}
+      />
+      <Composition
+        id="LoopCheck"
+        component={LoopCheck}
+        fps={FPS}
+        durationInFrames={2}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{ variant: "v1" as const, loopFrames: DURATION_IN_FRAMES }}
       />
     </>
   );

@@ -49,22 +49,22 @@ export const PALETTES: Record<Variant, Palette> = {
     cardboardEdge: "#a79b82",
     strap: "#141d22",
     label: "#8f857c",
-    mark: "#1a1612",
-    roller: "#58493f",
-    rollerGap: "#1b1613",
-    rail: "#b8aea4",
+    mark: "#2a2622",
+    roller: "#5c4d42",
+    rollerGap: "#261e1a",
+    rail: "#6e625a",
     floor: "#2a211d",
     backdrop: "#4d3d3a",
-    rackPost: "#1c1614",
-    rackBeam: "#6b5a3c",
-    rackGoods: ["#5b4a4c", "#56504f", "#6a5045", "#7a5e4d", "#4e4648", "#5d4b40", "#54433d", "#5a5350"],
+    rackPost: "#2c2422",
+    rackBeam: "#5a4c3c",
+    rackGoods: ["#5b4a4c", "#4f4e63", "#6a5045", "#7a5e4d", "#4a4660", "#6b4440", "#54433d", "#5a5350", "#74483e"],
     bokeh: [
       { color: "#ff9a62", intensity: 3.6 },
       { color: "#ffb27a", intensity: 2.6 },
       { color: "#ffd9a8", intensity: 2.2 },
       { color: "#e8785a", intensity: 3 },
     ],
-    keyLight: "#ffeed9",
+    keyLight: "#fff3e6",
     skyFill: "#d9b596",
     groundFill: "#0c0908",
     bounce: "#ffdcb0",
@@ -122,10 +122,10 @@ export const CONFIG = {
     /** Real cylinders for the first `count` rollers; a flat strip with the same light bands continues beyond. */
     count: 66,
     /** How many of them (nearest the lens) use the fine round profile. */
-    nearCount: 30,
+    nearCount: 40,
     firstAt: 9,
     /** Roller radius in pitches (0.5 would make neighbours touch). */
-    radius: 0.46,
+    radius: 0.47,
     /** Belt edges, in pitches left / right of the camera. */
     left: -15.3,
     right: 10.8,
@@ -133,10 +133,10 @@ export const CONFIG = {
   /** The travelling overhead light: one lit zone per loop. */
   lightZone: {
     /** Length of the lit zone and of one full period, in pitches. */
-    length: 34,
+    length: 31,
     period: 64,
     /** Distance of the zone's leading edge from the camera at frame 0, in pitches. */
-    leadAtFrame0: 47,
+    leadAtFrame0: 49.5,
   },
   /**
    * Parcels, measured in the camera's ground frame (x = right of the lens axis, distance = along it).
@@ -145,12 +145,10 @@ export const CONFIG = {
    * straps = positions along strapAxis (0 = near / left, 1 = far / right).
    */
   parcels: [
-    { id: "hero", size: [5.07, 1.55, 6.23], topRise: 0.24, corner: [-0.17, 26.5], yawDeg: 35.3, straps: [0.31, 0.775], strapAxis: "depth", rim: true, label: false, flaps: false, mark: true },
-    { id: "mid", tone: 1.35, size: [8.7, 2.48, 5.5], corner: [-4.5, 42], yawDeg: 1.5, straps: [0.37, 0.77], strapAxis: "width", rim: false, label: false, flaps: false, mark: false },
-    { id: "far", tone: 0.85, size: [8, 5.1, 7], corner: [-4.26, 58], yawDeg: -2, straps: [], strapAxis: "width", rim: false, label: true, flaps: false, mark: false },
-    { id: "sideR", size: [6.2, 2.3, 6], corner: [4.4, 57.5], yawDeg: -4, straps: [], strapAxis: "width", rim: false, label: false, flaps: false, mark: false },
-    { id: "sideL", size: [8.5, 2.1, 6], corner: [-14.6, 61], yawDeg: 5, straps: [0.6], strapAxis: "width", rim: false, label: false, flaps: false, mark: false },
-    { id: "last", size: [6.6, 7.6, 6], corner: [-3.2, 74], yawDeg: 3, straps: [], strapAxis: "width", rim: false, label: false, flaps: false, mark: false },
+    { id: "hero", size: [5.05, 1.6, 6.6], topRise: 0.18, corner: [-0.17, 26.3], yawDeg: 35, straps: [0.25, 0.69], strapAxis: "depth", rim: true, label: false, flaps: false, mark: true },
+    { id: "mid", tone: 1.3, size: [10.7, 2.42, 6], corner: [-5.5, 52], yawDeg: 1.5, straps: [0.37, 0.77], strapAxis: "width", rim: false, label: false, flaps: false, mark: false },
+    { id: "far", tone: 0.85, size: [8.6, 5.35, 7], corner: [-4.55, 62.5], yawDeg: -2, straps: [], strapAxis: "width", rim: false, label: true, flaps: true, mark: false },
+    { id: "last", size: [7, 8.2, 6], corner: [-3.4, 80], yawDeg: 3, straps: [], strapAxis: "width", rim: false, label: false, flaps: false, mark: false },
   ] as ParcelSpec[],
   vibration: {
     /** Vertical shake of each parcel in pitches, and its rate in Hz. */

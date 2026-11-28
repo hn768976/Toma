@@ -1,7 +1,7 @@
 {
   "name": "conveyor-parcels",
   "version": "1.0.0",
-  "description": "A React Three Fiber Project",
+  "description": "Parcels riding a roller conveyor through a warehouse (Remotion + three.js)",
   "repository": {},
   "license": "UNLICENSED",
   "engines": {
@@ -35,7 +35,9 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:v1": "remotion render V1-conveyor-parcels out/V1-conveyor-parcels-4k.mp4 --codec=h264 --scale=1 --gl=angle --crf=16 --pixel-format=yuv420p",
+    "render:v2": "remotion render V2-conveyor-parcels out/V2-conveyor-parcels-4k.mp4 --codec=h264 --scale=1 --gl=angle --crf=16 --pixel-format=yuv420p"
   },
   "allowScripts": {
     "esbuild": false
