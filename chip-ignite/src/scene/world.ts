@@ -71,8 +71,20 @@ const makeBoardTexture = (seed: number) => {
       const n = rng.int(2, 9);
       const horiz = rng.chance(0.5);
       for (let k = 0; k < n; k++) {
-        if (horiz) ctx.fillRect(x + 6, y + ((k + 0.5) * h) / n - 2, w - 12, rng.range(2, 5));
-        else ctx.fillRect(x + ((k + 0.5) * w) / n - 2, y + 6, rng.range(2, 5), h - 12);
+        if (horiz)
+          ctx.fillRect(
+            x + 6,
+            y + ((k + 0.5) * h) / n - 2,
+            w - 12,
+            rng.range(2, 5),
+          );
+        else
+          ctx.fillRect(
+            x + ((k + 0.5) * w) / n - 2,
+            y + 6,
+            rng.range(2, 5),
+            h - 12,
+          );
       }
     }
   }
@@ -97,7 +109,14 @@ const makeBoardTexture = (seed: number) => {
     ctx.strokeStyle = grey(170, 250);
     ctx.lineWidth = rng.pick([2, 3, 4]);
     for (let k = 0; k < n; k++) {
-      strokePath(ctx, offsetPath(g, (k - (n - 1) / 2) * sp), cell, cell, cell / 2, cell / 2);
+      strokePath(
+        ctx,
+        offsetPath(g, (k - (n - 1) / 2) * sp),
+        cell,
+        cell,
+        cell / 2,
+        cell / 2,
+      );
     }
   }
   // --- medium: single routed traces with via pads ----------------------------
@@ -202,7 +221,12 @@ const makeTileAtlas = (seed: number) => {
       for (let i = 0; i < 7; i++) {
         const v = rng.chance(0.6) ? rng.int(160, 205) : rng.int(75, 110);
         ctx.fillStyle = `rgb(${v},${v},${v - 3})`;
-        ctx.fillRect(ox + rng.range(0, C), oy + rng.range(0, C), rng.range(30, 230), rng.range(30, 230));
+        ctx.fillRect(
+          ox + rng.range(0, C),
+          oy + rng.range(0, C),
+          rng.range(30, 230),
+          rng.range(30, 230),
+        );
       }
       // engraved traces
       const cols = 100;
@@ -229,7 +253,8 @@ const makeTileAtlas = (seed: number) => {
         const n = rng.int(4, 12);
         const horiz = rng.chance(0.5);
         ctx.fillStyle = rng.chance(0.5) ? "#1c1c1c" : "#f4f4f0";
-        for (let k = 0; k < n; k++) ctx.fillRect(x + (horiz ? k * 8 : 0), y + (horiz ? 0 : k * 8), 5, 5);
+        for (let k = 0; k < n; k++)
+          ctx.fillRect(x + (horiz ? k * 8 : 0), y + (horiz ? 0 : k * 8), 5, 5);
       }
       // dark rim
       ctx.strokeStyle = "#101010";
@@ -324,7 +349,10 @@ const makeFlareMaterial = () =>
 /* the world                                                                   */
 /* -------------------------------------------------------------------------- */
 
-export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World => {
+export const createWorld = (
+  gl: THREE.WebGLRenderer,
+  move: CameraMove,
+): World => {
   const rng = new Rng(SEED);
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(move.fov, 16 / 9, 1, 300);
@@ -338,7 +366,8 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
   scene.environmentIntensity = LIGHTS.envIntensity;
 
   const ML = MATERIAL_LOOK;
-  const std = (p: THREE.MeshStandardMaterialParameters) => new THREE.MeshStandardMaterial(p);
+  const std = (p: THREE.MeshStandardMaterialParameters) =>
+    new THREE.MeshStandardMaterial(p);
 
   /* ---- board ------------------------------------------------------------- */
   const boardCanvas = makeBoardTexture(SEED + 11);
@@ -353,30 +382,85 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     bumpScale: 1.2,
     envMapIntensity: 1.0,
   });
-  const board = new THREE.Mesh(new THREE.PlaneGeometry(BOARD_SIZE, BOARD_SIZE), boardMat);
+  const board = new THREE.Mesh(
+    new THREE.PlaneGeometry(BOARD_SIZE, BOARD_SIZE),
+    boardMat,
+  );
   board.receiveShadow = true;
   scene.add(board);
 
   const mats: Record<string, THREE.Material> = {
-    black: std({ color: "#040405", roughness: 0.3, metalness: 0.2, envMapIntensity: 0.4 }),
-    blackGloss: std({ color: "#020203", roughness: 0.16, metalness: 0.5, envMapIntensity: 0.32 }),
-    shroud: std({ color: "#020202", roughness: 0.6, metalness: 0.0, envMapIntensity: 0.15 }),
-    gold: std({ color: PALETTE.gold, roughness: 0.25, metalness: 1, envMapIntensity: 1.2 }),
-    bronze: std({ color: PALETTE.bronze, roughness: 0.4, metalness: 1, envMapIntensity: 0.9 }),
-    silver: std({ color: PALETTE.silver, roughness: 0.22, metalness: 1, envMapIntensity: 1.1 }),
-    plate: std({ color: "#8f8f8c", roughness: 0.6, metalness: 0.3, envMapIntensity: 0.7 }),
-    capBody: std({ color: "#15130f", roughness: 0.35, metalness: 0.6, envMapIntensity: 0.7 }),
-    smd: std({ color: "#ffffff", roughness: 0.45, metalness: 0.5, envMapIntensity: 0.8 }),
+    black: std({
+      color: "#040405",
+      roughness: 0.3,
+      metalness: 0.2,
+      envMapIntensity: 0.4,
+    }),
+    blackGloss: std({
+      color: "#020203",
+      roughness: 0.16,
+      metalness: 0.5,
+      envMapIntensity: 0.32,
+    }),
+    shroud: std({
+      color: "#020202",
+      roughness: 0.6,
+      metalness: 0.0,
+      envMapIntensity: 0.15,
+    }),
+    gold: std({
+      color: PALETTE.gold,
+      roughness: 0.25,
+      metalness: 1,
+      envMapIntensity: 1.2,
+    }),
+    bronze: std({
+      color: PALETTE.bronze,
+      roughness: 0.4,
+      metalness: 1,
+      envMapIntensity: 0.9,
+    }),
+    silver: std({
+      color: PALETTE.silver,
+      roughness: 0.22,
+      metalness: 1,
+      envMapIntensity: 1.1,
+    }),
+    plate: std({
+      color: "#8f8f8c",
+      roughness: 0.6,
+      metalness: 0.3,
+      envMapIntensity: 0.7,
+    }),
+    capBody: std({
+      color: "#15130f",
+      roughness: 0.35,
+      metalness: 0.6,
+      envMapIntensity: 0.7,
+    }),
+    smd: std({
+      color: "#ffffff",
+      roughness: 0.45,
+      metalness: 0.5,
+      envMapIntensity: 0.8,
+    }),
   };
 
   const b = new Batch();
   const blocked: [number, number, number, number][] = [];
   const block = (cx: number, cy: number, w: number, h: number, pad = 0.2) =>
-    blocked.push([cx - w / 2 - pad, cy - h / 2 - pad, cx + w / 2 + pad, cy + h / 2 + pad]);
+    blocked.push([
+      cx - w / 2 - pad,
+      cy - h / 2 - pad,
+      cx + w / 2 + pad,
+      cy + h / 2 + pad,
+    ]);
   const isFree = (x: number, y: number, r: number) =>
     Math.abs(x) < BOARD_SIZE / 2 - 0.5 &&
     Math.abs(y) < BOARD_SIZE / 2 - 0.5 &&
-    !blocked.some((k) => x > k[0] - r && x < k[2] + r && y > k[1] - r && y < k[3] + r);
+    !blocked.some(
+      (k) => x > k[0] - r && x < k[2] + r && y > k[1] - r && y < k[3] + r,
+    );
 
   /* ---- the package ------------------------------------------------------- */
   const P = PACKAGE;
@@ -384,7 +468,9 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
   const frameZ = P.baseH + P.midH;
   b.box("blackGloss", 0, 0, 0, P.base, P.base, P.baseH, { round: true });
   b.box("black", 0, 0, P.baseH, P.mid, P.mid, P.midH, { round: true });
-  b.box("blackGloss", 0, 0, frameZ, P.top + 0.9, P.top + 0.9, 0.1, { round: true });
+  b.box("blackGloss", 0, 0, frameZ, P.top + 0.9, P.top + 0.9, 0.1, {
+    round: true,
+  });
   // grid of bars around the 3x3 tiles
   const barH = P.topZ - frameZ;
   const outer = (P.top - (P.pitch * 2 + P.tile)) / 2; // border width
@@ -402,10 +488,28 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     for (const sy of [-1, 1]) {
       const cxx = sx * (P.top / 2 - 0.06);
       const cyy = sy * (P.top / 2 - 0.06);
-      b.box("gold", cxx - sx * 0.7, cyy, P.topZ - 0.04, 1.6, 0.26, 0.1, { round: true });
-      b.box("gold", cxx, cyy - sy * 0.7, P.topZ - 0.04, 0.26, 1.6, 0.1, { round: true });
-      b.cyl("gold", sx * (P.base / 2 - 0.6), sy * (P.base / 2 - 0.6), P.baseH, 0.26, 0.1);
-      b.cyl("black", sx * (P.base / 2 - 0.6), sy * (P.base / 2 - 0.6), P.baseH + 0.1, 0.1, 0.01);
+      b.box("gold", cxx - sx * 0.7, cyy, P.topZ - 0.04, 1.6, 0.26, 0.1, {
+        round: true,
+      });
+      b.box("gold", cxx, cyy - sy * 0.7, P.topZ - 0.04, 0.26, 1.6, 0.1, {
+        round: true,
+      });
+      b.cyl(
+        "gold",
+        sx * (P.base / 2 - 0.6),
+        sy * (P.base / 2 - 0.6),
+        P.baseH,
+        0.26,
+        0.1,
+      );
+      b.cyl(
+        "black",
+        sx * (P.base / 2 - 0.6),
+        sy * (P.base / 2 - 0.6),
+        P.baseH + 0.1,
+        0.1,
+        0.01,
+      );
     }
   // rows of upright gold fins along two sides of the base
   for (let i = 0; i < 18; i++) {
@@ -418,8 +522,12 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
   for (const seat of [P.chip + 0.35, P.chip - 0.75]) {
     const hgt = seat > P.chip ? 0.34 : 0.24;
     for (const s of [-1, 1]) {
-      b.box("gold", s * (seat / 2), 0, frameZ + 0.05, 0.16, seat + 0.16, hgt, { round: true });
-      b.box("gold", 0, s * (seat / 2), frameZ + 0.05, seat + 0.16, 0.16, hgt, { round: true });
+      b.box("gold", s * (seat / 2), 0, frameZ + 0.05, 0.16, seat + 0.16, hgt, {
+        round: true,
+      });
+      b.box("gold", 0, s * (seat / 2), frameZ + 0.05, seat + 0.16, 0.16, hgt, {
+        round: true,
+      });
     }
   }
   b.box("gold", 0, 0, frameZ + 0.05, 0.5, 0.5, 0.05);
@@ -442,12 +550,25 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
       // outline, counter-clockwise from bottom-left, with one optional cut
       const pts: Pt[] = [];
       const add = (x: number, y: number) => pts.push([x, y]);
-      if (corner === 0) { add(-h + c, -h); } else add(-h, -h);
-      if (corner === 1) { add(h - c, -h); add(h, -h + c); } else add(h, -h);
-      if (corner === 2) { add(h, h - c); add(h - c, h); } else add(h, h);
-      if (corner === 3) { add(-h + c, h); add(-h, h - c); } else add(-h, h);
+      if (corner === 0) {
+        add(-h + c, -h);
+      } else add(-h, -h);
+      if (corner === 1) {
+        add(h - c, -h);
+        add(h, -h + c);
+      } else add(h, -h);
+      if (corner === 2) {
+        add(h, h - c);
+        add(h - c, h);
+      } else add(h, h);
+      if (corner === 3) {
+        add(-h + c, h);
+        add(-h, h - c);
+      } else add(-h, h);
       if (corner === 0) add(-h, -h + c);
-      const shape = new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y)));
+      const shape = new THREE.Shape(
+        pts.map(([x, y]) => new THREE.Vector2(x, y)),
+      );
       const g = new THREE.ShapeGeometry(shape);
       const pos = g.getAttribute("position");
       const uv = new Float32Array(pos.count * 2);
@@ -488,8 +609,14 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     const along = w > h;
     for (let i = 0; i < n; i++) {
       const o = ((i + 0.5) / n - 0.5) * (along ? w : h) * 0.9;
-      if (along) b.box("shroud", x + o, y, t, (w / n) * 0.45, h * 0.86, 0.5, { round: true });
-      else b.box("shroud", x, y + o, t, w * 0.86, (h / n) * 0.45, 0.5, { round: true });
+      if (along)
+        b.box("shroud", x + o, y, t, (w / n) * 0.45, h * 0.86, 0.5, {
+          round: true,
+        });
+      else
+        b.box("shroud", x, y + o, t, w * 0.86, (h / n) * 0.45, 0.5, {
+          round: true,
+        });
     }
     block(x, y, w + 1, h + 1, 0.4);
   }
@@ -504,7 +631,15 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     for (let i = 0; i < n; i++) {
       const cw = rng.range(1.2, 3.5);
       const ch = rng.range(1.0, 3.0);
-      b.box("black", x + rng.range(-w / 2 + 2, w / 2 - 2), y + rng.range(-h / 2 + 2, h / 2 - 2), 0.5, cw, ch, 0.02);
+      b.box(
+        "black",
+        x + rng.range(-w / 2 + 2, w / 2 - 2),
+        y + rng.range(-h / 2 + 2, h / 2 - 2),
+        0.5,
+        cw,
+        ch,
+        0.02,
+      );
     }
     block(x, y, w, h, 0.5);
   }
@@ -518,12 +653,22 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     if (!isFree(x, y, s * 0.8)) continue;
     b.box("silver", x, y, 0, s + 0.3, s * 0.86, 0.06);
     b.box("silver", x, y, 0, s * 0.86, s + 0.3, 0.06);
-    b.box("blackGloss", x, y, 0.04, s, s, rng.range(0.35, 0.6), { round: true });
+    b.box("blackGloss", x, y, 0.04, s, s, rng.range(0.35, 0.6), {
+      round: true,
+    });
     block(x, y, s, s, 0.35);
     placed++;
   }
   // capacitors: dark cans with bronze tops, in clusters
-  const clusters: Pt[] = [[13.5, -13.5], [-12.5, 13.5], [14, 7], [-6, -15], [7, 15], [17, -18], [0, -14.5]];
+  const clusters: Pt[] = [
+    [13.5, -13.5],
+    [-12.5, 13.5],
+    [14, 7],
+    [-6, -15],
+    [7, 15],
+    [17, -18],
+    [0, -14.5],
+  ];
   placed = 0;
   guard = 0;
   while (placed < COUNTS.capacitors && guard++ < 8000) {
@@ -539,7 +684,13 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     placed++;
   }
   // indicator LEDs (lower right of the package)
-  const ledXY: Pt[] = [[11.9, 2.0], [13.0, 2.2], [12.1, 0.9], [13.2, 1.1], [12.6, 3.2]];
+  const ledXY: Pt[] = [
+    [11.9, 2.0],
+    [13.0, 2.2],
+    [12.1, 0.9],
+    [13.2, 1.1],
+    [12.6, 3.2],
+  ];
   const ledMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
   const redMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
   const leds = new THREE.Group();
@@ -550,7 +701,10 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     b.cyl("capBody", x, y, 0, 0.24, 0.24);
     block(x, y, 0.6, 0.6, 0.1);
   }
-  for (const [x, y] of [[11.4, 5.0], [11.4, 5.5]] as Pt[]) {
+  for (const [x, y] of [
+    [11.4, 5.0],
+    [11.4, 5.5],
+  ] as Pt[]) {
     const m = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.16, 0.12), redMat);
     m.position.set(x, y, 0.2);
     leds.add(m);
@@ -558,7 +712,17 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
   }
   scene.add(leds);
   // tiny surface-mount parts
-  const smdColors = ["#0c0c0d", "#0c0c0d", "#1d1d20", "#a9a9a8", "#c4c4c2", "#c4c4c2", "#4e4032", "#3a3938", "#111112"];
+  const smdColors = [
+    "#0c0c0d",
+    "#0c0c0d",
+    "#1d1d20",
+    "#a9a9a8",
+    "#c4c4c2",
+    "#c4c4c2",
+    "#4e4032",
+    "#3a3938",
+    "#111112",
+  ];
   placed = 0;
   guard = 0;
   while (placed < COUNTS.smallParts && guard++ < 200000) {
@@ -620,8 +784,15 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
             const a = rng.range(0.35, 0.6) * 2 * h - h;
             const a2 = a + Math.abs(jog);
             const end = Math.min(h, a2 + rng.range(0.4, 2.0));
-            const l: Pt[] = [[-h, u * 0.55], [a, u * 0.55], [a2, u * 0.55 + jog], [end, u * 0.55 + jog]];
-            pts = l.map(([p, q]) => (dx !== 0 ? [ox + dx * p, oy + q] : [ox + q, oy + dy * p]));
+            const l: Pt[] = [
+              [-h, u * 0.55],
+              [a, u * 0.55],
+              [a2, u * 0.55 + jog],
+              [end, u * 0.55 + jog],
+            ];
+            pts = l.map(([p, q]) =>
+              dx !== 0 ? [ox + dx * p, oy + q] : [ox + q, oy + dy * p],
+            );
           } else {
             // corner tiles: lines leave the inner corner diagonally, then straighten
             const k = i - n + 0.5;
@@ -630,9 +801,14 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
             const dl = rng.range(0.5, 1.8);
             const s1: Pt = [s0[0] + dl, s0[1] + dl];
             const straight = rng.range(0.5, 2.4);
-            const s2: Pt = off > 0 ? [Math.min(h, s1[0] + straight), s1[1]] : [s1[0], Math.min(h, s1[1] + straight)];
+            const s2: Pt =
+              off > 0
+                ? [Math.min(h, s1[0] + straight), s1[1]]
+                : [s1[0], Math.min(h, s1[1] + straight)];
             if (s1[0] > h || s1[1] > h) continue;
-            pts = [s0, s1, s2].map(([p, q]) => [ox + dx * p, oy + dy * q] as Pt);
+            pts = [s0, s1, s2].map(
+              ([p, q]) => [ox + dx * p, oy + dy * q] as Pt,
+            );
           }
           tileRib.add(pts, 0.085, z);
           const e = pts[pts.length - 1];
@@ -654,7 +830,8 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     const keep = P.base / 2 + 0.6;
     for (let y = 0; y < cols; y++)
       for (let x = 0; x < cols; x++)
-        if (Math.abs(gc(x)) < keep && Math.abs(gc(y)) < keep) occ[y * cols + x] = 1;
+        if (Math.abs(gc(x)) < keep && Math.abs(gc(y)) < keep)
+          occ[y * cols + x] = 1;
     let side = 0;
     const paths = routeTraces(rng, {
       cols,
@@ -709,7 +886,10 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     cb.box("blackGloss", -c * 0.13, 0, 0.5, c * 0.07, c * 0.42, 0.012);
     cb.box("blackGloss", c * 0.13, 0, 0.5, c * 0.07, c * 0.42, 0.012);
     chip.add(cb.build(mats));
-    const top = new THREE.Mesh(new THREE.BoxGeometry(c - 0.3, c - 0.3, 0.08), chipTopMat);
+    const top = new THREE.Mesh(
+      new THREE.BoxGeometry(c - 0.3, c - 0.3, 0.08),
+      chipTopMat,
+    );
     top.position.z = 0.46;
     top.castShadow = true;
     chip.add(top);
@@ -728,7 +908,10 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
   scene.add(ignite);
 
   /* ---- lights ---------------------------------------------------------------- */
-  const key = new THREE.DirectionalLight(LIGHTS.key.color, LIGHTS.key.intensity);
+  const key = new THREE.DirectionalLight(
+    LIGHTS.key.color,
+    LIGHTS.key.intensity,
+  );
   key.position.set(...LIGHTS.key.pos);
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
@@ -743,7 +926,10 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
   key.shadow.normalBias = 0.04;
   key.shadow.radius = 2.5;
   scene.add(key, key.target);
-  const fill = new THREE.DirectionalLight(LIGHTS.fill.color, LIGHTS.fill.intensity);
+  const fill = new THREE.DirectionalLight(
+    LIGHTS.fill.color,
+    LIGHTS.fill.intensity,
+  );
   fill.position.set(...LIGHTS.fill.pos);
   scene.add(fill);
 
@@ -786,7 +972,8 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     const glow = ramp(t, TIMING.glowFrom, TIMING.glowTo);
     const burst = ramp(t, TIMING.flareFrom, TIMING.flarePeak);
     const settle = 1 - 0.22 * ramp(t, TIMING.flarePeak, TIMING.flarePeak + 1.2);
-    const breathe = 1 + 0.045 * Math.sin(t * 5.3) + 0.03 * Math.sin(t * 8.9 + 1.3);
+    const breathe =
+      1 + 0.045 * Math.sin(t * 5.3) + 0.03 * Math.sin(t * 8.9 + 1.3);
     const flareAmt = burst * settle * breathe;
     // after the burst the flare keeps building up to the end of the film
     const swell = t < TIMING.swell[0][0] ? 1 : pchip(t, TIMING.swell);
@@ -795,7 +982,8 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     chipTopMat.envMapIntensity = 1.3 * (1 - 0.93 * glow);
     chipTopMat.color.setScalar(0.85 * (1 - 0.95 * glow) + 0.01);
     flareMat.uniforms.uIntensity.value =
-      flareAmt * ML.flareIntensity * (0.8 + 0.2 * build) + glow * (1 - burst) * 0.8;
+      flareAmt * ML.flareIntensity * (0.8 + 0.2 * build) +
+      glow * (1 - burst) * 0.8;
     flareMat.uniforms.uCoreMix.value = burst * (0.6 + 0.4 * build);
     // the flare is a camera-facing card whose size is tied to the frame height
     const flarePos = chip.position;
@@ -805,13 +993,18 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     flare.quaternion.copy(camera.quaternion);
     flare.scale.setScalar(frameH * ML.flareSize * 2);
     ignite.intensity = LIGHTS.ignition * (0.3 * glow + flareAmt * swell);
-    tileLineMat.uniforms.uIntensity.value = ML.lineIntensity * (0.7 + 0.3 * swell);
+    tileLineMat.uniforms.uIntensity.value =
+      ML.lineIntensity * (0.7 + 0.3 * swell);
 
     // lines spreading over the tiles and then the board
-    tileLineMat.uniforms.uReveal.value = t < TIMING.tileReveal[0][0] ? 0 : pchip(t, TIMING.tileReveal);
-    boardLineMat.uniforms.uReveal.value = t < TIMING.boardReveal[0][0] ? 0 : pchip(t, TIMING.boardReveal);
+    tileLineMat.uniforms.uReveal.value =
+      t < TIMING.tileReveal[0][0] ? 0 : pchip(t, TIMING.tileReveal);
+    boardLineMat.uniforms.uReveal.value =
+      t < TIMING.boardReveal[0][0] ? 0 : pchip(t, TIMING.boardReveal);
     const edge = ramp(t, TIMING.edgeFrom, TIMING.edgeTo);
-    edgeMat.color.copy(edgeCol).multiplyScalar(edge * ML.edgeIntensity * breathe);
+    edgeMat.color
+      .copy(edgeCol)
+      .multiplyScalar(edge * ML.edgeIntensity * breathe);
 
     return {
       focus: dist,

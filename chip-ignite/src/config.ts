@@ -37,7 +37,12 @@ export const PALETTE = {
 /* ---- timings (seconds) --------------------------------------------------- */
 export const TIMING = {
   /** height of the small chip above its seat, cm: [time, height] */
-  chipDrop: [[0, 17.5], [2.2, 9.0], [5.0, 1.0], [5.7, 0]] as [number, number][],
+  chipDrop: [
+    [0, 17.5],
+    [2.2, 9.0],
+    [5.0, 1.0],
+    [5.7, 0],
+  ] as [number, number][],
   /** the four indicator LEDs fade in while the chip comes down */
   ledsFrom: 3.2,
   ledsTo: 5.6,
@@ -47,16 +52,31 @@ export const TIMING = {
   flareFrom: 6.4,
   flarePeak: 6.8,
   /** glowing lines spread over the tiles: [time, radius in cm] */
-  tileReveal: [[6.65, 1.0], [8.4, 9.0]] as [number, number][],
+  tileReveal: [
+    [6.65, 1.0],
+    [8.4, 9.0],
+  ] as [number, number][],
   /** ...and on across the board */
-  boardReveal: [[8.4, 9.5], [10.5, 19], [13.6, 36]] as [number, number][],
+  boardReveal: [
+    [8.4, 9.5],
+    [10.5, 19],
+    [13.6, 36],
+  ] as [number, number][],
   /** edge light strips of the package */
   edgeFrom: 7.0,
   edgeTo: 8.2,
   /** overall exposure over time (the shot opens up as the camera cranes up) */
-  exposure: [[0, 0.9], [4, 1.1], [8.4, 1.05], [13.6, 0.98]] as [number, number][],
+  exposure: [
+    [0, 0.9],
+    [4, 1.1],
+    [8.4, 1.05],
+    [13.6, 0.98],
+  ] as [number, number][],
   /** after the burst the whole package keeps getting brighter: [time, level] */
-  swell: [[6.8, 1], [13.6, 2.6]] as [number, number][],
+  swell: [
+    [6.8, 1],
+    [13.6, 2.6],
+  ] as [number, number][],
 };
 
 /* ---- camera -------------------------------------------------------------- */
@@ -77,12 +97,34 @@ export interface CameraMove {
 
 /** Version 1 - the reference move: slow orbit while craning up and back. */
 export const CAMERA_V1: CameraMove = {
-  azimuth: [[0, 33], [13.6, 49]],
-  elevation: [[0, 38], [6.8, 58], [13.6, 72]],
-  distance: [[0, 29], [6.8, 28.5], [13.6, 34]],
-  roll: [[0, 0], [13.6, 0]],
-  targetX: [[0, -0.5], [6.8, 1.6], [13.6, 0.4]],
-  targetY: [[0, 1.0], [6.8, -2.0], [13.6, -0.4]],
+  azimuth: [
+    [0, 33],
+    [13.6, 49],
+  ],
+  elevation: [
+    [0, 38],
+    [6.8, 58],
+    [13.6, 72],
+  ],
+  distance: [
+    [0, 29],
+    [6.8, 28.5],
+    [13.6, 34],
+  ],
+  roll: [
+    [0, 0],
+    [13.6, 0],
+  ],
+  targetX: [
+    [0, -0.5],
+    [6.8, 1.6],
+    [13.6, 0.4],
+  ],
+  targetY: [
+    [0, 1.0],
+    [6.8, -2.0],
+    [13.6, -0.4],
+  ],
   fov: 38,
 };
 
@@ -93,12 +135,33 @@ export const CAMERA_V1: CameraMove = {
  * and pulls back with only a small orbit.)
  */
 export const CAMERA_V2: CameraMove = {
-  azimuth: [[0, 20], [13.6, 95]],
-  elevation: [[0, 62], [6, 50], [13.6, 34]],
-  distance: [[0, 34], [6.5, 29], [13.6, 23]],
-  roll: [[0, 0], [13.6, 0]],
-  targetX: [[0, 0], [13.6, 0]],
-  targetY: [[0, 0], [13.6, 0.4]],
+  azimuth: [
+    [0, 20],
+    [13.6, 88],
+  ],
+  elevation: [
+    [0, 62],
+    [6, 52],
+    [13.6, 44],
+  ],
+  distance: [
+    [0, 34],
+    [6.5, 30],
+    [13.6, 27],
+  ],
+  roll: [
+    [0, 0],
+    [13.6, 0],
+  ],
+  targetX: [
+    [0, -2.5],
+    [6, 0],
+    [13.6, 0],
+  ],
+  targetY: [
+    [0, 0],
+    [13.6, 0.4],
+  ],
   fov: 38,
 };
 

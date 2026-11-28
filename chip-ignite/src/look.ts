@@ -22,7 +22,13 @@ export const LOOK: Look = {
   },
   dof: { enabled: true, bokehScale: 5.0, focusRange: 19 },
   fringe: { amount: 0.018, power: 1.6 },
-  vignette: { strength: 0.3, inner: 0.34, outer: 1.35, center: [0.64, 0.4], aspect: 1 },
+  vignette: {
+    strength: 0.3,
+    inner: 0.34,
+    outer: 1.35,
+    center: [0.64, 0.4],
+    aspect: 1,
+  },
   grade: {
     contrast: 1.1,
     saturation: 1.0,
@@ -37,8 +43,16 @@ export const LOOK: Look = {
 
 /** Lights. The board lies in the XY plane and +Z is up. */
 export const LIGHTS = {
-  key: { color: "#f3f6ff", intensity: 4.6, pos: [26, -22, 38] as [number, number, number] },
-  fill: { color: "#ffe2c4", intensity: 0.3, pos: [-30, 10, 30] as [number, number, number] },
+  key: {
+    color: "#f3f6ff",
+    intensity: 4.6,
+    pos: [26, -22, 38] as [number, number, number],
+  },
+  fill: {
+    color: "#ffe2c4",
+    intensity: 0.3,
+    pos: [-30, 10, 30] as [number, number, number],
+  },
   envIntensity: 1.0,
   /** peak strength of the orange light the ignited chip throws */
   ignition: 44,

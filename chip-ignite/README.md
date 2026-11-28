@@ -55,8 +55,8 @@ scrubbing stays responsive).
 **The camera movement** - nothing else. Version 1 follows the reference: a
 small orbit (about 16 degrees) while the camera cranes up to nearly top-down.
 Version 2 does the opposite: it starts high, wide and nearly square to the
-package, then spirals 75 degrees around it while descending and pushing in,
-ending low and close on the burning chip.
+package, then spirals about 70 degrees around it while descending and pushing
+in, ending lower and closer on the burning chip.
 
 The reference is a slow, almost static move over a scene that is detailed in
 every direction, so a new camera path shows the same design from fresh angles
@@ -103,8 +103,8 @@ concurrency:
 
 | | per frame | whole film (408 frames) |
 |---|---|---|
-| 1080p (`--scale=0.5`), measured | __T1080__ | __TOTAL1080__ |
-| 4K (`--scale=1`), estimated from measured 4K stills | __T4K__ | __TOTAL4K__ |
+| 1080p (`--scale=0.5`), measured | about 4.9 s | about 33 min per version |
+| 4K (`--scale=1`), estimated from measured 4K stills | about 14 s | about 95 min per version |
 
 A machine with a GPU will be many times faster.
 

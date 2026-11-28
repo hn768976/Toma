@@ -68,7 +68,11 @@ export const TIMING = {
   motionBlurFrom: 2.1,
   motionBlurTo: 3.55,
   /** the glow of the board fades down towards the end: [time, level] */
-  fade: [[0, 1], [5.0, 1], [9.8, 0.75]] as [number, number][],
+  fade: [
+    [0, 1],
+    [5.0, 1],
+    [9.8, 0.75],
+  ] as [number, number][],
 };
 
 /**
@@ -78,28 +82,72 @@ export const TIMING = {
 export const MOTION = {
   /** camera distance from its target, cm */
   distance: [
-    [0, 21.5], [1.5, 23.0], [2.1, 24], [2.25, 27.5], [2.42, 44], [2.58, 68],
-    [2.75, 84], [2.92, 98], [3.08, 106], [3.25, 112], [3.75, 118], [5.0, 124], [10.04, 132],
+    [0, 21.5],
+    [1.5, 23.0],
+    [2.1, 24],
+    [2.25, 27.5],
+    [2.42, 44],
+    [2.58, 68],
+    [2.75, 84],
+    [2.92, 98],
+    [3.08, 106],
+    [3.25, 112],
+    [3.75, 118],
+    [5.0, 124],
+    [10.04, 132],
   ] as [number, number][],
   /** camera azimuth around the chip during the close-up, degrees */
-  azimuth: [[0, -40], [1.5, -6], [2.15, 0], [10.04, 0]] as [number, number][],
+  azimuth: [
+    [0, -40],
+    [1.5, -6],
+    [2.15, 0],
+    [10.04, 0],
+  ] as [number, number][],
   /** camera elevation, degrees */
-  elevation: [[0, 8], [2.1, 2], [3.2, 0], [10.04, 0]] as [number, number][],
+  elevation: [
+    [0, 8],
+    [2.1, 2],
+    [3.2, 0],
+    [10.04, 0],
+  ] as [number, number][],
   /** board spin about its vertical axis, degrees */
   spin: [
-    [0, 0], [2.15, 0], [2.42, 80], [2.75, 180], [3.08, 270], [3.4, 330],
-    [3.75, 350], [4.5, 353], [10.04, 364],
+    [0, 0],
+    [2.15, 0],
+    [2.42, 80],
+    [2.75, 180],
+    [3.08, 270],
+    [3.4, 330],
+    [3.75, 350],
+    [4.5, 353],
+    [10.04, 364],
   ] as [number, number][],
   /** 0 = camera looks at the chip, 1 = at the board centre */
   /** board tilt about its horizontal axis (top leaning away), degrees */
-  tilt: [[0, 0], [2.15, 0], [3.4, -6], [10.04, -1]] as [number, number][],
-  targetBlend: [[0, 0], [2.15, 0], [2.75, 1], [10.04, 1]] as [number, number][],
+  tilt: [
+    [0, 0],
+    [2.15, 0],
+    [3.4, -6],
+    [10.04, -1],
+  ] as [number, number][],
+  targetBlend: [
+    [0, 0],
+    [2.15, 0],
+    [2.75, 1],
+    [10.04, 1],
+  ] as [number, number][],
   /** vertical field of view, degrees */
   fov: 20,
   /** the camera aims this far above the chip centre during the close-up, cm */
   closeUpLift: 0.15,
   /** screen position (u) of the backdrop light pool over time */
-  poolX: [[0, 0.62], [3.5, 0.62], [6, 0.58], [9.5, 0.5], [10.04, 0.49]] as [number, number][],
+  poolX: [
+    [0, 0.62],
+    [3.5, 0.62],
+    [6, 0.58],
+    [9.5, 0.5],
+    [10.04, 0.49],
+  ] as [number, number][],
 };
 
 /* ---- counts / sizes (cm) ------------------------------------------------- */

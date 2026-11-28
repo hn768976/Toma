@@ -36,7 +36,6 @@ Config.overrideFfmpegCommand(({ args }) => {
   ];
 });
 
-
 // Some sandboxed build machines cannot download Remotion's own Chrome
 // Headless Shell but ship one at this path. On a normal machine the path
 // does not exist and Remotion uses its managed browser as usual.

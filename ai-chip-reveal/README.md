@@ -100,8 +100,8 @@ concurrency:
 
 | | per frame | whole film (301 frames) |
 |---|---|---|
-| 1080p (`--scale=0.5`), measured | __T1080__ | __TOTAL1080__ |
-| 4K (`--scale=1`), estimated from measured 4K stills | __T4K__ | __TOTAL4K__ |
+| 1080p (`--scale=0.5`), measured | about 3.8 s on average (1.6 s in the wide shot, about 4 s in the close-up, about 16 s inside the motion-blur window) | 18.9 min (V1), 19.3 min (V2) |
+| 4K (`--scale=1`), estimated from measured 4K stills | about 10 s on average (4.6 s in the wide shot, 13 s in the close-up, 28 s inside the motion-blur window) | about 50 min per version |
 
 Frames inside the motion-blur window cost about 6x a normal frame. A machine
 with a GPU will be many times faster.

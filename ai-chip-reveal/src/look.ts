@@ -22,7 +22,13 @@ export const LOOK: Look = {
   },
   dof: { enabled: true, bokehScale: 5, focusRange: 3.0 },
   fringe: { amount: 0.0, power: 1.5 },
-  vignette: { strength: 0, inner: 0.3, outer: 1.2, center: [0.5, 0.5], aspect: 1 },
+  vignette: {
+    strength: 0,
+    inner: 0.3,
+    outer: 1.2,
+    center: [0.5, 0.5],
+    aspect: 1,
+  },
   grade: {
     contrast: 1.1,
     saturation: 0.92,
@@ -37,9 +43,17 @@ export const LOOK: Look = {
 
 /** Lights (colour, intensity, direction in world space; the board faces +Z). */
 export const LIGHTS = {
-  key: { color: "#eef3ff", intensity: 3.2, pos: [-18, 30, 42] as [number, number, number] },
+  key: {
+    color: "#eef3ff",
+    intensity: 3.2,
+    pos: [-18, 30, 42] as [number, number, number],
+  },
   fill: { intensity: 0.5, pos: [30, -6, 26] as [number, number, number] },
-  rim: { color: "#cfe0ff", intensity: 0.8, pos: [8, 40, -10] as [number, number, number] },
+  rim: {
+    color: "#cfe0ff",
+    intensity: 0.8,
+    pos: [8, 40, -10] as [number, number, number],
+  },
   /** coloured spill lights near the chip (palette.spill) */
   spillIntensity: 9.0,
   /** soft pools of glow colour over the lower half of the board */

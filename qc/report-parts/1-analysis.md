@@ -31,7 +31,7 @@
 | 2D or 3D | **3D.** A continuous camera move (orbit, crane up, slight push) over a board covered in parts of different heights, with a chip descending in depth, shadows, and lens blur front and back. |
 | Loops? | **No.** It starts unlit and ends fully lit. |
 | Technology | three.js through `@remotion/three`, WebGL 2 via ANGLE. A 4096 px seeded canvas texture (three detail scales) for the board, a second for the etched tiles, about 9,000 instanced parts, reveal-masked shader ribbons for the spreading light, an additive flare card, pmndrs `postprocessing` for depth of field and bloom, and the custom final pass (radial colour fringe, vignette, ACES, grade, grain, dither). |
-| Version 2 | **Camera movement.** The reference move is slow and gentle over a scene that is detailed in every direction, so a new path (start high and nearly square-on, spiral 75 degrees around the package while descending, push in low) shows the same design freshly. A palette change would have weakened the warm-on-neutral contrast that the ignition depends on. |
+| Version 2 | **Camera movement.** The reference move is slow and gentle over a scene that is detailed in every direction, so a new path (start high and nearly square-on, spiral about 70 degrees around the package while descending and pushing in) shows the same design freshly. A palette change would have weakened the warm-on-neutral contrast that the ignition depends on. |
 
 **What it shows**
 

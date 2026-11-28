@@ -35,7 +35,13 @@ type InnerProps = Props & {
  * Both happen synchronously in a layout effect keyed on useCurrentFrame(), so
  * nothing depends on a clock, on useFrame(), or on an earlier frame.
  */
-const StageInner: React.FC<InnerProps> = ({ createWorld, look, frameMap, hueShift, dpr }) => {
+const StageInner: React.FC<InnerProps> = ({
+  createWorld,
+  look,
+  frameMap,
+  hueShift,
+  dpr,
+}) => {
   const frame = useCurrentFrame();
   const gl = useThree((s) => s.gl);
   const rootScene = useThree((s) => s.scene);
@@ -93,7 +99,19 @@ const StageInner: React.FC<InnerProps> = ({ createWorld, look, frameMap, hueShif
     // draw to the canvas now; R3F's own render that follows is identical
     gl.setRenderTarget(null);
     gl.render(rootScene, rootCamera);
-  }, [frame, frameMap, pipeline, material, look, gl, rootScene, rootCamera, pw, ph, hueShift]);
+  }, [
+    frame,
+    frameMap,
+    pipeline,
+    material,
+    look,
+    gl,
+    rootScene,
+    rootCamera,
+    pw,
+    ph,
+    hueShift,
+  ]);
 
   useLayoutEffect(
     () => () => {
@@ -102,9 +120,7 @@ const StageInner: React.FC<InnerProps> = ({ createWorld, look, frameMap, hueShif
     [pipeline],
   );
 
-  return (
-    <mesh frustumCulled={false} geometry={geometry} material={material} />
-  );
+  return <mesh frustumCulled={false} geometry={geometry} material={material} />;
 };
 
 export const Stage: React.FC<Props> = (props) => {

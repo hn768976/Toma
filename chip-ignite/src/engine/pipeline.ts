@@ -191,13 +191,15 @@ export class Pipeline {
 
   /** Render one scene state through the composer; returns the HDR texture. */
   private renderScene(fl: FrameLook): THREE.Texture {
-    const dofOn = this.look.dof.enabled && (fl.bokehScale ?? this.look.dof.bokehScale) > 0;
+    const dofOn =
+      this.look.dof.enabled && (fl.bokehScale ?? this.look.dof.bokehScale) > 0;
     this.dofPass.enabled = dofOn;
     if (dofOn) {
       // The blur buffers have a fixed height (DOF_H), so the blur is the same
       // fraction of the frame at any output size. Look values are given in
       // pixels of a 540-line frame, hence the constant factor.
-      this.dof.bokehScale = (fl.bokehScale ?? this.look.dof.bokehScale) * (DOF_H / 540);
+      this.dof.bokehScale =
+        (fl.bokehScale ?? this.look.dof.bokehScale) * (DOF_H / 540);
       const coc = this.dof.cocMaterial;
       coc.worldFocusDistance = fl.focus;
       coc.worldFocusRange = fl.focusRange ?? this.look.dof.focusRange;

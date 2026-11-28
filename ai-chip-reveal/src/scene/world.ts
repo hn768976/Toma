@@ -23,7 +23,16 @@ import {
   SOCKET,
   TIMING,
 } from "../config";
-import { BACKDROP, DOF, ENV_AMBIENT, ENV_LOBES, ENV_PANELS, LIGHTS, LOOK, MATERIAL_LOOK } from "../look";
+import {
+  BACKDROP,
+  DOF,
+  ENV_AMBIENT,
+  ENV_LOBES,
+  ENV_PANELS,
+  LIGHTS,
+  LOOK,
+  MATERIAL_LOOK,
+} from "../look";
 
 const rad = (d: number) => (d * Math.PI) / 180;
 
@@ -190,7 +199,10 @@ const makeGlowMaterial = (color: string, hot: string, intensity: number) =>
 /* the world                                                                   */
 /* -------------------------------------------------------------------------- */
 
-export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World => {
+export const createWorld = (
+  gl: THREE.WebGLRenderer,
+  palette: Palette,
+): World => {
   const rng = new Rng(SEED);
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(MOTION.fov, 16 / 9, 1, 400);
@@ -206,32 +218,134 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
   const boardCanvas = makeBoardTexture(SEED + 1);
   const boardMap = canvasTexture(boardCanvas, { srgb: true, aniso: 8 });
   const boardBump = canvasTexture(boardCanvas, { srgb: false, aniso: 4 });
-  const std = (p: THREE.MeshStandardMaterialParameters) => new THREE.MeshStandardMaterial(p);
+  const std = (p: THREE.MeshStandardMaterialParameters) =>
+    new THREE.MeshStandardMaterial(p);
   const mats: Record<string, THREE.Material> = {
     // Lambert: the bare board has no specular, so the small coloured lights
     // pool softly on it instead of showing up as sharp glints
-    pcb: new THREE.MeshLambertMaterial({ color: ML.pcb, map: boardMap, bumpMap: boardBump, bumpScale: 0.15 }),
-    pcbEdge: std({ color: "#050506", roughness: 0.5, metalness: 0.2, envMapIntensity: 0.2 }),
-    back: std({ color: ML.back, roughness: 0.3, metalness: 0.75, emissive: "#ffffff", emissiveIntensity: 0, envMapIntensity: 0.08 }),
-    gunmetal: std({ color: "#404248", roughness: 0.36, metalness: 1, envMapIntensity: 1.0 }),
-    heatsink: std({ color: "#5d6068", roughness: 0.4, metalness: 1, envMapIntensity: 1.0 }),
+    pcb: new THREE.MeshLambertMaterial({
+      color: ML.pcb,
+      map: boardMap,
+      bumpMap: boardBump,
+      bumpScale: 0.15,
+    }),
+    pcbEdge: std({
+      color: "#050506",
+      roughness: 0.5,
+      metalness: 0.2,
+      envMapIntensity: 0.2,
+    }),
+    back: std({
+      color: ML.back,
+      roughness: 0.3,
+      metalness: 0.75,
+      emissive: "#ffffff",
+      emissiveIntensity: 0,
+      envMapIntensity: 0.08,
+    }),
+    gunmetal: std({
+      color: "#404248",
+      roughness: 0.36,
+      metalness: 1,
+      envMapIntensity: 1.0,
+    }),
+    heatsink: std({
+      color: "#5d6068",
+      roughness: 0.4,
+      metalness: 1,
+      envMapIntensity: 1.0,
+    }),
     steel: std({ color: "#c4c8cf", roughness: 0.24, metalness: 1 }),
-    alu: std({ color: "#b9bcc3", roughness: 0.2, metalness: 1, envMapIntensity: 0.85 }),
-    black: std({ color: "#17171a", roughness: 0.5, metalness: 0.0, envMapIntensity: 0.3 }),
-    blackGloss: std({ color: "#060607", roughness: 0.22, metalness: 0.3, envMapIntensity: 0.4 }),
-    grey: std({ color: "#46474d", roughness: 0.55, metalness: 0.3, envMapIntensity: 0.5 }),
-    white: std({ color: "#c9ccd2", roughness: 0.5, metalness: 0, emissive: "#f2f5ff", emissiveIntensity: ML.whiteEmissive }),
-    gold: std({ color: palette.pin, roughness: 0.28, metalness: 1, envMapIntensity: 0.3 }),
-    substrate: std({ color: palette.chipFace, roughness: 0.5, metalness: 0.3, envMapIntensity: 0.4 }),
-    capTop: std({ color: "#5c5f66", roughness: 0.3, metalness: 1, envMapIntensity: 1.0 }),
-    smd: std({ color: "#ffffff", roughness: 0.5, metalness: 0.35, envMapIntensity: 0.5 }),
-    bar: std({ color: "#0b0b0d", roughness: 0.55, metalness: 0.0, envMapIntensity: 0.1 }),
-    latch: std({ color: "#33353a", roughness: 0.5, metalness: 0.2, envMapIntensity: 0.4 }),
-    dot: std({ color: "#26272b", roughness: 0.5, metalness: 0.5, envMapIntensity: 0.4 }),
-    leg: std({ color: "#7d8088", roughness: 0.4, metalness: 0.9, envMapIntensity: 0.5 }),
+    alu: std({
+      color: "#b9bcc3",
+      roughness: 0.2,
+      metalness: 1,
+      envMapIntensity: 0.85,
+    }),
+    black: std({
+      color: "#17171a",
+      roughness: 0.5,
+      metalness: 0.0,
+      envMapIntensity: 0.3,
+    }),
+    blackGloss: std({
+      color: "#060607",
+      roughness: 0.22,
+      metalness: 0.3,
+      envMapIntensity: 0.4,
+    }),
+    grey: std({
+      color: "#46474d",
+      roughness: 0.55,
+      metalness: 0.3,
+      envMapIntensity: 0.5,
+    }),
+    white: std({
+      color: "#c9ccd2",
+      roughness: 0.5,
+      metalness: 0,
+      emissive: "#f2f5ff",
+      emissiveIntensity: ML.whiteEmissive,
+    }),
+    gold: std({
+      color: palette.pin,
+      roughness: 0.28,
+      metalness: 1,
+      envMapIntensity: 0.3,
+    }),
+    substrate: std({
+      color: palette.chipFace,
+      roughness: 0.5,
+      metalness: 0.3,
+      envMapIntensity: 0.4,
+    }),
+    capTop: std({
+      color: "#5c5f66",
+      roughness: 0.3,
+      metalness: 1,
+      envMapIntensity: 1.0,
+    }),
+    smd: std({
+      color: "#ffffff",
+      roughness: 0.5,
+      metalness: 0.35,
+      envMapIntensity: 0.5,
+    }),
+    bar: std({
+      color: "#0b0b0d",
+      roughness: 0.55,
+      metalness: 0.0,
+      envMapIntensity: 0.1,
+    }),
+    latch: std({
+      color: "#33353a",
+      roughness: 0.5,
+      metalness: 0.2,
+      envMapIntensity: 0.4,
+    }),
+    dot: std({
+      color: "#26272b",
+      roughness: 0.5,
+      metalness: 0.5,
+      envMapIntensity: 0.4,
+    }),
+    leg: std({
+      color: "#7d8088",
+      roughness: 0.4,
+      metalness: 0.9,
+      envMapIntensity: 0.5,
+    }),
   };
-  const traceMat = makeGlowMaterial(palette.trace, palette.traceHot, ML.traceIntensity);
-  const chipTraceMat = makeGlowMaterial(palette.chipTrace, palette.traceHot, ML.chipTraceIntensity);
+  const traceMat = makeGlowMaterial(
+    palette.trace,
+    palette.traceHot,
+    ML.traceIntensity,
+  );
+  const chipTraceMat = makeGlowMaterial(
+    palette.chipTrace,
+    palette.traceHot,
+    ML.chipTraceIntensity,
+  );
   // extruded metal letters that also glow, so their sides catch the light
   const lettersMat = std({
     color: palette.pin,
@@ -246,7 +360,12 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
   scene.add(board);
   const { w: BW, h: BH, t: BT } = BOARD;
   const slab = new THREE.Mesh(new THREE.BoxGeometry(BW, BH, BT), [
-    mats.pcbEdge, mats.pcbEdge, mats.pcbEdge, mats.pcbEdge, mats.pcb, mats.back,
+    mats.pcbEdge,
+    mats.pcbEdge,
+    mats.pcbEdge,
+    mats.pcbEdge,
+    mats.pcb,
+    mats.back,
   ]);
   slab.position.z = -BT / 2;
   slab.receiveShadow = true;
@@ -257,7 +376,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
   // during the spin and settles back on its own schedule (config ASSEMBLY).
   const batches = new Map<string, Batch>();
   let b = new Batch();
-  const use = (name: string) => {
+  const intoGroup = (name: string) => {
     let x = batches.get(name);
     if (!x) {
       x = new Batch();
@@ -265,15 +384,22 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
     }
     b = x;
   };
-  use("socket");
+  intoGroup("socket");
   /** footprints of big parts, so small parts do not overlap them */
   const blocked: [number, number, number, number][] = [];
   const block = (cx: number, cy: number, w: number, h: number, pad = 0.2) =>
-    blocked.push([cx - w / 2 - pad, cy - h / 2 - pad, cx + w / 2 + pad, cy + h / 2 + pad]);
+    blocked.push([
+      cx - w / 2 - pad,
+      cy - h / 2 - pad,
+      cx + w / 2 + pad,
+      cy + h / 2 + pad,
+    ]);
   const isFree = (x: number, y: number, r: number) =>
     Math.abs(x) < BW / 2 - 0.4 - r &&
     Math.abs(y) < BH / 2 - 0.4 - r &&
-    !blocked.some((k) => x > k[0] - r && x < k[2] + r && y > k[1] - r && y < k[3] + r);
+    !blocked.some(
+      (k) => x > k[0] - r && x < k[2] + r && y > k[1] - r && y < k[3] + r,
+    );
 
   /* ---- CPU socket -------------------------------------------------------- */
   const cx = SOCKET.x;
@@ -333,7 +459,12 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
         const a2 = a1 + l2;
         const s2 = s1 + Math.sign(u || 1) * l2;
         const a3 = Math.min(2.2, a2 + l3);
-        const local: Pt[] = [[a0, s1], [a1, s1], [a2, s2], [a3, s2]];
+        const local: Pt[] = [
+          [a0, s1],
+          [a1, s1],
+          [a2, s2],
+          [a3, s2],
+        ];
         const pts: Pt[] = local.map(([a, t]) =>
           horiz ? [cx + sgn * a, cy + t] : [cx + t, cy + sgn * a],
         );
@@ -344,7 +475,10 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
         if (i % 3 === 1) {
           const b0: Pt = local[2];
           const bl = rng.range(0.2, 0.5);
-          const br: Pt[] = [b0, [b0[0] + bl * 0.4, b0[1] + Math.sign(u || 1) * bl]];
+          const br: Pt[] = [
+            b0,
+            [b0[0] + bl * 0.4, b0[1] + Math.sign(u || 1) * bl],
+          ];
           const bp: Pt[] = br.map(([a, t]) =>
             horiz ? [cx + sgn * a, cy + t] : [cx + t, cy + sgn * a],
           );
@@ -359,17 +493,22 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
   letters.position.set(cx, cy, chipTop + 0.01);
 
   /* ---- left of the socket: white blocks and capacitors -------------------- */
-  use("blocks");
+  intoGroup("blocks");
   for (let i = 0; i < COUNTS.whiteBlocks; i++) {
     const y = cy - 4.4 + i * 1.46;
     b.box("white", cx - 7.0, y, 0, 1.5, 1.08, 1.05, { round: true });
     b.box("gunmetal", cx - 7.0, y, 0, 1.62, 1.2, 0.12);
   }
   block(cx - 7.0, cy, 1.9, 10.6);
-  use("caps");
+  intoGroup("caps");
   const capXY: [number, number][] = [];
-  for (let i = 0; i < COUNTS.capacitors; i++) capXY.push([cx - 5.4, cy - 4.6 + i * 1.3]);
-  capXY.push([cx - 4.45, cy + 1.25], [cx - 4.45, cy + 2.55], [cx - 4.45, cy - 0.05]);
+  for (let i = 0; i < COUNTS.capacitors; i++)
+    capXY.push([cx - 5.4, cy - 4.6 + i * 1.3]);
+  capXY.push(
+    [cx - 4.45, cy + 1.25],
+    [cx - 4.45, cy + 2.55],
+    [cx - 4.45, cy - 0.05],
+  );
   for (const [x, y] of capXY) {
     b.cyl("alu", x, y, 0, 0.43, 1.25, { shape: "can" });
     b.cyl("capTop", x, y, 1.246, 0.24, 0.01);
@@ -378,7 +517,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
   block(cx - 4.95, cy, 2.0, 10.8);
 
   /* ---- right of the socket: tall bars ------------------------------------ */
-  use("bars");
+  intoGroup("bars");
   for (let i = 0; i < COUNTS.sideBars; i++) {
     const x = cx + 4.34 + i * 0.89;
     const y0 = cy - 3.3;
@@ -397,7 +536,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
   block(cx + 4.34 + 1.33, cy + 1.7, 3.6, 11.6);
 
   /* ---- top-left: connector blocks ---------------------------------------- */
-  use("io");
+  intoGroup("io");
   const io: [number, number, number, number, number][] = [
     [-10.6, 11.2, 2.2, 2.6, 2.2],
     [-10.6, 8.3, 2.2, 2.2, 1.7],
@@ -412,7 +551,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
 
   /* ---- lower half: long parallel slots ----------------------------------- */
   for (let i = 0; i < COUNTS.slots; i++) {
-    use(i % 2 === 0 ? "slotsA" : "slotsB");
+    intoGroup(i % 2 === 0 ? "slotsA" : "slotsB");
     const x = -8.9 + i * (17.8 / (COUNTS.slots - 1));
     const len = 9.4;
     const yTop = -3.0;
@@ -426,15 +565,16 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
 
   /* ---- medium parts: chips, heat sink, white squares ---------------------- */
   // large finned heat sink, upper right
-  use("heatsink");
+  intoGroup("heatsink");
   {
     const hx = 9.9;
     const hy = 9.4;
     b.box("heatsink", hx, hy, 0, 3.4, 5.6, 0.35, { round: true });
-    for (let i = 0; i < 10; i++) b.box("heatsink", hx - 1.44 + i * 0.32, hy, 0.35, 0.13, 5.4, 1.3);
+    for (let i = 0; i < 10; i++)
+      b.box("heatsink", hx - 1.44 + i * 0.32, hy, 0.35, 0.13, 5.4, 1.3);
     block(hx, hy, 3.6, 5.8);
   }
-  use("whites");
+  intoGroup("whites");
   for (let i = 0; i < 4; i++) {
     b.box("white", 6.4 + i * 1.15, 1.9, 0, 0.85, 0.85, 0.7, { round: true });
   }
@@ -444,7 +584,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
   }
   block(-11.0, -1.5, 1.0, 5.4);
   // square ICs
-  use("chips");
+  intoGroup("chips");
   let placed = 0;
   let guard = 0;
   while (placed < COUNTS.chips && guard++ < 4000) {
@@ -460,10 +600,14 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
     placed++;
   }
   // small cans and inductors
-  use("cans");
+  intoGroup("cans");
   placed = 0;
   guard = 0;
-  const canClusters: Pt[] = [[-1.5, 11.4], [-9.6, -5.5], [3.2, -1.2]];
+  const canClusters: Pt[] = [
+    [-1.5, 11.4],
+    [-9.6, -5.5],
+    [3.2, -1.2],
+  ];
   while (placed < COUNTS.cans && guard++ < 4000) {
     const c = rng.pick(canClusters);
     const x = c[0] + rng.range(-1.6, 1.6);
@@ -475,16 +619,25 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
     placed++;
   }
   // bottom edge header row
-  use("header");
+  intoGroup("header");
   for (let i = 0; i < 14; i++) {
     const x = -10.6 + i * 1.62;
     b.box("black", x, -BH / 2 + 0.55, 0, 1.3, 0.55, 0.75, { round: true });
-    for (let k = 0; k < 5; k++) b.cyl("gold", x - 0.48 + k * 0.24, -BH / 2 + 0.55, 0.75, 0.035, 0.22);
+    for (let k = 0; k < 5; k++)
+      b.cyl("gold", x - 0.48 + k * 0.24, -BH / 2 + 0.55, 0.75, 0.035, 0.22);
   }
   block(0, -BH / 2 + 0.55, BW, 0.9);
 
   /* ---- tiny surface-mount parts ------------------------------------------ */
-  const smdColors = ["#1b1b1e", "#1b1b1e", "#2a2a2e", "#b9aa8d", "#d9d9dc", "#6b6d73", "#111113"];
+  const smdColors = [
+    "#1b1b1e",
+    "#1b1b1e",
+    "#2a2a2e",
+    "#b9aa8d",
+    "#d9d9dc",
+    "#6b6d73",
+    "#111113",
+  ];
   placed = 0;
   guard = 0;
   while (placed < COUNTS.smallParts && guard++ < 40000) {
@@ -494,12 +647,14 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
     const n = rng.chance(0.35) ? rng.int(2, 6) : 1;
     const horiz = rng.chance(0.5);
     const col = rng.pick(smdColors);
-    use(rng.pick(["smdA", "smdA", "smdB", "smdC"]));
+    intoGroup(rng.pick(["smdA", "smdA", "smdB", "smdC"]));
     for (let k = 0; k < n; k++) {
       const px = x + (horiz ? 0 : k * 0.19);
       const py = y + (horiz ? k * 0.19 : 0);
       if (!isFree(px, py, 0.1)) break;
-      b.box("smd", px, py, 0, horiz ? 0.3 : 0.13, horiz ? 0.13 : 0.3, 0.1, { color: col });
+      b.box("smd", px, py, 0, horiz ? 0.3 : 0.13, horiz ? 0.13 : 0.3, 0.1, {
+        color: col,
+      });
       b.box("leg", px, py, 0, horiz ? 0.36 : 0.11, horiz ? 0.11 : 0.36, 0.06);
       placed++;
     }
@@ -571,7 +726,8 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
     const gy = (y: number) => -BH / 2 + g + y * g;
     for (let y = 0; y < rows; y++)
       for (let x = 0; x < cols; x++)
-        if (Math.abs(gx(x) - cx) < 3.6 && Math.abs(gy(y) - cy) < 3.9) occ[y * cols + x] = 1;
+        if (Math.abs(gx(x) - cx) < 3.6 && Math.abs(gy(y) - cy) < 3.9)
+          occ[y * cols + x] = 1;
     const paths = routeTraces(rng, {
       cols,
       rows,
@@ -584,7 +740,10 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
       occupied: occ,
       // mostly vertical runs, as on the lower half of the reference board
       startDir: (r) => (r.chance(0.7) ? r.pick([2, 6]) : r.pick([0, 4, 1, 3])),
-      start: (r) => [r.int(0, cols - 1), r.chance(0.72) ? r.int(0, Math.floor(rows * 0.52)) : r.int(0, rows - 1)],
+      start: (r) => [
+        r.int(0, cols - 1),
+        r.chance(0.72) ? r.int(0, Math.floor(rows * 0.52)) : r.int(0, rows - 1),
+      ],
     });
     for (const p of paths) {
       const pts: Pt[] = p.map(([x, y]) => [gx(x), gy(y)]);
@@ -599,7 +758,10 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
   board.add(traces);
 
   /* ---- lights ------------------------------------------------------------ */
-  const key = new THREE.DirectionalLight(LIGHTS.key.color, LIGHTS.key.intensity);
+  const key = new THREE.DirectionalLight(
+    LIGHTS.key.color,
+    LIGHTS.key.intensity,
+  );
   key.position.set(...LIGHTS.key.pos);
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
@@ -617,11 +779,17 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
   const fill = new THREE.DirectionalLight(palette.fill, LIGHTS.fill.intensity);
   fill.position.set(...LIGHTS.fill.pos);
   scene.add(fill);
-  const rim = new THREE.DirectionalLight(LIGHTS.rim.color, LIGHTS.rim.intensity);
+  const rim = new THREE.DirectionalLight(
+    LIGHTS.rim.color,
+    LIGHTS.rim.intensity,
+  );
   rim.position.set(...LIGHTS.rim.pos);
   scene.add(rim);
   for (const [x, y] of [
-    [cx - 4.2, cy], [cx + 4.0, cy + 1.5], [cx, cy - 4.6], [cx, cy + 4.6],
+    [cx - 4.2, cy],
+    [cx + 4.0, cy + 1.5],
+    [cx, cy - 4.6],
+    [cx, cy + 4.6],
   ]) {
     const p = new THREE.PointLight(palette.spill, LIGHTS.spillIntensity, 9, 2);
     p.position.set(x, y, 0.9);
@@ -629,14 +797,26 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
   }
   // soft pools of glow colour between the parts of the lower half
   const poolLights: THREE.PointLight[] = [];
-  for (const [x, y] of [[-7, -4], [0, -5.5], [7, -4.5], [-4, -10], [4.5, -10.5], [-9, 2]]) {
+  for (const [x, y] of [
+    [-7, -4],
+    [0, -5.5],
+    [7, -4.5],
+    [-4, -10],
+    [4.5, -10.5],
+    [-9, 2],
+  ]) {
     const p = new THREE.PointLight(palette.spill, LIGHTS.poolIntensity, 8, 2);
     p.position.set(x, y, 1.4);
     board.add(p);
     poolLights.push(p);
   }
   // glow of the letters on the chip face
-  const letterLight = new THREE.PointLight(palette.letters, LIGHTS.spillIntensity * 0.04, 5, 2);
+  const letterLight = new THREE.PointLight(
+    palette.letters,
+    LIGHTS.spillIntensity * 0.04,
+    5,
+    2,
+  );
   letterLight.position.set(cx, cy, 1.1);
   board.add(letterLight);
 
@@ -707,7 +887,9 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
     const out = ramp(t, ASSEMBLY.out[0], ASSEMBLY.out[1]);
     for (const name in groups) {
       const a = ASSEMBLY.groups[name] ?? ASSEMBLY.fallback;
-      const k = out * (1 - easeInOutCubic((t - a.settle[0]) / (a.settle[1] - a.settle[0])));
+      const k =
+        out *
+        (1 - easeInOutCubic((t - a.settle[0]) / (a.settle[1] - a.settle[0])));
       groups[name].position.set(a.off[0] * k, a.off[1] * k, a.off[2] * k);
     }
     board.updateMatrixWorld(true);
@@ -730,24 +912,36 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
 
     // the back plate catches the key light once per turn
     const a = ((spin % 360) + 360) % 360;
-    backMat.emissiveIntensity = ML.backFlash * Math.exp(-Math.pow((a - 228) / 10, 2));
+    backMat.emissiveIntensity =
+      ML.backFlash * Math.exp(-Math.pow((a - 228) / 10, 2));
 
     const g = Math.exp(-Math.pow((t - TIMING.flashAt) / TIMING.flashWidth, 2));
     const wide = ramp(t, TIMING.whipStart, TIMING.whipStart + 0.5);
     const fade = pchip(t, TIMING.fade);
-    traceMat.uniforms.uIntensity.value = ML.traceIntensity * (1 - wide + wide * ML.traceWide) * fade;
-    for (const l of poolLights) l.intensity = LIGHTS.poolIntensity * fade * fade;
+    traceMat.uniforms.uIntensity.value =
+      ML.traceIntensity * (1 - wide + wide * ML.traceWide) * fade;
+    for (const l of poolLights)
+      l.intensity = LIGHTS.poolIntensity * fade * fade;
     traceMat.uniforms.uSelect.value = wide;
-    whiteMat.emissiveIntensity = ML.whiteEmissive * (1 - wide + wide * ML.whiteWide);
-    lettersMat.emissiveIntensity = ML.lettersIntensity * (1 - wide + wide * ML.lettersWide);
-    chipTraceMat.uniforms.uIntensity.value = ML.chipTraceIntensity * (1 - wide + wide * ML.chipTraceWide);
-    key.intensity = LIGHTS.key.intensity * (1 - wide + wide * ML.keyWide) * (0.6 + 0.4 * fade);
+    whiteMat.emissiveIntensity =
+      ML.whiteEmissive * (1 - wide + wide * ML.whiteWide);
+    lettersMat.emissiveIntensity =
+      ML.lettersIntensity * (1 - wide + wide * ML.lettersWide);
+    chipTraceMat.uniforms.uIntensity.value =
+      ML.chipTraceIntensity * (1 - wide + wide * ML.chipTraceWide);
+    key.intensity =
+      LIGHTS.key.intensity *
+      (1 - wide + wide * ML.keyWide) *
+      (0.6 + 0.4 * fade);
     const wideExposure = 1 - wide + wide * ML.exposureWide;
     backdropMat.uniforms.uExposure.value = LOOK.exposure * wideExposure;
     const moving = t >= TIMING.motionBlurFrom && t <= TIMING.motionBlurTo;
     return {
       focus: dist,
-      bokehScale: (DOF.startBokeh + (DOF.closeBokeh - DOF.startBokeh) * ramp(t, 0, 1.5)) * (1 - wide) + DOF.wideBokeh * wide,
+      bokehScale:
+        (DOF.startBokeh + (DOF.closeBokeh - DOF.startBokeh) * ramp(t, 0, 1.5)) *
+          (1 - wide) +
+        DOF.wideBokeh * wide,
       grainMul: 1 - wide,
       focusRange: DOF.closeRange,
       exposureMul: (1 + ML.flashExposure * g) * wideExposure,

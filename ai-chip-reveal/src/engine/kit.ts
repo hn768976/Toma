@@ -83,7 +83,12 @@ export interface PartOpts {
 export class Batch {
   private readonly buckets = new Map<string, Bucket>();
 
-  private push(shape: Shape, mat: string, m: THREE.Matrix4, color?: THREE.ColorRepresentation) {
+  private push(
+    shape: Shape,
+    mat: string,
+    m: THREE.Matrix4,
+    color?: THREE.ColorRepresentation,
+  ) {
     const key = `${shape}|${mat}`;
     let b = this.buckets.get(key);
     if (!b) {
@@ -95,7 +100,16 @@ export class Batch {
   }
 
   /** Box centred at (x, y) whose base sits at height z0. */
-  box(mat: string, x: number, y: number, z0: number, sx: number, sy: number, h: number, o: PartOpts = {}) {
+  box(
+    mat: string,
+    x: number,
+    y: number,
+    z0: number,
+    sx: number,
+    sy: number,
+    h: number,
+    o: PartOpts = {},
+  ) {
     if (o.euler) _e.set(o.euler[0], o.euler[1], o.euler[2]);
     else _e.set(0, 0, o.rot ?? 0);
     _q.setFromEuler(_e);
@@ -104,7 +118,15 @@ export class Batch {
   }
 
   /** Upright cylinder (axis = board normal). */
-  cyl(mat: string, x: number, y: number, z0: number, r: number, h: number, o: PartOpts & { shape?: "cyl" | "can" | "ring" } = {}) {
+  cyl(
+    mat: string,
+    x: number,
+    y: number,
+    z0: number,
+    r: number,
+    h: number,
+    o: PartOpts & { shape?: "cyl" | "can" | "ring" } = {},
+  ) {
     if (o.euler) _e.set(o.euler[0], o.euler[1], o.euler[2]);
     else _e.set(0, 0, o.rot ?? 0);
     _q.setFromEuler(_e);
@@ -126,7 +148,11 @@ export class Batch {
     for (const b of this.buckets.values()) {
       const mat = mats[b.mat];
       if (!mat) throw new Error(`Unknown material "${b.mat}"`);
-      const mesh = new THREE.InstancedMesh(unitGeometry(b.shape), mat, b.matrices.length);
+      const mesh = new THREE.InstancedMesh(
+        unitGeometry(b.shape),
+        mat,
+        b.matrices.length,
+      );
       const hasColor = b.colors.some((c) => c !== null);
       const white = new THREE.Color(1, 1, 1);
       b.matrices.forEach((m, i) => {
@@ -165,12 +191,18 @@ export class Ribbons {
    * @param a     free per-path values, available in shaders as `aInfo`
    *              (x: path length is written automatically into aInfo.w)
    */
-  add(pts: readonly Pt[], width: number, z: number, a: [number, number, number] = [0, 0, 0]) {
+  add(
+    pts: readonly Pt[],
+    width: number,
+    z: number,
+    a: [number, number, number] = [0, 0, 0],
+  ) {
     if (pts.length < 2) return;
     const hw = width / 2;
     const n = pts.length;
     let total = 0;
-    for (let i = 1; i < n; i++) total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    for (let i = 1; i < n; i++)
+      total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
     let dist = 0;
     const base = this.v;
     for (let i = 0; i < n; i++) {
@@ -183,10 +215,30 @@ export class Ribbons {
       let d2y = next[1] - p[1];
       const l1 = Math.hypot(d1x, d1y) || 1;
       const l2 = Math.hypot(d2x, d2y) || 1;
-      if (i === 0) { d1x = d2x; d1y = d2y; } else { d1x /= l1; d1y /= l1; }
-      if (i === n - 1) { d2x = d1x; d2y = d1y; } else { d2x /= l2; d2y /= l2; }
-      if (i === 0) { const l = Math.hypot(d1x, d1y) || 1; d1x /= l; d1y /= l; }
-      if (i === n - 1) { const l = Math.hypot(d2x, d2y) || 1; d2x /= l; d2y /= l; }
+      if (i === 0) {
+        d1x = d2x;
+        d1y = d2y;
+      } else {
+        d1x /= l1;
+        d1y /= l1;
+      }
+      if (i === n - 1) {
+        d2x = d1x;
+        d2y = d1y;
+      } else {
+        d2x /= l2;
+        d2y /= l2;
+      }
+      if (i === 0) {
+        const l = Math.hypot(d1x, d1y) || 1;
+        d1x /= l;
+        d1y /= l;
+      }
+      if (i === n - 1) {
+        const l = Math.hypot(d2x, d2y) || 1;
+        d2x /= l;
+        d2y /= l;
+      }
       // mitre direction
       let tx = d1x + d2x;
       let ty = d1y + d2y;
@@ -198,7 +250,14 @@ export class Ribbons {
       const cosHalf = Math.max(0.35, tx * d1x + ty * d1y);
       const m = hw / cosHalf;
       if (i > 0) dist += Math.hypot(p[0] - prev[0], p[1] - prev[1]);
-      this.pos.push(p[0] + nx * m, p[1] + ny * m, z, p[0] - nx * m, p[1] - ny * m, z);
+      this.pos.push(
+        p[0] + nx * m,
+        p[1] + ny * m,
+        z,
+        p[0] - nx * m,
+        p[1] - ny * m,
+        z,
+      );
       this.uv.push(dist, 1, dist, -1);
       this.info.push(a[0], a[1], a[2], total, a[0], a[1], a[2], total);
       this.v += 2;
@@ -210,7 +269,15 @@ export class Ribbons {
   }
 
   /** small filled disc (via or pad) */
-  dot(x: number, y: number, r: number, z: number, a: [number, number, number] = [0, 0, 0], dist = 0, total = 1) {
+  dot(
+    x: number,
+    y: number,
+    r: number,
+    z: number,
+    a: [number, number, number] = [0, 0, 0],
+    dist = 0,
+    total = 1,
+  ) {
     const seg = 10;
     const base = this.v;
     this.pos.push(x, y, z);
@@ -248,7 +315,14 @@ export class Ribbons {
 /* ------------------------------------------------------------------------ */
 
 const DIRS: Pt[] = [
-  [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1],
+  [1, 0],
+  [1, 1],
+  [0, 1],
+  [-1, 1],
+  [-1, 0],
+  [-1, -1],
+  [0, -1],
+  [1, -1],
 ];
 
 export interface RouteOpts {
@@ -298,7 +372,8 @@ export const routeTraces = (rng: Rng, o: RouteOpts): Pt[][] => {
         const ny = y + DIRS[d][1];
         if (at(nx, ny)) break;
         // a diagonal step may not squeeze between two occupied cells
-        if (DIRS[d][0] !== 0 && DIRS[d][1] !== 0 && at(nx, y) && at(x, ny)) break;
+        if (DIRS[d][0] !== 0 && DIRS[d][1] !== 0 && at(nx, y) && at(x, ny))
+          break;
         x = nx;
         y = ny;
         occ[y * o.cols + x] = 1;
@@ -307,7 +382,8 @@ export const routeTraces = (rng: Rng, o: RouteOpts): Pt[][] => {
       }
       if (moved > 0) pts.push([x, y]);
       if (moved < run && moved === 0 && s > 0) break;
-      if (o.ortho && rng.chance(o.ortho)) d = (d + (rng.chance(0.5) ? 2 : 6)) % 8;
+      if (o.ortho && rng.chance(o.ortho))
+        d = (d + (rng.chance(0.5) ? 2 : 6)) % 8;
       else d = (d + (rng.chance(0.5) ? 1 : 7)) % 8;
     }
     if (pts.length >= 2) paths.push(pts);
@@ -328,15 +404,25 @@ export const offsetPath = (pts: readonly Pt[], off: number): Pt[] => {
     let ay = p[1] - prev[1];
     let bx = next[0] - p[0];
     let by = next[1] - p[1];
-    if (i === 0) { ax = bx; ay = by; }
-    if (i === n - 1) { bx = ax; by = ay; }
+    if (i === 0) {
+      ax = bx;
+      ay = by;
+    }
+    if (i === n - 1) {
+      bx = ax;
+      by = ay;
+    }
     const la = Math.hypot(ax, ay) || 1;
     const lb = Math.hypot(bx, by) || 1;
-    ax /= la; ay /= la; bx /= lb; by /= lb;
+    ax /= la;
+    ay /= la;
+    bx /= lb;
+    by /= lb;
     let tx = ax + bx;
     let ty = ay + by;
     const tl = Math.hypot(tx, ty) || 1;
-    tx /= tl; ty /= tl;
+    tx /= tl;
+    ty /= tl;
     const c = Math.max(0.35, tx * ax + ty * ay);
     out.push([p[0] - ty * (off / c), p[1] + tx * (off / c)]);
   }
@@ -362,7 +448,9 @@ export const canvasTexture = (
 ) => {
   const t = new THREE.CanvasTexture(canvas);
   t.colorSpace = o.srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
-  t.wrapS = t.wrapT = o.repeat ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
+  t.wrapS = t.wrapT = o.repeat
+    ? THREE.RepeatWrapping
+    : THREE.ClampToEdgeWrapping;
   t.anisotropy = o.aniso ?? 8;
   t.generateMipmaps = true;
   t.minFilter = THREE.LinearMipmapLinearFilter;
