@@ -32,7 +32,7 @@ export const LOOK: Look = {
   },
   grain: 0.03,
   dither: 1,
-  sharpen: 1.3,
+  sharpen: 0.8,
 };
 
 /** Lights. The board lies in the XY plane and +Z is up. */

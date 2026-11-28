@@ -94,7 +94,7 @@ export const MATERIAL_LOOK = {
   whiteWide: 0.06,
   keyWide: 0.14,
   /** exposure of the wide shot relative to the close-up */
-  exposureWide: 0.6,
+  exposureWide: 0.7,
   /** HDR brightness of the glowing lines (1 = white point before bloom) */
   traceIntensity: 1.0,
   /** the lines are dimmed by this factor once the whole board is in view */
@@ -111,7 +111,7 @@ export const MATERIAL_LOOK = {
   /** extra exposure at the peak of the white-out flash */
   flashExposure: 10,
   /** sub-frame renders per frame while the whip is happening */
-  motionSamples: 8,
+  motionSamples: 6,
   /** shutter length in frames (0.5 = 180 degrees) */
   shutter: 0.7,
 };

@@ -61,8 +61,8 @@ export const TIMING = {
   flashAt: 2.44,
   flashWidth: 0.13,
   /** motion blur is only computed while the camera/board move fast */
-  motionBlurFrom: 2.0,
-  motionBlurTo: 3.7,
+  motionBlurFrom: 2.1,
+  motionBlurTo: 3.55,
   /** the glow of the board fades down towards the end: [time, level] */
   fade: [[0, 1], [5.0, 1], [9.8, 0.5]] as [number, number][],
 };

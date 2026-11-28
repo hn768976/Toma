@@ -23,7 +23,7 @@ export interface Look {
   };
   dof: {
     enabled: boolean;
-    /** blur size, in 1080p pixels */
+    /** blur size, in pixels of a 540-line frame */
     bokehScale: number;
     /** world-space depth range that stays sharp around the focus distance */
     focusRange: number;

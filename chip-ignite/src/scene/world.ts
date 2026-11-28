@@ -731,7 +731,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
   const key = new THREE.DirectionalLight(LIGHTS.key.color, LIGHTS.key.intensity);
   key.position.set(...LIGHTS.key.pos);
   key.castShadow = true;
-  key.shadow.mapSize.set(4096, 4096);
+  key.shadow.mapSize.set(2048, 2048);
   const sc = key.shadow.camera;
   sc.left = -40;
   sc.right = 40;

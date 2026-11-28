@@ -27,7 +27,8 @@ import type { FrameLook, Look, World } from "./types";
 
 const BLOOM_W = 960;
 const BLOOM_H = 540;
-const DOF_H = 1080;
+// height of the depth-of-field blur buffers (the in-focus image stays full size)
+const DOF_H = 720;
 
 const fsVert = /* glsl */ `
   varying vec2 vUv;
@@ -89,7 +90,17 @@ export class Pipeline {
     this.dofPass.enabled = look.dof.enabled;
     this.composer.addPass(this.renderPass);
     this.composer.addPass(this.dofPass);
-    this.composer.setSize(width, height, false);
+    // EffectComposer.setSize() multiplies by the renderer's pixel ratio. The
+    // sizes passed in here are already device pixels, so apply them with the
+    // ratio set to 1 for a moment, then put the renderer back as it was.
+    {
+      const ratio = gl.getPixelRatio();
+      const css = gl.getSize(new THREE.Vector2());
+      gl.setPixelRatio(1);
+      this.composer.setSize(width, height, false);
+      gl.setPixelRatio(ratio);
+      gl.setSize(css.x, css.y, false);
+    }
 
     this.accum = new THREE.WebGLRenderTarget(width, height, {
       type: half,
@@ -183,7 +194,10 @@ export class Pipeline {
     const dofOn = this.look.dof.enabled && (fl.bokehScale ?? this.look.dof.bokehScale) > 0;
     this.dofPass.enabled = dofOn;
     if (dofOn) {
-      this.dof.bokehScale = fl.bokehScale ?? this.look.dof.bokehScale;
+      // The blur buffers have a fixed height (DOF_H), so the blur is the same
+      // fraction of the frame at any output size. Look values are given in
+      // pixels of a 540-line frame, hence the constant factor.
+      this.dof.bokehScale = (fl.bokehScale ?? this.look.dof.bokehScale) * (DOF_H / 540);
       const coc = this.dof.cocMaterial;
       coc.worldFocusDistance = fl.focus;
       coc.worldFocusRange = fl.focusRange ?? this.look.dof.focusRange;
