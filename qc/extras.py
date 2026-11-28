@@ -34,7 +34,7 @@ VIDEOS = [
 # dark or softly graded areas, as fractions of the frame (left, top, right, bottom)
 BAND_REGIONS = {
     "conveyor-parcels": [("background, top left", (0.0, 0.0, 0.45, 0.3)), ("belt, bottom left", (0.0, 0.72, 0.45, 1.0)),
-                         ("glare falloff, right", (0.6, 0.55, 1.0, 0.85))],
+                         ("carton face", (0.45, 0.52, 0.85, 0.72))],
     "mars-dome": [("haze, top", (0.25, 0.0, 0.7, 0.25)), ("glass, bottom right", (0.62, 0.65, 1.0, 1.0)),
                   ("plaza, bottom left", (0.0, 0.7, 0.4, 1.0))],
 }
