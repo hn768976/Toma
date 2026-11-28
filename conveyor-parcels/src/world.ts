@@ -67,12 +67,15 @@ const valueNoise = (size: number, seed: number) => {
   };
 };
 
-/** Kraft board: large blotches, medium fibre streaks, fine speckle. */
+/** Kraft board: large blotches, medium fibre streaks, fine speckle. Tiles seamlessly. */
 const cardboardTexture = () => {
-  const n = valueNoise(64, 11);
+  // every noise term completes a whole number of table periods across the 512 px tile
+  const blotch = valueNoise(4, 11);
+  const mottle = valueNoise(16, 13);
+  const fibres = valueNoise(16, 17);
   return noiseTexture(512, 512, 12, (x, y, rng) => {
-    const large = n(x / 128, y / 128) * 0.6 + n(x / 37, y / 37) * 0.4;
-    const fibre = n(x / 40, y / 3);
+    const large = blotch(x / 128, y / 128) * 0.6 + mottle(x / 32, y / 32) * 0.4;
+    const fibre = fibres(x / 32, y / 4);
     const flute = 0.5 + 0.5 * Math.sin((y / 512) * Math.PI * 2 * 48);
     const fine = rng();
     return 0.8 + large * 0.09 + fibre * 0.035 + flute * 0.008 + fine * 0.05;

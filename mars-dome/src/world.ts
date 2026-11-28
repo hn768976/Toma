@@ -119,14 +119,14 @@ const plazaTexture = () =>
         const py = (y / S - 0.5) * 2 * R;
         const r = Math.hypot(px, py);
         const a = Math.atan2(py, px);
-        const ringW = 3.1;
+        const ringW = 1.7;
         const ring = Math.floor(r / ringW);
-        const slabs = Math.max(6, Math.round((ring + 0.5) * 3.2));
+        const slabs = Math.max(8, Math.round((ring + 0.5) * 3.6));
         const fa = ((a / TAU + 1 + ring * 0.137) % 1) * slabs;
         const slab = Math.floor(fa);
         const dr = Math.min(r / ringW - ring, ring + 1 - r / ringW) * ringW;
         const da = Math.min(fa - slab, slab + 1 - fa) * ((TAU * r) / slabs);
-        const seam = Math.min(dr, da) < 0.055 ? 1 : 0;
+        const seam = Math.min(dr, da) < 0.04 ? 1 : 0;
         const tint = 0.9 + 0.12 * hash(ring, slab);
         const stain = 0.86 + 0.2 * n.fbm(x / 110, y / 110, 4);
         const fine = 0.96 + 0.05 * n.value(x / 2.3, y / 2.3);
@@ -266,7 +266,7 @@ const buildTerrain = () => {
     const wall = smooth(0, 1, (-z - (380 + 0.45 * x)) / 520);
     let h = -24 * off;
     h += off * ((big - 0.42) * (20 + d * 0.06) + (mid - 0.4) * 14 + (small - 0.5) * 3.2);
-    h += crag * (n.fbm(x / 70 + 2, z / 70 + 7, 4) * 110 + n.ridged(x / 30 + 5, z / 30 + 3, 3) * 10 - 34);
+    h += crag * (n.fbm(x / 70 + 2, z / 70 + 7, 4) * 95 + n.ridged(x / 20 + 5, z / 20 + 3, 4) * 24 - 34);
     h += wall * (250 + (big - 0.5) * 300 + (mid - 0.4) * 160);
     heights[i] = h - 0.6;
     pos.setY(i, heights[i]);
@@ -290,7 +290,7 @@ const buildTerrain = () => {
     c.copy(dark).lerp(lit, smooth(0.25, 0.8, facing) * 0.75 + crest * 0.35);
     c.lerp(pale, smooth(0.55, 0.95, crest) * 0.6);
     c.lerp(dark, Math.min(1, crag * 0.55 + steep * 0.5));
-    c.multiplyScalar(1 - 0.62 * crag);
+    c.multiplyScalar(1 - 0.7 * crag);
     c.lerp(sand, tones[i * 3 + 2]);
     c.multiplyScalar(0.86 + 0.28 * n.fbm(pos.getX(i) / 14, pos.getZ(i) / 14, 2));
     colors[i * 3] = c.r;
@@ -305,7 +305,7 @@ const buildTerrain = () => {
     for (let y = 0; y < 512; y++) {
       for (let x = 0; x < 512; x++) {
         // tileable: sample the noise on a 128-cell torus
-        const v = 0.74 + 0.3 * dn.ridged((x / 512) * 8, (y / 512) * 8, 5) + 0.1 * (dn.value(x / 3, y / 3) - 0.5) + 0.06 * dn.ridged((x / 512) * 40, (y / 512) * 40, 2);
+        const v = 0.6 + 0.5 * dn.ridged((x / 512) * 8, (y / 512) * 8, 5) + 0.14 * (dn.value(x / 3, y / 3) - 0.5) + 0.1 * dn.ridged((x / 512) * 40, (y / 512) * 40, 2);
         const cc = Math.round(255 * Math.max(0, Math.min(1, v)));
         const i = (y * 512 + x) * 4;
         img.data[i] = cc;
@@ -336,7 +336,7 @@ interface Mats {
 const buildBuilding = (spec: BuildingSpec, m: Mats, rng: Rng) => {
   const g = new THREE.Group();
   if (spec.kind === "capsules") {
-    const r = 1.45;
+    const r = 1.25;
     const L = spec.length;
     for (let i = 0; i < spec.levels; i++) {
       const cap = new THREE.Mesh(new THREE.CapsuleGeometry(r, L - 2 * r, 8, 24), m.hullLong);
@@ -367,7 +367,7 @@ const buildBuilding = (spec: BuildingSpec, m: Mats, rng: Rng) => {
   } else if (spec.kind === "rings") {
     const r = 3.0;
     const h = 2.1;
-    const k = 0.7;
+    const k = 0.38;
     const pts: THREE.Vector2[] = [new THREE.Vector2(0, 0)];
     for (let i = 0; i <= 6; i++) {
       const a = -Math.PI / 2 + (i / 6) * (Math.PI / 2);
@@ -384,16 +384,16 @@ const buildBuilding = (spec: BuildingSpec, m: Mats, rng: Rng) => {
       ring.position.y = 0.15 + i * (h + 0.06);
       ring.rotation.y = rng() * TAU;
       g.add(ring);
-      for (let w = 0; w < 7; w++) {
-        const a = (w / 7) * TAU + i * 0.4;
-        const win = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.42, 0.12), m.glassDark);
-        win.position.set(Math.sin(a) * (r + 0.01), ring.position.y + h * 0.5, Math.cos(a) * (r + 0.01));
-        win.rotation.y = a;
+      const bandGeo = new THREE.CylinderGeometry(r + 0.015, r + 0.015, 0.3, 40, 1, true, 0.25, 1.1);
+      for (let w = 0; w < 4; w++) {
+        const win = new THREE.Mesh(bandGeo, m.glassDark);
+        win.position.y = ring.position.y + h * 0.56;
+        win.rotation.y = (w / 4) * TAU + i * 0.5;
         g.add(win);
       }
     }
     const topY = 0.15 + spec.levels * (h + 0.06) - 0.05;
-    const inset = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 0.08, 32), m.roof);
+    const inset = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 1.9, 0.08, 32), m.roof);
     inset.position.y = topY;
     g.add(inset);
     const vent = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.45, 0.6), m.accent);
@@ -408,9 +408,9 @@ const buildBuilding = (spec: BuildingSpec, m: Mats, rng: Rng) => {
     const upper = new THREE.Mesh(new THREE.BoxGeometry(L * 0.7, 1.2, 3.6), m.hull);
     upper.position.set(-L * 0.08, 5.2, -0.3);
     g.add(upper);
-    for (let i = 0; i < 5; i++) {
-      const win = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.1), m.glassDark);
-      win.position.set(-L / 2 + 1.3 + i * ((L - 2.6) / 4), 3.1, 2.62);
+    for (let i = 0; i < 3; i++) {
+      const win = new THREE.Mesh(new THREE.BoxGeometry(L * 0.86, 0.34, 0.1), m.glassDark);
+      win.position.set(0, 1.2 + i * 1.35, 2.62);
       g.add(win);
     }
     const porch = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.4, 1.2), m.dark);
@@ -486,8 +486,8 @@ export const makeWorld = (variant: Variant): World => {
   root.add(plaza);
   const wallPts = [
     new THREE.Vector2(D.plazaRadius - 0.5, 0),
-    new THREE.Vector2(D.plazaRadius - 0.5, 3.1),
-    new THREE.Vector2(D.plazaRadius + 0.5, 3.1),
+    new THREE.Vector2(D.plazaRadius - 0.5, 2.3),
+    new THREE.Vector2(D.plazaRadius + 0.5, 2.3),
     new THREE.Vector2(D.plazaRadius + 0.5, 0),
   ];
   const wall = new THREE.Mesh(new THREE.LatheGeometry(wallPts, 160), std(PAL.wall, { map: wallTex }));
@@ -694,8 +694,8 @@ export const makeWorld = (variant: Variant): World => {
     const base = new THREE.Vector3(d.x * mast.radius, 0, d.z * mast.radius);
     const inward = Math.tan(deg(mast.leanDeg)) * mast.height;
     const top = new THREE.Vector3(d.x * (mast.radius - inward), mast.height, d.z * (mast.radius - inward));
-    root.add(shadowed(strut(base, top, 0.42, 0.26, mastMat), true, false));
-    const head = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.1, 1.1), mastMat);
+    root.add(shadowed(strut(base, top, 0.75, 0.5, mastMat), true, false));
+    const head = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.3, 8, 20), mastMat);
     head.position.copy(top);
     head.rotation.y = deg(mast.azimuthDeg);
     root.add(head);
@@ -751,10 +751,10 @@ export const makeWorld = (variant: Variant): World => {
     trunkMesh.setMatrixAt(i, dummy.matrix);
     for (let k = 0; k < 4; k++) {
       const lvl = k / 3;
-      const rad = (0.95 - lvl * 0.52) * t.s;
+      const rad = (0.82 - lvl * 0.6) * t.s;
       dummy.position.set(t.x + range(treeRng, -0.3, 0.3), 0.3 + h * (0.45 + lvl * 0.5), t.z + range(treeRng, -0.3, 0.3));
-      dummy.scale.set(rad, rad * 1.15, rad);
-      dummy.rotation.set(treeRng() * 3, treeRng() * 3, 0);
+      dummy.scale.set(rad, rad * 1.7, rad);
+      dummy.rotation.set(0, treeRng() * 6.283, 0);
       dummy.updateMatrix();
       blobMesh.setMatrixAt(i * 4 + k, dummy.matrix);
       blobMesh.setColorAt(i * 4 + k, tint.set(PAL.foliage).multiplyScalar(range(treeRng, 0.7, 1.2)));
@@ -793,7 +793,7 @@ export const makeWorld = (variant: Variant): World => {
   }
   const spots = lampSpots.slice(0, CONFIG.lamps.count);
   const poleMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.045, 0.06, 2.4, 6), std(PAL.hullDark), spots.length);
-  const bulbMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.17, 12, 8), new THREE.MeshBasicMaterial({ color: col(PAL.lamp).multiplyScalar(LIGHTS.lampBrightness) }), spots.length);
+  const bulbMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.11, 12, 8), new THREE.MeshBasicMaterial({ color: col(PAL.lamp).multiplyScalar(LIGHTS.lampBrightness) }), spots.length);
   const poolMat = new THREE.MeshBasicMaterial({ map: glowTexture(), color: col(PAL.lamp).multiplyScalar(0.1), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   const poolGeo = new THREE.PlaneGeometry(3.4, 3.4);
   poolGeo.rotateX(-Math.PI / 2);
@@ -834,15 +834,11 @@ export const makeWorld = (variant: Variant): World => {
     const poleMat = std(PAL.mast, { roughness: 0.6, metalness: 0.2 });
     poleMat.color.multiplyScalar(0.85);
     root.add(strut(ext, a, fp.radius, fp.radius * 0.9, poleMat, 12));
-    const head = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.09, 8, 20), poleMat);
+    const head = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.07, 8, 20, Math.PI * 1.4), poleMat);
     head.position.copy(a);
     head.lookAt(basePos);
     root.add(head);
-    const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.75, 0.5), poleMat);
-    bracket.position.copy(a).lerp(b, 0.3);
-    bracket.lookAt(basePos);
-    root.add(bracket);
-    for (const t of [0.24, 0.36]) {
+    for (const t of [0.04, 0.24]) {
       const beacon = new THREE.Mesh(beaconGeo, beaconMat);
       beacon.scale.setScalar(0.05);
       beacon.position.copy(a).lerp(b, t).add(new THREE.Vector3(-0.22, 0, 0.1));

@@ -48,6 +48,12 @@ export interface Look {
     maxCoc: number;
     /** Extra multiplier for things in front of the focus plane. */
     nearScale: number;
+    /**
+     * Miniature (tilt-shift) falloff: extra blur towards the top and bottom of the frame.
+     * amount = blur diameter at the frame edge (fraction of frame height), centre = sharp band's
+     * height (0 = bottom, 1 = top), width = half-height of the sharp band.
+     */
+    tiltShift: { amount: number; centre: number; width: number };
   };
   bloom: {
     /** Scene-linear luminance (after exposure) where bloom starts. */
@@ -113,6 +119,7 @@ uniform float uFocus;
 uniform float uCocInf;
 uniform float uMaxCoc;
 uniform float uNearScale;
+uniform vec3 uTilt;
 void main() {
   vec3 col = texture2D(tColor, vUv).rgb;
   float d = texture2D(tDepth, vUv).x;
@@ -139,6 +146,10 @@ void main() {
   float coc = uCocInf * (1.0 - uFocus / viewZ);
   if (coc < 0.0) coc *= uNearScale;
   coc = clamp(coc, -uMaxCoc, uMaxCoc);
+  if (uTilt.x > 0.0) {
+    float ts = uTilt.x * smoothstep(uTilt.z, uTilt.z + 0.32, abs(vUv.y - uTilt.y));
+    coc = (coc < 0.0 ? -1.0 : 1.0) * max(abs(coc), ts);
+  }
   gl_FragColor = vec4(col, coc);
 }`;
 
@@ -565,7 +576,7 @@ export class PostPipeline {
         tColor: u(null), tDepth: u(null), uProjInv: u(new THREE.Matrix4()), uViewInv: u(new THREE.Matrix4()),
         uCamPos: u(new THREE.Vector3()), uFogColor: u(new THREE.Vector3()), uFogSunColor: u(new THREE.Vector3()),
         uFogSunDir: u(new THREE.Vector3(0, 1, 0)), uFogSunPower: u(8), uFogDensity: u(0), uFogFalloff: u(0),
-        uFogBase: u(0), uFogMax: u(1), uFocus: u(1), uCocInf: u(0), uMaxCoc: u(0), uNearScale: u(1),
+        uFogBase: u(0), uFogMax: u(1), uFocus: u(1), uCocInf: u(0), uMaxCoc: u(0), uNearScale: u(1), uTilt: u(new THREE.Vector3()),
       }),
       downCoc: mat(DOWN_COC_FRAG, { tPrep: u(null), uTexel: u(new THREE.Vector2()) }),
       nearTile: mat(NEAR_TILE_FRAG, { tHalf: u(null), uTexel: u(new THREE.Vector2()) }),
@@ -673,6 +684,7 @@ export class PostPipeline {
     u.uCocInf.value = L.dof.enabled ? L.dof.cocInfinity : 0;
     u.uMaxCoc.value = L.dof.maxCoc;
     u.uNearScale.value = L.dof.nearScale;
+    u.uTilt.value.set(L.dof.enabled ? L.dof.tiltShift.amount : 0, L.dof.tiltShift.centre, L.dof.tiltShift.width);
     this.pass(render, m.prep, this.prepRT, renderer);
 
     // 3. depth of field

@@ -87,6 +87,7 @@ export const LOOK: Look = {
     cocInfinity: 0.11,
     maxCoc: 0.12,
     nearScale: 0.45,
+    tiltShift: { amount: 0, centre: 0.5, width: 0.3 },
   },
   bloom: { threshold: 1.0, knee: 0.5, strength: 0.14, tilt: 0.3 },
   grade: {
