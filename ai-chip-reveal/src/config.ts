@@ -25,6 +25,8 @@ export interface Palette {
   chipTrace: string;
   /** plated pins of the chip */
   pin: string;
+  /** face of the chip under the pins */
+  chipFace: string;
   /** small coloured lights that spill glow colour onto nearby parts */
   spill: string;
   /** tint of the warm fill light */
@@ -38,6 +40,7 @@ export const PALETTE_V1: Palette = {
   letters: "#ffc060",
   chipTrace: "#e8842a",
   pin: "#80582a",
+  chipFace: "#3a2412",
   spill: "#ff7a18",
   fill: "#ffd2a8",
 };
@@ -48,7 +51,8 @@ export const PALETTE_V2: Palette = {
   traceHot: "#58d8ff",
   letters: "#8fe6ff",
   chipTrace: "#2ebeff",
-  pin: "#aebfd0",
+  pin: "#2f6f96",
+  chipFace: "#10283a",
   spill: "#1e9cff",
   fill: "#a8d4ff",
 };

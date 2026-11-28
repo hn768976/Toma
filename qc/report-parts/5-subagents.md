@@ -43,5 +43,5 @@ Every review was done by a fresh sub-agent that saw only the image pairs or fram
 
 | Video | Is the change clearly visible? | Everything else the same concept and quality? | Notes |
 |---|---|---|---|
-| 02-V2-ai-chip-reveal (palette) | __A2_VISIBLE__ | __A2_SAME__ | __A2_NOTES__ |
+| 02-V2-ai-chip-reveal (palette) | **Yes** - "orange/gold accents are unmistakably replaced by cyan/blue with white highlights in all three frames" | **Yes** - "staging, framing, timing and background match closely" | The reviewer noted two things specific to Version 2: the pin field blown out to white, and a leftover brown chip face. Both were fixed afterwards (the chip face is now part of the palette and the cyan pin colour was darkened to the same brightness as the copper one: mean frame brightness 69.5 against 69.7 in Version 1) and Version 2 was rendered again. Its other notes (trace distribution, materials, sharpness) apply equally to Version 1 and are listed there |
 | 04-V2-chip-ignite (camera movement) | __B2_VISIBLE__ | __B2_SAME__ | __B2_NOTES__ |

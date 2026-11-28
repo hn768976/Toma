@@ -222,7 +222,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
     grey: std({ color: "#46474d", roughness: 0.55, metalness: 0.3, envMapIntensity: 0.5 }),
     white: std({ color: "#c9ccd2", roughness: 0.5, metalness: 0, emissive: "#f2f5ff", emissiveIntensity: ML.whiteEmissive }),
     gold: std({ color: palette.pin, roughness: 0.28, metalness: 1, envMapIntensity: 0.3 }),
-    substrate: std({ color: "#3a2412", roughness: 0.5, metalness: 0.3, envMapIntensity: 0.4 }),
+    substrate: std({ color: palette.chipFace, roughness: 0.5, metalness: 0.3, envMapIntensity: 0.4 }),
     capTop: std({ color: "#5c5f66", roughness: 0.3, metalness: 1, envMapIntensity: 1.0 }),
     smd: std({ color: "#ffffff", roughness: 0.5, metalness: 0.35, envMapIntensity: 0.5 }),
     bar: std({ color: "#0b0b0d", roughness: 0.55, metalness: 0.0, envMapIntensity: 0.1 }),
