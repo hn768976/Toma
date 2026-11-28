@@ -12,7 +12,7 @@ no models, images, fonts or footage to load.
 | Composition       | Size      | fps | Frames | What it is |
 |-------------------|-----------|-----|--------|------------|
 | `V1-chip-ignite`  | 3840x2160 | 30  | 408    | Version 1 - the reference camera: slow orbit while craning up and back |
-| `V2-chip-ignite`  | 3840x2160 | 30  | 408    | Version 2 - same film, different camera movement: starts high and wide, spirals down the other way and pushes in |
+| `V2-chip-ignite`  | 3840x2160 | 30  | 408    | Version 2 - same film, different camera movement: starts high and wide, spirals down around the package and pushes in |
 | `LookDev`         | 3840x2160 | 30  | 3      | three stills (frames 15, 192, 252) used for look development |
 
 ## Install
@@ -53,9 +53,10 @@ scrubbing stays responsive).
 ## What Version 2 changes, and why
 
 **The camera movement** - nothing else. Version 1 follows the reference: a
-slow orbit that cranes up and pulls back. Version 2 starts high, wide and
-square to the package, then spirals down in the opposite direction and pushes
-in, ending low and close on the burning chip.
+small orbit (about 16 degrees) while the camera cranes up to nearly top-down.
+Version 2 does the opposite: it starts high, wide and nearly square to the
+package, then spirals 75 degrees around it while descending and pushing in,
+ending low and close on the burning chip.
 
 The reference is a slow, almost static move over a scene that is detailed in
 every direction, so a new camera path shows the same design from fresh angles

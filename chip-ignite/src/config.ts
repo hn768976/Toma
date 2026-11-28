@@ -87,13 +87,15 @@ export const CAMERA_V1: CameraMove = {
 };
 
 /**
- * Version 2 - a different camera movement: starts high and wide, square to
- * the package, then spirals down the other way and pushes in on the chip.
+ * Version 2 - a different camera movement: starts high, wide and nearly
+ * square to the package, then spirals down around it and pushes in, ending
+ * low and close on the burning chip. (Version 1 does the opposite: it rises
+ * and pulls back with only a small orbit.)
  */
 export const CAMERA_V2: CameraMove = {
-  azimuth: [[0, 8], [13.6, -58]],
-  elevation: [[0, 72], [6, 54], [13.6, 36]],
-  distance: [[0, 36], [6.5, 29], [13.6, 22]],
+  azimuth: [[0, 20], [13.6, 95]],
+  elevation: [[0, 62], [6, 50], [13.6, 34]],
+  distance: [[0, 34], [6.5, 29], [13.6, 23]],
   roll: [[0, 0], [13.6, 0]],
   targetX: [[0, 0], [13.6, 0]],
   targetY: [[0, 0], [13.6, 0.4]],
