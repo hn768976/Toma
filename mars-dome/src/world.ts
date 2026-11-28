@@ -769,6 +769,7 @@ export const makeWorld = (variant: Variant): World => {
   }
 
   // --- path lamps: pole, glowing bulb, pool of light on the paving
+  const LAMP_HEIGHT = 1.7;
   const lampRng = mulberry32(CONFIG.lamps.seed);
   const lampSpots: [number, number][] = [];
   for (let i = 0; i < 6; i++) {
@@ -792,7 +793,7 @@ export const makeWorld = (variant: Variant): World => {
     lampSpots.push([Math.sin(a) * r, Math.cos(a) * r]);
   }
   const spots = lampSpots.slice(0, CONFIG.lamps.count);
-  const poleMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.045, 0.06, 2.4, 6), std(PAL.hullDark), spots.length);
+  const poleMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.03, 0.04, LAMP_HEIGHT, 6), std(PAL.hullDark), spots.length);
   const bulbMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.11, 12, 8), new THREE.MeshBasicMaterial({ color: col(PAL.lamp).multiplyScalar(LIGHTS.lampBrightness) }), spots.length);
   const poolMat = new THREE.MeshBasicMaterial({ map: glowTexture(), color: col(PAL.lamp).multiplyScalar(0.1), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   const poolGeo = new THREE.PlaneGeometry(3.4, 3.4);
@@ -801,10 +802,10 @@ export const makeWorld = (variant: Variant): World => {
   spots.forEach(([x, z], i) => {
     dummy.rotation.set(0, 0, 0);
     dummy.scale.set(1, 1, 1);
-    dummy.position.set(x, 1.2, z);
+    dummy.position.set(x, LAMP_HEIGHT / 2, z);
     dummy.updateMatrix();
     poleMesh.setMatrixAt(i, dummy.matrix);
-    dummy.position.set(x, 2.5, z);
+    dummy.position.set(x, LAMP_HEIGHT + 0.08, z);
     dummy.updateMatrix();
     bulbMesh.setMatrixAt(i, dummy.matrix);
     dummy.position.set(x, 0.36, z);
@@ -813,6 +814,24 @@ export const makeWorld = (variant: Variant): World => {
   });
   poolMesh.renderOrder = 2;
   root.add(poleMesh, bulbMesh, poolMesh);
+  // soft halo around every bulb (additive sprites; size is in metres, so it scales with distance)
+  const haloGeo = new THREE.BufferGeometry();
+  haloGeo.setAttribute("position", new THREE.Float32BufferAttribute(spots.flatMap(([x, z]) => [x, LAMP_HEIGHT + 0.08, z]), 3));
+  const halo = new THREE.Points(
+    haloGeo,
+    new THREE.PointsMaterial({
+      map: glowTexture(),
+      color: col(PAL.lamp).multiplyScalar(LIGHTS.lampHalo),
+      size: 1.7,
+      sizeAttenuation: true,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  halo.frustumCulled = false;
+  halo.renderOrder = 3;
+  root.add(halo);
 
   // --- base camera frame (Version 1 rest position) and what it looks at
   const camCfg = CONFIG.camera;
@@ -917,7 +936,7 @@ export const makeWorld = (variant: Variant): World => {
       } else {
         // orbital sweep with a push-in: whole cycles only
         const o = CONFIG.orbit;
-        const az = deg(o.sweepDeg) * Math.cos(TAU * t);
+        const az = deg(o.centreDeg) - deg(o.sweepDeg) * Math.cos(TAU * t);
         const ease = Math.sin(Math.PI * t) ** 2;
         pos.copy(basePos).applyAxisAngle(yAxis, az);
         tgt.copy(target).applyAxisAngle(yAxis, az);

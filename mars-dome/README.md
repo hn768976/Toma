@@ -60,8 +60,9 @@ __RENDER_TIME__
 ## What Version 2 changes, and why
 
 Version 2 changes **only the camera movement**. Version 1 holds one position and drifts by a few
-tens of centimetres, as the reference does. Version 2 sweeps 18 degrees either side of that
-position around the tower, pushing in 12 m and rising 3 m at the middle of the loop. Mars's colour
+tens of centimetres, as the reference does. Version 2 starts 30 degrees further round the
+tower to the left, swings 28 degrees towards the Version 1 position while pushing in 12 m and
+rising 3 m, and swings back. Mars's colour
 is the subject of the shot, so the palette is the wrong thing to change; a larger move instead
 shows off the parallax between the glass, the ribs, the buildings and the cliffs. The move is
 built from whole cycles of the loop, so it also closes seamlessly.

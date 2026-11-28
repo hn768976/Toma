@@ -68,11 +68,15 @@ export const CONFIG = {
   },
   /**
    * Version 2 camera: a slow orbital sweep around the tower with a push-in over the dome.
-   * All terms are whole cycles of the loop, so the last frame flows into the first.
+   * The camera starts 30 degrees to the left of the Version 1 position, swings round to 2 degrees
+   * left of it while pushing in and rising, and swings back. All terms are whole cycles of the
+   * loop, so the last frame flows into the first.
    */
   orbit: {
-    /** Half-width of the sweep in degrees: the camera swings from +sweep to -sweep and back. */
-    sweepDeg: 18,
+    /** Middle of the sweep, degrees around the tower from the Version 1 position (negative = to the left). */
+    centreDeg: -16,
+    /** Half-width of the sweep in degrees. */
+    sweepDeg: 14,
     /** How far the camera pushes in at the middle of the loop, metres. */
     pushIn: 12,
     /** How far it rises at the middle of the loop, metres. */

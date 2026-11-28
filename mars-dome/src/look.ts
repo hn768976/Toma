@@ -17,6 +17,8 @@ export const LIGHTS = {
   environment: { intensity: 0.2 },
   /** Path lamps and beacons: emissive brightness (they bloom). */
   lampBrightness: 10,
+  /** Brightness of the soft halo sprite around each lamp. */
+  lampHalo: 0.55,
   beaconBrightness: 1.6,
   /**
    * Dome glass. transmit = how much of the scene behind shows through face-on (it dims, it does not veil);
