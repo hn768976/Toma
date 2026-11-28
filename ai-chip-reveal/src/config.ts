@@ -33,11 +33,11 @@ export interface Palette {
 
 /** Version 1 - the reference palette: black, silver and amber. */
 export const PALETTE_V1: Palette = {
-  trace: "#ee8414",
-  traceHot: "#ffb44a",
+  trace: "#e07818",
+  traceHot: "#ffae48",
   letters: "#ffc060",
   chipTrace: "#e8842a",
-  pin: "#b07f34",
+  pin: "#9a6a2e",
   spill: "#ff7a18",
   fill: "#ffd2a8",
 };
@@ -58,11 +58,13 @@ export const TIMING = {
   /** the whip pull-back starts here */
   whipStart: 2.15,
   /** white-out flash at the start of the whip */
-  flashAt: 2.5,
-  flashWidth: 0.11,
+  flashAt: 2.44,
+  flashWidth: 0.13,
   /** motion blur is only computed while the camera/board move fast */
   motionBlurFrom: 2.0,
   motionBlurTo: 3.7,
+  /** the glow of the board fades down towards the end: [time, level] */
+  fade: [[0, 1], [5.0, 1], [9.8, 0.5]] as [number, number][],
 };
 
 /**
@@ -72,26 +74,26 @@ export const TIMING = {
 export const MOTION = {
   /** camera distance from its target, cm */
   distance: [
-    [0, 21.0], [1.5, 22.1], [2.1, 23], [2.25, 26.5], [2.42, 43], [2.58, 67],
-    [2.75, 80], [2.92, 92], [3.08, 97], [3.25, 100], [3.75, 103], [5.0, 104.5], [10.04, 127],
+    [0, 21.5], [1.5, 23.0], [2.1, 24], [2.25, 27.5], [2.42, 44], [2.58, 68],
+    [2.75, 84], [2.92, 98], [3.08, 106], [3.25, 112], [3.75, 118], [5.0, 124], [10.04, 132],
   ] as [number, number][],
   /** camera azimuth around the chip during the close-up, degrees */
-  azimuth: [[0, -42], [1.5, -6], [2.15, 0], [10.04, 0]] as [number, number][],
+  azimuth: [[0, -40], [1.5, -6], [2.15, 0], [10.04, 0]] as [number, number][],
   /** camera elevation, degrees */
   elevation: [[0, 8], [2.1, 2], [3.2, 0], [10.04, 0]] as [number, number][],
   /** board spin about its vertical axis, degrees */
   spin: [
     [0, 0], [2.15, 0], [2.42, 80], [2.75, 180], [3.08, 270], [3.4, 330],
-    [3.75, 344], [4.5, 348], [10.04, 371],
+    [3.75, 350], [4.5, 353], [10.04, 364],
   ] as [number, number][],
   /** 0 = camera looks at the chip, 1 = at the board centre */
   /** board tilt about its horizontal axis (top leaning away), degrees */
-  tilt: [[0, 0], [2.15, 0], [3.4, -15], [10.04, -11]] as [number, number][],
+  tilt: [[0, 0], [2.15, 0], [3.4, -6], [10.04, -1]] as [number, number][],
   targetBlend: [[0, 0], [2.15, 0], [2.75, 1], [10.04, 1]] as [number, number][],
   /** vertical field of view, degrees */
   fov: 20,
   /** the camera aims this far above the chip centre during the close-up, cm */
-  closeUpLift: 0.55,
+  closeUpLift: 0.15,
   /** screen position (u) of the backdrop light pool over time */
   poolX: [[0, 0.62], [3.5, 0.62], [6, 0.58], [9.5, 0.5], [10.04, 0.49]] as [number, number][],
 };
@@ -102,7 +104,7 @@ export const SOCKET = { x: 0.6, y: 6.2 };
 export const COUNTS = {
   /** pins per side of the chip, and the size of the empty centre field */
   pinGrid: 19,
-  pinHole: 13,
+  pinHole: 11,
   /** fan-out lines per side of the letter block */
   chipLines: 13,
   /** routed glowing traces on the board */
@@ -114,7 +116,9 @@ export const COUNTS = {
   capacitors: 8,
   whiteBlocks: 7,
   sideBars: 4,
-  slots: 8,
+  slots: 7,
+  /** small capacitor cans, in three clusters */
+  cans: 16,
 };
 export const SEED = 20240611;
 
@@ -137,20 +141,20 @@ export const ASSEMBLY: {
   out: [2.3, 3.1],
   fallback: { off: [0, 0, 1.5], settle: [3.6, 6.0] },
   groups: {
-    socket: { off: [0, 0, 1.0], settle: [3.3, 4.8] },
-    blocks: { off: [-2.6, 0.4, 2.2], settle: [4.2, 7.6] },
-    caps: { off: [-1.5, 0.9, 3.0], settle: [3.8, 6.8] },
-    bars: { off: [1.0, 1.5, 2.6], settle: [4.6, 8.4] },
-    io: { off: [-3.4, 0.5, 1.6], settle: [5.4, 9.6] },
-    slotsA: { off: [0, -0.9, 2.4], settle: [3.6, 6.4] },
-    slotsB: { off: [0, -1.5, 3.6], settle: [4.6, 8.2] },
-    heatsink: { off: [1.5, 1.6, 3.4], settle: [5.0, 9.2] },
-    whites: { off: [1.6, 0, 2.0], settle: [4.0, 7.2] },
-    chips: { off: [0, 0, 1.6], settle: [3.6, 6.2] },
-    cans: { off: [0.4, 1.8, 3.8], settle: [5.6, 11.0] },
-    header: { off: [0, -1.7, 1.0], settle: [4.8, 8.8] },
-    smdA: { off: [0, 0, 0.9], settle: [3.4, 5.4] },
-    smdB: { off: [0, 0.7, 1.9], settle: [4.0, 7.4] },
-    smdC: { off: [-0.6, 1.3, 2.9], settle: [5.2, 11.0] },
+    socket: { off: [0, 0, 1.0], settle: [3.4, 5.2] },
+    blocks: { off: [-3.0, 0.5, 2.4], settle: [5.4, 8.6] },
+    caps: { off: [-1.8, 2.6, 3.2], settle: [5.0, 8.0] },
+    bars: { off: [1.0, 2.0, 2.8], settle: [5.6, 9.0] },
+    io: { off: [-3.6, 0.6, 1.8], settle: [6.2, 9.8] },
+    slotsA: { off: [0, -1.0, 2.6], settle: [4.4, 7.4] },
+    slotsB: { off: [0, -1.6, 3.8], settle: [5.4, 8.8] },
+    heatsink: { off: [1.4, 2.0, 3.6], settle: [6.0, 9.6] },
+    whites: { off: [1.8, 0, 2.2], settle: [4.8, 7.8] },
+    chips: { off: [0, 0, 1.8], settle: [4.2, 7.0] },
+    cans: { off: [0.3, 2.4, 4.2], settle: [6.4, 11.4] },
+    header: { off: [0, -1.8, 1.2], settle: [5.6, 9.2] },
+    smdA: { off: [0, 0, 1.0], settle: [4.0, 6.4] },
+    smdB: { off: [0, 0.9, 2.2], settle: [5.0, 8.4] },
+    smdC: { off: [-0.7, 1.6, 3.2], settle: [6.2, 11.6] },
   },
 };

@@ -8,7 +8,7 @@ import type { Look } from "./engine/types";
  */
 export const LOOK: Look = {
   toneMap: "aces",
-  exposure: 0.84,
+  exposure: 0.78,
   msaa: 4,
   bloom: {
     threshold: 0.85,
@@ -20,8 +20,8 @@ export const LOOK: Look = {
     coreLevels: 5,
     haloLevels: 8,
   },
-  dof: { enabled: true, bokehScale: 2.6, focusRange: 16 },
-  fringe: { amount: 0.016, power: 1.5 },
+  dof: { enabled: true, bokehScale: 5.0, focusRange: 19 },
+  fringe: { amount: 0.012, power: 1.6 },
   vignette: { strength: 0.5, inner: 0.34, outer: 1.35, center: [0.64, 0.4], aspect: 1 },
   grade: {
     contrast: 1.1,
@@ -59,10 +59,11 @@ export const ENV_PANELS: EnvPanel[] = [
 /** Material and effect strengths that shape the look. */
 export const MATERIAL_LOOK = {
   /** brightness multiplier of the silver copper pattern on the board */
-  boardSilver: "#cdcdcb",
-  tileSilver: "#dededa",
+  boardSilver: "#a9a9a7",
+  tileSilver: "#f2f2ee",
   /** HDR brightness of the glowing lines (1 = white point before bloom) */
-  lineIntensity: 2.4,
+  lineIntensity: 2.6,
+  boardLineIntensity: 1.9,
   /** extra brightness of the leading edge while the lines spread */
   lineHead: 1.2,
   chipGlow: 2.2,
@@ -70,8 +71,8 @@ export const MATERIAL_LOOK = {
   /** flare size as a fraction of the frame height */
   flareSize: 0.42,
   ledIntensity: 7.0,
-  edgeIntensity: 0.35,
+  edgeIntensity: 0.0,
 };
 
 /** Depth of field (blur size in 1080p pixels, sharp range in cm). */
-export const DOF = { bokeh: 2.6, range: 16 };
+export const DOF = { bokeh: 5.0, range: 19 };

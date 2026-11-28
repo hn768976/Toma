@@ -58,9 +58,9 @@ const makeBoardTexture = (seed: number) => {
   };
 
   // --- large: copper pours and blocks, some hatched -------------------------
-  for (let i = 0; i < 110; i++) {
-    const w = rng.range(0.4, 2.6) * pxPerCm;
-    const h = rng.range(0.4, 2.6) * pxPerCm;
+  for (let i = 0; i < 26; i++) {
+    const w = rng.range(0.3, 1.6) * pxPerCm;
+    const h = rng.range(0.3, 1.6) * pxPerCm;
     const x = rng.range(0, S - w);
     const y = rng.range(0, S - h);
     ctx.fillStyle = grey(60, 170);
@@ -78,7 +78,7 @@ const makeBoardTexture = (seed: number) => {
   }
 
   // --- medium: buses of parallel traces --------------------------------------
-  const cols = 300;
+  const cols = 400;
   const cell = S / cols;
   const occ = new Uint8Array(cols * cols);
   const guides = routeTraces(rng, {
@@ -95,7 +95,7 @@ const makeBoardTexture = (seed: number) => {
     const n = rng.int(3, 9);
     const sp = rng.pick([0.5, 0.6, 0.8]);
     ctx.strokeStyle = grey(170, 250);
-    ctx.lineWidth = rng.pick([3, 4, 5]);
+    ctx.lineWidth = rng.pick([2, 3, 4]);
     for (let k = 0; k < n; k++) {
       strokePath(ctx, offsetPath(g, (k - (n - 1) / 2) * sp), cell, cell, cell / 2, cell / 2);
     }
@@ -104,32 +104,32 @@ const makeBoardTexture = (seed: number) => {
   const singles = routeTraces(rng, {
     cols,
     rows: cols,
-    count: 4200,
+    count: 6500,
     minRun: 2,
-    maxRun: 14,
+    maxRun: 16,
     minSegs: 1,
     maxSegs: 5,
     occupied: occ,
   });
   for (const p of singles) {
     ctx.strokeStyle = grey(120, 250);
-    ctx.lineWidth = rng.pick([3, 4, 5, 6, 8]);
+    ctx.lineWidth = rng.pick([2, 3, 3, 4, 6]);
     strokePath(ctx, p, cell, cell, cell / 2, cell / 2);
     const e = p[p.length - 1];
     const ex = cell / 2 + e[0] * cell;
     const ey = cell / 2 + e[1] * cell;
     ctx.fillStyle = grey(190, 255);
     ctx.beginPath();
-    ctx.arc(ex, ey, 8, 0, Math.PI * 2);
+    ctx.arc(ex, ey, 6, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = "#050505";
     ctx.beginPath();
-    ctx.arc(ex, ey, 3, 0, Math.PI * 2);
+    ctx.arc(ex, ey, 2.2, 0, Math.PI * 2);
     ctx.fill();
   }
 
   // --- fine: pad rows (chip footprints) and dot fields ------------------------
-  for (let i = 0; i < 1800; i++) {
+  for (let i = 0; i < 1000; i++) {
     const x = rng.range(0, S);
     const y = rng.range(0, S);
     const n = rng.int(4, 16);
@@ -156,6 +156,12 @@ const makeBoardTexture = (seed: number) => {
         ctx.arc(x + a * 14, y + b2 * 14, 4.2, 0, Math.PI * 2);
         ctx.fill();
       }
+  }
+  // --- finest: glitter-like specks of bare solder ------------------------------
+  ctx.fillStyle = "#f4f4f2";
+  for (let i = 0; i < 16000; i++) {
+    const r = rng.pick([2, 2, 3, 3, 4]);
+    ctx.fillRect(rng.range(0, S), rng.range(0, S), r, r);
   }
   // --- large dark patches: bare, unlit board between the copper ---------------
   for (let i = 0; i < 170; i++) {
@@ -189,31 +195,31 @@ const makeTileAtlas = (seed: number) => {
       ctx.beginPath();
       ctx.rect(ox, oy, C, C);
       ctx.clip();
-      const base = rng.int(110, 150);
+      const base = rng.int(140, 185);
       ctx.fillStyle = `rgb(${base},${base},${base - 3})`;
       ctx.fillRect(ox, oy, C, C);
       // large blocks, lighter and darker
-      for (let i = 0; i < 14; i++) {
+      for (let i = 0; i < 7; i++) {
         const v = rng.chance(0.6) ? rng.int(160, 205) : rng.int(75, 110);
         ctx.fillStyle = `rgb(${v},${v},${v - 3})`;
         ctx.fillRect(ox + rng.range(0, C), oy + rng.range(0, C), rng.range(30, 230), rng.range(30, 230));
       }
       // engraved traces
-      const cols = 64;
+      const cols = 100;
       const cell = C / cols;
       const paths = routeTraces(rng, {
         cols,
         rows: cols,
-        count: 110,
+        count: 300,
         minRun: 3,
-        maxRun: 26,
+        maxRun: 40,
         minSegs: 2,
         maxSegs: 5,
       });
       for (const p of paths) {
-        const v = rng.chance(0.3) ? rng.int(55, 90) : rng.int(185, 235);
+        const v = rng.chance(0.45) ? rng.int(40, 90) : rng.int(215, 255);
         ctx.strokeStyle = `rgb(${v},${v},${v})`;
-        ctx.lineWidth = rng.pick([2, 3, 3, 5, 8]);
+        ctx.lineWidth = rng.pick([1.5, 2, 2, 3, 4]);
         strokePath(ctx, p, cell, cell, ox + cell / 2, oy + cell / 2);
       }
       // fine pad rows
@@ -305,9 +311,9 @@ const makeFlareMaterial = () =>
       void main() {
         float r = length(vUv);
         float edge = 1.0 - smoothstep(0.6, 1.0, r);
-        float core = exp(-r * r * 240.0) * uCoreMix;
+        float core = exp(-r * r * 130.0) * uCoreMix;
         float mid = exp(-r * r * 26.0) * 0.2 * (0.35 + 0.65 * uCoreMix);
-        float halo = 0.09 / (1.0 + r * r * 10.0);
+        float halo = 0.06 / (1.0 + r * r * 10.0);
         vec3 c = uCore * core + mix(uHalo, uCore, 0.3) * mid + uHalo * halo;
         gl_FragColor = vec4(c * uIntensity * edge, 1.0);
       }
@@ -354,11 +360,11 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
   const mats: Record<string, THREE.Material> = {
     black: std({ color: "#040405", roughness: 0.3, metalness: 0.2, envMapIntensity: 0.4 }),
     blackGloss: std({ color: "#020203", roughness: 0.16, metalness: 0.5, envMapIntensity: 0.32 }),
-    shroud: std({ color: "#050505", roughness: 0.55, metalness: 0.0, envMapIntensity: 0.3 }),
+    shroud: std({ color: "#020202", roughness: 0.6, metalness: 0.0, envMapIntensity: 0.15 }),
     gold: std({ color: PALETTE.gold, roughness: 0.25, metalness: 1, envMapIntensity: 1.2 }),
     bronze: std({ color: PALETTE.bronze, roughness: 0.4, metalness: 1, envMapIntensity: 0.9 }),
     silver: std({ color: PALETTE.silver, roughness: 0.22, metalness: 1, envMapIntensity: 1.1 }),
-    plate: std({ color: "#f0efea", roughness: 0.5, metalness: 0.25, envMapIntensity: 1.0 }),
+    plate: std({ color: "#8f8f8c", roughness: 0.6, metalness: 0.3, envMapIntensity: 0.7 }),
     capBody: std({ color: "#15130f", roughness: 0.35, metalness: 0.6, envMapIntensity: 0.7 }),
     smd: std({ color: "#ffffff", roughness: 0.45, metalness: 0.5, envMapIntensity: 0.8 }),
   };
@@ -396,21 +402,21 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     for (const sy of [-1, 1]) {
       const cxx = sx * (P.top / 2 - 0.06);
       const cyy = sy * (P.top / 2 - 0.06);
-      b.box("gold", cxx - sx * 0.5, cyy, P.topZ - 0.02, 1.0, 0.09, 0.05);
-      b.box("gold", cxx, cyy - sy * 0.5, P.topZ - 0.02, 0.09, 1.0, 0.05);
+      b.box("gold", cxx - sx * 0.7, cyy, P.topZ - 0.04, 1.6, 0.26, 0.1, { round: true });
+      b.box("gold", cxx, cyy - sy * 0.7, P.topZ - 0.04, 0.26, 1.6, 0.1, { round: true });
       b.cyl("gold", sx * (P.base / 2 - 0.6), sy * (P.base / 2 - 0.6), P.baseH, 0.26, 0.1);
       b.cyl("black", sx * (P.base / 2 - 0.6), sy * (P.base / 2 - 0.6), P.baseH + 0.1, 0.1, 0.01);
     }
-  // bronze contact fingers along two sides of the base
-  for (let i = 0; i < 16; i++) {
-    const t = -P.base / 2 + 1.4 + i * ((P.base - 2.8) / 15);
-    b.box("bronze", t, -P.base / 2 - 0.7, 0, 0.42, 1.0, 0.5, { round: true });
-    b.box("bronze", -P.base / 2 - 0.7, t, 0, 1.0, 0.42, 0.5, { round: true });
+  // rows of upright gold fins along two sides of the base
+  for (let i = 0; i < 18; i++) {
+    const t = -P.base / 2 + 1.2 + i * ((P.base - 2.4) / 17);
+    b.box("bronze", t, -P.base / 2 - 0.75, 0, 0.2, 1.1, 0.95, { round: true });
+    b.box("bronze", -P.base / 2 - 0.75, t, 0, 1.1, 0.2, 0.95, { round: true });
   }
   // centre cell: recessed pad with a gold seat for the small chip
   b.box("black", 0, 0, frameZ, P.tile, P.tile, 0.06);
   for (const seat of [P.chip + 0.35, P.chip - 0.75]) {
-    const hgt = seat > P.chip ? 0.24 : 0.06;
+    const hgt = seat > P.chip ? 0.34 : 0.24;
     for (const s of [-1, 1]) {
       b.box("gold", s * (seat / 2), 0, frameZ + 0.05, 0.16, seat + 0.16, hgt, { round: true });
       b.box("gold", 0, s * (seat / 2), frameZ + 0.05, seat + 0.16, 0.16, hgt, { round: true });
@@ -425,7 +431,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
   const tiles = new THREE.Group();
   const tileMats: THREE.MeshStandardMaterial[] = [];
   /** which corner of a tile is cut off: [tile index] -> corner 0..3, -1 none */
-  const cut = [0, -1, -1, 1, -1, -1, -1, -1, 2];
+  const cut = [0, -1, 2, 1, -1, -1, 3, -1, 2];
   for (let ty = 0; ty < 3; ty++)
     for (let tx = 0; tx < 3; tx++) {
       if (tx === 1 && ty === 1) continue;
@@ -458,7 +464,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
         bumpScale: 0.8,
         metalness: 1,
         roughness: rng.range(0.18, 0.3),
-        envMapIntensity: 1.7,
+        envMapIntensity: 2.0,
       });
       tileMats.push(m);
       const mesh = new THREE.Mesh(g, m);
@@ -471,13 +477,20 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
   /* ---- surroundings ------------------------------------------------------- */
   // large black shrouds (upper left), soft and out of focus in the reference
   const shrouds: [number, number, number, number, number, number][] = [
-    [-21, 2, 15, 34, 3.4, 0.0],
-    [-4, 25, 34, 14, 3.0, 0.0],
-    [-27, -26, 14, 16, 2.6, 0.0],
+    [-23.5, 2, 13, 32, 3.4, 0.0],
+    [-4, 28.5, 32, 11, 3.0, 0.0],
+    [-28, -27, 12, 14, 2.6, 0.0],
   ];
   for (const [x, y, w, h, t, r] of shrouds) {
     b.box("shroud", x, y, 0, w, h, t, { rot: r, round: true });
-    b.box("shroud", x, y, t, w * 0.82, h * 0.7, 0.25, { rot: r, round: true });
+    // ridges along the long side
+    const n = 9;
+    const along = w > h;
+    for (let i = 0; i < n; i++) {
+      const o = ((i + 0.5) / n - 0.5) * (along ? w : h) * 0.9;
+      if (along) b.box("shroud", x + o, y, t, (w / n) * 0.45, h * 0.86, 0.5, { round: true });
+      else b.box("shroud", x, y + o, t, w * 0.86, (h / n) * 0.45, 0.5, { round: true });
+    }
     block(x, y, w + 1, h + 1, 0.4);
   }
   // bright metal plates with rectangular cut-outs (right and bottom)
@@ -517,17 +530,18 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     const c = rng.pick(clusters);
     const x = c[0] + rng.range(-3.2, 3.2);
     const y = c[1] + rng.range(-3.2, 3.2);
-    const r = rng.range(0.34, 0.52);
+    const r = rng.range(0.24, 0.36);
     if (!isFree(x, y, r + 0.12)) continue;
-    const h = rng.range(0.9, 1.5);
+    const h = rng.range(0.6, 1.0);
     b.cyl("capBody", x, y, 0, r, h, { shape: "can" });
     b.cyl("bronze", x, y, h - 0.07, r * 0.72, 0.02);
     block(x, y, r * 2, r * 2, 0.12);
     placed++;
   }
   // indicator LEDs (lower right of the package)
-  const ledXY: Pt[] = [[11.3, -0.5], [12.4, -0.3], [11.5, -1.6], [12.6, -1.4]];
+  const ledXY: Pt[] = [[11.9, 2.0], [13.0, 2.2], [12.1, 0.9], [13.2, 1.1], [12.6, 3.2]];
   const ledMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+  const redMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
   const leds = new THREE.Group();
   for (const [x, y] of ledXY) {
     const m = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 12), ledMat);
@@ -535,6 +549,12 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     leds.add(m);
     b.cyl("capBody", x, y, 0, 0.24, 0.24);
     block(x, y, 0.6, 0.6, 0.1);
+  }
+  for (const [x, y] of [[11.4, 5.0], [11.4, 5.5]] as Pt[]) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.16, 0.12), redMat);
+    m.position.set(x, y, 0.2);
+    leds.add(m);
+    block(x, y, 1.1, 0.4, 0.1);
   }
   scene.add(leds);
   // tiny surface-mount parts
@@ -614,7 +634,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
             if (s1[0] > h || s1[1] > h) continue;
             pts = [s0, s1, s2].map(([p, q]) => [ox + dx * p, oy + dy * q] as Pt);
           }
-          tileRib.add(pts, 0.05, z);
+          tileRib.add(pts, 0.085, z);
           const e = pts[pts.length - 1];
           tileRib.dot(e[0], e[1], 0.085, z + 0.001);
         }
@@ -640,10 +660,10 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
       cols,
       rows: cols,
       count: COUNTS.boardLines,
-      minRun: 3,
+      minRun: 5,
       maxRun: 18,
-      minSegs: 3,
-      maxSegs: 7,
+      minSegs: 2,
+      maxSegs: 4,
       occupied: occ,
       start: (r) => {
         side = r.int(0, 3);
@@ -659,7 +679,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     });
     for (const p of paths) {
       const pts: Pt[] = p.map(([x, y]) => [gc(x), gc(y)]);
-      const w = rng.range(0.06, 0.11);
+      const w = rng.range(0.08, 0.14);
       boardRib.add(pts, w, 0.03);
       const e = pts[pts.length - 1];
       boardRib.dot(e[0], e[1], w * 1.4, 0.031);
@@ -667,6 +687,8 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
   }
   const boardLineMat = makeRevealMaterial();
   boardLineMat.uniforms.uSoft.value = 2.5;
+  boardLineMat.uniforms.uIntensity.value = ML.boardLineIntensity;
+  boardLineMat.uniforms.uColor.value.set(PALETTE.boardGlow);
   scene.add(new THREE.Mesh(boardRib.build(), boardLineMat));
 
   /* ---- the small chip that comes down -------------------------------------- */
@@ -701,7 +723,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
   flare.renderOrder = 20;
   flare.frustumCulled = false;
   scene.add(flare);
-  const ignite = new THREE.PointLight(PALETTE.ignitionLight, 0, 16, 2);
+  const ignite = new THREE.PointLight(PALETTE.ignitionLight, 0, 10.5, 2);
   ignite.position.set(0, 0, P.topZ + 1.6);
   scene.add(ignite);
 
@@ -728,6 +750,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
   /* ---- animation: a pure function of the frame -------------------------------- */
   const target = new THREE.Vector3();
   const glowCol = new THREE.Color(PALETTE.led);
+  const redCol = new THREE.Color(PALETTE.ledRed);
   const edgeCol = new THREE.Color(PALETTE.glow);
   const zAxis = new THREE.Vector3(0, 0, 1);
 
@@ -738,7 +761,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     const az = rad(pchip(t, move.azimuth));
     const el = rad(pchip(t, move.elevation));
     const dist = pchip(t, move.distance);
-    target.set(pchip(t, move.targetX), pchip(t, move.targetY), 1.6);
+    target.set(pchip(t, move.targetX), pchip(t, move.targetY), 2.6);
     camera.position.set(
       target.x + dist * Math.cos(el) * Math.sin(az),
       target.y - dist * Math.cos(el) * Math.cos(az),
@@ -757,6 +780,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     // LEDs
     const led = ramp(t, TIMING.ledsFrom, TIMING.ledsTo);
     ledMat.color.copy(glowCol).multiplyScalar(led * ML.ledIntensity);
+    redMat.color.copy(redCol).multiplyScalar(led * ML.ledIntensity * 0.5);
 
     // ignition: glow -> flare -> steady burn with a slow, small breathing
     const glow = ramp(t, TIMING.glowFrom, TIMING.glowTo);
@@ -764,11 +788,15 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     const settle = 1 - 0.22 * ramp(t, TIMING.flarePeak, TIMING.flarePeak + 1.2);
     const breathe = 1 + 0.045 * Math.sin(t * 5.3) + 0.03 * Math.sin(t * 8.9 + 1.3);
     const flareAmt = burst * settle * breathe;
-    chipTopMat.emissiveIntensity = glow * ML.chipGlow * (1 - 0.35 * burst);
+    // after the burst the flare keeps building up to the end of the film
+    const swell = t < TIMING.swell[0][0] ? 1 : pchip(t, TIMING.swell);
+    const build = (swell - 1) / (TIMING.swell[TIMING.swell.length - 1][1] - 1);
+    chipTopMat.emissiveIntensity = glow * ML.chipGlow * (1 - 0.85 * burst);
     chipTopMat.envMapIntensity = 1.3 * (1 - 0.93 * glow);
     chipTopMat.color.setScalar(0.85 * (1 - 0.95 * glow) + 0.01);
-    flareMat.uniforms.uIntensity.value = flareAmt * ML.flareIntensity + glow * (1 - burst) * 0.8;
-    flareMat.uniforms.uCoreMix.value = burst;
+    flareMat.uniforms.uIntensity.value =
+      flareAmt * ML.flareIntensity * (0.8 + 0.2 * build) + glow * (1 - burst) * 0.8;
+    flareMat.uniforms.uCoreMix.value = burst * (0.3 + 0.7 * build);
     // the flare is a camera-facing card whose size is tied to the frame height
     const flarePos = chip.position;
     const dCam = camera.position.distanceTo(flarePos);
@@ -776,7 +804,8 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     flare.position.copy(flarePos).addScaledVector(zAxis, 0.5);
     flare.quaternion.copy(camera.quaternion);
     flare.scale.setScalar(frameH * ML.flareSize * 2);
-    ignite.intensity = LIGHTS.ignition * (0.3 * glow + flareAmt);
+    ignite.intensity = LIGHTS.ignition * (0.3 * glow + flareAmt * swell);
+    tileLineMat.uniforms.uIntensity.value = ML.lineIntensity * (0.7 + 0.3 * swell);
 
     // lines spreading over the tiles and then the board
     tileLineMat.uniforms.uReveal.value = t < TIMING.tileReveal[0][0] ? 0 : pchip(t, TIMING.tileReveal);

@@ -16,7 +16,7 @@ export const DURATION_IN_FRAMES = 408;
 /* ---- colours ------------------------------------------------------------- */
 export const PALETTE = {
   /** glowing lines after the chip ignites */
-  glow: "#ff9638",
+  glow: "#ff8a2a",
   glowHot: "#ffdca8",
   /** the small chip when it starts to glow */
   chipGlow: "#ff3a00",
@@ -26,9 +26,12 @@ export const PALETTE = {
   /** light the ignited chip throws onto the package */
   ignitionLight: "#ff8a2a",
   gold: "#a08652",
-  bronze: "#4f4026",
+  bronze: "#6a5228",
   silver: "#dcdcda",
   led: "#ff9a3a",
+  /** pale gold of the lines that spread over the board */
+  boardGlow: "#ffc070",
+  ledRed: "#ff2a12",
 };
 
 /* ---- timings (seconds) --------------------------------------------------- */
@@ -39,17 +42,19 @@ export const TIMING = {
   ledsFrom: 3.2,
   ledsTo: 5.6,
   /** the chip starts to glow, then the flare bursts */
-  glowFrom: 6.05,
-  glowTo: 6.5,
-  flareFrom: 6.5,
-  flarePeak: 6.95,
+  glowFrom: 6.0,
+  glowTo: 6.4,
+  flareFrom: 6.4,
+  flarePeak: 6.8,
   /** glowing lines spread over the tiles: [time, radius in cm] */
-  tileReveal: [[6.75, 1.0], [8.5, 9.0]] as [number, number][],
+  tileReveal: [[6.65, 1.0], [8.4, 9.0]] as [number, number][],
   /** ...and on across the board */
   boardReveal: [[8.4, 9.5], [10.5, 19], [13.6, 36]] as [number, number][],
   /** edge light strips of the package */
   edgeFrom: 7.0,
   edgeTo: 8.2,
+  /** after the burst the whole package keeps getting brighter: [time, level] */
+  swell: [[6.8, 1], [13.6, 2.6]] as [number, number][],
 };
 
 /* ---- camera -------------------------------------------------------------- */
@@ -71,11 +76,11 @@ export interface CameraMove {
 /** Version 1 - the reference move: slow orbit while craning up and back. */
 export const CAMERA_V1: CameraMove = {
   azimuth: [[0, 33], [13.6, 49]],
-  elevation: [[0, 43], [6, 50], [13.6, 63]],
-  distance: [[0, 28], [13.6, 35]],
+  elevation: [[0, 38], [6.8, 53], [13.6, 72]],
+  distance: [[0, 29], [6.8, 25.5], [13.6, 31]],
   roll: [[0, 0], [13.6, 0]],
-  targetX: [[0, -0.5], [13.6, 0.5]],
-  targetY: [[0, 1.0], [13.6, 0.5]],
+  targetX: [[0, -0.5], [6.8, 1.6], [13.6, 0.4]],
+  targetY: [[0, 1.0], [6.8, -2.0], [13.6, -0.4]],
   fov: 38,
 };
 
@@ -99,24 +104,24 @@ export const PACKAGE = {
   base: 19.0,
   mid: 16.6,
   top: 13.4,
-  tile: 3.5,
+  tile: 3.8,
   pitch: 4.1,
   /** heights of the two steps under the tile frame */
-  baseH: 0.9,
-  midH: 0.9,
+  baseH: 1.6,
+  midH: 1.4,
   /** height of the tile surface and of the frame bars */
-  tileZ: 1.92,
-  topZ: 2.34,
+  tileZ: 3.12,
+  topZ: 3.54,
   /** size of the small chip that comes down */
   chip: 2.3,
 };
 export const COUNTS = {
   /** tiny surface-mount parts scattered over the board */
   smallParts: 8000,
-  capacitors: 54,
+  capacitors: 30,
   chips: 16,
   /** glowing lines that spread across the board */
-  boardLines: 110,
+  boardLines: 64,
   /** fan-out lines per tile edge */
   tileLines: 16,
 };

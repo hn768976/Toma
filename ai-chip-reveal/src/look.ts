@@ -11,9 +11,9 @@ export const LOOK: Look = {
   exposure: 1.0,
   msaa: 4,
   bloom: {
-    threshold: 1.0,
+    threshold: 0.7,
     knee: 0.5,
-    coreIntensity: 1.0,
+    coreIntensity: 0.85,
     coreRadius: 0.65,
     haloIntensity: 0.014,
     haloRadius: 0.8,
@@ -25,7 +25,7 @@ export const LOOK: Look = {
   vignette: { strength: 0, inner: 0.3, outer: 1.2, center: [0.5, 0.5], aspect: 1 },
   grade: {
     contrast: 1.1,
-    saturation: 1.0,
+    saturation: 0.92,
     gamma: 1.0,
     lift: [0, 0, 0],
     gain: [1, 1, 1],
@@ -78,8 +78,8 @@ export const BACKDROP = {
 /** Depth of field per phase (blur size in 1080p pixels). */
 export const DOF = {
   /** blur at the very start (camera at an angle) and by the time it is frontal */
-  startBokeh: 20.0,
-  closeBokeh: 9.0,
+  startBokeh: 10.0,
+  closeBokeh: 6.0,
   wideBokeh: 0.0,
   closeRange: 2.6,
 };
@@ -89,10 +89,10 @@ export const MATERIAL_LOOK = {
   pcb: "#101014",
   back: "#0c1012",
   /** self-illumination of the white blocks (they clip to white on purpose) */
-  whiteEmissive: 1.3,
+  whiteEmissive: 0.6,
   /** in the wide shot the white parts and the key light are held back */
   whiteWide: 0.06,
-  keyWide: 0.24,
+  keyWide: 0.14,
   /** exposure of the wide shot relative to the close-up */
   exposureWide: 0.6,
   /** HDR brightness of the glowing lines (1 = white point before bloom) */
@@ -100,10 +100,12 @@ export const MATERIAL_LOOK = {
   /** the lines are dimmed by this factor once the whole board is in view */
   traceWide: 1.0,
   chipTraceIntensity: 0.42,
-  lettersIntensity: 2.6,
+  lettersIntensity: 2.0,
   /** in the wide shot the chip reads as one glowing copper square */
-  lettersWide: 0.45,
-  chipTraceWide: 1.6,
+  lettersWide: 0.2,
+  chipTraceWide: 2.4,
+  /** bloom strength of the wide shot relative to the close-up */
+  bloomWide: 1.8,
   /** brightness of the back-plate glint during the spin */
   backFlash: 8,
   /** extra exposure at the peak of the white-out flash */

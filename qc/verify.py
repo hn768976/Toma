@@ -27,6 +27,8 @@ def main():
     ap.add_argument("--ref")
     ap.add_argument("--frames", type=int, required=True)
     ap.add_argument("--json")
+    ap.add_argument("--flash", help="first-last frame of an intended flash, e.g. 60-95; "
+                    "brightness peaks inside it are reported but are not flicker")
     a = ap.parse_args()
 
     info = probe(a.video)
@@ -85,6 +87,11 @@ def main():
     d = np.diff(mean)
     flick = [int(i + 1) for i in range(len(d) - 1)
              if abs(d[i]) > 0.02 and abs(d[i + 1]) > 0.02 and d[i] * d[i + 1] < 0]
+    res["flash_peaks_in_intended_window"] = []
+    if a.flash:
+        lo, hi = (int(v) for v in a.flash.split("-"))
+        res["flash_peaks_in_intended_window"] = [f for f in flick if lo <= f <= hi]
+        flick = [f for f in flick if not lo <= f <= hi]
     res["flicker_frames"] = flick
     res["max_brightness_step"] = round(float(np.abs(d).max()), 4)
     res["max_brightness_step_at"] = int(np.abs(d).argmax() + 1)
