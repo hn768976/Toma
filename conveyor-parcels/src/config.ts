@@ -47,17 +47,17 @@ export const PALETTES: Record<Variant, Palette> = {
   v1: {
     cardboard: "#7f735f",
     cardboardEdge: "#a79b82",
-    strap: "#141d22",
+    strap: "#1a2228",
     label: "#8f857c",
-    mark: "#2a2622",
-    roller: "#5c4d42",
-    rollerGap: "#261e1a",
+    mark: "#3a342e",
+    roller: "#5e4d40",
+    rollerGap: "#30271f",
     rail: "#6e625a",
     floor: "#2a211d",
     backdrop: "#4d3d3a",
     rackPost: "#2c2422",
     rackBeam: "#5a4c3c",
-    rackGoods: ["#5b4a4c", "#4f4e63", "#6a5045", "#7a5e4d", "#4a4660", "#6b4440", "#54433d", "#5a5350", "#74483e"],
+    rackGoods: ["#5b4a4c", "#544e58", "#63504a", "#6e5a4f", "#4f4a56", "#5e4a46", "#54433d", "#5a5350", "#66504a"],
     bokeh: [
       { color: "#ff9a62", intensity: 3.6 },
       { color: "#ffb27a", intensity: 2.6 },
@@ -126,7 +126,7 @@ export const CONFIG = {
     nearCount: 40,
     firstAt: 9,
     /** Roller radius in pitches (0.5 would make neighbours touch). */
-    radius: 0.47,
+    radius: 0.485,
     /** Belt edges, in pitches left / right of the camera. */
     left: -15.3,
     right: 10.8,

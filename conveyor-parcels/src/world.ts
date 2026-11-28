@@ -282,8 +282,8 @@ const buildParcel = (spec: ParcelSpec, index: number, pal: Palette, tex: { card:
       [0.06, 0.16],
       [0.34, -0.14],
     ] as const) {
-      const flap = add(new THREE.Mesh(new THREE.BoxGeometry(w * range(rng, 0.06, 0.09), 0.05 * P, 0.6 * P), flapMat));
-      flap.position.set(fx * w, h + lift + 0.05 * P, d * 0.5 - range(rng, 0.3, 0.5) * P);
+      const flap = add(new THREE.Mesh(new THREE.BoxGeometry(w * range(rng, 0.06, 0.09), 0.05 * P, 0.4 * P), flapMat));
+      flap.position.set(fx * w, h + lift - 0.08 * P, d * 0.5 - range(rng, 0.15, 0.3) * P);
       flap.rotation.z = tilt;
       flap.rotation.x = range(rng, 0.42, 0.6); // tipped towards the lens, so the lit side shows
     }
@@ -299,7 +299,7 @@ const buildParcel = (spec: ParcelSpec, index: number, pal: Palette, tex: { card:
   contact.renderOrder = 1;
   group.add(contact);
   const tight = new THREE.Mesh(
-    new THREE.PlaneGeometry(w + 0.9 * P, d + 0.9 * P),
+    new THREE.PlaneGeometry(w + 1.3 * P, d + 1.3 * P),
     new THREE.MeshBasicMaterial({ map: contactTexture(), color: 0x000000, transparent: true, opacity: LIGHTS.contactShadowTight, depthWrite: false }),
   );
   tight.rotation.x = -Math.PI / 2;
