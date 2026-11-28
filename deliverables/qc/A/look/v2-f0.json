@@ -1,0 +1,374 @@
+{
+ "frames": [
+  "/tmp/claude-0/-home-user-Toma/c9f7d756-c540-5fa7-9e4a-4cf066ae6c08/scratchpad/refA/f0.png",
+  "deliverables/qc/A/look/v2-f0.png"
+ ],
+ "measures": [
+  {
+   "lum_p1": 0.0,
+   "lum_p5": 0.0,
+   "lum_p50": 9.454509803921567,
+   "lum_p95": 74.1949019607843,
+   "lum_p99": 81.64227450980393,
+   "lum_mean": 22.36928778549921,
+   "pct_above_90": 0.00795605710539548,
+   "pct_below_5": 41.32917072425579,
+   "sat_mean": 61.581096796456066,
+   "chroma_mean": 15.726339341373258,
+   "hue_shadows": 218.69089636666408,
+   "hue_midtones": 194.31960245157953,
+   "hue_highlights": 189.3091032611749,
+   "glow_peak": 85.83362092154714,
+   "glow_peak_x": 69.79166666666666,
+   "glow_peak_y": 3.009259259259259,
+   "glow_r50": 9.765625,
+   "glow_r25": 37.109375,
+   "glow_r10": 73.95833333333334,
+   "contrast_top": 77.28988235294118,
+   "black_top": 2.0225882352941174,
+   "mean_top": 45.21994202041349,
+   "contrast_mid": 61.17223529411763,
+   "black_mid": 0.1415686274509804,
+   "mean_mid": 17.134374028005904,
+   "contrast_bot": 16.266823529411766,
+   "black_bot": 0.0,
+   "mean_bot": 3.9228114823041484,
+   "haze_far_near_contrast": 4.7513813753001415,
+   "grain_flat_std": 0.0,
+   "grain_global_std": 36.72493532006411,
+   "detail_laplacian_var": 46.99324187128066,
+   "detail_fine": 23.62831017586145,
+   "detail_medium": 64.6868270669367,
+   "detail_coarse": 92.161346071963,
+   "vignette_corner_centre": 1.813842286810505
+  },
+  {
+   "lum_p1": 0.0,
+   "lum_p5": 0.0,
+   "lum_p50": 9.248549019607843,
+   "lum_p95": 80.772,
+   "lum_p99": 85.99003921568628,
+   "lum_mean": 24.12767522314088,
+   "pct_above_90": 0.07383220993807005,
+   "pct_below_5": 42.5063489335701,
+   "sat_mean": 57.61801097632547,
+   "chroma_mean": 20.73249888958403,
+   "hue_shadows": 338.1704225417332,
+   "hue_midtones": 16.647075039671417,
+   "hue_highlights": 32.2679702424946,
+   "glow_peak": 89.25324666956682,
+   "glow_peak_x": 70.96354166666666,
+   "glow_peak_y": 0.0,
+   "glow_r50": 14.583333333333334,
+   "glow_r25": 38.02083333333333,
+   "glow_r10": 72.13541666666666,
+   "contrast_top": 82.04627450980392,
+   "black_top": 2.0364705882352943,
+   "mean_top": 50.95151052091843,
+   "contrast_mid": 62.96580392156862,
+   "black_mid": 0.0,
+   "mean_mid": 14.465822624486261,
+   "contrast_bot": 26.16721568627451,
+   "black_bot": 0.0,
+   "mean_bot": 5.432439548157225,
+   "haze_far_near_contrast": 3.135460627277959,
+   "grain_flat_std": 0.0,
+   "grain_global_std": 41.412154758758085,
+   "detail_laplacian_var": 55.594454738765826,
+   "detail_fine": 26.46142775558648,
+   "detail_medium": 70.67384622320787,
+   "detail_coarse": 88.45431691724664,
+   "vignette_corner_centre": 2.180348522404356
+  }
+ ],
+ "compare": [
+  {
+   "measure": "lum_p1",
+   "ref": 0.0,
+   "mine": 0.0,
+   "diff": 0.0,
+   "rel": "+0.0%",
+   "status": "PASS"
+  },
+  {
+   "measure": "lum_p5",
+   "ref": 0.0,
+   "mine": 0.0,
+   "diff": 0.0,
+   "rel": "+0.0%",
+   "status": "PASS"
+  },
+  {
+   "measure": "lum_p50",
+   "ref": 9.454509803921567,
+   "mine": 9.248549019607843,
+   "diff": -0.20596078431372433,
+   "rel": "-2.2%",
+   "status": "PASS"
+  },
+  {
+   "measure": "lum_p95",
+   "ref": 74.1949019607843,
+   "mine": 80.772,
+   "diff": 6.577098039215699,
+   "rel": "+8.9%",
+   "status": "PASS"
+  },
+  {
+   "measure": "lum_p99",
+   "ref": 81.64227450980393,
+   "mine": 85.99003921568628,
+   "diff": 4.347764705882355,
+   "rel": "+5.3%",
+   "status": "PASS"
+  },
+  {
+   "measure": "lum_mean",
+   "ref": 22.36928778549921,
+   "mine": 24.12767522314088,
+   "diff": 1.7583874376416695,
+   "rel": "+7.9%",
+   "status": "PASS"
+  },
+  {
+   "measure": "pct_above_90",
+   "ref": 0.00795605710539548,
+   "mine": 0.07383220993807005,
+   "diff": 0.06587615283267456,
+   "rel": "+828.0%",
+   "status": "PASS"
+  },
+  {
+   "measure": "pct_below_5",
+   "ref": 41.32917072425579,
+   "mine": 42.5063489335701,
+   "diff": 1.177178209314313,
+   "rel": "+2.8%",
+   "status": "PASS"
+  },
+  {
+   "measure": "sat_mean",
+   "ref": 61.581096796456066,
+   "mine": 57.61801097632547,
+   "diff": null,
+   "rel": "n/a",
+   "status": "skip"
+  },
+  {
+   "measure": "chroma_mean",
+   "ref": 15.726339341373258,
+   "mine": 20.73249888958403,
+   "diff": null,
+   "rel": "n/a",
+   "status": "skip"
+  },
+  {
+   "measure": "hue_shadows",
+   "ref": 218.69089636666408,
+   "mine": 338.1704225417332,
+   "diff": null,
+   "rel": "n/a",
+   "status": "skip"
+  },
+  {
+   "measure": "hue_midtones",
+   "ref": 194.31960245157953,
+   "mine": 16.647075039671417,
+   "diff": null,
+   "rel": "n/a",
+   "status": "skip"
+  },
+  {
+   "measure": "hue_highlights",
+   "ref": 189.3091032611749,
+   "mine": 32.2679702424946,
+   "diff": null,
+   "rel": "n/a",
+   "status": "skip"
+  },
+  {
+   "measure": "glow_peak",
+   "ref": 85.83362092154714,
+   "mine": 89.25324666956682,
+   "diff": 3.4196257480196834,
+   "rel": "+4.0%",
+   "status": "PASS"
+  },
+  {
+   "measure": "glow_peak_x",
+   "ref": 69.79166666666666,
+   "mine": 70.96354166666666,
+   "diff": null,
+   "rel": "n/a",
+   "status": "info"
+  },
+  {
+   "measure": "glow_peak_y",
+   "ref": 3.009259259259259,
+   "mine": 0.0,
+   "diff": null,
+   "rel": "n/a",
+   "status": "info"
+  },
+  {
+   "measure": "glow_r50",
+   "ref": 9.765625,
+   "mine": 14.583333333333334,
+   "diff": 4.817708333333334,
+   "rel": "+49.3%",
+   "status": "FAIL"
+  },
+  {
+   "measure": "glow_r25",
+   "ref": 37.109375,
+   "mine": 38.02083333333333,
+   "diff": 0.9114583333333286,
+   "rel": "+2.5%",
+   "status": "PASS"
+  },
+  {
+   "measure": "glow_r10",
+   "ref": 73.95833333333334,
+   "mine": 72.13541666666666,
+   "diff": -1.8229166666666856,
+   "rel": "-2.5%",
+   "status": "PASS"
+  },
+  {
+   "measure": "contrast_top",
+   "ref": 77.28988235294118,
+   "mine": 82.04627450980392,
+   "diff": 4.756392156862745,
+   "rel": "+6.2%",
+   "status": "PASS"
+  },
+  {
+   "measure": "black_top",
+   "ref": 2.0225882352941174,
+   "mine": 2.0364705882352943,
+   "diff": 0.013882352941176901,
+   "rel": "+0.7%",
+   "status": "PASS"
+  },
+  {
+   "measure": "mean_top",
+   "ref": 45.21994202041349,
+   "mine": 50.95151052091843,
+   "diff": 5.731568500504942,
+   "rel": "+12.7%",
+   "status": "FAIL"
+  },
+  {
+   "measure": "contrast_mid",
+   "ref": 61.17223529411763,
+   "mine": 62.96580392156862,
+   "diff": 1.7935686274509948,
+   "rel": "+2.9%",
+   "status": "PASS"
+  },
+  {
+   "measure": "black_mid",
+   "ref": 0.1415686274509804,
+   "mine": 0.0,
+   "diff": -0.1415686274509804,
+   "rel": "-100.0%",
+   "status": "PASS"
+  },
+  {
+   "measure": "mean_mid",
+   "ref": 17.134374028005904,
+   "mine": 14.465822624486261,
+   "diff": -2.6685514035196434,
+   "rel": "-15.6%",
+   "status": "FAIL"
+  },
+  {
+   "measure": "contrast_bot",
+   "ref": 16.266823529411766,
+   "mine": 26.16721568627451,
+   "diff": 9.900392156862743,
+   "rel": "+60.9%",
+   "status": "FAIL"
+  },
+  {
+   "measure": "black_bot",
+   "ref": 0.0,
+   "mine": 0.0,
+   "diff": 0.0,
+   "rel": "+0.0%",
+   "status": "PASS"
+  },
+  {
+   "measure": "mean_bot",
+   "ref": 3.9228114823041484,
+   "mine": 5.432439548157225,
+   "diff": 1.5096280658530765,
+   "rel": "+38.5%",
+   "status": "FAIL"
+  },
+  {
+   "measure": "haze_far_near_contrast",
+   "ref": 4.7513813753001415,
+   "mine": 3.135460627277959,
+   "diff": -1.6159207480221824,
+   "rel": "-34.0%",
+   "status": "FAIL"
+  },
+  {
+   "measure": "grain_flat_std",
+   "ref": 0.0,
+   "mine": 0.0,
+   "diff": 0.0,
+   "rel": "+0.0%",
+   "status": "PASS"
+  },
+  {
+   "measure": "grain_global_std",
+   "ref": 36.72493532006411,
+   "mine": 41.412154758758085,
+   "diff": 4.6872194386939725,
+   "rel": "+12.8%",
+   "status": "FAIL"
+  },
+  {
+   "measure": "detail_laplacian_var",
+   "ref": 46.99324187128066,
+   "mine": 55.594454738765826,
+   "diff": 8.601212867485167,
+   "rel": "+18.3%",
+   "status": "FAIL"
+  },
+  {
+   "measure": "detail_fine",
+   "ref": 23.62831017586145,
+   "mine": 26.46142775558648,
+   "diff": 2.8331175797250303,
+   "rel": "+12.0%",
+   "status": "FAIL"
+  },
+  {
+   "measure": "detail_medium",
+   "ref": 64.6868270669367,
+   "mine": 70.67384622320787,
+   "diff": 5.987019156271174,
+   "rel": "+9.3%",
+   "status": "PASS"
+  },
+  {
+   "measure": "detail_coarse",
+   "ref": 92.161346071963,
+   "mine": 88.45431691724664,
+   "diff": -3.707029154716352,
+   "rel": "-4.0%",
+   "status": "PASS"
+  },
+  {
+   "measure": "vignette_corner_centre",
+   "ref": 1.813842286810505,
+   "mine": 2.180348522404356,
+   "diff": 0.3665062355938511,
+   "rel": "+20.2%",
+   "status": "FAIL"
+  }
+ ]
+}

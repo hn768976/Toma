@@ -1,4 +1,4 @@
-== fresh extract: /tmp/claude-0/-home-user-Toma/c9f7d756-c540-5fa7-9e4a-4cf066ae6c08/scratchpad/ziptestA/teal-waves
+== ZIP test 2026-11-28T10:26:41Z: teal-waves-project.zip extracted into a fresh folder
 .
 ..
 .agents
@@ -16,14 +16,13 @@ skills-lock.json
 src
 tsconfig.json
 == npm ci
-81 packages are looking for funding
   run `npm fund` for details
 
 found 0 vulnerabilities
-npm ci seconds: 7
+npm ci seconds: 6
 == npx remotion still V1-teal-waves out/V1-4k.png --frame=563 --scale=1 --gl=angle
-exit 0 seconds: 19
-V1 (3840, 2160) mean 47.89 max 236 min 0
+exit 0 seconds: 16
+V1 (3840, 2160) mean 48.95 max 245 min 0
 == npx remotion still V2-teal-waves out/V2-4k.png --frame=563 --scale=1 --gl=angle
 exit 0 seconds: 15
-V2 (3840, 2160) mean 43.36 max 249 min 0
+V2 (3840, 2160) mean 46.81 max 251 min 0

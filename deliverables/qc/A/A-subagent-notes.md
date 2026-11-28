@@ -69,4 +69,23 @@ Every review below was done by a fresh sub-agent that saw only the image pairs o
 | 5 | Dotted strands and bundles of parallel strands | Filament stretch relaxed (0.2 → 0.3–0.4) so strands are no longer combed; residual faint dotting remains on a few out-of-focus strands |
 | 7–8 | Foreground bokeh brighter; highlights paler in the mid field | Near level 0.19; middle ramp stops deepened |
 
-**Round 3** — see the QC report (run on frames of the final video).
+**Round 3** (frames 0 / 563 / 1125 of the delivered `01-V1-teal-waves.mp4`; third and last round, recorded and not acted on)
+
+1. Surface texture: the reference is built from many thin, wiry, densely packed filament highlights; ours reads as smooth glossy liquid or silk with broad specular bands and wide featureless black faces. Fine strand detail largely missing.
+2. Wave scale and consistency: reference ripples are small, numerous and evenly choppy in all three frames; ours are larger rolling swells, and frame 563 is dominated by one long smooth horizontal swell at 45–60 % height.
+3. Dotted lines: beaded or dashed strings along some ridges in the focus band (about 30–50 % height) in all three frames; reference lines are continuous.
+4. Top band: the top 15–20 % of ours is a washed-out pale cyan haze with heavy blur; the reference top is bright but keeps readable wave shapes and dark troughs to the top edge.
+5. Foreground: the reference is almost black with a few large faint blurred shapes; frames 0 and 1125 of ours have many mid-bright blurred teal ribbons reaching the bottom and right edges, frame 563 is nearly empty.
+6. Contrast and edges: ours crisp and hard-edged against pure black; reference softer with slight bloom and gentler mid-tone falloff.
+7. Colour: our mid-tones a more saturated turquoise; reference slightly bluer and greyer with paler, icier highlights.
+8. Camera angle: ours looks lower and more grazing; the reference looks down slightly more.
+9. Focus band: both sharp at about 30–60 % height; our change from sharp to blurred is more abrupt, especially towards the top.
+
+### Step 8B, Version 2 (`02-V2-teal-waves.mp4`, frames 0 / 563 / 1125)
+
+- Is the palette change clearly visible? **Yes** ("the reference is cool teal/cyan on blue-black, while the second set is amber/gold on brown-black").
+- Is everything else the same concept and quality? **Yes** ("broadly: both are a low-angle, shallow-focus rippling surface with a blurred bright far field, a sharp mid band and a dark blurred foreground at similar polish, but the surface character differs as listed").
+
+Other differences listed (the same gaps as Version 1, as expected since only the palette differs): broader glossy ribbons instead of thin wiry filaments; a larger and brighter top band (about the top 30–35 % against 20–25 %), near clipped cream; larger, smoother folds with a calm area in the middle frame; visible blurred streaks in the foreground of the start and end frames; fine dotted lines along some sharp crests in the middle and end frames; a crisper focus band with a more abrupt fall-off; blacks sitting inside the sharp band as large pools.
+
+Both answers were yes on the first run, so no fix round was needed for Version 2.

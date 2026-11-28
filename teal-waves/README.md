@@ -134,14 +134,21 @@ comparison images and numbers.
 
 ## Render time
 
-Measured on the build machine: 4 CPU cores, **no GPU** (software WebGL through
-ANGLE/SwiftShader), two renders sharing the machine.
+Measured on the build machine: 4 CPU cores and **no GPU** (software WebGL
+through ANGLE/SwiftShader), `--concurrency=2`.
 
-| Output              | Per frame        | Whole video (1126 frames) |
-| ------------------- | ---------------- | ------------------------- |
-| 1080p (`--scale=0.5`) | RENDER_1080_PF | RENDER_1080_TOTAL         |
-| 4K (`--scale=1`)      | RENDER_4K_PF   | RENDER_4K_TOTAL           |
+| Output                | Per frame, machine otherwise idle | Whole video (1126 frames) |
+| --------------------- | --------------------------------- | ------------------------- |
+| 1080p (`--scale=0.5`) | 2.8 s (measured over 40 frames)   | about 53 min              |
+| 4K (`--scale=1`)      | 12.2 s (measured over 8 frames)   | about 3 h 50 min (estimate) |
 
+The delivered 1080p files were rendered while two other renders shared the
+machine and took 6.7 s per frame (each half of 563 frames took about 63 min).
 On a machine with a GPU expect a small fraction of these times. Setting
 `GRID.samples` to `0` in `src/config.ts` saves roughly 30 % at the cost of
 slightly rougher crest lines.
+
+A render that would run longer than your job limit can be split with
+`--frames=0-562` / `--frames=563-1125` and joined without re-encoding:
+`ffmpeg -f concat -safe 0 -i list.txt -c copy out.mp4` (that is how the
+delivered files were made).
