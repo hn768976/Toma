@@ -16,21 +16,21 @@ export const DURATION_IN_FRAMES = 408;
 /* ---- colours ------------------------------------------------------------- */
 export const PALETTE = {
   /** glowing lines after the chip ignites */
-  glow: "#ffac64",
-  glowHot: "#ffdca8",
+  glow: "#ffa050",
+  glowHot: "#ffd0a0",
   /** the small chip when it starts to glow */
   chipGlow: "#ff3a00",
   /** the flare in the centre */
   flareCore: "#fff1dc",
   flareHalo: "#ffb070",
   /** light the ignited chip throws onto the package */
-  ignitionLight: "#ffb478",
+  ignitionLight: "#ffa050",
   gold: "#a08652",
   bronze: "#6a5228",
   silver: "#dcdcda",
   led: "#ff9a3a",
   /** pale gold of the lines that spread over the board */
-  boardGlow: "#ffc070",
+  boardGlow: "#ffb264",
   ledRed: "#ff2a12",
 };
 
@@ -78,8 +78,8 @@ export interface CameraMove {
 /** Version 1 - the reference move: slow orbit while craning up and back. */
 export const CAMERA_V1: CameraMove = {
   azimuth: [[0, 33], [13.6, 49]],
-  elevation: [[0, 38], [6.8, 53], [13.6, 72]],
-  distance: [[0, 29], [6.8, 25.5], [13.6, 27.5]],
+  elevation: [[0, 38], [6.8, 58], [13.6, 72]],
+  distance: [[0, 29], [6.8, 28.5], [13.6, 34]],
   roll: [[0, 0], [13.6, 0]],
   targetX: [[0, -0.5], [6.8, 1.6], [13.6, 0.4]],
   targetY: [[0, 1.0], [6.8, -2.0], [13.6, -0.4]],

@@ -21,7 +21,7 @@ export const LOOK: Look = {
     haloLevels: 8,
   },
   dof: { enabled: true, bokehScale: 5.0, focusRange: 19 },
-  fringe: { amount: 0.012, power: 1.6 },
+  fringe: { amount: 0.018, power: 1.6 },
   vignette: { strength: 0.3, inner: 0.34, outer: 1.35, center: [0.64, 0.4], aspect: 1 },
   grade: {
     contrast: 1.1,
@@ -41,7 +41,7 @@ export const LIGHTS = {
   fill: { color: "#ffe2c4", intensity: 0.3, pos: [-30, 10, 30] as [number, number, number] },
   envIntensity: 1.0,
   /** peak strength of the orange light the ignited chip throws */
-  ignition: 30,
+  ignition: 44,
 };
 
 export const ENV_AMBIENT = "#0a0a0a";
@@ -60,7 +60,7 @@ export const ENV_PANELS: EnvPanel[] = [
 export const MATERIAL_LOOK = {
   /** brightness multiplier of the silver copper pattern on the board */
   boardSilver: "#a9a9a7",
-  tileSilver: "#f2f2ee",
+  tileSilver: "#cfcfcb",
   /** HDR brightness of the glowing lines (1 = white point before bloom) */
   lineIntensity: 1.6,
   boardLineIntensity: 1.2,

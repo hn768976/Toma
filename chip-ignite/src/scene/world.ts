@@ -311,9 +311,9 @@ const makeFlareMaterial = () =>
       void main() {
         float r = length(vUv);
         float edge = 1.0 - smoothstep(0.6, 1.0, r);
-        float core = exp(-r * r * 130.0) * uCoreMix;
-        float mid = exp(-r * r * 26.0) * 0.2 * (0.35 + 0.65 * uCoreMix);
-        float halo = 0.06 / (1.0 + r * r * 10.0);
+        float core = exp(-r * r * 70.0) * uCoreMix;
+        float mid = exp(-r * r * 12.0) * 0.32 * (0.35 + 0.65 * uCoreMix);
+        float halo = 0.1 / (1.0 + r * r * 8.0);
         vec3 c = uCore * core + mix(uHalo, uCore, 0.3) * mid + uHalo * halo;
         gl_FragColor = vec4(c * uIntensity * edge, 1.0);
       }
@@ -464,7 +464,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
         bumpScale: 0.8,
         metalness: 1,
         roughness: rng.range(0.18, 0.3),
-        envMapIntensity: 2.0,
+        envMapIntensity: 1.6,
       });
       tileMats.push(m);
       const mesh = new THREE.Mesh(g, m);
@@ -796,7 +796,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
     chipTopMat.color.setScalar(0.85 * (1 - 0.95 * glow) + 0.01);
     flareMat.uniforms.uIntensity.value =
       flareAmt * ML.flareIntensity * (0.8 + 0.2 * build) + glow * (1 - burst) * 0.8;
-    flareMat.uniforms.uCoreMix.value = burst * (0.3 + 0.7 * build);
+    flareMat.uniforms.uCoreMix.value = burst * (0.6 + 0.4 * build);
     // the flare is a camera-facing card whose size is tied to the frame height
     const flarePos = chip.position;
     const dCam = camera.position.distanceTo(flarePos);
