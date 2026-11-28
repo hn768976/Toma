@@ -1,3 +1,6 @@
 refs/
 out/
 *.zip.tmp
+qc/results/**/*.png
+qc/results/**/*.log
+qc/results/*.log

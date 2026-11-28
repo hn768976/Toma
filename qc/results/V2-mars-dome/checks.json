@@ -1,0 +1,14 @@
+{
+ "loop_max_abs_diff": 0,
+ "loop_differing_pixels": 0,
+ "loop_md5": [
+  "8db5be54fd541570193404aac197c4e7",
+  "8db5be54fd541570193404aac197c4e7"
+ ],
+ "determinism_cold_md5": "cc46584b3369e4eee4e8982164ccaf17",
+ "determinism_sequence_md5": "cc46584b3369e4eee4e8982164ccaf17",
+ "determinism_bytes_identical": true,
+ "determinism_max_abs_diff": 0,
+ "pass_loop": true,
+ "pass_determinism": true
+}
