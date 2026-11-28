@@ -37,7 +37,7 @@ export const PALETTE_V1: Palette = {
   traceHot: "#ffae48",
   letters: "#ffc060",
   chipTrace: "#e8842a",
-  pin: "#9a6a2e",
+  pin: "#80582a",
   spill: "#ff7a18",
   fill: "#ffd2a8",
 };
@@ -64,7 +64,7 @@ export const TIMING = {
   motionBlurFrom: 2.1,
   motionBlurTo: 3.55,
   /** the glow of the board fades down towards the end: [time, level] */
-  fade: [[0, 1], [5.0, 1], [9.8, 0.5]] as [number, number][],
+  fade: [[0, 1], [5.0, 1], [9.8, 0.75]] as [number, number][],
 };
 
 /**

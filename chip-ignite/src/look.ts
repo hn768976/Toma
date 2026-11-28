@@ -22,7 +22,7 @@ export const LOOK: Look = {
   },
   dof: { enabled: true, bokehScale: 5.0, focusRange: 19 },
   fringe: { amount: 0.012, power: 1.6 },
-  vignette: { strength: 0.5, inner: 0.34, outer: 1.35, center: [0.64, 0.4], aspect: 1 },
+  vignette: { strength: 0.3, inner: 0.34, outer: 1.35, center: [0.64, 0.4], aspect: 1 },
   grade: {
     contrast: 1.1,
     saturation: 1.0,
@@ -32,7 +32,7 @@ export const LOOK: Look = {
   },
   grain: 0.03,
   dither: 1,
-  sharpen: 0.8,
+  sharpen: 0.3,
 };
 
 /** Lights. The board lies in the XY plane and +Z is up. */
@@ -41,7 +41,7 @@ export const LIGHTS = {
   fill: { color: "#ffe2c4", intensity: 0.3, pos: [-30, 10, 30] as [number, number, number] },
   envIntensity: 1.0,
   /** peak strength of the orange light the ignited chip throws */
-  ignition: 38,
+  ignition: 30,
 };
 
 export const ENV_AMBIENT = "#0a0a0a";
@@ -62,12 +62,12 @@ export const MATERIAL_LOOK = {
   boardSilver: "#a9a9a7",
   tileSilver: "#f2f2ee",
   /** HDR brightness of the glowing lines (1 = white point before bloom) */
-  lineIntensity: 2.6,
-  boardLineIntensity: 1.9,
+  lineIntensity: 1.6,
+  boardLineIntensity: 1.2,
   /** extra brightness of the leading edge while the lines spread */
   lineHead: 1.2,
   chipGlow: 2.2,
-  flareIntensity: 7,
+  flareIntensity: 5,
   /** flare size as a fraction of the frame height */
   flareSize: 0.42,
   ledIntensity: 7.0,

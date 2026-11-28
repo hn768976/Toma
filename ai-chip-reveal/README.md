@@ -89,6 +89,9 @@ difference is which palette object `src/Root.tsx` passes in.
   frames between 2.1 s and 3.55 s (`MATERIAL_LOOK.motionSamples`, `TIMING`).
 - Bloom and depth of field work at a fixed internal size, so 1080p and 4K
   renders of a frame have the same glow and blur.
+- `remotion.config.ts` sends PNG frames to the encoder and adds x264 settings
+  (`aq-mode=3`, weaker deblocking) so that dark gradients keep their dither
+  instead of banding. The render commands above need no extra flags.
 
 ## Render time
 

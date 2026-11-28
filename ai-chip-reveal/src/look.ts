@@ -41,7 +41,7 @@ export const LIGHTS = {
   fill: { intensity: 0.5, pos: [30, -6, 26] as [number, number, number] },
   rim: { color: "#cfe0ff", intensity: 0.8, pos: [8, 40, -10] as [number, number, number] },
   /** coloured spill lights near the chip (palette.spill) */
-  spillIntensity: 5.0,
+  spillIntensity: 9.0,
   /** soft pools of glow colour over the lower half of the board */
   poolIntensity: 11.0,
   envIntensity: 1.0,
@@ -71,7 +71,7 @@ export const BACKDROP = {
   /** display-linear brightness in the pool centre (0.013 = sRGB 30/255) */
   peak: 0.0118,
   /** distance (in frame heights) at which the pool has fallen to half */
-  radius: 0.7,
+  radius: 0.62,
   power: 3.0,
 };
 
@@ -81,12 +81,12 @@ export const DOF = {
   startBokeh: 10.0,
   closeBokeh: 6.0,
   wideBokeh: 0.0,
-  closeRange: 2.6,
+  closeRange: 1.6,
 };
 
 /** Material and effect strengths that shape the look. */
 export const MATERIAL_LOOK = {
-  pcb: "#101014",
+  pcb: "#08080a",
   back: "#0c1012",
   /** self-illumination of the white blocks (they clip to white on purpose) */
   whiteEmissive: 0.6,

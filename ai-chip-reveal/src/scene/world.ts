@@ -213,7 +213,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
     pcb: new THREE.MeshLambertMaterial({ color: ML.pcb, map: boardMap, bumpMap: boardBump, bumpScale: 0.15 }),
     pcbEdge: std({ color: "#050506", roughness: 0.5, metalness: 0.2, envMapIntensity: 0.2 }),
     back: std({ color: ML.back, roughness: 0.3, metalness: 0.75, emissive: "#ffffff", emissiveIntensity: 0, envMapIntensity: 0.08 }),
-    gunmetal: std({ color: "#5c5f66", roughness: 0.36, metalness: 1, envMapIntensity: 1.0 }),
+    gunmetal: std({ color: "#404248", roughness: 0.36, metalness: 1, envMapIntensity: 1.0 }),
     heatsink: std({ color: "#5d6068", roughness: 0.4, metalness: 1, envMapIntensity: 1.0 }),
     steel: std({ color: "#c4c8cf", roughness: 0.24, metalness: 1 }),
     alu: std({ color: "#b9bcc3", roughness: 0.2, metalness: 1, envMapIntensity: 0.85 }),
@@ -221,11 +221,11 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
     blackGloss: std({ color: "#060607", roughness: 0.22, metalness: 0.3, envMapIntensity: 0.4 }),
     grey: std({ color: "#46474d", roughness: 0.55, metalness: 0.3, envMapIntensity: 0.5 }),
     white: std({ color: "#c9ccd2", roughness: 0.5, metalness: 0, emissive: "#f2f5ff", emissiveIntensity: ML.whiteEmissive }),
-    gold: std({ color: palette.pin, roughness: 0.24, metalness: 1, envMapIntensity: 0.55 }),
-    substrate: std({ color: "#150e0a", roughness: 0.45, metalness: 0.3, envMapIntensity: 0.4 }),
+    gold: std({ color: palette.pin, roughness: 0.28, metalness: 1, envMapIntensity: 0.3 }),
+    substrate: std({ color: "#3a2412", roughness: 0.5, metalness: 0.3, envMapIntensity: 0.4 }),
     capTop: std({ color: "#5c5f66", roughness: 0.3, metalness: 1, envMapIntensity: 1.0 }),
     smd: std({ color: "#ffffff", roughness: 0.5, metalness: 0.35, envMapIntensity: 0.5 }),
-    bar: std({ color: "#0b0b0d", roughness: 0.55, metalness: 0.0, envMapIntensity: 0.25 }),
+    bar: std({ color: "#0b0b0d", roughness: 0.55, metalness: 0.0, envMapIntensity: 0.1 }),
     latch: std({ color: "#33353a", roughness: 0.5, metalness: 0.2, envMapIntensity: 0.4 }),
     dot: std({ color: "#26272b", roughness: 0.5, metalness: 0.5, envMapIntensity: 0.4 }),
     leg: std({ color: "#7d8088", roughness: 0.4, metalness: 0.9, envMapIntensity: 0.5 }),
@@ -558,7 +558,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, palette: Palette): World =>
         dy /= l;
       }
       // lines that start at the socket stay among the bright ones
-      ribbons.add(pts, rng.range(0.19, 0.25), tz, [rng.range(0.6, 1), 0, 0]);
+      ribbons.add(pts, rng.range(0.28, 0.38), tz, [rng.range(0.6, 1), 0, 0]);
     }
   }
   // routed traces over the whole board

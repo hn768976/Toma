@@ -46,7 +46,7 @@ const makeBoardTexture = (seed: number) => {
   const { canvas, ctx } = makeCanvas(S, S);
   const rng = new Rng(seed);
   const pxPerCm = S / BOARD_SIZE;
-  ctx.fillStyle = "#040404";
+  ctx.fillStyle = "#070707";
   ctx.fillRect(0, 0, S, S);
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
@@ -164,7 +164,7 @@ const makeBoardTexture = (seed: number) => {
     ctx.fillRect(rng.range(0, S), rng.range(0, S), r, r);
   }
   // --- large dark patches: bare, unlit board between the copper ---------------
-  for (let i = 0; i < 170; i++) {
+  for (let i = 0; i < 80; i++) {
     const w = rng.range(1.2, 6.0) * pxPerCm;
     const h = rng.range(1.2, 6.0) * pxPerCm;
     const x = rng.range(0, S - w);
@@ -558,7 +558,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
   }
   scene.add(leds);
   // tiny surface-mount parts
-  const smdColors = ["#0c0c0d", "#0c0c0d", "#1d1d20", "#a9a9a8", "#e6e6e4", "#e6e6e4", "#4e4032", "#3a3938", "#111112"];
+  const smdColors = ["#0c0c0d", "#0c0c0d", "#1d1d20", "#a9a9a8", "#c4c4c2", "#c4c4c2", "#4e4032", "#3a3938", "#111112"];
   placed = 0;
   guard = 0;
   while (placed < COUNTS.smallParts && guard++ < 200000) {
@@ -818,6 +818,7 @@ export const createWorld = (gl: THREE.WebGLRenderer, move: CameraMove): World =>
       bokehScale: DOF.bokeh,
       focusRange: DOF.range,
       bloomMul: 1 + 0.8 * clamp01(flareAmt),
+      exposureMul: pchip(t, TIMING.exposure),
     };
   };
 

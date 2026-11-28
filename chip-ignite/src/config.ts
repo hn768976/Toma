@@ -16,15 +16,15 @@ export const DURATION_IN_FRAMES = 408;
 /* ---- colours ------------------------------------------------------------- */
 export const PALETTE = {
   /** glowing lines after the chip ignites */
-  glow: "#ff8a2a",
+  glow: "#ffac64",
   glowHot: "#ffdca8",
   /** the small chip when it starts to glow */
   chipGlow: "#ff3a00",
   /** the flare in the centre */
   flareCore: "#fff1dc",
-  flareHalo: "#ff9a45",
+  flareHalo: "#ffb070",
   /** light the ignited chip throws onto the package */
-  ignitionLight: "#ff8a2a",
+  ignitionLight: "#ffb478",
   gold: "#a08652",
   bronze: "#6a5228",
   silver: "#dcdcda",
@@ -53,6 +53,8 @@ export const TIMING = {
   /** edge light strips of the package */
   edgeFrom: 7.0,
   edgeTo: 8.2,
+  /** overall exposure over time (the shot opens up as the camera cranes up) */
+  exposure: [[0, 0.9], [4, 1.1], [8.4, 1.05], [13.6, 0.98]] as [number, number][],
   /** after the burst the whole package keeps getting brighter: [time, level] */
   swell: [[6.8, 1], [13.6, 2.6]] as [number, number][],
 };
@@ -77,7 +79,7 @@ export interface CameraMove {
 export const CAMERA_V1: CameraMove = {
   azimuth: [[0, 33], [13.6, 49]],
   elevation: [[0, 38], [6.8, 53], [13.6, 72]],
-  distance: [[0, 29], [6.8, 25.5], [13.6, 31]],
+  distance: [[0, 29], [6.8, 25.5], [13.6, 27.5]],
   roll: [[0, 0], [13.6, 0]],
   targetX: [[0, -0.5], [6.8, 1.6], [13.6, 0.4]],
   targetY: [[0, 1.0], [6.8, -2.0], [13.6, -0.4]],
