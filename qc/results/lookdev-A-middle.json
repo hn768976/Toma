@@ -1,6 +1,6 @@
 {
  "ref": {
-  "file": "/tmp/claude-0/-home-user-Toma/79481f2d-9783-555f-806a-9985b76d7ff1/scratchpad/look/refA-5.2.png",
+  "file": "/home/user/Toma/qc/results/_ref-A-middle.png",
   "analysis_size": [
    768,
    432
@@ -36,7 +36,7 @@
   "vignette_ratio": 1.524641752243042
  },
  "mine": {
-  "file": "/tmp/claude-0/-home-user-Toma/79481f2d-9783-555f-806a-9985b76d7ff1/scratchpad/ld-A-middle.png",
+  "file": "/home/user/Toma/qc/results/_mine-A-middle.png",
   "analysis_size": [
    768,
    432
